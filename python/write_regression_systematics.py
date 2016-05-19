@@ -678,8 +678,7 @@ for job in info:
         #Start event loop
         #########################
 
-        #for entry in range(0,nEntries):
-        for entry in range(0,1000):
+        for entry in range(0,nEntries):
                 # if entry>1000: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
