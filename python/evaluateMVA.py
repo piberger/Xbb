@@ -147,6 +147,7 @@ for job in info:
             filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
             hash = hashlib.sha224(filename).hexdigest()
             inputFile = "%s/%s/%s" %(INpath,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
+            if not os.path.isfile(inputFile): continue
             outputFile = "%s/%s/%s" %(OUTpath,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
             tmpfile = "%s/%s" %(tmpDir,filename.replace('.root','')+'_'+str(hash)+'.root')
             if inputFile in inputfiles: continue
