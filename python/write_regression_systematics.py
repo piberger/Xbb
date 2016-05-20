@@ -206,6 +206,7 @@ for job in info:
         print 'inputfiles',inputfiles,'tmpfiles',tmpfiles
     
     for inputfile,tmpfile,outputFile in zip(inputfiles,tmpfiles,outputfiles):
+        if not os.path.isfile(inputfile): continue
         input = ROOT.TFile.Open(inputfile,'read')
         output = ROOT.TFile.Open(tmpfile,'recreate')
         print ''
