@@ -124,7 +124,7 @@ elif [ $task = "singleprep" ]; then
 
 elif [ $task = "mergesingleprep" ]; then
     echo "./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}"
-    ./myutils/mergetreePSI.py --samples $sample --config ${config_filenames[@]}
+    ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "trainReg" ]; then
     echo "./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
