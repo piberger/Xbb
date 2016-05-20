@@ -317,7 +317,7 @@ def main(argv=None):
     # RETRIEVE FILELIST FOR THE TREECOPIER PSI AND SINGLE FILE SYS STEPS
     def getfilelist(job):
         samplefiles = parser.get('Directories', 'samplefiles')
-        filelist = myutils.copytreePSI.filelist(samplefiles, job)
+        filelist = myutils.filelist(samplefiles, job)
         return filelist
 
     if args.task == 'train':
