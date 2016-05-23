@@ -16,7 +16,8 @@ VHBBHeppy_version = 'VHBBHeppyV21'
 
 # intput_file = str(VHBBHeppy_version)+'.txt'
 #intput_file = 'DYB.txt'
-intput_file = 'DY5to50.txt'
+#intput_file = 'DY5to50.txt'
+intput_file = 'V21bis.txt'
 
 das = "../das_client.py"
 
