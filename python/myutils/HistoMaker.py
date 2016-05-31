@@ -70,9 +70,9 @@ class HistoMaker:
         else:
             UseTrainSample = eval(self.config.get('Analysis','UseTrainSample'))
             if UseTrainSample:
-                BDT_add_cut='EventForTraining == 1'
+                BDT_add_cut='((evt%2) == 0 || isData)'
             else:
-                BDT_add_cut='EventForTraining == 0'
+                BDT_add_cut='!((evt%2) == 0 || isData)'
 
         plot_path = self.config.get('Directories','plotpath')
         addOverFlow=eval(self.config.get('Plot_general','addOverFlow'))
@@ -105,7 +105,10 @@ class HistoMaker:
             xMax=float(options['xMax'])
             weightF=options['weight']
             #Include weight per sample (specialweight)
-            weightF="("+weightF+")*(" + job.specialweight +")"
+            if 'PSI' in self.config.get('Configuration','whereToLaunch'):
+                weightF="("+weightF+")"
+            else:
+                weightF="("+weightF+")*(" + job.specialweight +")"
 
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
@@ -125,6 +128,8 @@ class HistoMaker:
             #print 'weightF',weightF
             
             hTree = ROOT.TH1F('%s'%name,'%s'%name,nBins,xMin,xMax)
+
+            #If you use extension only
             hTree.Sumw2()
             hTree.SetTitle(job.name)
             #print('hTree.name() 1 =',hTree.GetName())
