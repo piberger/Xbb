@@ -105,8 +105,10 @@ class HistoMaker:
             xMax=float(options['xMax'])
             weightF=options['weight']
             #Include weight per sample (specialweight)
-            weightF="("+weightF+")"
-            #weightF="("+weightF+")*(" + job.specialweight +")"
+            if 'PSI' in self.config.get('Configuration','whereToLaunch'):
+                weightF="("+weightF+")"
+            else:
+                weightF="("+weightF+")*(" + job.specialweight +")"
 
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
