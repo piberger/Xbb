@@ -175,6 +175,7 @@ for job in info:
             filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
             hash = hashlib.sha224(filename).hexdigest()
             inputFile = "%s/%s/%s" %(pathIN,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
+            if not os.path.isfile(inputFile): continue
             outputFile = "%s/%s/%s" %(pathOUT,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
             tmpfile = "%s/%s" %(tmpDir,filename.replace('.root','')+'_'+str(hash)+'.root')
             if inputFile in inputfiles: continue
@@ -439,9 +440,19 @@ for job in info:
             newtree.Branch('bTagWeightcErr2Down_new',bTagWeightcErr2Down_new,'bTagWeightcErr2Down_new/F')
 
         if channel == "Zmm":
+        #Special weights
+
+            DY_specialWeight= array('f',[0])
+            DY_specialWeight[0] = 1
+            newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
+
+
+        #Add reg VHDphi
+            HVdPhi_reg = array('f',[0])
+            HVdPhi_reg[0] = 300
+            newtree.Branch('HVdPhi_reg',HVdPhi_reg,'HVdPhi_reg/F')
+
         # Add muon SF
-            # vLeptons_SFweight_IdLoose = array('f',[0])
-            # vLeptons_SFweight_IsoLoose = array('f',[0])
             vLeptons_SFweight_HLT = array('f',[0])
             lepton_EvtWeight = array('f',[0])
 
@@ -876,9 +887,7 @@ for job in info:
 
 		        # ================ Lepton Scale Factors =================
                 # For custom made form own JSON files
-                eTrigSFWeight = 1
-                eIDLooseSFWeight = 1
-                eTrigSFWeight= 1
+
                 wdir = config.get('Directories','vhbbpath')
                 jsons = {
                     wdir+'/python/json/ScaleFactor_GsfElectronToRECO_passingTrigWP80.json' : ['ScaleFactor_GsfElectronToRECO_passingTrigWP80', 'eta_pt_ratio'],
@@ -907,7 +916,29 @@ for job in info:
                 ##########################
                 # Adding mu SFs
                 ##########################
+
+                if not job.specialweight:
+                    DY_specialWeight[0] = 1
+                else :
+                    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
+                    specialWeight_ = specialWeight.EvalInstance()
+                    DY_specialWeight[0] = specialWeight_
+
+                eTrigSFWeight = 1
+                eIDLooseSFWeight = 1
+                eTrigSFWeight= 1
+
+                HVdPhi_reg[0] = 300
+
+                dphi = tree.HCSV_reg_phi - tree.V_phi
+                if dphi > math.pi:
+                    dphi = dphi - 2*math.pi
+                elif dphi <= -math.pi:
+                    dphi = dphi + 2*math.pi
+                HVdPhi_reg[0] = dphi
+
                 if job.type != 'DATA':
+
                     if tree.Vtype == 1:
                         lepton_EvtWeight[0] = eIDLooseSFWeight*eTrigSFWeight
 #                elif channel == "Zmm":
