@@ -25,7 +25,7 @@ class TreeCache:
 
         self.__doCache = True
         if config.has_option('Directories','tmpSamples'):
-            self.__tmpPath = config.get('Directories','tmpSamples')
+            self.__cachedPath = config.get('Directories','tmpSamples')
         self.__hashDict = {}
         self.minCut = None
         self.__find_min_cut()# store the cut list as one string in minCut, using ROOT syntax (i.e. || to separate between each cut) 
@@ -65,15 +65,27 @@ class TreeCache:
         theHash = hashlib.sha224('%s_s%s_%s' %(sample,checksum,self.minCut)).hexdigest()
         self.__hashDict[theName] = theHash
         tmpSource = '%s/tmp_%s.root'%(self.__tmpPath,theHash)
+        tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,theHash)
+        print('tmpSource is', tmpSource)
+        print('tmpCache is', tmpCache)
 
-        print('the tmp source is ', tmpSource)
+        #sys.exit()
+        #print('the tmp source is ', tmpSource)
         #print ('self.__doCache',self.__doCache,'self.file_exists(tmpSource)',self.file_exists(tmpSource))
         print("==================================================================")
         print ('The cut is ', self.minCut)
         print("==================================================================\n")
-        if self.__doCache and self.file_exists(tmpSource) and not forceReDo:
-            print('sample',theName,'skipped, filename=',tmpSource)
+        if self.__doCache and self.file_exists(tmpCache) and not forceReDo:
+            print('sample',theName,'skipped, filename=',tmpCache)
             return (theName,theHash)
+        else:
+            if self.__doCache and self.file_exists(tmpSource) and not forceReDo:
+                print ('File exists in TMPDIR, proceeding to the copy')
+                print('sample',theName,'skipped, filename=',tmpSource)
+                command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpSource+' '+ tmpCache.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
+                subprocess.call([command], shell=True)
+                return (theName,theHash)
+
         print ('trying to create',tmpSource)
         print ('self.__tmpPath',self.__tmpPath)
         if self.__tmpPath.find('root://t3dcachedb03.psi.ch:1094/') != -1:
@@ -125,7 +137,6 @@ class TreeCache:
         tree = input.Get(sample.tree)
         assert type(tree) is ROOT.TTree
 
-        print ("debug1")
         input.cd()
         obj = ROOT.TObject
         for key in ROOT.gDirectory.GetListOfKeys():
@@ -153,6 +164,9 @@ class TreeCache:
         del output
         print ("debug4")
         print ("I've done " + theName + " in " + str(time.time() - start_time) + " s.")
+        print ("Copying file to the tmp folder.")
+        command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpSource+' '+ tmpCache.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
+        subprocess.call([command], shell=True)
         return (theName,theHash)
 
 
@@ -173,23 +187,22 @@ class TreeCache:
         else:
             for input_ in inputs:
                 outputs.append(getattr(input_[0],input_[1])(input_[2])) #ie. self._trim_tree(job)
-        
         for output in outputs:
             (theName,theHash) = output
             self.__hashDict[theName]=theHash
 
     def get_tree(self, sample, cut):
-        print('input file %s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
+        print('input file %s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]))
         # print ('Opening %s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
-        input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]),'read')
-        print ('Opening %s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
+        input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]),'read')
+        print ('Opening %s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]))
         try:
             tree = input.Get(sample.tree)
             assert type(tree) is ROOT.TTree
         except:
-            print ("%s/tmp_%s.root is corrupted. I'm relaunching _trim_tree"%(self.__tmpPath,self.__hashDict[sample.name]))
+            print ("%s/tmp_%s.root is corrupted. I'm relaunching _trim_tree"%(self.__cachedPath,self.__hashDict[sample.name]))
             self._trim_tree(sample, forceReDo=True)
-            input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]),'read')
+            input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]),'read')
             tree = input.Get(sample.tree)
             print("Type of sample.tree ROOT.TTree? (again) ", type(tree) is ROOT.TTree)
 
@@ -304,11 +317,17 @@ class TreeCache:
             f = ROOT.TFile.Open(file,'read')
             if not f:
                 print ('File is null. Gonna redo it.')
+                del_protocol = file.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+                if '/scratch/tmpdir' in  del_protocol: command = 'rm %s' %(del_protocol)
+                else: command = 'gfal-rm %s' %(del_protocol)
+                subprocess.call([command], shell=True)
+                print(command)
             elif f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
                 print ('f.GetNkeys()',f.GetNkeys(),'f.TestBit(ROOT.TFile.kRecovered)',f.TestBit(ROOT.TFile.kRecovered),'f.IsZombie()',f.IsZombie())
                 print ('File', file_dummy, 'already exists but is buggy, gonna delete and rewrite it.')
                 del_protocol = file.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-                command = 'srmrm %s' %(del_protocol)
+                if '/scratch/tmpdir' in  del_protocol: command = 'rm %s' %(del_protocol)
+                else: command = 'gfal-rm %s' %(del_protocol)
                 subprocess.call([command], shell=True)
                 print(command)
             else:
