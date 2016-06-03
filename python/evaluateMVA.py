@@ -147,6 +147,7 @@ for job in info:
             filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
             hash = hashlib.sha224(filename).hexdigest()
             inputFile = "%s/%s/%s" %(INpath,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
+            inputFile = inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')
             if not os.path.isfile(inputFile): continue
             outputFile = "%s/%s/%s" %(OUTpath,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
             tmpfile = "%s/%s" %(tmpDir,filename.replace('.root','')+'_'+str(hash)+'.root')
@@ -178,7 +179,7 @@ for job in info:
         print ('inputfiles',inputfiles,'tmpfiles',tmpfiles)
 
     for inputfile,tmpfile,outputFile in zip(inputfiles,tmpfiles,outputfiles):
-        input = ROOT.TFile.Open(inputfile,'read')
+        input = ROOT.TFile.Open('root://t3dcachedb03.psi.ch:1094/'+inputfile,'read')
         output = ROOT.TFile.Open(tmpfile,'recreate')
         print ('')
         print ('inputfile',inputfile)
