@@ -30,7 +30,7 @@ class HistoMaker:
         #print "Cuts:",self.cuts
         self.tc = TreeCache(self.cuts,samples,path,config)# created cached tree i.e. create new skimmed trees using the list of cuts
         #print self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config)
+        #self.tc = TreeCache(self.cuts,samples,path,config)
         self._rebin = False
         self.mybinning = None
         self.GroupDict=GroupDict
