@@ -7,50 +7,52 @@ from optparse import OptionParser
 from BetterConfigParser import BetterConfigParser
 from sample_parser import ParseInfo
 
-print 'start mergetreePSI.py'
+if __name__ == "__main__":
 
-argv = sys.argv
+    print 'start mergetreePSI.py'
 
-#get files info from config
-parser = OptionParser()
-parser.add_option("-C", "--config", dest="config", default=[], action="append",
-                      help="directory config")
-parser.add_option("-S", "--samples", dest="names", default="",
-                              help="samples you want to run on")
-parser.add_option("-s", "--mergesys", dest="mergesys", default="False",
-                              help="merge singlesys step")
-parser.add_option("-e", "--mergeeval", dest="mergeeval", default="False",
-                              help="merge singleeval step")
+    argv = sys.argv
 
-(opts, args) = parser.parse_args(argv)
+    #get files info from config
+    parser = OptionParser()
+    parser.add_option("-C", "--config", dest="config", default=[], action="append",
+                          help="directory config")
+    parser.add_option("-S", "--samples", dest="names", default="",
+                                  help="samples you want to run on")
+    parser.add_option("-s", "--mergesys", dest="mergesys", default="False",
+                                  help="merge singlesys step")
+    parser.add_option("-e", "--mergeeval", dest="mergeeval", default="False",
+                                  help="merge singleeval step")
 
-config = BetterConfigParser()
-config.read(opts.config)
+    (opts, args) = parser.parse_args(argv)
 
-namelist=opts.names.split(',')
-print "namelist:",namelist
+    config = BetterConfigParser()
+    config.read(opts.config)
 
-if opts.mergesys == 'True':
-    pathIN = config.get('Directories','SYSin')
-    pathOUT = config.get('Directories','SYSout')
-elif opts.mergeeval == 'True':
-    pathIN = config.get('Directories','MVAin')
-    pathOUT = config.get('Directories','MVAout')
-else:
-    pathIN = config.get('Directories','PREPin')
-    pathOUT = config.get('Directories','PREPout')
+    namelist=opts.names.split(',')
+    print "namelist:",namelist
 
-samplesinfo=config.get('Directories','samplesinfo')
-sampleconf = BetterConfigParser()
-sampleconf.read(samplesinfo)
+    if opts.mergesys == 'True':
+        pathIN = config.get('Directories','SYSin')
+        pathOUT = config.get('Directories','SYSout')
+    elif opts.mergeeval == 'True':
+        pathIN = config.get('Directories','MVAin')
+        pathOUT = config.get('Directories','MVAout')
+    else:
+        pathIN = config.get('Directories','PREPin')
+        pathOUT = config.get('Directories','PREPout')
 
-whereToLaunch = config.get('Configuration','whereToLaunch') # USEFUL IN CASE OF SITE BY SITE OPTIONS
-prefix=sampleconf.get('General','prefix')
-info = ParseInfo(samplesinfo,pathIN)
-print "samplesinfo:",samplesinfo
+    samplesinfo=config.get('Directories','samplesinfo')
+    sampleconf = BetterConfigParser()
+    sampleconf.read(samplesinfo)
+
+    whereToLaunch = config.get('Configuration','whereToLaunch') # USEFUL IN CASE OF SITE BY SITE OPTIONS
+    prefix=sampleconf.get('General','prefix')
+    info = ParseInfo(samplesinfo,pathIN)
+    print "samplesinfo:",samplesinfo
 
 
-def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config):
+def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config):
     '''
     List of variables
     pathIN: path of the input file containing the data
@@ -61,12 +63,20 @@ def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config)
     Aprefix: empty string ''
     Acut: the sample cut as defined in "samples_nosplit.cfg"
     '''
+    print('pathIN',pathIN,'pathOUT',pathOUT,'prefix',prefix,'newprefix',newprefix,'folderName',folderName,'Aprefix',Aprefix,'Acut',Acut,'config',config)
+    # prefix = theHash
+    # newprefix = tmp_
+
     print 'start mergetreePSI.py'
     print (pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut)
     print "##### MERGE TREE - BEGIN ######"
 
-    print 'checking if output file exists:',pathOUT+'/'+newprefix+folderName+".root"
-    f = ROOT.TFile.Open(pathOUT+'/'+newprefix+folderName+".root",'read')
+    outputfile = pathOUT+'/'+newprefix+folderName+".root"
+    if prefix != '':
+        outputfile = pathOUT+'/'+newprefix+prefix+".root"
+
+    print 'checking if output file exists:',outputfile
+    f = ROOT.TFile.Open(outputfile,'read')
     if not f:
         print "MERGED FILE DOESN'T EXIST, CREATING IT"
     elif f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
@@ -75,11 +85,12 @@ def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config)
         print "MERGED FILE EXISTS AND IS NOT CORRUPTED, EXITING"
         sys.exit()
 
-    merged = pathOUT+'/'+newprefix+folderName+".root "
 
     t = ROOT.TFileMerger(ROOT.kFALSE)
     __tmpPath = os.environ["TMPDIR"]
     tmp_filename = __tmpPath+'/'+newprefix+folderName+".root "
+    if prefix != '':
+        tmp_filename = __tmpPath+'/'+newprefix+prefix+".root"
     print 'tmp_filename',tmp_filename
     # print 't.OutputFile('+tmp_filename+',"RECREATE")'
     # t.OutputFile(tmp_filename, "RECREATE")
@@ -89,7 +100,7 @@ def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config)
     # command = 'hadd -f '+tmp_filename+' '
     allFiles = []
     for file in os.listdir(outputFolder.replace('root://t3dcachedb03.psi.ch:1094','').replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','')):
-        if file.startswith('tree'):
+        if file.startswith('tree') and ( prefix == '' or Aprefix in file):
             allFiles.append(outputFolder+file)
             # command = command+' '+outputFolder+file
             # print 't.AddFile('+outputFolder+file+')'
@@ -99,6 +110,8 @@ def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config)
     allFiles_chunks = [allFiles[i:i+n] for i in range(0, len(allFiles), n)]
     print 'len(allFiles_chunks)',len(allFiles_chunks),'allFiles_chunks[0]',allFiles_chunks[0]
     tmpfile_chunk = __tmpPath+'/'+newprefix+folderName+'_tmpfile_chunk_'
+    if prefix != '':
+        tmpfile_chunk = __tmpPath+'/'+newprefix+folderName+prefix+'_tmpfile_chunk_'
     print 'tmpfile_chunk',tmpfile_chunk
     counter = 0
     for allFiles_chunk in allFiles_chunks:
@@ -120,38 +133,42 @@ def mergetreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config)
     print 'finished merging all files'
 
     # DUMMY WAYS TO COPE WITH FILE COMMAND PROTOCOLS @T2-PSI...
-    del_merged = merged.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+    del_merged = outputfile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
     command = 'srmrm %s' %(del_merged)
     print command
     subprocess.call([command], shell = True)
     srmpathOUT = pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-    command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+__tmpPath+'/'+newprefix+folderName+".root"+' '+srmpathOUT+'/'+newprefix+folderName+".root"
+    command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmp_filename+' '+outputfile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
     print command
     subprocess.call([command], shell=True)
 
-    print 'checking output file',pathOUT+'/'+newprefix+folderName+".root"
-    f = ROOT.TFile.Open(pathOUT+'/'+newprefix+folderName+".root",'read')
+    print 'checking output file',outputfile
+    f = ROOT.TFile.Open(outputfile,'read')
     if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
         print 'TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! ERROR: exiting'
         sys.exit(1)
     f.Close()
 
-    command = 'rm '+__tmpPath+'/'+newprefix+folderName+'.root'
+    command = 'rm '+tmp_filename
+    print command
+    subprocess.call([command], shell=True)
+    command = 'rm '+tmpfile_chunk+'*.root'
     print command
     subprocess.call([command], shell=True)
 
     print "##### MERGE TREE - END ######"
 
 
-print "info:",info
-for job in info:
-    if not job.name in namelist and not job.identifier in namelist:
-        continue
-    if job.subsample:
-        continue
-    samplefiles = config.get('Directories','samplefiles')
-    mergetreePSI(samplefiles,pathOUT,prefix,job.prefix,job.identifier,'',job.addtreecut, config)
+if __name__ == "__main__":
+    print "info:",info
+    for job in info:
+        if not job.name in namelist and not job.identifier in namelist:
+            continue
+        if job.subsample:
+            continue
+        samplefiles = config.get('Directories','samplefiles')
+        mergetreePSI_def(samplefiles,pathOUT,prefix,job.prefix,job.identifier,'',job.addtreecut, config)
 
-print 'end mergetreePSI.py'
+    print 'end mergetreePSI.py'
 
 
