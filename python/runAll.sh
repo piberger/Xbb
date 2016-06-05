@@ -27,6 +27,7 @@ nprocesses=$4 # Dummy variable used to shift the other parameters by +1. FIXME: 
 job_id=$5     # Needed for split step and train optimisation. FIXME: It does not have a unique meaning.
 bdt_params=$6 # The set of hyperparameters for BDT optimisation.
 filelist=$7   # Needed to run the prep and sys step with a limited number of files per job.
+region=$8     # plotting region
 
 # Verify the number of input arguments.
 if [ $# -lt 3 ]; then
@@ -167,6 +168,14 @@ elif [ $task = "syseval" ]; then
 elif [ $task = "train" ]; then
     echo "./train.py --training $sample ${config_filenames[@]} --local True"
     ./train.py --training $sample ${config_filenames[@]} --local True
+
+elif [ $task = "singleplot" ]; then
+    echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist"
+    ./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist
+
+elif [ $task = "mergesingleplot" ]; then
+    echo "./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True"
+    ./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True
 
 elif [ $task = "plot" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]}"
