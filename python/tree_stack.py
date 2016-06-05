@@ -25,6 +25,10 @@ parser.add_option("-R", "--region", dest="region", default="",
                       help="region to plot")
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration file")
+parser.add_option("-f", "--filelist", dest="filelist", default="",
+                              help="list of files you want to run on")
+parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
+                              help="option to merge")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
@@ -33,6 +37,14 @@ from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, 
 
 #adds the file vhbbPlotDef.ini to the config list
 #print 'opts.config',opts.config
+print 'opts.filelist="'+opts.filelist+'"'
+filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
+print filelist
+print "len(filelist)",len(filelist),
+if len(filelist)>0:
+    print "filelist[0]:",filelist[0];
+else:
+    print ''
 
 vhbbPlotDef=opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
 opts.config.append(vhbbPlotDef)#adds it to the config list
@@ -51,14 +63,6 @@ if config.has_option('Plot_general','addBlindingCut'):#contained in plots, cut o
 
 print "Compile external macros"
 print "=======================\n"
-
-# compile external macros to compute variables on the fly
-#ROOT.gSystem.CompileMacro("../plugins/VH_pt.C")
-#ROOT.gSystem.CompileMacro("../plugins/SimpleDeltaR.C")
-#ROOT.gSystem.CompileMacro("../plugins/HJetPt.C")
-#ROOT.gSystem.CompileMacro("../plugins/OtherJets.C")
-#ROOT.gSystem.CompileMacro("../plugins/VHj_Pt.C")
-#ROOT.gSystem.CompileMacro("../plugins/PU.C")
 
 #get locations:
 Wdir=config.get('Directories','Wdir')# working direcoty containing the ouput
@@ -92,17 +96,14 @@ def doPlot():
     mc = eval(config.get('Plot_general','samples'))# read the list of mc samples
     total_lumi = eval(config.get('Plot_general','lumi'))
     #print 'total lumi is', total_lumi
-
-    #print "The list of mc samples is", mc
+    print "The list of mc samples is", mc
 
     #print "Check if is Signal Region"
     #print "=========================\n"
-
     SignalRegion = False
     if config.has_option(section,'Signal'):
         mc.append(config.get(section,'Signal'))
         SignalRegion = True
-
     #print "After addind the signal, the mc is", mc
 
     #print "Getting information on data and mc samples"
@@ -112,7 +113,6 @@ def doPlot():
     datasamples = info.get_samples(data)
     #print "datasamples is\n", datasamples
     #print "Getting mc sample"
-    #print mc
     mcsamples = info.get_samples(mc)
     #print "mc sample is\n"
     #for sample in mcsamples:
@@ -135,7 +135,10 @@ def doPlot():
     # print 'options',options
 
     #Prepare cached files in the temporary (tmpSamples) folder.
-    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict)
+    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot)
+    if len(filelist)>0 or opts.mergeplot:
+        print('ONLY CACHING PERFORMED, EXITING');
+        sys.exit(1)
 
     #print '\nProducing Plot of %s\n'%vars[v]
     Lhistos = [[] for _ in range(0,len(vars))]
@@ -166,24 +169,6 @@ def doPlot():
 
     Plotter.lumi=lumi
     mass = Stacks[0].mass
-
-    #print "Getting the histograms from mc and data tmp"
-    #print "===========================================\n"
-    #print "MC samples\n"
-    #! Get the histogram from Plotter
-    #! Get the mc histograms
-    # multiprocess=16
-    # if multiprocess>0:
-       # from multiprocessing import Pool
-       # p = Pool(multiprocess)
-       # import pathos.multiprocessing as mp
-       # p = mp.ProcessingPool(multiprocess)
-       # myinputs = []
-       # for job in self.__sampleList:
-           # myoptions = self.putOptions()
-           # myinputs.append((myoptions,job))
-           
-       # outputs = p.map(trim_treeMT, myinputs)
 
     #print 'mcsamples',mcsamples
     inputs=[]

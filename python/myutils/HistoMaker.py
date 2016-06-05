@@ -10,13 +10,15 @@ from copy import copy
 import time
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList,GroupDict=None):
+    def __init__(self, samples, path, config, optionsList,GroupDict=None,filelist=None,mergeplot=False):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
         #optionsList: Dictionnary containing information on vars, including the cuts
         #! Read arguments and initialise variables
 
+        if filelist:
+            print 'len(filelist)',len(filelist)
         #print "Start Creating HistoMaker"
         #print "=========================\n"
         self.path = path
@@ -28,9 +30,12 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "Cuts:",self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config)# created cached tree i.e. create new skimmed trees using the list of cuts
+        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot)# created cached tree i.e. create new skimmed trees using the list of cuts
+        if len(filelist)>0 or mergeplot:
+            print('ONLY CACHING PERFORMED, EXITING');
+            sys.exit(1)
         #print self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config)
+        # self.tc = TreeCache(self.cuts,samples,path,config)
         self._rebin = False
         self.mybinning = None
         self.GroupDict=GroupDict
@@ -38,9 +43,9 @@ class HistoMaker:
         VHbbNameSpace=config.get('VHbbNameSpace','library')
         ROOT.gSystem.Load(VHbbNameSpace)
 
-        #print ""
-        #print "Done Creating HistoMaker"
-        #print "========================\n"
+        print ""
+        print "Done Creating HistoMaker"
+        print "========================\n"
 
     def get_histos_from_tree(self,job,quick=True):
         start_time = time.time()
