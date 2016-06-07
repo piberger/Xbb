@@ -68,8 +68,9 @@ if(debugPrintOUts): print 'opts.ftag',opts.ftag
 
 if not opts.ftag == '':
     tagDir = pathconfig.get('Directories','tagDir')
+    scratchdir = pathconfig.get('Directories','scratch')
     if(debugPrintOUts): print 'tagDir',tagDir
-    DirStruct={'tagDir':tagDir,'ftagdir':'%s/%s/'%(tagDir,opts.ftag),'logpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Logs'),'plotpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Plots'),'limitpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Limits'),'confpath':'%s/%s/%s/'%(tagDir,opts.ftag,'config') }
+    DirStruct={'tagDir':tagDir,'ftagdir':'%s/%s/'%(tagDir,opts.ftag),'logpath':'%s/%s/'%(scratchdir,opts.ftag),'plotpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Plots'),'limitpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Limits'),'confpath':'%s/%s/%s/'%(tagDir,opts.ftag,'config') }
 
     if(debugPrintOUts): print 'DirStruct',DirStruct
 
@@ -77,7 +78,7 @@ if not opts.ftag == '':
         try:
             os.stat(DirStruct[keys])
         except:
-            os.mkdir(DirStruct[keys])
+            os.makedirs(DirStruct[keys])
 
     pathfile = open('%sconfig/paths.ini'%(en))
     buffer = pathfile.readlines()
@@ -210,7 +211,7 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -245,7 +246,7 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     print "the command is ", command
     print "submitting", len(file.split(';')),'files like',file.split(';')[0]
@@ -266,7 +267,7 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
