@@ -296,8 +296,8 @@ class TreeCache:
             samplematch = False
             if filelist: samplematch = '/'+job.identifier+'/' in filelist[0]
             if samplematch: print('job.name',job.name,'samplematch',samplematch)#,'filelist',filelist)
-            if not filelist or samplematch:
-                inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
+            #if not filelist or samplematch:
+            inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
         multiprocess=0
         # if('pisa' in self.config.get('Configuration','whereToLaunch')):
         multiprocess=int(self.config.get('Configuration','nprocesses'))
