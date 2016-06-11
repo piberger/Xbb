@@ -7,6 +7,7 @@ import sys
 from optparse import OptionParser
 from BetterConfigParser import BetterConfigParser
 from sample_parser import ParseInfo
+import StackMaker, HistoMaker
 
 if __name__ == "__main__":
 
@@ -55,7 +56,20 @@ if __name__ == "__main__":
         # section='Plot:%s'%region
         # vars = (config.get(section, 'vars')).split(',')#get the variables to be ploted in each region
         # print 'vars',vars
+        # SignalRegion = False
+        # if config.has_option(section,'Signal'):
+            # # mc.append(config.get(section,'Signal'))
+            # SignalRegion = True
+        # #GETALL AT ONCE
+        # options = []
+        # Stacks = []
+        # #print "Start Loop over the list of variables(to fill the StackMaker )" print "==============================================================\n"
+        # for i in range(len(vars)):# loop over the list of variables to be ploted in each reagion
+            # #print "The variable is ", vars[i], "\n"
+            # Stacks.append(StackMaker.StackMaker(config,vars[i],region,SignalRegion))# defined in myutils DoubleStackMaker. The StackMaker merge together all the informations necessary to perform the plot (plot region, variables, samples and signal region ). "options" contains the variables information, including the cuts.
+            # options.append(Stacks[i].options)
 
+        # print options
         # exit(1)
 
     dataset_missing_files = []
