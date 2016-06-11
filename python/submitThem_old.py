@@ -68,9 +68,8 @@ if(debugPrintOUts): print 'opts.ftag',opts.ftag
 
 if not opts.ftag == '':
     tagDir = pathconfig.get('Directories','tagDir')
-    scratchdir = pathconfig.get('Directories','scratch')
     if(debugPrintOUts): print 'tagDir',tagDir
-    DirStruct={'tagDir':tagDir,'ftagdir':'%s/%s/'%(tagDir,opts.ftag),'logpath':'%s/%s/'%(scratchdir,opts.ftag),'plotpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Plots'),'limitpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Limits'),'confpath':'%s/%s/%s/'%(tagDir,opts.ftag,'config') }
+    DirStruct={'tagDir':tagDir,'ftagdir':'%s/%s/'%(tagDir,opts.ftag),'logpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Logs'),'plotpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Plots'),'limitpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Limits'),'confpath':'%s/%s/%s/'%(tagDir,opts.ftag,'config') }
 
     if(debugPrintOUts): print 'DirStruct',DirStruct
 
