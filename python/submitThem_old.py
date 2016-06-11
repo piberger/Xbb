@@ -226,8 +226,8 @@ def submit(job,repDict,redirect_to_null=False):
             counter = int(subprocess.check_output('ps aux | grep $USER | grep '+opts.task +' | wc -l', shell=True))
 
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
-        # if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
-        # else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out' %(repDict) + ' &'
+        if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
+        else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out' %(repDict) + ' &'
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -235,13 +235,8 @@ def submit(job,repDict,redirect_to_null=False):
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def checksinglestep(repDict,run_locally,counter_local,Plot):
     global counter
-    # repDict['job'] = job
     nJob = counter % len(logo)
     counter += 1
-    # if opts.philipp_love_progress_bars:
-        # repDict['name'] = '"%s"' %logo[nJob].strip()
-    # else:
-        # repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     command = 'sh runAll.sh nosample %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     print "the command is ", command
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
@@ -397,13 +392,10 @@ elif opts.task == 'checksingleprep' or opts.task == 'checksinglesys' or opts.tas
     else:
         sample_list = set(samplesList)
 
-    # for sample in sample_list:
-        # if sample == '': continue
     counter_local = 0
     for item in Plot_vars:
         checksinglestep(repDict,run_locally,counter_local,item)
         counter_local = counter_local + 1
-        sys.exit(1)
 
 # ADD SYSTEMATIC UNCERTAINTIES AND ADDITIONAL HIGHER LEVEL VARIABLES TO THE TREES
 elif opts.task == 'sys' or opts.task == 'syseval':
