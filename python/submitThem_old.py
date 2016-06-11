@@ -234,6 +234,21 @@ def submit(job,repDict,redirect_to_null=False):
         subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
+def checksinglestep(repDict,run_locally,counter_local,Plot):
+    global counter
+    # repDict['job'] = job
+    nJob = counter % len(logo)
+    counter += 1
+    # if opts.philipp_love_progress_bars:
+        # repDict['name'] = '"%s"' %logo[nJob].strip()
+    # else:
+        # repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+    command = 'sh runAll.sh nosample %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+    print "the command is ", command
+    command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
+    subprocess.call([command], shell=True)
+
+# SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot):
     global counter
     repDict['job'] = job
@@ -292,7 +307,7 @@ if opts.task == 'dc':
     print DC_vars
 
 Plot_vars = ['']
-if opts.task == 'plot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+if opts.task == 'plot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot' or opts.task == 'checksingleplot':
     Plot_vars= (config.get('Plot_general','List')).split(',')
 
 
@@ -364,6 +379,32 @@ elif opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'sing
             for item in Plot_vars:
                 mergesubmitsinglefile(sample,repDict,run_locally,item)
 
+
+elif opts.task == 'checksingleprep' or opts.task == 'checksinglesys' or opts.task == 'checksingleeval' or opts.task == 'checksingleplot':
+    if ( opts.samples == ""):
+        if opts.task == 'checksingleprep':
+            path = config.get("Directories","PREPin")
+        elif opts.task == 'checksinglesys':
+            path = config.get("Directories","SYSin")
+        elif opts.task == 'checksingleeval':
+            path = config.get("Directories","MVAin")
+        elif opts.task == 'checksingleplot':
+            path = config.get("Directories","plottingSamples")
+        info = ParseInfo(samplesinfo,path)
+        sample_list = []
+        for job in info:
+            sample_list.append(job.identifier)
+        sample_list = set(sample_list)
+    else:
+        sample_list = set(samplesList)
+
+    # for sample in sample_list:
+        # if sample == '': continue
+    counter_local = 0
+    for item in Plot_vars:
+        checksinglestep(repDict,run_locally,counter_local,item)
+        counter_local = counter_local + 1
+        sys.exit(1)
 
 # ADD SYSTEMATIC UNCERTAINTIES AND ADDITIONAL HIGHER LEVEL VARIABLES TO THE TREES
 elif opts.task == 'sys' or opts.task == 'syseval':

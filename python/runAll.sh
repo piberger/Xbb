@@ -181,6 +181,14 @@ elif [ $task = "plot" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]}"
     ./tree_stack.py --region $sample ${config_filenames[@]}
 
+elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
+    if [[ $region ]]; then
+        echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task"
+        ./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task
+    else
+        echo "./myutils/check_singlestep.py ${config_filenames[@]} --task $task"
+        ./myutils/check_singlestep.py ${config_filenames[@]} --task $task
+    fi
 elif [ $task = "dc" ]; then
     echo "./workspace_datacard.py --variable $sample ${config_filenames[@]}"
     ./workspace_datacard.py --variable $sample ${config_filenames[@]}
