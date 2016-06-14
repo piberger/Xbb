@@ -226,11 +226,21 @@ def submit(job,repDict,redirect_to_null=False):
             counter = int(subprocess.check_output('ps aux | grep $USER | grep '+opts.task +' | wc -l', shell=True))
 
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
-        # if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
-        # else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out' %(repDict) + ' &'
+        if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
+        else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out' %(repDict) + ' &'
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
+
+# SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
+def checksinglestep(repDict,run_locally,counter_local,Plot):
+    global counter
+    nJob = counter % len(logo)
+    counter += 1
+    command = 'sh runAll.sh nosample %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+    print "the command is ", command
+    command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
+    subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot):
@@ -363,6 +373,29 @@ elif opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'sing
             for item in Plot_vars:
                 mergesubmitsinglefile(sample,repDict,run_locally,item)
 
+
+elif opts.task == 'checksingleprep' or opts.task == 'checksinglesys' or opts.task == 'checksingleeval' or opts.task == 'checksingleplot':
+    if ( opts.samples == ""):
+        if opts.task == 'checksingleprep':
+            path = config.get("Directories","PREPin")
+        elif opts.task == 'checksinglesys':
+            path = config.get("Directories","SYSin")
+        elif opts.task == 'checksingleeval':
+            path = config.get("Directories","MVAin")
+        elif opts.task == 'checksingleplot':
+            path = config.get("Directories","plottingSamples")
+        info = ParseInfo(samplesinfo,path)
+        sample_list = []
+        for job in info:
+            sample_list.append(job.identifier)
+        sample_list = set(sample_list)
+    else:
+        sample_list = set(samplesList)
+
+    counter_local = 0
+    for item in Plot_vars:
+        checksinglestep(repDict,run_locally,counter_local,item)
+        counter_local = counter_local + 1
 
 # ADD SYSTEMATIC UNCERTAINTIES AND ADDITIONAL HIGHER LEVEL VARIABLES TO THE TREES
 elif opts.task == 'sys' or opts.task == 'syseval':
