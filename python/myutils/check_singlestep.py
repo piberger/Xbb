@@ -26,6 +26,8 @@ if __name__ == "__main__":
 
     parser.add_option("-t", "--task", dest="task", default="",
                                   help="task (prep, sys, eval, plot) to be checked")
+    parser.add_option("-f", "--filelist", dest="filelist", default="",
+                                  help="list of files you want to run on")
 
     (opts, args) = parser.parse_args(argv)
 
@@ -38,6 +40,8 @@ if __name__ == "__main__":
     samplesinfo=config.get('Directories','samplesinfo')
     sampleconf = BetterConfigParser()
     sampleconf.read(samplesinfo)
+
+    if opts.filelist != '': print 'filelist NOT NULL!'
 
     if opts.task == 'checksingleprep':
         pathOUT_orig = config.get('Directories','PREPout')
@@ -90,48 +94,76 @@ if __name__ == "__main__":
         print 'pathOUT_orig', pathOUT_orig
         print hash
 
+    grep_hash = ''
+    if hash != '':
+        grep_hash = ' |grep '+hash
+
     mc_dataset_missing_files = []
     data_dataset_missing_files = []
     dataset_identifiers = []
-    # print "info:",info
-    for job in info:
-        dataset_identifiers.append(job.identifier)
-    dataset_identifiers = set(dataset_identifiers)
-    for identifier in dataset_identifiers:
-        sampleType = config.get(identifier,'sampleType')
-        print 'sampleType',sampleType
 
-        # print identifier
-        # identifier=opts.names.split(',')[0]
-        print "identifier:",identifier
-        pathOUT = pathOUT_orig+'/'+identifier
-        samplefiles = config.get('Directories','samplefiles')
-        filenames = open(samplefiles+'/'+identifier+'.txt').readlines()
-        print 'number of files on DAS:',len(filenames),#filenames[0]
+    if opts.filelist == "":
+        # print "info:",info
+        for job in info:
+            dataset_identifiers.append(job.identifier)
+        dataset_identifiers = set(dataset_identifiers)
+        for identifier in dataset_identifiers:
+            sampleType = config.get(identifier,'sampleType')
+            print 'sampleType',sampleType
 
-        # print 'pathOUT', pathOUT
-        # print('ls '+pathOUT+'/*.root |wc -l')
-        grep_hash = ''
-        if hash != '':
-            grep_hash = ' |grep '+hash
-        nFilesInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|wc -l').read())
-        firstfileInPathOut = os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|head -n 1').read()
-        print '    --->>    number of files produced by '+opts.task+':',nFilesInPathOut#,firstfileInPathOut[0]
+            # print identifier
+            # identifier=opts.names.split(',')[0]
+            print "identifier:",identifier
+            pathOUT = pathOUT_orig+'/'+identifier
+            samplefiles = config.get('Directories','samplefiles')
+            filenames = open(samplefiles+'/'+identifier+'.txt').readlines()
+            print 'number of files on DAS:',len(filenames),#filenames[0]
 
-        if len(filenames) == int(nFilesInPathOut):
-            print 'ALL FILES CORRECTLY PROCESSED BY '+opts.task+'\n'
-            # sys.exit(0)
-        else:
-            print '-------->>>>>> MISSING '+str(len(filenames)-int(nFilesInPathOut))+'/'+str(len(filenames))+' FILES IN THE '+opts.task+' TASK FOR THE SAMPLE '+identifier+'\n'
-            # sys.exit(1)
-            if sampleType == 'DATA':
-                data_dataset_missing_files.append(identifier)
+            # print 'pathOUT', pathOUT
+            # print('ls '+pathOUT+'/*.root |wc -l')
+            nFilesInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|wc -l').read())
+            firstfileInPathOut = os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|head -n 1').read()
+            print '    --->>    number of files produced by '+opts.task+':',nFilesInPathOut#,firstfileInPathOut[0]
+
+            if len(filenames) == int(nFilesInPathOut):
+                print 'ALL FILES CORRECTLY PROCESSED BY '+opts.task+'\n'
+                # sys.exit(0)
             else:
-                mc_dataset_missing_files.append(identifier)
+                print '-------->>>>>> MISSING '+str(len(filenames)-int(nFilesInPathOut))+'/'+str(len(filenames))+' FILES IN THE '+opts.task+' TASK FOR THE SAMPLE '+identifier+'\n'
+                # sys.exit(1)
+                if sampleType == 'DATA':
+                    data_dataset_missing_files.append(identifier)
+                else:
+                    mc_dataset_missing_files.append(identifier)
 
 
-    print '\n\nFINAL RECAP: \n\nmissing files for the following MC datasets:'
-    print mc_dataset_missing_files
-    print '\nmissing files for the following DATA datasets (VERY IMPORTANT!!!):'
-    print data_dataset_missing_files
+        print '\n\nFINAL RECAP: \n\nmissing files for the following MC datasets:'
+        print mc_dataset_missing_files
+        print '\nmissing files for the following DATA datasets (VERY IMPORTANT!!!):'
+        print data_dataset_missing_files
+    else:
+        filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
+        for inputfile in filelist:
+
+            inputtree = inputfile.rsplit('/',1)[len(inputfile.rsplit('/',1))-1]
+            inputfolder = inputfile.replace('/'+inputtree,'')
+            print 'inputfile',inputfile,'inputtree',inputtree,'inputfolder',inputfolder
+            inputfileexists = int(os.popen('xrdfs t3se01.psi.ch ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
+            print 'inputfileexists PSI',inputfileexists
+            if int(inputfileexists) == 0:
+                inputfileexists = int(os.popen('xrdfs stormgf1.pi.infn.it ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
+                print 'inputfileexists PISA',inputfileexists
+            if inputfileexists == 0: continue
+
+            inputtreenumber = inputtree.replace('tree','').replace('.root','')+'_'
+            # print 'opts.names',opts.names
+            pathOUT = pathOUT_orig+'/'+opts.names
+            # print 'pathOUT',pathOUT,'inputtreenumber',inputtreenumber
+            isFileInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|grep '+inputtreenumber+'|wc -l').read())
+            print 'isFileInPathOut',isFileInPathOut
+            if isFileInPathOut == 0:
+                print'RESUBMITTING SAMPLE',opts.names
+                sys.exit(1)
+
+        sys.exit(0)
 

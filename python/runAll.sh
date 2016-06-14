@@ -183,12 +183,15 @@ elif [ $task = "plot" ]; then
 
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
-        echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task"
-        ./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task
+        echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist $filelist"
+        ./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task --filelist $filelist --sample $sample
     else
-        echo "./myutils/check_singlestep.py ${config_filenames[@]} --task $task"
-        ./myutils/check_singlestep.py ${config_filenames[@]} --task $task
+        echo "./myutils/check_singlestep.py ${config_filenames[@]} --task $task  --sample $sample --filelist $filelist"
+        ./myutils/check_singlestep.py ${config_filenames[@]} --task $task --sample $sample --filelist $filelist
     fi
+    exitcode=$?
+    # echo $exitcode
+    exit $exitcode
 elif [ $task = "dc" ]; then
     echo "./workspace_datacard.py --variable $sample ${config_filenames[@]}"
     ./workspace_datacard.py --variable $sample ${config_filenames[@]}
