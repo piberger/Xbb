@@ -183,10 +183,10 @@ elif [ $task = "plot" ]; then
 
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
-        echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist $filelist"
+        echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist ...(${#filelist} char)"
         ./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task --filelist $filelist --sample $sample
     else
-        echo "./myutils/check_singlestep.py ${config_filenames[@]} --task $task  --sample $sample --filelist $filelist"
+        echo "./myutils/check_singlestep.py ${config_filenames[@]} --task $task  --sample $sample --filelist ...(${#filelist} char)"
         ./myutils/check_singlestep.py ${config_filenames[@]} --task $task --sample $sample --filelist $filelist
     fi
     exitcode=$?

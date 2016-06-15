@@ -41,7 +41,7 @@ if __name__ == "__main__":
     sampleconf = BetterConfigParser()
     sampleconf.read(samplesinfo)
 
-    if opts.filelist != '': print 'filelist NOT NULL!'
+    # if opts.filelist != '': print 'filelist NOT NULL!'
 
     if opts.task == 'checksingleprep':
         pathOUT_orig = config.get('Directories','PREPout')
@@ -52,9 +52,9 @@ if __name__ == "__main__":
     elif opts.task == 'checksingleplot':
         pathOUT_orig = config.get('Directories','tmpSamples')
 
-    info = ParseInfo(samplesinfo,pathOUT_orig)
     pathOUT_orig = pathOUT_orig.replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','').replace('root://t3dcachedb03.psi.ch:1094/','')
-    print "opts.task",opts.task
+    # print "opts.task",opts.task
+    samplefiles = config.get('Directories','samplefiles')
 
     hash = ''
     if opts.region:
@@ -104,6 +104,8 @@ if __name__ == "__main__":
 
     if opts.filelist == "":
         # print "info:",info
+        info = ParseInfo(samplesinfo,pathOUT_orig)
+        # if opts.names == ""
         for job in info:
             dataset_identifiers.append(job.identifier)
         dataset_identifiers = set(dataset_identifiers)
@@ -115,7 +117,6 @@ if __name__ == "__main__":
             # identifier=opts.names.split(',')[0]
             print "identifier:",identifier
             pathOUT = pathOUT_orig+'/'+identifier
-            samplefiles = config.get('Directories','samplefiles')
             filenames = open(samplefiles+'/'+identifier+'.txt').readlines()
             print 'number of files on DAS:',len(filenames),#filenames[0]
 
@@ -142,27 +143,31 @@ if __name__ == "__main__":
         print '\nmissing files for the following DATA datasets (VERY IMPORTANT!!!):'
         print data_dataset_missing_files
     else:
+        pathOUT = pathOUT_orig+'/'+opts.names
+        filenames = open(samplefiles+'/'+opts.names+'.txt').readlines()
+        nFilesInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|wc -l').read())
+        if len(filenames) == int(nFilesInPathOut): print 'all files available'; sys.exit(10)
+
         filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
         for inputfile in filelist:
 
             inputtree = inputfile.rsplit('/',1)[len(inputfile.rsplit('/',1))-1]
             inputfolder = inputfile.replace('/'+inputtree,'')
-            print 'inputfile',inputfile,'inputtree',inputtree,'inputfolder',inputfolder
-            inputfileexists = int(os.popen('xrdfs t3se01.psi.ch ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
-            print 'inputfileexists PSI',inputfileexists
-            if int(inputfileexists) == 0:
-                inputfileexists = int(os.popen('xrdfs stormgf1.pi.infn.it ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
-                print 'inputfileexists PISA',inputfileexists
-            if inputfileexists == 0: continue
+            # print 'inputfile',inputfile,'inputtree',inputtree,'inputfolder',inputfolder
+            # inputfileexists = int(os.popen('xrdfs t3se01.psi.ch ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
+            # print 'inputfileexists PSI',inputfileexists
+            # if int(inputfileexists) == 0:
+                # inputfileexists = int(os.popen('xrdfs stormgf1.pi.infn.it ls -l -u '+inputfolder+'|grep '+inputtree+'|wc -l').read())
+                # print 'inputfileexists PISA',inputfileexists
+            # if inputfileexists == 0: continue
 
             inputtreenumber = inputtree.replace('tree','').replace('.root','')+'_'
             # print 'opts.names',opts.names
-            pathOUT = pathOUT_orig+'/'+opts.names
             # print 'pathOUT',pathOUT,'inputtreenumber',inputtreenumber
             isFileInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|grep '+inputtreenumber+'|wc -l').read())
-            print 'isFileInPathOut',isFileInPathOut
+            # print 'isFileInPathOut',isFileInPathOut
             if isFileInPathOut == 0:
-                print'RESUBMITTING SAMPLE',opts.names
+                print'FILE MISSING, RESUBMITTING TRANCHE FROM SAMPLE',opts.names
                 sys.exit(1)
 
         sys.exit(0)
