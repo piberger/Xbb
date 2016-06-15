@@ -567,7 +567,7 @@ elif opts.task == 'mva_opt_dc':
                 print setting
 
 
-if run_locally == 'False':
+if (run_locally == 'False') and ('check' not in opts.task):
     print 'list_submitted_singlejobs',list_submitted_singlejobs.keys()
     running_jobs = ['']
     finished_jobs_marked_ok = []
@@ -637,7 +637,7 @@ if run_locally == 'False':
         running_jobs = running_jobs.split('\n')
         time.sleep(60)
 
-print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
-print '---> failed permanently:\n',jobs_failed_5times
+    print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
+    print '---> failed permanently:\n',jobs_failed_5times
 
 # os.system('qdel -u perrozzi')

@@ -102,7 +102,7 @@ if __name__ == "__main__":
     data_dataset_missing_files = []
     dataset_identifiers = []
 
-    if opts.filelist == "":
+    if opts.filelist == "" or opts.names == 'nosample':
         # print "info:",info
         info = ParseInfo(samplesinfo,pathOUT_orig)
         # if opts.names == ""
