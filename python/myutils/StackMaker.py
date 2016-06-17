@@ -91,7 +91,7 @@ class StackMaker:
         # self.hname = self.hname.replace(':','')
         # self.hname = self.hname.replace(':','')
         # self.hname = self.hname.replace('[','')
-        # self.hname = self.hname.replace(']','')
+
         # self.hname = self.hname.replace('$','')
 # >>>>>>> silviodonato/master
         #print ('self.hname',self.hname)
@@ -496,9 +496,11 @@ class StackMaker:
         name = name.replace(' ',"_")
         pngName = (name.replace('.pdf','.png')).replace("/pdf","")
         rootName = (name.replace('.pdf','.root')).replace("/pdf","/root")
+        CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
-        c.Print(rootName)
+        c.SaveAs(rootName)
+        c.Print(CName)
 
         #print "DATA INTEGRAL: %s" %d1.Integral(d1.GetNbinsX()-2,d1.GetNbinsX()) 
         #fOut = ROOT.TFile.Open(name.replace('.pdf','.root'),'RECREATE')
@@ -749,7 +751,9 @@ class StackMaker:
         c.Print(name)
         pngName = (name.replace('.pdf','.png')).replace("/pdf","")
         rootName = (name.replace('.pdf','.root')).replace("/pdf","/root")
+        CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
-        c.Print(rootName)
+        c.SaveAs(rootName)
+        c.Print(CName)
 

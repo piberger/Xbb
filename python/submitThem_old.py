@@ -80,7 +80,7 @@ if not opts.ftag == '':
         try:
             os.stat(DirStruct[keys])
         except:
-            os.makedirs(DirStruct[keys])
+            os.mkdir(DirStruct[keys])
 
     pathfile = open('%sconfig/paths.ini'%(en))
     buffer = pathfile.readlines()
@@ -215,7 +215,7 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -287,7 +287,7 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
@@ -312,7 +312,7 @@ if opts.task == 'dc':
     print DC_vars
 
 Plot_vars = ['']
-if opts.task == 'plot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot' or opts.task == 'checksingleplot':
+if opts.task == 'plot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
     Plot_vars= (config.get('Plot_general','List')).split(',')
 
 

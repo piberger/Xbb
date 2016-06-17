@@ -141,7 +141,7 @@ if channel == "Znn":
 
 for job in info:
     if not job.name in namelist and len([x for x in namelist if x==job.identifier])==0:
-        print 'job.name',job.name,'and job.identifier',job.identifier,'not in namelist',namelist
+        #print 'job.name',job.name,'and job.identifier',job.identifier,'not in namelist',namelist
         continue
     ROOT.gROOT.ProcessLine(
         "struct H {\
@@ -175,7 +175,7 @@ for job in info:
             filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
             hash = hashlib.sha224(filename).hexdigest()
             inputFile = "%s/%s/%s" %(pathIN,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-            if not os.path.isfile(inputFile): continue
+            #if not os.path.isfile(inputFile): continue
             outputFile = "%s/%s/%s" %(pathOUT,job.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
             tmpfile = "%s/%s" %(tmpDir,filename.replace('.root','')+'_'+str(hash)+'.root')
             if inputFile in inputfiles: continue
@@ -963,8 +963,8 @@ for job in info:
                     eff1 = tree.vLeptons_Eff_HLT_RunD4p2[0]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[0]*0.8198088835
                     eff2 = tree.vLeptons_Eff_HLT_RunD4p2[1]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[1]*0.8198088835
 
-                    print 'vLeptSFw is', vLeptons_SFweight_HLT[0]
-                    print 'Vtype is', tree.Vtype
+                    #print 'vLeptSFw is', vLeptons_SFweight_HLT[0]
+                    #print 'Vtype is', tree.Vtype
 
                     if tree.Vtype == 1:
                         vLeptons_SFweight_HLT[0] = 1
@@ -979,7 +979,7 @@ for job in info:
                             effdata = 1 - (1-SF1*eff1)*(1-SF2*eff2);
                             effmc = 1 - (1-eff1)*(1-eff2);
                             vLeptons_SFweight_HLT[0] = effdata/effmc
-                    print 'vLeptSFw afer fill is', vLeptons_SFweight_HLT[0]
+                    #print 'vLeptSFw afer fill is', vLeptons_SFweight_HLT[0]
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
