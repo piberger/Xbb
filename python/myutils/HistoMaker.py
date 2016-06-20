@@ -31,7 +31,7 @@ class HistoMaker:
             self.cuts.append(options['cut'])
         #print "Cuts:",self.cuts
         self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot)# created cached tree i.e. create new skimmed trees using the list of cuts
-        if len(filelist)>0 or mergeplot:
+        if filelist and len(filelist)>0 or mergeplot:
             print('ONLY CACHING PERFORMED, EXITING');
             sys.exit(1)
         #print self.cuts
@@ -112,6 +112,7 @@ class HistoMaker:
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
                 weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
