@@ -117,16 +117,17 @@ path=config.get('Directories','MVAin')
 
 TCutname=config.get(run, 'treeCut')
 TCut=config.get('Cuts',TCutname)
-#print TCut
+print 'TCut is', TCut
 
 #signals
 signals=config.get(run,'signals')
 signals=eval(signals)
-print 'signals are', signals
 #backgrounds
 backgrounds=config.get(run,'backgrounds')
 backgrounds=eval(backgrounds)
 treeVarSet=config.get(run,'treeVarSet')
+print 'signals are', signals
+print 'backgrounds are', backgrounds
         
 #variables
 #TreeVar Array
@@ -142,14 +143,17 @@ workdir=ROOT.gDirectory.GetPath()
 
 
 #Remove EventForTraining in order to run the MVA directly from the PREP step
-TrainCut='%s & !((evt%s)==0 || isData)'%(TCut,'%2')
-EvalCut= '%s & ((evt%s)==0 || isData)'%(TCut,'%2')
+#TrainCut='%s & !((evt%s)==0 || isData)'%(TCut,'%2')
+#EvalCut= '%s & ((evt%s)==0 || isData)'%(TCut,'%2')
+TrainCut='!((evt%2)==0 || isData)'
+EvalCut= '((evt%2)==0 || isData)'
 #TrainCut='%s & EventForTraining==1'%TCut
 #EvalCut='%s & EventForTraining==0'%TCut
 
 print "TrainCut:",TrainCut
 print "EvalCut:",EvalCut
-cuts = [TrainCut,EvalCut] 
+#cuts = [TrainCut,EvalCut]
+cuts = [TCut]
 
 
 samples = []
@@ -158,7 +162,7 @@ samples = info.get_samples(signals+backgrounds)
 
 print "XXXXXXXXXXXXXXXX"
 
-tc = TreeCache(cuts,samples,path,config)
+tc = TreeCache(cuts,samples,path,config, [])
 
 output = ROOT.TFile.Open(fnameOutput, "RECREATE")
 
