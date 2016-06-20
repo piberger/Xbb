@@ -275,11 +275,12 @@ class StackMaker:
         d1 = ROOT.TH1F('noData','noData',self.nBins,self.xMin,self.xMax)
         datatitle='Data'
         addFlag = ''
-        if 'Zee' in self.datanames and 'Zmm' in self.datanames:
+        print 'self.datanames is', self.datanames
+        if 'SingleElectron__Run2015D_16Dec2015' in self.datanames and 'data_SM_Run2015D_25ns_16Dec2015' in self.datanames:
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Zee' in self.datanames:
+        elif 'SingleElectron__Run2015D_16Dec2015' in self.datanames:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Zmm' in self.datanames:
+        elif 'data_SM_Run2015D_25ns_16Dec2015' in self.datanames:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'
@@ -414,7 +415,7 @@ class StackMaker:
             # tLumi = self.myText("#sqrt{s} =  %s, L = %.1f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.)),0.17,0.78)
         # else:
             # tLumi = self.myText("#sqrt{s} =  %s, L = %.1f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.)),0.17,0.83)
-        tLumi = self.myText("#sqrt{s} =  %s, L = %.3f fb^{-1}"%(self.anaTag,(float(self.lumi/1000.0))),0.17,0.83)
+        tLumi = self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag,(float(self.lumi/1000.0))),0.17,0.83)
         tAddFlag = self.myText(addFlag,0.17,0.78)
         print 'Add Flag %s' %self.addFlag2
         if self.addFlag2:
