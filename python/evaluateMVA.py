@@ -230,7 +230,8 @@ for job in info:
         output.Close()
 
         # targetStorage = OUTpath.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')+'/'+job.prefix+job.identifier+'.root'
-        targetStorage = outputFile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+        # targetStorage = outputFile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+        targetStorage = outputFile.replace('gsidcap://t3se01.psi.ch:22128/','root://t3dcachedb03.psi.ch:1094/')
         if('pisa' in config.get('Configuration','whereToLaunch')):
           command = 'rm %s' %(targetStorage)
           print(command)
@@ -243,7 +244,8 @@ for job in info:
             command = 'srmrm %s' %(targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/'))
             print(command)
             subprocess.call([command], shell=True)
-            command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///%s %s' %(tmpfile,targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/'))
+            # command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///%s %s' %(tmpfile,targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/'))
+            command = 'xrdcp -d 1 '+tmpfile+' '+ targetStorage
             print(command)
             os.system(command)
             command = 'rm %s' %(tmpfile)
