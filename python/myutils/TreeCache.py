@@ -73,7 +73,7 @@ class TreeCache:
         tmpSource = ''
         theHash = ''
 
-        if len(filelist) == 0:
+        if not filelist or len(filelist) == 0:
             source = '%s/%s' %(self.path,sample.get_path)
             inputfiles.append(source)
             checksum = self.get_checksum(source)
@@ -127,8 +127,7 @@ class TreeCache:
                     if f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
                         print('f.GetNkeys()',f.GetNkeys(),'f.TestBit(ROOT.TFile.kRecovered)',f.TestBit(ROOT.TFile.kRecovered),'f.IsZombie()',f.IsZombie())
                         print('File', del_protocol.replace('srm://t3se01.psi.ch:8443/srm/managerv2?SFN=',''), 'already exists but is buggy, gonna delete and rewrite it.')
-                        #command = 'rm %s' %(outputFile)
-                        command = 'srmrm %s' %(del_protocol)
+                        #command = 'srmrm %s' %(del_protocol)
                         subprocess.call([command], shell=True)
                         print(command)
                     else: continue
@@ -145,14 +144,15 @@ class TreeCache:
             print("==================================================================")
             print ('The cut is ', self.minCut)
             print("==================================================================\n")
-            if self.__doCache and self.file_exists(outputFile) and not forceReDo and len(filelist) == 0:
+            if self.__doCache and self.file_exists(outputFile) and not forceReDo and (not filelist or len(filelist) == 0):
                 print('sample',theName,'skipped, filename=',outputFile)
                 return (theName,theHash)
             else:
                 if self.__doCache and self.file_exists(tmpfile) and not forceReDo:
                     print ('File exists in TMPDIR, proceeding to the copy')
                     print('sample',theName,'skipped, filename=',tmpfile)
-                    command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpfile+' '+ outputFile.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
+                    command = 'xrdcp -d 1 '+tmpfile+' '+ outputFile
+                    print('the command is', command)
                     subprocess.call([command], shell=True)
                     if len(filelist) == 0: return (theName,theHash)
 
@@ -239,11 +239,12 @@ class TreeCache:
             print ("I've done " + theName + " in " + str(time.time() - start_time) + " s.")
             print ("Copying file to the tmp folder.")
             print('outputFile',outputFile)
-            command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpfile+' '+ outputFile.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
+            command = 'xrdcp -d 1 '+tmpfile+' '+ outputFile
+            print('the command is', command)
             subprocess.call([command], shell=True)
             if '/scratch/' in  tmpfile: command = 'rm %s' %(tmpfile)
             else: command = 'gfal-rm %s' %(tmpfile)
-            if len(filelist) == 0: return (theName,theHash)
+            if not filelist or len(filelist) == 0: return (theName,theHash)
 
             # ######################################################################
             # print('Exit loop')
@@ -313,7 +314,7 @@ class TreeCache:
                 #CACHING OF THE FILES HAPPENS HERE!!!!! THIS IS EQUIVALENT TO
                 # self._trim_tree(job,filenames,mergeplot)
                 outputs.append((getattr(input_[0],input_[1])(input_[2],input_[3],input_[4])))
-        if len(filelist)==0:
+        if not filelist or  len(filelist)==0:
         # for output in outputs:
             (theName,theHash) = outputs[0]
             self.__hashDict[theName]=theHash

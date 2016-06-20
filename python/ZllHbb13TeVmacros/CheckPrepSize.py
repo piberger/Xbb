@@ -8,32 +8,38 @@ import os
 import ROOT
 
 #V20
-_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V20/prep_v4/'
+_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/prep_eandmu/'
 #V21
-_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/perrozzi/VHbb/ZllHbb13TeV_V21/preptest2/'
+_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_v2/'
+
+dummy_cut = ''
+
+CUTLISTV20 = [dummy_cut]
+CUTLISTV21 = [dummy_cut]
+LISTNAME = ['Cut']
 
 #Define list of cuts
-CSV_Loose = '0.46'
-CSV_Medium = '0.8'
-CSV_Tight = '0.935'
-pT20 = '(vLeptons_pt[0] > 20. & vLeptons_pt[1] > 20.)'
-addjetV20 = 'Sum$(Jet_pt>20 && abs(Jet_eta)<2.4 && Jet_puId == 1)'
-addjetV21 = 'Sum$(Jet_pt>20 && abs(Jet_eta)<2.4 && Jet_puId ==7)'
-LooseIso =  '(vLeptons_relIso04[0] < 0.25 & vLeptons_relIso04[1] < 0.25)'
-
-CRZlightV20 = '(V_mass > 75. & V_mass < 105. & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & Jet_btagCSV[hJCidx[0]] < '+ CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] < '+ CSV_Tight + ' & ' + addjetV20 + ' == 2 & abs(HVdPhi) > 2.9 & ' + pT20 + ' & ' + LooseIso + ')'
-
-CRZlightV21 = '(V_mass > 75. & V_mass < 105. & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & Jet_btagCSV[hJCidx[0]] < '+ CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] < '+ CSV_Tight + ' & ' + addjetV21 + ' == 2 & abs(HVdPhi) > 2.9 & ' + pT20 + ' & ' + LooseIso + ')'
-
-CRZb_incl = '(V_mass > 85. & V_mass < 97. & met_pt < 60 & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & (HCSV_mass < 90 || HCSV_mass > 145) & Jet_btagCSV[hJCidx[0]] > '+CSV_Tight + '& Jet_btagCSV[hJCidx[1]] > '+CSV_Loose+ ' & abs(HVdPhi) > 2.9 & '+pT20 + ' & ' + LooseIso + ')'
-
-CRttbar_incl = '(Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & V_mass > 10 & (V_mass < 75 || V_mass > 120) & Jet_btagCSV[hJCidx[0]] > ' + CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] > ' +CSV_Loose + ' & ' + pT20 + ' & ' + LooseIso +')'
-
-ZllBDThighVptcut = 'V_mass > 75 & V_mass < 105 & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & (HCSV_mass > 40 & HCSV_mass < 250) & V_pt > 100 & Jet_btagCSV[hJCidx[0]] > ' +CSV_Loose + ' & Jet_btagCSV[hJCidx[1]] > ' + CSV_Loose
-
-CUTLISTV20 = [CRZlightV20, CRZb_incl, CRttbar_incl, ZllBDThighVptcut]
-CUTLISTV21 = [CRZlightV21, CRZb_incl, CRttbar_incl, ZllBDThighVptcut]
-LISTNAME = ['Zlf', 'Zhf', 'ttbar', 'SR']
+#CSV_Loose = '0.46'
+#CSV_Medium = '0.8'
+#CSV_Tight = '0.935'
+#pT20 = '(vLeptons_pt[0] > 20. & vLeptons_pt[1] > 20.)'
+#addjetV20 = 'Sum$(Jet_pt>20 && abs(Jet_eta)<2.4 && Jet_puId == 1)'
+#addjetV21 = 'Sum$(Jet_pt>20 && abs(Jet_eta)<2.4 && Jet_puId ==7)'
+#LooseIso =  '(vLeptons_relIso04[0] < 0.25 & vLeptons_relIso04[1] < 0.25)'
+#
+#CRZlightV20 = '(V_mass > 75. & V_mass < 105. & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & Jet_btagCSV[hJCidx[0]] < '+ CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] < '+ CSV_Tight + ' & ' + addjetV20 + ' == 2 & abs(HVdPhi) > 2.9 & ' + pT20 + ' & ' + LooseIso + ')'
+#
+#CRZlightV21 = '(V_mass > 75. & V_mass < 105. & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & Jet_btagCSV[hJCidx[0]] < '+ CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] < '+ CSV_Tight + ' & ' + addjetV21 + ' == 2 & abs(HVdPhi) > 2.9 & ' + pT20 + ' & ' + LooseIso + ')'
+#
+#CRZb_incl = '(V_mass > 85. & V_mass < 97. & met_pt < 60 & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & (HCSV_mass < 90 || HCSV_mass > 145) & Jet_btagCSV[hJCidx[0]] > '+CSV_Tight + '& Jet_btagCSV[hJCidx[1]] > '+CSV_Loose+ ' & abs(HVdPhi) > 2.9 & '+pT20 + ' & ' + LooseIso + ')'
+#
+#CRttbar_incl = '(Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & HCSV_pt > 100 & V_mass > 10 & (V_mass < 75 || V_mass > 120) & Jet_btagCSV[hJCidx[0]] > ' + CSV_Tight + ' & Jet_btagCSV[hJCidx[1]] > ' +CSV_Loose + ' & ' + pT20 + ' & ' + LooseIso +')'
+#
+#ZllBDThighVptcut = 'V_mass > 75 & V_mass < 105 & Jet_pt[hJCidx[0]] > 20 & Jet_pt[hJCidx[1]] > 20 & (HCSV_mass > 40 & HCSV_mass < 250) & V_pt > 100 & Jet_btagCSV[hJCidx[0]] > ' +CSV_Loose + ' & Jet_btagCSV[hJCidx[1]] > ' + CSV_Loose
+#
+#CUTLISTV20 = [CRZlightV20, CRZb_incl, CRttbar_incl, ZllBDThighVptcut]
+#CUTLISTV21 = [CRZlightV21, CRZb_incl, CRttbar_incl, ZllBDThighVptcut]
+#LISTNAME = ['Zlf', 'Zhf', 'ttbar', 'SR']
 
 
 

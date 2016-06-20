@@ -235,7 +235,7 @@ if str(anType) == 'cr':
 # ignore stat shapes
 ignore_stats = eval(config.get('LimitGeneral','ignore_stats'))
 #max_rel = float(config.get('LimitGeneral','rebin_max_rel'))
-signal_inject=config.get('LimitGeneral','signal_inject')
+signal_inject=eval(config.get('LimitGeneral','signal_inject'))
 # add signal as background
 add_signal_as_bkg=config.get('LimitGeneral','add_signal_as_bkg')
 if not add_signal_as_bkg == 'None':
@@ -499,10 +499,11 @@ if signal_inject:
 
 print 'Get the signal histo'
 print '====================\n'
-for job in signal_inject: 
-    htree = sig_hMaker.get_histos_from_tree(job)
-    hDummy.Add(htree[0].values()[0],1) 
-    del htree 
+if signal_inject:
+    for job in signal_inject:
+        htree = sig_hMaker.get_histos_from_tree(job)
+        hDummy.Add(htree[0].values()[0],1)
+        del htree
 
 print 'Get the data histo'
 print '==================\n'
