@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from optparse import OptionParser
 import sys
-import time
+import time,datetime
 import os
 import shutil
 import subprocess
@@ -26,6 +26,8 @@ parser.add_option("-V", "--verbose", dest="verbose", action="store_true", defaul
 parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
                       help="Override run_locally option to run locally")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
+                      help="Override run_locally option to run in batch")
+parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
 
 (opts, args) = parser.parse_args(sys.argv)
@@ -52,7 +54,8 @@ en = opts.tag
 
 #create the list with the samples to run over
 samplesList=opts.samples.split(",")
-timestamp = time.asctime().replace(' ','_').replace(':','-')
+# timestamp = time.asctime().replace(' ','_').replace(':','-')
+timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
 
 if(debugPrintOUts): print 'samplesList',samplesList
 if(debugPrintOUts): print 'timestamp',timestamp
@@ -199,6 +202,8 @@ if( not os.path.isdir(logPath) ):
 # CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
 repDict = {'en':en,'logpath':logPath,'job':'','task':opts.task,'queue': 'all.q','timestamp':timestamp,'additional':'','job_id':'noid','nprocesses':str(max(int(pathconfig.get('Configuration','nprocesses')),1))}
 
+list_submitted_singlejobs = {}
+
 # STANDARD WORKFLOW SUBMISSION FUNCTION
 def submit(job,repDict,redirect_to_null=False):
     global counter
@@ -233,17 +238,20 @@ def submit(job,repDict,redirect_to_null=False):
         subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
-def checksinglestep(repDict,run_locally,counter_local,Plot):
+def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="nosample"):
     global counter
     nJob = counter % len(logo)
     counter += 1
-    command = 'sh runAll.sh nosample %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+    task = opts.task
+    if file != "none":
+        task = "check"+opts.task
+    command = 'sh runAll.sh '+str(sample)+' %(en)s ' %(repDict) + task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     print "the command is ", command
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
-    subprocess.call([command], shell=True)
+    return subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
-def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot):
+def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=False):
     global counter
     repDict['job'] = job
     nJob = counter % len(logo)
@@ -252,16 +260,19 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot):
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+        repDict['name'] = repDict['name']+'_'+str(counter_local)
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
+    list_submitted_singlejobs[repDict['name']] = [file,1]
     print "the command is ", command
     print "submitting", len(file.split(';')),'files like',file.split(';')[0]
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-    subprocess.call([command], shell=True)
+    if (not opts.monitor_only) or resubmit:
+        subprocess.call([command], shell=True)
 
 # MERGING FUNCTION FOR SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW TO BE COMPATIBLE WITH THE OLD WORKFLOW
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
@@ -556,6 +567,77 @@ elif opts.task == 'mva_opt_dc':
                 print setting
 
 
-#os.system('qstat')
-if (opts.philipp_love_progress_bars):
-    os.system('./qstat.py')
+if (run_locally == 'False') and ('check' not in opts.task):
+    print 'list_submitted_singlejobs',list_submitted_singlejobs.keys()
+    running_jobs = ['']
+    finished_jobs_marked_ok = []
+    jobs_failed_5times = []
+    finished = []
+    completed_dataset = []
+    while len(running_jobs)>0:
+        #os.system('qstat')
+        # if (opts.philipp_love_progress_bars):
+        # os.system('./myutils/qstat.py')
+        running_jobs = os.popen('./myutils/qstat.py').read()
+        print str(datetime.datetime.now()).split('.')[0]+' - running_jobs:\n',running_jobs,
+        running_jobs = running_jobs.split('\n')
+        # jobs_statuses = [job.split('\t') for job in running_jobs if job]
+        jobs_statuses = [job.replace('\t','').split()[3] for job in running_jobs if job]
+        running_jobs = [job.replace('\t','').split()[2] for job in running_jobs if job]
+        # print 'running_jobs:\n',running_jobs
+        # jobs_statuses = [job for job in jobs_statuses if job]
+        # print 'jobs_statuses:\n',jobs_statuses
+        # running_jobs = ['ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1_LucaZllHbb13TeVsingleprep_2']
+
+        finished = [singlejob for singlejob in list_submitted_singlejobs.keys() if (singlejob not in running_jobs) and (singlejob not in finished_jobs_marked_ok) and (singlejob not in jobs_failed_5times)]
+
+        # print 'finished jobs marked ok',finished_jobs_marked_ok
+        print 'finished jobs to be checked',finished
+        print 'finished jobs marked as permanently failed',jobs_failed_5times
+
+        print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
+        print '---> failed permanently:',len(jobs_failed_5times),
+        print '---> running:',jobs_statuses.count("r"),
+        print '---> waiting:',jobs_statuses.count("qw"),
+        print '---> marked ok:',len(finished_jobs_marked_ok),
+        print '---> finished to be checked:',len(finished)
+
+        counter_finished = 1
+        for job in finished:
+            print '\nPlot_vars',Plot_vars
+            for item in Plot_vars:
+                print 'job in finished',counter_finished,'of',len(finished),':',job
+                counter_finished = counter_finished + 1
+                # print 'filelist',list_submitted_singlejobs[job][0]
+                counter_local = job.rsplit('_',1)[len(job.rsplit('_',1))-1]
+                # print 'counter_local',counter_local
+                replace_string = '_%(en)s%(task)s' %repDict
+                # print 'replace_string',replace_string
+                # sample = job.replace('_'+counter_local,'').replace(replace_string,'')
+                sample = job.replace(replace_string,'')
+                sample = (sample[::-1].replace(('_'+counter_local)[::-1], '', 1))[::-1]
+                print 'sample',sample
+                needtoresubmit = 0
+                if sample not in completed_dataset:
+                    needtoresubmit = checksinglestep(repDict,run_locally,counter_local,item,list_submitted_singlejobs[job][0],sample)
+                print 'needtoresubmit',needtoresubmit
+                if needtoresubmit == 1 :
+                    if int(list_submitted_singlejobs[job][1]) < 6 :
+                      list_submitted_singlejobs[job][1] = list_submitted_singlejobs[job][1] + 1
+                      print 'submitting for the',list_submitted_singlejobs[job][1],'time'
+                      submitsinglefile(sample,repDict,list_submitted_singlejobs[job][0],run_locally,counter_local,item,True)
+                    else:
+                      print 'job failed 5 resubmission, marking as PERMANENTLY FAILED'
+                      jobs_failed_5times.append(job)
+                else:
+                    if needtoresubmit == 10 :
+                        completed_dataset.append(sample)
+                    finished_jobs_marked_ok.append(job)
+        running_jobs = os.popen('./myutils/qstat.py').read()
+        running_jobs = running_jobs.split('\n')
+        time.sleep(60)
+
+    print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
+    print '---> failed permanently:\n',jobs_failed_5times
+
+# os.system('qdel -u perrozzi')

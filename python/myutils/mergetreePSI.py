@@ -138,7 +138,9 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
     print command
     subprocess.call([command], shell = True)
     srmpathOUT = pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-    command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmp_filename+' '+outputfile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+    # command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmp_filename+' '+outputfile.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+    command = 'xrdcp -d 1 '+tmp_filename+' '+outputfile.replace('srm://t3se01.psi.ch:8443/srm/managerv2?SFN=','root://t3dcachedb03.psi.ch:1094/')
+    .replace('gsidcap://t3se01.psi.ch:22128/','root://t3dcachedb03.psi.ch:1094/').replace('dcap://t3se01.psi.ch:22125/','root://t3dcachedb03.psi.ch:1094/')
     print command
     subprocess.call([command], shell=True)
 
