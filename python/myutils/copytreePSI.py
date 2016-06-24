@@ -46,11 +46,8 @@ def copySingleFile(whereToLaunch,inputFile,outputFile,Acut,remove_branches):
         output.Write()
         output.Close()
         input.Close()
-        # command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+__tmpPath+'/'+outputFileName+' '+ outputFile.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
         command = 'xrdcp -d 1 '+__tmpPath+'/'+outputFileName+' '+ outputFile
-        if not os.path.isfile(outputFile.replace('srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/','')):
-            subprocess.call([command], shell=True)
-        else: print 'File', outputFile.replace('srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/',''), 'already exists. Skiping'
+        subprocess.call([command], shell=True)
         command = 'rm '+__tmpPath+'/'+outputFileName
         subprocess.call([command], shell=True)
 
