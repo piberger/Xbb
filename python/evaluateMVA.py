@@ -139,7 +139,7 @@ for job in info:
             os.mkdir(OUTpath)
         except:
             pass
-        outputfiles.append("%s/%s/%s" %(OUTpath,job.prefix,job.identifier+'.root'))
+        outputfiles.append("%s/%s%s" %(OUTpath,job.prefix,job.identifier+'.root'))
     else:
         for inputFile in filelist:
             subfolder = inputFile.split('/')[-4]
@@ -179,7 +179,8 @@ for job in info:
         print ('inputfiles',inputfiles,'tmpfiles',tmpfiles)
 
     for inputfile,tmpfile,outputFile in zip(inputfiles,tmpfiles,outputfiles):
-        input = ROOT.TFile.Open('root://t3dcachedb03.psi.ch:1094/'+inputfile,'read')
+        #input = ROOT.TFile.Open('root://t3dcachedb03.psi.ch:1094/'+inputfile,'read')
+        input = ROOT.TFile.Open(inputfile,'read')
         output = ROOT.TFile.Open(tmpfile,'recreate')
         print ('')
         print ('inputfile',inputfile)
