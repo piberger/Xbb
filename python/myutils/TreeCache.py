@@ -108,6 +108,12 @@ class TreeCache:
                 hash = hashlib.sha224(self.minCut).hexdigest()
                 outputFile = "%s/%s/%s" %(self.__cachedPath,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('outputFile',outputFile)
+                outputFolder = "%s/%s" %(self.__cachedPath.replace('root://t3dcachedb03.psi.ch:1094/',''),sample.identifier)
+                print('outputFolder is', outputFolder)
+                if not os.path.isfile(outputFolder):
+                    createFolder = 'gfal-mkdir -p gsiftp://t3se01.psi.ch/' + outputFolder
+                    print('Will create the missing fodler using the command', createFolder)
+                    subprocess.call([createFolder], shell=True)# delete the files a
                 tmpfile = "%s/%s" %(self.__tmpPath,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('tmpfile',tmpfile)
                 if inputFile in inputfiles: continue
