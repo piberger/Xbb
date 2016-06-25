@@ -37,9 +37,9 @@ from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, 
 
 #adds the file vhbbPlotDef.ini to the config list
 #print 'opts.config',opts.config
-print 'opts.filelist="'+opts.filelist+'"'
+# print 'opts.filelist="'+opts.filelist+'"'
 filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
-print filelist
+# print filelist
 print "len(filelist)",len(filelist),
 if len(filelist)>0:
     print "filelist[0]:",filelist[0];

@@ -58,12 +58,12 @@ if __name__ == "__main__":
 
     hash = ''
     if opts.region:
-        print 'opts.region',opts.region
+        # print 'opts.region',opts.region
         region = opts.region
         print 'evaluating cuts for region',region
         section='Plot:%s'%region
         vars = (config.get(section, 'vars')).split(',')#get the variables to be ploted in each region
-        print 'vars',vars
+        # print 'vars',vars
         SignalRegion = False
         if config.has_option(section,'Signal'):
             # mc.append(config.get(section,'Signal'))
