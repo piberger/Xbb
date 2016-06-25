@@ -351,37 +351,48 @@ elif opts.task == 'prep':
 
 
 elif opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot' or opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
-    if ( opts.samples == ""):
-        if opts.task == 'singleprep' or opts.task == 'mergesingleprep':
-            path = config.get("Directories","PREPin")
-        elif opts.task == 'singlesys' or opts.task == 'mergesinglesys':
-            path = config.get("Directories","SYSin")
-        elif opts.task == 'singleeval' or opts.task == 'mergesingleeval':
-            path = config.get("Directories","MVAin")
-        elif opts.task == 'singleplot' or opts.task == 'mergesingleplot':
-            path = config.get("Directories","plottingSamples")
-        info = ParseInfo(samplesinfo,path)
-        sample_list = []
+    if opts.task == 'singleprep' or opts.task == 'mergesingleprep':
+        path = config.get("Directories","PREPin")
+    elif opts.task == 'singlesys' or opts.task == 'mergesinglesys':
+        path = config.get("Directories","SYSin")
+    elif opts.task == 'singleeval' or opts.task == 'mergesingleeval':
+        path = config.get("Directories","MVAin")
+    elif opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+        path = config.get("Directories","plottingSamples")
+    info = ParseInfo(samplesinfo,path)
+    sample_list = {}
+    if ( samplesList == [''] ):
         for job in info:
-            sample_list.append(job.identifier)
-        sample_list = set(sample_list)
+            sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
     else:
-        sample_list = set(samplesList)
+        for job in info:
+            if job.identifier in samplesList:
+                sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
 
-    for sample in sample_list:
-        if sample == '': continue
-        if opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot':
-            files = getfilelist(sample)
-            files_per_job = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else int(config.get("Configuration","files_per_job"))
-            files_split=[files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
-            files_split = [';'.join(sublist) for sublist in files_split]
-            counter_local = 0
-            for files_sublist in files_split:
-                for item in Plot_vars:
+    for item in Plot_vars:
+        if opts.task == 'singleplot':
+            section='Plot:%s'%item
+            data = eval(config.get(section,'Datas'))# read the data corresponding to each CR (section)
+            mc = eval(config.get('Plot_general','samples'))# read the list of mc samples
+            # print 'data',data
+            # print 'mc',mc
+        for sample, sampleplot in sample_list.iteritems():
+            print 'sample',sample
+            if sample == '': continue
+            if opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot':
+                files = getfilelist(sample)
+                files_per_job = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else int(config.get("Configuration","files_per_job"))
+                files_split=[files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+                files_split = [';'.join(sublist) for sublist in files_split]
+                counter_local = 0
+                if opts.task == 'singleplot':
+                    if set(sampleplot).isdisjoint(data+mc):
+                        print 'not included in plotting region',item
+                        continue
+                for files_sublist in files_split:
                     submitsinglefile(sample,repDict,files_sublist,run_locally,counter_local,item)
                     counter_local = counter_local + 1
-        elif opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
-            for item in Plot_vars:
+            elif opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
                 mergesubmitsinglefile(sample,repDict,run_locally,item)
 
 
@@ -585,7 +596,7 @@ if (run_locally == 'False') and ('check' not in opts.task):
         # if (opts.philipp_love_progress_bars):
         # os.system('./myutils/qstat.py')
         running_jobs = os.popen('./myutils/qstat.py').read()
-        print str(datetime.datetime.now()).split('.')[0]+' - running_jobs:\n',running_jobs,
+        print '\n'+str(datetime.datetime.now()).split('.')[0]+' - running_jobs:\n',running_jobs,
         running_jobs = running_jobs.split('\n')
         # jobs_statuses = [job.split('\t') for job in running_jobs if job]
         jobs_statuses = [job.replace('\t','').split()[3] for job in running_jobs if job]
@@ -610,9 +621,9 @@ if (run_locally == 'False') and ('check' not in opts.task):
 
         counter_finished = 1
         for job in finished:
-            print '\nPlot_vars',Plot_vars
+            # print '\nPlot_vars',Plot_vars
             for item in Plot_vars:
-                print 'job in finished',counter_finished,'of',len(finished),':',job
+                print '\njob in finished',counter_finished,'of',len(finished),':',job
                 counter_finished = counter_finished + 1
                 # print 'filelist',list_submitted_singlejobs[job][0]
                 counter_local = job.rsplit('_',1)[len(job.rsplit('_',1))-1]
@@ -645,5 +656,6 @@ if (run_locally == 'False') and ('check' not in opts.task):
         running_jobs.append(running_jobs1)
         print '\n'+str(datetime.datetime.now()).split('.')[0]
     print 'number of jobs: total',len(finished_jobs_marked_ok)+len(jobs_failed_5times),
+    print '---> marked ok:',len(finished_jobs_marked_ok),
     print '---> failed permanently:\n',jobs_failed_5times
 
