@@ -100,13 +100,13 @@ class TreeCache:
                 print('Will create the missing fodler using the command', createFolder)
                 subprocess.call([createFolder], shell=True)# delete the files a
             for inputFile in filelist:
-                print('inputFile',inputFile)
+                # print('inputFile',inputFile)
                 subfolder = inputFile.split('/')[-4]
                 # print('subfolder',subfolder)
                 filename = inputFile.split('/')[-1]
                 # print('filename1',filename)
                 filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
-                print('filename2',filename)
+                # print('filename2',filename)
                 hash = hashlib.sha224(filename).hexdigest()
                 inputFile = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('inputFile2',inputFile,'isfile',os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')))

@@ -574,7 +574,13 @@ if (run_locally == 'False') and ('check' not in opts.task):
     jobs_failed_5times = []
     finished = []
     completed_dataset = []
-    while len(running_jobs)>0:
+    while len(running_jobs)>0 and len(jobs_failed_5times)+len(finished_jobs_marked_ok)<(len(running_jobs)+len(finished)):
+        running_jobs = os.popen('./myutils/qstat.py').read()
+        # time_sec = 60
+        time_sec = 1
+        print 'waiting',time_sec,'seconds before to proceed'
+        time.sleep(time_sec)
+
         #os.system('qstat')
         # if (opts.philipp_love_progress_bars):
         # os.system('./myutils/qstat.py')
@@ -626,6 +632,7 @@ if (run_locally == 'False') and ('check' not in opts.task):
                       list_submitted_singlejobs[job][1] = list_submitted_singlejobs[job][1] + 1
                       print 'submitting for the',list_submitted_singlejobs[job][1],'time'
                       submitsinglefile(sample,repDict,list_submitted_singlejobs[job][0],run_locally,counter_local,item,True)
+                      running_jobs.append(sample)
                     else:
                       print 'job failed 5 resubmission, marking as PERMANENTLY FAILED'
                       jobs_failed_5times.append(job)
@@ -633,11 +640,10 @@ if (run_locally == 'False') and ('check' not in opts.task):
                     if needtoresubmit == 10 :
                         completed_dataset.append(sample)
                     finished_jobs_marked_ok.append(job)
-        running_jobs = os.popen('./myutils/qstat.py').read()
-        running_jobs = running_jobs.split('\n')
-        time.sleep(60)
-
-    print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
+        running_jobs1 = os.popen('./myutils/qstat.py').read()
+        running_jobs1 = filter(None, running_jobs1.split('\n'))
+        running_jobs.append(running_jobs1)
+        print '\n'+str(datetime.datetime.now()).split('.')[0]
+    print 'number of jobs: total',len(finished_jobs_marked_ok)+len(jobs_failed_5times),
     print '---> failed permanently:\n',jobs_failed_5times
 
-# os.system('qdel -u perrozzi')
