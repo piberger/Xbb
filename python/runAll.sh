@@ -120,7 +120,7 @@ if [ $task = "prep" ]; then
     ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singleprep" ]; then
-    echo "./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist"
+    echo "./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleprep" ]; then
@@ -136,7 +136,7 @@ elif [ $task = "sys" ]; then
     ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singlesys" ]; then
-    echo "./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist $filelist"
+    echo "./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     ./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesinglesys" ]; then
@@ -152,7 +152,7 @@ elif [ $task = "eval" ]; then
     ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singleeval" ]; then
-    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist"
+    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleeval" ]; then
@@ -170,7 +170,7 @@ elif [ $task = "train" ]; then
     ./train.py --training $sample ${config_filenames[@]} --local True
 
 elif [ $task = "singleplot" ]; then
-    echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist"
+    echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist ...(${#filelist} char)"
     ./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleplot" ]; then
