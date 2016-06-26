@@ -139,7 +139,7 @@ if 'PSI' in whereToLaunch:
     for _folder in mkdir_protocol.split('/'):
         _output_folder += '/'+_folder
         if not os.path.exists(_output_folder):
-            command = 'srmmkdir srm://t3se01.psi.ch/' + _output_folder
+            command = "uberftp t3se01 'mkdir ",_output_folder," ' "
             subprocess.call([command], shell = True)
 
 def dump_config(configs,output_file):
@@ -215,7 +215,7 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -287,7 +287,7 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
@@ -587,8 +587,8 @@ if (run_locally == 'False') and ('check' not in opts.task):
     completed_dataset = []
     while len(running_jobs)>0 and len(jobs_failed_5times)+len(finished_jobs_marked_ok)<(len(running_jobs)+len(finished)):
         running_jobs = os.popen('./myutils/qstat.py').read()
-        # time_sec = 60
-        time_sec = 1
+        time_sec = 60
+        # time_sec = 1
         print 'waiting',time_sec,'seconds before to proceed'
         time.sleep(time_sec)
 

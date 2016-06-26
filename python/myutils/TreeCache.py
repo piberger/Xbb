@@ -165,7 +165,7 @@ class TreeCache:
             print ('trying to create',tmpfile)
             print ('self.__tmpPath',self.__tmpPath)
             if self.__tmpPath.find('root://t3dcachedb03.psi.ch:1094/') != -1:
-                mkdir_command = self.__tmpPath.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/')
+                mkdir_command = self.__tmpPath.replace('root://t3dcachedb03.psi.ch:1094/','')
                 print('mkdir_command',mkdir_command)
                 # RECURSIVELY CREATE REMOTE FOLDER ON PSI SE, but only up to 3 new levels
                 mkdir_command1 = mkdir_command.rsplit('/',1)[0]
@@ -174,16 +174,17 @@ class TreeCache:
                 my_user = os.popen("whoami").read().strip('\n').strip('\r')+'/'
                 if my_user in mkdir_command3:
                   print ('mkdir_command3',mkdir_command3)
-                  subprocess.call(['srmmkdir '+mkdir_command3], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command3+" ' "], shell=True)# delete the files already created ?
+                  " "
                 if my_user in mkdir_command2:
                   print ('mkdir_command2',mkdir_command2)
-                  subprocess.call(['srmmkdir '+mkdir_command2], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command2+" ' "], shell=True)# delete the files already created ?
                 if my_user in mkdir_command1:
                   print ('mkdir_command1',mkdir_command1)
-                  subprocess.call(['srmmkdir '+mkdir_command1], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command1+" ' "], shell=True)# delete the files already created ?
                 if my_user in mkdir_command:
                   print ('mkdir_command',mkdir_command)
-                  subprocess.call(['srmmkdir '+mkdir_command], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command+" ' "], shell=True)# delete the files already created ?
             else:
                 mkdir_command = self.__tmpPath
                 print('mkdir_command',mkdir_command)
