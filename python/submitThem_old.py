@@ -327,7 +327,7 @@ if opts.task == 'plot':
         submit(item,repDict)
 
 
-if opts.task == 'trainReg':
+if opts.;task == 'trainReg':
     repDict['queue'] = 'all.q'
     submit('trainReg',repDict)
 
