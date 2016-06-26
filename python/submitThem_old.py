@@ -139,7 +139,8 @@ if 'PSI' in whereToLaunch:
     for _folder in mkdir_protocol.split('/'):
         _output_folder += '/'+_folder
         if not os.path.exists(_output_folder):
-            command = "uberftp t3se01 'mkdir ",_output_folder," ' "
+            command = "uberftp t3se01 'mkdir " + _output_folder + " ' "
+            if(debugPrintOUts): print 'command is',command
             subprocess.call([command], shell = True)
 
 def dump_config(configs,output_file):
@@ -327,7 +328,7 @@ if opts.task == 'plot':
         submit(item,repDict)
 
 
-if opts.;task == 'trainReg':
+if opts.task == 'trainReg':
     repDict['queue'] = 'all.q'
     submit('trainReg',repDict)
 
