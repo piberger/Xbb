@@ -9,7 +9,7 @@ class TreeCache:
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
-        print("Init path",path," sampleList",sampleList)
+        print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
         #! Make the cut lists from inputs
         for cut in cutList:
@@ -93,27 +93,27 @@ class TreeCache:
                 sys.exit(1)
 
         else:
+            outputFolder = "%s/%s" %(self.__cachedPath.replace('root://t3dcachedb03.psi.ch:1094/',''),sample.identifier)
+            print('outputFolder is', outputFolder)
+            if not os.path.isfile(outputFolder):
+                createFolder = 'gfal-mkdir -p gsiftp://t3se01.psi.ch/' + outputFolder
+                print('Will create the missing fodler using the command', createFolder)
+                subprocess.call([createFolder], shell=True)# delete the files a
             for inputFile in filelist:
-                print('inputFile',inputFile)
+                # print('inputFile',inputFile)
                 subfolder = inputFile.split('/')[-4]
-                print('subfolder',subfolder)
+                # print('subfolder',subfolder)
                 filename = inputFile.split('/')[-1]
-                print('filename1',filename)
+                # print('filename1',filename)
                 filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
-                print('filename2',filename)
+                # print('filename2',filename)
                 hash = hashlib.sha224(filename).hexdigest()
                 inputFile = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-                print('inputFile',inputFile)
+                print('inputFile2',inputFile,'isfile',os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')))
                 if not os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')): continue
                 hash = hashlib.sha224(self.minCut).hexdigest()
                 outputFile = "%s/%s/%s" %(self.__cachedPath,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('outputFile',outputFile)
-                outputFolder = "%s/%s" %(self.__cachedPath.replace('root://t3dcachedb03.psi.ch:1094/',''),sample.identifier)
-                print('outputFolder is', outputFolder)
-                if not os.path.isfile(outputFolder):
-                    createFolder = 'gfal-mkdir -p gsiftp://t3se01.psi.ch/' + outputFolder
-                    print('Will create the missing fodler using the command', createFolder)
-                    subprocess.call([createFolder], shell=True)# delete the files a
                 tmpfile = "%s/%s" %(self.__tmpPath,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('tmpfile',tmpfile)
                 if inputFile in inputfiles: continue
@@ -165,7 +165,7 @@ class TreeCache:
             print ('trying to create',tmpfile)
             print ('self.__tmpPath',self.__tmpPath)
             if self.__tmpPath.find('root://t3dcachedb03.psi.ch:1094/') != -1:
-                mkdir_command = self.__tmpPath.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/')
+                mkdir_command = self.__tmpPath.replace('root://t3dcachedb03.psi.ch:1094/','')
                 print('mkdir_command',mkdir_command)
                 # RECURSIVELY CREATE REMOTE FOLDER ON PSI SE, but only up to 3 new levels
                 mkdir_command1 = mkdir_command.rsplit('/',1)[0]
@@ -174,16 +174,17 @@ class TreeCache:
                 my_user = os.popen("whoami").read().strip('\n').strip('\r')+'/'
                 if my_user in mkdir_command3:
                   print ('mkdir_command3',mkdir_command3)
-                  subprocess.call(['srmmkdir '+mkdir_command3], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command3+" ' "], shell=True)# delete the files already created ?
+                  " "
                 if my_user in mkdir_command2:
                   print ('mkdir_command2',mkdir_command2)
-                  subprocess.call(['srmmkdir '+mkdir_command2], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command2+" ' "], shell=True)# delete the files already created ?
                 if my_user in mkdir_command1:
                   print ('mkdir_command1',mkdir_command1)
-                  subprocess.call(['srmmkdir '+mkdir_command1], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command1+" ' "], shell=True)# delete the files already created ?
                 if my_user in mkdir_command:
                   print ('mkdir_command',mkdir_command)
-                  subprocess.call(['srmmkdir '+mkdir_command], shell=True)# delete the files already created ?
+                  subprocess.call(["uberftp t3se01 'mkdir "+mkdir_command+" ' "], shell=True)# delete the files already created ?
             else:
                 mkdir_command = self.__tmpPath
                 print('mkdir_command',mkdir_command)
@@ -301,10 +302,21 @@ class TreeCache:
             # sys.exit()
 
             samplematch = False
-            if filelist: samplematch = '/'+job.identifier+'/' in filelist[0]
+            if filelist:
+                if not 'Run' in job.identifier:
+                    # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
+                    if len(job.identifier.split('_ext')) == 1:
+                        samplematch = '/'+job.identifier+'/' in filelist[0]
+                    else:
+                        samplematch_noext = '/'+job.identifier.split('_ext')[0]+'/' in filelist[0]
+                        samplematch = samplematch_noext and ('_ext'+job.identifier.split('_ext')[1] in filelist[0])
+                else:
+                    samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
+
             if samplematch: print('job.name',job.name,'samplematch',samplematch)#,'filelist',filelist)
-            #if not filelist or samplematch:
-            inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
+            if not filelist or samplematch:
+                inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
+
         multiprocess=0
         # if('pisa' in self.config.get('Configuration','whereToLaunch')):
         multiprocess=int(self.config.get('Configuration','nprocesses'))

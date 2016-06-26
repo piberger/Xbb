@@ -139,7 +139,7 @@ if 'PSI' in whereToLaunch:
     for _folder in mkdir_protocol.split('/'):
         _output_folder += '/'+_folder
         if not os.path.exists(_output_folder):
-            command = 'srmmkdir srm://t3se01.psi.ch/' + _output_folder
+            command = "uberftp t3se01 'mkdir ",_output_folder," ' "
             subprocess.call([command], shell = True)
 
 def dump_config(configs,output_file):
@@ -215,7 +215,7 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -287,7 +287,7 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y  -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
@@ -351,37 +351,48 @@ elif opts.task == 'prep':
 
 
 elif opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot' or opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
-    if ( opts.samples == ""):
-        if opts.task == 'singleprep' or opts.task == 'mergesingleprep':
-            path = config.get("Directories","PREPin")
-        elif opts.task == 'singlesys' or opts.task == 'mergesinglesys':
-            path = config.get("Directories","SYSin")
-        elif opts.task == 'singleeval' or opts.task == 'mergesingleeval':
-            path = config.get("Directories","MVAin")
-        elif opts.task == 'singleplot' or opts.task == 'mergesingleplot':
-            path = config.get("Directories","plottingSamples")
-        info = ParseInfo(samplesinfo,path)
-        sample_list = []
+    if opts.task == 'singleprep' or opts.task == 'mergesingleprep':
+        path = config.get("Directories","PREPin")
+    elif opts.task == 'singlesys' or opts.task == 'mergesinglesys':
+        path = config.get("Directories","SYSin")
+    elif opts.task == 'singleeval' or opts.task == 'mergesingleeval':
+        path = config.get("Directories","MVAin")
+    elif opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+        path = config.get("Directories","plottingSamples")
+    info = ParseInfo(samplesinfo,path)
+    sample_list = {}
+    if ( samplesList == [''] ):
         for job in info:
-            sample_list.append(job.identifier)
-        sample_list = set(sample_list)
+            sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
     else:
-        sample_list = set(samplesList)
+        for job in info:
+            if job.identifier in samplesList:
+                sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
 
-    for sample in sample_list:
-        if sample == '': continue
-        if opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot':
-            files = getfilelist(sample)
-            files_per_job = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else int(config.get("Configuration","files_per_job"))
-            files_split=[files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
-            files_split = [';'.join(sublist) for sublist in files_split]
-            counter_local = 0
-            for files_sublist in files_split:
-                for item in Plot_vars:
+    for item in Plot_vars:
+        if opts.task == 'singleplot':
+            section='Plot:%s'%item
+            data = eval(config.get(section,'Datas'))# read the data corresponding to each CR (section)
+            mc = eval(config.get('Plot_general','samples'))# read the list of mc samples
+            # print 'data',data
+            # print 'mc',mc
+        for sample, sampleplot in sample_list.iteritems():
+            print 'sample',sample
+            if sample == '': continue
+            if opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot':
+                files = getfilelist(sample)
+                files_per_job = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else int(config.get("Configuration","files_per_job"))
+                files_split=[files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+                files_split = [';'.join(sublist) for sublist in files_split]
+                counter_local = 0
+                if opts.task == 'singleplot':
+                    if set(sampleplot).isdisjoint(data+mc):
+                        print 'not included in plotting region',item
+                        continue
+                for files_sublist in files_split:
                     submitsinglefile(sample,repDict,files_sublist,run_locally,counter_local,item)
                     counter_local = counter_local + 1
-        elif opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
-            for item in Plot_vars:
+            elif opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
                 mergesubmitsinglefile(sample,repDict,run_locally,item)
 
 
@@ -574,12 +585,18 @@ if (run_locally == 'False') and ('check' not in opts.task):
     jobs_failed_5times = []
     finished = []
     completed_dataset = []
-    while len(running_jobs)>0:
+    while len(running_jobs)>0 and len(jobs_failed_5times)+len(finished_jobs_marked_ok)<(len(running_jobs)+len(finished)):
+        running_jobs = os.popen('./myutils/qstat.py').read()
+        time_sec = 60
+        # time_sec = 1
+        print 'waiting',time_sec,'seconds before to proceed'
+        time.sleep(time_sec)
+
         #os.system('qstat')
         # if (opts.philipp_love_progress_bars):
         # os.system('./myutils/qstat.py')
         running_jobs = os.popen('./myutils/qstat.py').read()
-        print str(datetime.datetime.now()).split('.')[0]+' - running_jobs:\n',running_jobs,
+        print '\n'+str(datetime.datetime.now()).split('.')[0]+' - running_jobs:\n',running_jobs,
         running_jobs = running_jobs.split('\n')
         # jobs_statuses = [job.split('\t') for job in running_jobs if job]
         jobs_statuses = [job.replace('\t','').split()[3] for job in running_jobs if job]
@@ -604,9 +621,9 @@ if (run_locally == 'False') and ('check' not in opts.task):
 
         counter_finished = 1
         for job in finished:
-            print '\nPlot_vars',Plot_vars
+            # print '\nPlot_vars',Plot_vars
             for item in Plot_vars:
-                print 'job in finished',counter_finished,'of',len(finished),':',job
+                print '\njob in finished',counter_finished,'of',len(finished),':',job
                 counter_finished = counter_finished + 1
                 # print 'filelist',list_submitted_singlejobs[job][0]
                 counter_local = job.rsplit('_',1)[len(job.rsplit('_',1))-1]
@@ -626,6 +643,7 @@ if (run_locally == 'False') and ('check' not in opts.task):
                       list_submitted_singlejobs[job][1] = list_submitted_singlejobs[job][1] + 1
                       print 'submitting for the',list_submitted_singlejobs[job][1],'time'
                       submitsinglefile(sample,repDict,list_submitted_singlejobs[job][0],run_locally,counter_local,item,True)
+                      running_jobs.append(sample)
                     else:
                       print 'job failed 5 resubmission, marking as PERMANENTLY FAILED'
                       jobs_failed_5times.append(job)
@@ -633,11 +651,11 @@ if (run_locally == 'False') and ('check' not in opts.task):
                     if needtoresubmit == 10 :
                         completed_dataset.append(sample)
                     finished_jobs_marked_ok.append(job)
-        running_jobs = os.popen('./myutils/qstat.py').read()
-        running_jobs = running_jobs.split('\n')
-        time.sleep(60)
-
-    print 'number of jobs: total',len(running_jobs)+len(finished_jobs_marked_ok)+len(finished)+len(jobs_failed_5times),
+        running_jobs1 = os.popen('./myutils/qstat.py').read()
+        running_jobs1 = filter(None, running_jobs1.split('\n'))
+        running_jobs.append(running_jobs1)
+        print '\n'+str(datetime.datetime.now()).split('.')[0]
+    print 'number of jobs: total',len(finished_jobs_marked_ok)+len(jobs_failed_5times),
+    print '---> marked ok:',len(finished_jobs_marked_ok),
     print '---> failed permanently:\n',jobs_failed_5times
 
-# os.system('qdel -u perrozzi')

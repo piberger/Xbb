@@ -1241,7 +1241,7 @@ for job in info:
             print(command)
             subprocess.call([command], shell=True)
         else:
-            command = 'srmmkdir %s' %(pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')+'/'+job.identifier).replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/')
+            command = "uberftp t3se01 'mkdir %s ' " %(pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','')+'/'+job.identifier).replace('root://t3dcachedb03.psi.ch:1094/','')
             print(command)
             subprocess.call([command], shell=True)
             if len(filelist) == 0:
