@@ -73,7 +73,7 @@ config.read(_file_sf)
 #Choose what channels will be displayed on the plot
 ch={'Zll':1.,'Zll low Pt':0.,'Zll high Pt':0.,'Wln':1.,'Wln low Pt':0.,'Wln high Pt':0.,'Znn':1.,'Znn low Pt':0.,'Znn high Pt':0.,'Znn med Pt':0.,'Zee':0.,'Zmm':0.}
 #list of the y-axis labels
-labels = ['TT','Wj1b','Wj2b','Zj0b','Zj1b','Zj2b','mjet']
+labels = ['TT','Wj0b','Wj2b','Zj0b','Zj1b','Zj2b','mjet']
 
 label_dictionary = {"TT":"t#bar{t}","Wj0b":"W+0b","Wj1b":"W+b","Wj2b":"W+b#bar{b}","Zj0b":"Z+0b","Zj1b":"Z+b","Zj2b":"Z+b#bar{b}","s_Top":"t","mjet":"multijet"}
 c = ROOT.TCanvas("c","c",600,600)
