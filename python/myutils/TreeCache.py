@@ -369,17 +369,21 @@ class TreeCache:
 
                 setattr(self,name,counts)
 
-        if sample.subsample:
-            cut += '& (%s)' %(sample.subcut)
+        #cut += 'groovy baby'
+        #if sample.subsample:
+        #    cut += '& (%s)' %(sample.subcut)
         print('cut is', cut)
         ROOT.gROOT.cd()
         print('getting the tree after applying cuts')
-        cuttedTree=tree.CopyTree(cut)
+        #CopyTree overload the memory
+        #cuttedTree=tree.CopyTree(cut)
         # cuttedTree.SetDirectory(0)
         input.Close()
         del input
         del tree
-        return cuttedTree
+        #return cuttedTree
+        #return tree
+        return '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
 
     @staticmethod
     def get_slc_version():
