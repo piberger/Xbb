@@ -175,7 +175,7 @@ elif [ $task = "singleplot" ]; then
 
 elif [ $task = "mergesingleplot" ]; then
     echo "./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True"
-    ./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True
+    ./tree_stack.py --region $region ${config_filenames[@]} --filelist $sample --mergeplot True
 
 elif [ $task = "plot" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]}"

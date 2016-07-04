@@ -73,7 +73,7 @@ class TreeCache:
         tmpSource = ''
         theHash = ''
 
-        if not filelist or len(filelist) == 0:
+        if not filelist or len(filelist) == 0 or mergeplot:
             source = '%s/%s' %(self.path,sample.get_path)
             inputfiles.append(source)
             checksum = self.get_checksum(source)
@@ -90,7 +90,7 @@ class TreeCache:
                  # mergetreePSI(pathIN, pathOUT,           prefix,  newprefix, folderName,        Aprefix, Acut, config):
                 from mergetreePSI import mergetreePSI_def
                 mergetreePSI_def(self.path, self.__cachedPath, theHash, "tmp_",    sample.identifier, hashlib.sha224(self.minCut).hexdigest(),      "",   "")
-                sys.exit(1)
+                return 0
 
         else:
             outputFolder = "%s/%s" %(self.__cachedPath.replace('root://t3dcachedb03.psi.ch:1094/',''),sample.identifier)
@@ -301,8 +301,9 @@ class TreeCache:
             # print('__doc__',job.__doc__,'\n__eq__',job.__eq__,'\n__init__',job.__init__,'\n__module__',job.__module__,'\n__str__',job.__str__,'\nactive',job.active,'\naddtreecut',job.addtreecut,'\ncount',job.count,'\nget_path',job.get_path,'\ngroup',job.group,'\nidentifier',job.identifier,'\nlumi',job.lumi,'\nname',job.name,'\nprefix',job.prefix,'\nsf',job.sf,'\nspecialweight',job.specialweight,'\nsubcut',job.subcut,'\nsubsample',job.subsample,'\ntree',job.tree,'\ntreecut',job.treecut,'\ntype',job.type,'\nweightexpression',job.weightexpression,'\nxsec',job.xsec)
             # sys.exit()
 
+            # print("__cache_samples(",filelist,",",mergeplot,")")
             samplematch = False
-            if filelist:
+            if filelist and not mergeplot:
                 if not 'Run' in job.identifier:
                     # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
                     if len(job.identifier.split('_ext')) == 1:
@@ -313,8 +314,13 @@ class TreeCache:
                 else:
                     samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
 
+            elif mergeplot:
+                samplematch = job.identifier in filelist[0]
+            else:
+                samplematch = True
+
             if samplematch: print('job.name',job.name,'samplematch',samplematch)#,'filelist',filelist)
-            if not filelist or samplematch:
+            if samplematch:
                 inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
 
         multiprocess=0
