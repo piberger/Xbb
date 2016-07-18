@@ -579,6 +579,12 @@ elif opts.task == 'mva_opt_dc':
                 submit(dc,repDict,False)
                 print setting
 
+elif opts.task == 'turboplot':
+    samplesinfo=config.get('Directories','samplesinfo')
+    info = ParseInfo(samplesinfo,path)
+
+
+
 
 if (run_locally == 'False') and ('check' not in opts.task):
     print 'list_submitted_singlejobs',list_submitted_singlejobs.keys()
