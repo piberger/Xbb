@@ -306,8 +306,10 @@ class TreeCache:
             if filelist and not mergeplot:
                 if not 'Run' in job.identifier:
                     # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
-                    if len(job.identifier.split('_ext')) == 1:
+                    #no ext case
+                    if len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) == 1:
                         samplematch = '/'+job.identifier+'/' in filelist[0]
+                    #ext case
                     else:
                         samplematch_noext = '/'+job.identifier.split('_ext')[0]+'/' in filelist[0]
                         samplematch = samplematch_noext and ('_ext'+job.identifier.split('_ext')[1] in filelist[0])
@@ -315,7 +317,19 @@ class TreeCache:
                     samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
 
             elif mergeplot:
-                samplematch = job.identifier in filelist[0]
+                if not 'Run' in job.identifier:
+                    # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
+                    #no ext case
+                    if len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) == 1:
+                        samplematch = job.identifier in filelist[0]
+                    #ext case
+                    elif len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) != 1:
+                        pass
+                    else:
+                        samplematch_noext = job.identifier.split('_ext')[0] in filelist[0]
+                        samplematch = samplematch_noext and ('_ext'+job.identifier.split('_ext')[1] in filelist[0])
+                else:
+                    samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
             else:
                 samplematch = True
 
