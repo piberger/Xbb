@@ -126,13 +126,14 @@ if optimisation_training:
 
 
 import os
-if os.path.exists("../interface/DrawFunctions_C.so"):
-    print 'ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")'
-    ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")
+if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
+    print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
+    ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")
 
-if os.path.exists("../interface/VHbbNameSpace_h.so"):
-    print 'ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")'
-    ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")
+if os.path.exists("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so"):
+    print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")'
+    ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")
+
 
 print "Using",('dc:%s'%var,'var')
 print name
@@ -159,19 +160,23 @@ else:
 bdt = False
 mjj = False
 cr = False
-lhe = []
+lhe_muF = []
+lhe_muR = []
 if str(anType) == 'BDT':
     bdt = True
     systematics = eval(config.get('LimitGeneral','sys_BDT'))
-    if config.has_option('LimitGeneral','sys_lhe_BDT'): lhe = eval(config.get('LimitGeneral','sys_lhe_BDT'))
+    if config.has_option('LimitGeneral','sys_lhe_muF_BDT'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_BDT'))
+    if config.has_option('LimitGeneral','sys_lhe_muR_BDT'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_BDT'))
 elif str(anType) == 'Mjj':
     mjj = True
     systematics = eval(config.get('LimitGeneral','sys_Mjj'))
-    if config.has_option('LimitGeneral','sys_lhe_Mjj'): lhe = eval(config.get('LimitGeneral','sys_lhe_Mjj'))    
+    if config.has_option('LimitGeneral','sys_lhe_muF_Mjj'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_Mjj'))
+    if config.has_option('LimitGeneral','sys_lhe_muR_Mjj'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_Mjj'))
 elif str(anType) == 'cr':
     cr = True
     systematics = eval(config.get('LimitGeneral','sys_cr'))
-    if config.has_option('LimitGeneral','sys_lhe_cr'): lhe = eval(config.get('LimitGeneral','sys_lhe_cr'))    
+    if config.has_option('LimitGeneral','sys_lhe_muF_cr'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_cr'))
+    if config.has_option('LimitGeneral','sys_lhe_muR_cr'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_cr'))
 else:
     print 'EXIT: please specify if your datacards are BDT, Mjj or cr.'
     sys.exit()
@@ -228,7 +233,8 @@ Dict= eval(config.get('LimitGeneral','Dict'))
 binstat = eval(config.get('LimitGeneral','binstat'))
 # Use the rebinning:
 rebin_active=eval(config.get('LimitGeneral','rebin_active'))
-if str(anType) == 'cr':
+#if str(anType) == 'cr':
+if not bdt:
     if rebin_active:
         print '@WARNING: Changing rebin_active to false since you are running for control region.'
     rebin_active = False
@@ -324,9 +330,9 @@ print 'Assign the systematics'
 print '======================\n'
 
 import os
-if os.path.exists("../interface/DrawFunctions_C.so"):
-    print 'ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")'
-    ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")
+if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
+    print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
+    ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")
 
 #the 4 sys
 for syst in systematics:
@@ -351,8 +357,10 @@ for syst in systematics:
             _treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
             print _treevar
         elif mjj == True:
-            if syst == 'JER' or syst == 'JES':
-                _treevar = 'H_%s.mass_%s'%(syst,Q.lower())
+            if syst == 'JER':
+                _treevar = treevar.replace('_reg_mass','_reg_corrJER%s_mass'%Q)
+            elif syst == 'JES':
+                _treevar = treevar.replace('_reg_mass','_reg_corrJEC%s_mass'%Q)
             else:
                 _treevar = treevar
         elif cr == True:
@@ -369,16 +377,26 @@ for weightF_sys in weightF_systematics:
         _name = title
         appendList()
 
-#LHE
+#lhe_muF
 #Appends options for each weight (up/down -> len =2 )
-if len(lhe)==2:
-    for lhe_num in lhe:
-        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_num
+if len(lhe_muF)==2:
+    for lhe_muF_num in lhe_muF:
+        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muF_num
         _cut = treecut
         _treevar = treevar
         _name = title
         _countHisto = "CountWeightedLHEWeightScale"
-        _countbin = lhe_num
+        _countbin = lhe_muF_num
+        appendList()
+
+if len(lhe_muR)==2:
+    for lhe_muR_num in lhe_muR:
+        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muR_num
+        _cut = treecut
+        _treevar = treevar
+        _name = title
+        _countHisto = "CountWeightedLHEWeightScale"
+        _countbin = lhe_muR_num
         appendList()
 
 _countHisto = "CountWeighted"
@@ -570,7 +588,7 @@ for weightF_sys in weightF_systematics:
         ind+=1
 print 'add lhe sys'
 print '==============\n'
-if len(lhe)==2:
+if len(lhe_muF)==2:
     for Q in UD:
         for group in sys_lhe_affecting.keys():
             histos = []
@@ -578,10 +596,20 @@ if len(lhe)==2:
                 if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
                     print "XXX"
                     histos.append(all_histos[job.name][ind])
-            final_histos['%s_%s_%s'%(systematicsnaming['lhe'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muF'],group,Q)]= HistoMaker.orderandadd(histos,setup)
         ind+=1
 
-#f.write('%s_%s\tshape' %(systematicsnaming['lhe'],group))
+if len(lhe_muR)==2:
+    for Q in UD:
+        for group in sys_lhe_affecting.keys():
+            histos = []
+            for job in all_samples:
+                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
+                    print "XXX"
+                    histos.append(all_histos[job.name][ind])
+            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muR'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+        ind+=1
+
 
 
 if change_shapes:
@@ -607,11 +635,13 @@ def get_alternate_shapes(all_histos,asample_dict,all_samples):
     for job in all_samples:
         nominal = all_histos[job.name][0]
         if job.name in asample_dict:
+            print "EEE"
             alternate = copy(all_histos[asample_dict[job.name]][0])
             hUp, hDown = get_alternate_shape(nominal[nominal.keys()[0]],alternate[alternate.keys()[0]])
             alternate_shapes_up.append({nominal.keys()[0]:hUp})
             alternate_shapes_down.append({nominal.keys()[0]:hDown})
         else:
+            print "RRR"
             newh=nominal[nominal.keys()[0]].Clone('%s_%s_Up'%(nominal[nominal.keys()[0]].GetName(),'model'))
             alternate_shapes_up.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
             alternate_shapes_down.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
@@ -654,7 +684,7 @@ if not ignore_stats:
                             final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
     else:
         print "Running Statistical uncertainty"
-        threshold =  0.5 #stat error / sqrt(value). It was 0.5
+        threshold =  1 #stat error / sqrt(value). It was 0.5
         print "threshold",threshold
         binsBelowThreshold = {}
         for bin in range(1,nBins+1):
@@ -820,9 +850,19 @@ for DCtype in ['WS','TH']:
         for it in range(0,columns): f.write('\t1.0')
         f.write('\n')
     # LHE systematics
-    if len(lhe)==2:
+    if len(lhe_muF)==2:
         for group in sys_lhe_affecting.keys():
-            f.write('%s_%s\tshape' %(systematicsnaming['lhe'],group))
+            f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
+            samples = sys_lhe_affecting[group]
+            for c in setup:
+                if Dict[c] in samples:
+                    f.write('\t1.0')
+                else:
+                    f.write('\t-')
+            f.write('\n')
+    if len(lhe_muR)==2:
+        for group in sys_lhe_affecting.keys():
+            f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
             samples = sys_lhe_affecting[group]
             for c in setup:
                 if Dict[c] in samples:
@@ -837,6 +877,7 @@ for DCtype in ['WS','TH']:
             for c in setup:
                 if not c == GroupDict[newSample]: continue
                 if Dict[c] in alreadyAdded: continue
+                if final_histos['nominal'][c].Integral()<0.1: continue #skip model syst for negligible samples (eg. ggZH in W+Light CR)
                 f.write('%s_%s\tshape'%(systematicsnaming['model'],Dict[c]))
                 for it in range(0,columns):
                     if it == setup.index(c):
@@ -858,10 +899,15 @@ for DCtype in ['WS','TH']:
     # write rateParams systematics (free parameters)
 
     rateParams=eval(config.get('Datacard','rateParams_%s_%s'%(str(anType), pt_region)))
+    try:
+        rateParamRange=eval(config.get('Datacard','rateParamRange'))
+    except:
+        rateParamRange=[0,10]
+    assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:'+ len(rateParamRange)
     for rateParam in rateParams:
         dictProcs=eval(config.get('Datacard',rateParam))
         for proc in dictProcs.keys():
-            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
+            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
 
     f.close()
     useSpacesInDC(fileName)
