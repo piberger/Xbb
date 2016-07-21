@@ -81,13 +81,13 @@ section='Plot:%s'%region
 info = ParseInfo(samplesinfo,path) #creates a list of Samples by reading the info in samples_nosplit.cfg and the conentent of the path.
 
 import os
-if os.path.exists("../interface/DrawFunctions_C.so"):
-    print 'ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")'
-    ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")
+if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
+    print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
+    ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")
 
-if os.path.exists("../interface/VHbbNameSpace_h.so"):
-    print 'ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")'
-    ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")
+if os.path.exists("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so"):
+    print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")'
+    ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")
 
 #----------Histo from trees------------
 #Get the selections and the samples
