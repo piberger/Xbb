@@ -29,11 +29,17 @@ parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
 parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
                               help="option to merge")
+parser.add_option("-s", "--sample_to_merge", dest="sample_to_merge", default=False,
+                              help="sample you want to merge")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
         
 from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, HistoMaker
+
+print 'sample_to_merge is', opts.sample_to_merge
+print 'mergeplot is', opts.mergeplot
+
 
 #adds the file vhbbPlotDef.ini to the config list
 #print 'opts.config',opts.config
@@ -135,7 +141,7 @@ def doPlot():
     # print 'options',options
 
     #Prepare cached files in the temporary (tmpSamples) folder.
-    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot)
+    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot,opts.sample_to_merge)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)

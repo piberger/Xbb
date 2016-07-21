@@ -139,7 +139,8 @@ if 'PSI' in whereToLaunch:
     for _folder in mkdir_protocol.split('/'):
         _output_folder += '/'+_folder
         if not os.path.exists(_output_folder):
-            command = "uberftp t3se01 'mkdir ",_output_folder," ' "
+            command = "uberftp t3se01 'mkdir " + _output_folder + " ' "
+            if(debugPrintOUts): print 'command is',command
             subprocess.call([command], shell = True)
 
 def dump_config(configs,output_file):
@@ -326,6 +327,26 @@ if opts.task == 'plot':
     repDict['queue'] = 'all.q'
     for item in Plot_vars:
         submit(item,repDict)
+
+elif opts.task == 'splitcaching':
+    print "gonna do splitcaching"
+    Plot_vars= (config.get('Plot_general','List')).split(',')
+    for region in Plot_vars:
+        print 'region is', region
+        samplesinfo=config.get('Directories','samplesinfo')
+        section='Plot:%s'%region
+        data = eval(config.get(section,'Datas'))
+        mc = eval(config.get('Plot_general','samples'))
+        info = ParseInfo(samplesinfo,path)
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        samples= mcsamples+datasamples
+
+        for sample in samples:
+            print 'sample is', sample
+            repDict['additional']=str(sample)
+            repDict['queue'] = 'all.q'
+            submit(region,repDict)
 
 
 if opts.task == 'trainReg':
@@ -577,6 +598,7 @@ elif opts.task == 'mva_opt_dc':
                 repDict['additional']='OPT_'+par+str(value)
                 submit(dc,repDict,False)
                 print setting
+
 
 
 if (run_locally == 'False') and ('check' not in opts.task):

@@ -10,7 +10,7 @@ from copy import copy
 import time
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList,GroupDict=None,filelist=None,mergeplot=False):
+    def __init__(self, samples, path, config, optionsList,GroupDict=None,filelist=None,mergeplot=False,sample_to_merge=None):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
@@ -30,8 +30,8 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "Cuts:",self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot)# created cached tree i.e. create new skimmed trees using the list of cuts
-        if filelist and len(filelist)>0 or mergeplot:
+        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge)# created cached tree i.e. create new skimmed trees using the list of cuts
+        if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             sys.exit(1)
         #print self.cuts
@@ -83,11 +83,12 @@ class HistoMaker:
         addOverFlow=eval(self.config.get('Plot_general','addOverFlow'))
 
         # get all Histos at once
-        #print "The tree in the job is ", job.tree
-        CuttedTree = self.tc.get_tree(job,'1')# retrieve the cuted tree
-        # print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
-#        print 'begin self.optionsList',self.optionsList
-        # print 'end self.optionsList'
+        addCut = '1'
+        input = ROOT.TFile.Open(self.tc.get_tree(job, addCut),'read')
+        if job.subsample:
+            addCut += '& (%s)' %(job.subcut)
+        CuttedTree = input.Get(job.tree)
+        print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
 
         #! start the loop over variables (descriebed in options) 
         First_iter = True
@@ -111,8 +112,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                weightF="("+weightF+")"
-                #weightF="("+weightF+")*(" + job.specialweight +")"
+                #weightF="("+weightF+")"
+                weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
@@ -125,7 +126,7 @@ class HistoMaker:
             #    treeCut= str(1)
             #else:
             #    treeCut='%s'%(options['cut'])
-            treeCut='%s'%(options['cut'])
+            treeCut='%s & %s'%(options['cut'],addCut)
 
             treeCut = "("+treeCut+")&&"+job.addtreecut 
             #print 'job.addtreecut ',job.addtreecut
