@@ -5,7 +5,7 @@ from samplesclass import Sample
 import time
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
@@ -33,6 +33,7 @@ class TreeCache:
         self.minCut = None
         self.__find_min_cut()# store the cut list as one string in minCut, using ROOT syntax (i.e. || to separate between each cut) 
         self.__sampleList = sampleList
+        self.sample_to_merge = sample_to_merge
         print('\n\t>>> Caching FILES <<<\n')
         self.__cache_samples(filelist,mergeplot)
         
@@ -86,7 +87,8 @@ class TreeCache:
             outputfiles.append(tmpCache)
             print('tmpSource is', tmpSource)
             print('tmpCache is', tmpCache)
-            if mergeplot:
+            print('MERGEPLOT IS',mergeplot) 
+            if eval(str(mergeplot)):
                  # mergetreePSI(pathIN, pathOUT,           prefix,  newprefix, folderName,        Aprefix, Acut, config):
                 from mergetreePSI import mergetreePSI_def
                 mergetreePSI_def(self.path, self.__cachedPath, theHash, "tmp_",    sample.identifier, hashlib.sha224(self.minCut).hexdigest(),      "",   "")
@@ -302,6 +304,8 @@ class TreeCache:
             # sys.exit()
 
             # print("__cache_samples(",filelist,",",mergeplot,")")
+            if self.sample_to_merge and (str(job) != self.sample_to_merge):
+                continue
             samplematch = False
             if filelist and not mergeplot:
                 if not 'Run' in job.identifier:
@@ -316,7 +320,7 @@ class TreeCache:
                 else:
                     samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
 
-            elif mergeplot:
+            elif filelist and mergeplot:
                 if not 'Run' in job.identifier:
                     # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
                     #no ext case

@@ -181,6 +181,10 @@ elif [ $task = "plot" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]}"
     ./tree_stack.py --region $sample ${config_filenames[@]}
 
+elif [ $task = "splitcaching" ]; then
+    echo "./tree_stack.py --region $sample ${config_filenames[@]} --sample_to_merge $bdt_params --mergeplot False"
+    ./tree_stack.py --region $sample ${config_filenames[@]} --sample_to_merge $bdt_params --mergeplot False
+
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
         echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist ...(${#filelist} char)"
