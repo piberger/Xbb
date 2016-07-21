@@ -87,7 +87,7 @@ class TreeCache:
             outputfiles.append(tmpCache)
             print('tmpSource is', tmpSource)
             print('tmpCache is', tmpCache)
-            print('MERGEPLOT IS',mergeplot) 
+            print('MERGEPLOT IS',mergeplot)
             if eval(str(mergeplot)):
                  # mergetreePSI(pathIN, pathOUT,           prefix,  newprefix, folderName,        Aprefix, Acut, config):
                 from mergetreePSI import mergetreePSI_def
