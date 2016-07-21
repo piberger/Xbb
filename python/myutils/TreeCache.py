@@ -5,7 +5,7 @@ from samplesclass import Sample
 import time
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
@@ -33,6 +33,7 @@ class TreeCache:
         self.minCut = None
         self.__find_min_cut()# store the cut list as one string in minCut, using ROOT syntax (i.e. || to separate between each cut) 
         self.__sampleList = sampleList
+        self.sample_to_merge = sample_to_merge
         print('\n\t>>> Caching FILES <<<\n')
         self.__cache_samples(filelist,mergeplot)
         
@@ -86,7 +87,8 @@ class TreeCache:
             outputfiles.append(tmpCache)
             print('tmpSource is', tmpSource)
             print('tmpCache is', tmpCache)
-            if mergeplot:
+            print('MERGEPLOT IS',mergeplot)
+            if eval(str(mergeplot)):
                  # mergetreePSI(pathIN, pathOUT,           prefix,  newprefix, folderName,        Aprefix, Acut, config):
                 from mergetreePSI import mergetreePSI_def
                 mergetreePSI_def(self.path, self.__cachedPath, theHash, "tmp_",    sample.identifier, hashlib.sha224(self.minCut).hexdigest(),      "",   "")
@@ -302,20 +304,36 @@ class TreeCache:
             # sys.exit()
 
             # print("__cache_samples(",filelist,",",mergeplot,")")
+            if self.sample_to_merge and (str(job) != self.sample_to_merge):
+                continue
             samplematch = False
             if filelist and not mergeplot:
                 if not 'Run' in job.identifier:
                     # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
-                    if len(job.identifier.split('_ext')) == 1:
+                    #no ext case
+                    if len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) == 1:
                         samplematch = '/'+job.identifier+'/' in filelist[0]
+                    #ext case
                     else:
                         samplematch_noext = '/'+job.identifier.split('_ext')[0]+'/' in filelist[0]
                         samplematch = samplematch_noext and ('_ext'+job.identifier.split('_ext')[1] in filelist[0])
                 else:
                     samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
 
-            elif mergeplot:
-                samplematch = job.identifier in filelist[0]
+            elif filelist and mergeplot:
+                if not 'Run' in job.identifier:
+                    # print('no RUN','job.identifier',job.identifier,'filelist[0]',filelist[0])
+                    #no ext case
+                    if len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) == 1:
+                        samplematch = job.identifier in filelist[0]
+                    #ext case
+                    elif len(job.identifier.split('_ext')) == 1 and len(filelist[0].split('_ext')) != 1:
+                        pass
+                    else:
+                        samplematch_noext = job.identifier.split('_ext')[0] in filelist[0]
+                        samplematch = samplematch_noext and ('_ext'+job.identifier.split('_ext')[1] in filelist[0])
+                else:
+                    samplematch = '/'+job.identifier.split('__')[0]+'/' in filelist[0]
             else:
                 samplematch = True
 
@@ -375,17 +393,21 @@ class TreeCache:
 
                 setattr(self,name,counts)
 
-        if sample.subsample:
-            cut += '& (%s)' %(sample.subcut)
+        #cut += 'groovy baby'
+        #if sample.subsample:
+        #    cut += '& (%s)' %(sample.subcut)
         print('cut is', cut)
         ROOT.gROOT.cd()
         print('getting the tree after applying cuts')
-        cuttedTree=tree.CopyTree(cut)
+        #CopyTree overload the memory
+        #cuttedTree=tree.CopyTree(cut)
         # cuttedTree.SetDirectory(0)
         input.Close()
         del input
         del tree
-        return cuttedTree
+        #return cuttedTree
+        #return tree
+        return '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
 
     @staticmethod
     def get_slc_version():

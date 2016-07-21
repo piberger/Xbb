@@ -276,11 +276,11 @@ class StackMaker:
         datatitle='Data'
         addFlag = ''
         print 'self.datanames is', self.datanames
-        if 'SingleElectron__Run2015D_16Dec2015' in self.datanames and 'data_SM_Run2015D_25ns_16Dec2015' in self.datanames:
+        if 'SingleMuon__Run2016B-PromptReco' in self.datanames and 'SingleElectron__Run2016B_PromptReco' in self.datanames:
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'SingleElectron__Run2015D_16Dec2015' in self.datanames:
+        elif 'SingleElectron__Run2016B_PromptReco' in self.datanames:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'data_SM_Run2015D_25ns_16Dec2015' in self.datanames:
+        elif 'SingleMuon__Run2016B-PromptReco' in self.datanames:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'

@@ -83,7 +83,8 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
         print "MERGED FILE EXISTS BUT IS CORRUPTED, CREATING IT"
     else:
         print "MERGED FILE EXISTS AND IS NOT CORRUPTED, EXITING"
-        sys.exit()
+        return True
+        #sys.exit()
 
 
     t = ROOT.TFileMerger(ROOT.kFALSE)
