@@ -292,7 +292,7 @@ class StackMaker:
             addFlag = 'W(#tau#nu)H(b#bar{b})'
 
         for i in range(0,len(self.datas)):
-            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()
+            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbinsX()
             d1.Add(self.datas[i],1)
         print "\033[1;32m\n\tDATA integral = %s\033[1;m"%d1.Integral()
         flow = d1.GetEntries()-d1.Integral()
@@ -618,7 +618,7 @@ class StackMaker:
         else:
             addFlag = 'pp #rightarrow VH; H #rightarrow b#bar{b}'
         for i in range(0,len(self.datas)):
-            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()
+            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbins()
             d1.Add(self.datas[i],1)
         print "\033[1;32m\n\tDATA integral = %s\033[1;m"%d1.Integral()
         flow = d1.GetEntries()-d1.Integral()
