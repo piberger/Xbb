@@ -38,10 +38,73 @@ parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration file")
 parser.add_option("-V", "--variable", dest="var", default="",
                       help="variable to be fitted")
+parser.add_option("-L", "--log", dest="log", default="PLEASE_INSERT_A_LOG_FILE!!!",
+                      help="log of combine MaxLikelihood")
 
 (opts, args) = parser.parse_args(argv)
 
 print opts
+
+
+def removeDoubleSpaces(line):
+    flag = True
+    while flag:
+        nline = line.replace('  ',' ')
+        if nline == line:
+            flag = False
+        line = nline[:]
+    return line
+
+def getSFs(logFile):
+    f = open(logFile)
+    data = f.readlines()
+    f.close()
+
+    tmp = {}
+    SF_b = {}
+    SF_sb = {}
+    for line in data:
+        if  ".0000e+00" in line and "<none>" in line:
+            line = line.replace('\t','')
+            line = line.replace('=','')
+            line = line.replace('+/-','')
+            line = line.replace('(limited)','')
+            line = removeDoubleSpaces(line)
+            objs = line.split(' ')
+            if len(objs)<=4: continue
+            SF_name = objs[1]
+            SF_value = objs[3]
+            SF_error = objs[4]
+            if SF_name in tmp and not tmp[SF_name] is float(SF_value):
+                print SF_name,SF_value,SF_error
+                raise StandardError("There is a problem:",SF_name,SF_value,tmp[SF_name])
+            tmp[SF_name] = float(SF_value)
+        else:
+            if len(tmp)>0:
+                if "r" in tmp:
+                    SF_sb = dict(tmp)
+                    tmp = {}
+#                    print "added SF_sb",SF_sb
+                else:
+                    SF_b = dict(tmp)
+                    tmp = {}
+#                    print "added SF_b",SF_b
+    if len(SF_b) is 0 or len(SF_sb) is 0:
+        print SF_b
+        print SF_sb
+        raise StandardError("I'm not able to find the SFs in:"+logFile,len(SF_b),len(SF_sb))
+
+    for sf_name,sf in SF_b.items():
+        if not "SF_" in sf_name:
+            del SF_b[sf_name]
+
+    for sf_name,sf in SF_sb.items():
+        if not "SF_" in sf_name:
+            del SF_sb[sf_name]
+
+    return (SF_b,SF_sb)
+
+
 
 def readBestFit(theFile):
     file = ROOT.TFile(theFile)
@@ -76,6 +139,7 @@ def readBestFit(theFile):
     return nuiVariation
 
 def getBestFitShapes(procs,theShapes,shapeNui,theBestFit,DC,setup,opts,Dict):
+    print "getBestFitShapes"
     b = opts.bin
     for p in procs:
         counter = 0
@@ -89,7 +153,7 @@ def getBestFitShapes(procs,theShapes,shapeNui,theBestFit,DC,setup,opts,Dict):
                     theVari = 'Down'
                 bestNuiVar = theShapes[p+lsyst+theVari].Clone()
                 bestNuiVar.Add(nom,-1.)
-                #print p,lsyst,abs(shapeNui[p+lsyst]),bestNuiVar.Integral()
+                print p,lsyst,abs(shapeNui[p+lsyst]),bestNuiVar.Integral()
                 bestNuiVar.Scale(abs(shapeNui[p+lsyst]))
                 if counter == 0:
                     bestNui = bestNuiVar.Clone()
@@ -97,8 +161,11 @@ def getBestFitShapes(procs,theShapes,shapeNui,theBestFit,DC,setup,opts,Dict):
                     bestNui.Add(bestNuiVar)
                 counter +=1
         nom.Add(bestNui)
+        print "bestNui:",bestNui
         #nom.Scale(theBestFit[p])
-        nom.Scale(theShapes[p].Integral()/nom.Integral()*theBestFit[p])
+#        if nom.Integral()>0:
+#            print "I'm scaling of:",theShapes[p].Integral()/nom.Integral()*theBestFit[p]
+#            nom.Scale(theShapes[p].Integral()/nom.Integral()*theBestFit[p])
         nBins = nom.GetNbinsX()
         for bin in range(1,nBins+1):
             nom.SetBinError(bin,theShapes[p].GetBinError(bin))
@@ -106,7 +173,8 @@ def getBestFitShapes(procs,theShapes,shapeNui,theBestFit,DC,setup,opts,Dict):
     histos = []
     typs = []
     sigCount = 0
-    signalList = ['ZH','WH']
+    signalList = ['ZH','WH','ggZH']
+    signalList = ['ZHpow','WHpow','ggZHpow']
     #signalList = ['VVb']
     for s in setup:
         if s in signalList:
@@ -135,6 +203,17 @@ def drawFromDC():
 
     print 'Variable printing'
     print opts.var
+
+    if not opts.mlfit is "":
+        (SF_b,SF_sb) = getSFs(opts.log)
+        if opts.fit is 'b':
+            SF = SF_b
+        elif  opts.fit is 's':
+            SF = SF_sb
+        else:
+            SF = {}
+        print "I'm using SFs:",SF
+
     if(opts.var == ''):
         var = 'BDT'
         if dataname == 'Zmm' or dataname == 'Zee': var = 'BDT_Zll' 
@@ -148,14 +227,24 @@ def drawFromDC():
     else:
         var = opts.var
         
-    region = 'BDT'
+
+    if 'BDT' in opts.var:
+        region = 'BDT'
+    else:
+        region = opts.var
+
     ws_var = config.get('plotDef:%s'%var,'relPath')
-    ws_var = ROOT.RooRealVar(ws_var,ws_var,-1.,1.)
+    ws_var = ROOT.RooRealVar(ws_var,ws_var,-500.,500.)
+
+#    region = 'Hmass'
+#    ws_var = config.get('plotDef:%s'%var,'relPath')
+#    ws_var = ROOT.RooRealVar(ws_var,ws_var,0,500)
+
     blind = eval(config.get('Plot:%s'%region,'blind'))
     Stack=StackMaker(config,var,region,True)
 
+
     if 'LowPt' in opts.bin or 'ch1_Wenu' == opts.bin or 'ch2_Wmunu' == opts.bin:
-        print 'Niklas %s' %opts.bin
         Stack.addFlag2 = 'Low p_{T}(V)'
     elif 'MedPt' in opts.bin or 'ch1_Wenu2' == opts.bin or 'ch2_Wmunu2' == opts.bin:
         Stack.addFlag2 = 'Intermediate p_{T}(V)'
@@ -183,8 +272,8 @@ def drawFromDC():
             setup.remove('WH')
         except:
             print '@INFO: Wb / Wligh / WH not present in the datacard'
-    if not dataname == 'Znn' and 'QCD' in setup: 
-        setup.remove('QCD')
+#    if not dataname == 'Znn' and 'QCD' in setup:
+#        setup.remove('QCD')
     Stack.setup = setup
 
     Dict = eval(config.get('LimitGeneral','Dict'))
@@ -213,6 +302,14 @@ def drawFromDC():
     file = open(opts.dc, "r")
     os.chdir(os.path.dirname(opts.dc))
     DC = parseCard(file, options)
+
+#    ## dict of {bin : {process : yield}}
+#    self.exp     = {}
+#    print DC.rateParams
+
+#    print "*"*30
+#    print DC.rateParams[opts.bin+"AND"+]
+#    return
     if not DC.hasShapes: DC.hasShapes = True
     MB = ShapeBuilder(DC, options)
     theShapes = {}
@@ -228,8 +325,14 @@ def drawFromDC():
         shapeNui = {}
         reducedShapeNui = {}
         for (p,e) in DC.exp[b].items(): # so that we get only self.DC.processes contributing to this bin
-            exps[p] = [ e, [] ]
-            expNui[p] = [ e, [] ]
+            sf = 1
+#            rateParamKey = b+"AND"+p
+#            if rateParamKey in DC.rateParams and not opts.mlfit is "":
+#                rateParamName = DC.rateParams[rateParamKey][0][0][0] # eg.[[['SF_LowPt_Wjb', '1', 0], '[0,20]']]
+#                sf = SF[rateParamName]
+#                print "I'm applying: "+rateParamName+" = "+str(sf)+" to "+p
+            exps[p] = [ e*sf, [] ]
+            expNui[p] = [ e*sf, [] ]
         for (lsyst,nofloat,pdf,pdfargs,errline) in DC.systs:
             if pdf in ('param', 'flatParam'): continue
             # begin skip systematics
@@ -242,7 +345,7 @@ def drawFromDC():
             counter = 0
             for p in DC.exp[b].keys(): # so that we get only self.DC.processes contributing to this bin
                 if errline[b][p] == 0: continue
-                if p == 'QCD' and not 'QCD' in setup: continue
+#                if p == 'QCD' and not 'QCD' in setup: continue
                 if pdf == 'gmN':
                     exps[p][1].append(1/sqrt(pdfargs[0]+1));
                 elif pdf == 'gmM':
@@ -260,10 +363,16 @@ def drawFromDC():
                      exps[p][1].append(lnNVar)
                      expNui[p][1].append(abs(1-errline[b][p])*nui);
                 elif ("shape" in pdf):
+                    sf = 1
+                    rateParamKey = b+"AND"+p
+                    if rateParamKey in DC.rateParams and not opts.mlfit is "":
+                        rateParamName = DC.rateParams[rateParamKey][0][0][0] # eg.[[['SF_LowPt_Wjb', '1', 0], '[0,20]']]
+                        sf = SF[rateParamName]
+                        print rateParamName+" = "+str(sf)
                     #print 'shape %s %s: %s'%(pdf,p,lsyst)
-                    s0 = MB.getShape(b,p)
-                    sUp   = MB.getShape(b,p,lsyst+"Up")
-                    sDown = MB.getShape(b,p,lsyst+"Down")
+                    s0 = MB.getShape(b,p)*sf
+                    sUp   = MB.getShape(b,p,lsyst+"Up")*sf
+                    sDown = MB.getShape(b,p,lsyst+"Down")*sf
                     if (s0.InheritsFrom("RooDataHist")):
                         s0 = ROOT.RooAbsData.createHistogram(s0,p,ws_var,theBinning)
                         s0.SetName(p)
@@ -282,7 +391,7 @@ def drawFromDC():
                         reducedNui= nuiVar['%s_%s'%(opts.fit,lsyst)][1]
                     shapeNui[p+lsyst] = nui
                     reducedShapeNui[lsyst] = reducedNui
-                    if not 'CMS_vhbb_stat' in lsyst:
+                    if not ('CMS_vhbb_ZnnHighPt_stats_'  in lsyst or 'CMS_vhbb_ZnnLowPt_stats_'  in lsyst ):
                         if counter == 0:
                             theSyst[lsyst] = s0.Clone() 
                             theSyst[lsyst+'Up'] = sUp.Clone() 
@@ -294,12 +403,12 @@ def drawFromDC():
                         counter += 1
 
     procs = DC.exp[b].keys(); procs.sort()
-    if not 'QCD' in setup and 'QCD' in procs:
-        procs.remove('QCD')
-    if not 'W2b' in setup and 'WjHF' in procs:
-        procs.remove('WjHF')
-    if not 'Wlight' in setup and 'WjLF' in procs:
-        procs.remove('WjLF')
+#    if not 'QCD' in setup and 'QCD' in procs:
+#        procs.remove('QCD')
+#    if not 'W2b' in setup and 'WjHF' in procs:
+#        procs.remove('WjHF')
+#    if not 'Wlight' in setup and 'WjLF' in procs:
+#        procs.remove('WjLF')
     fmt = ("%%-%ds " % max([len(p) for p in procs]))+"  "+options.format;
     #Compute norm uncertainty and best fit
     theNormUncert = {}
@@ -320,7 +429,8 @@ def drawFromDC():
     shapesDown = [[] for _ in range(0,len(setup2))]
     
     sigCount = 0
-    signalList = ['ZH','WH']
+    signalList = ['ZH','WH','ggZH']
+    signalList = ['ZHpow','WHpow','ggZHpow']
     #signalList = ['VVb']
     for p in procs:
         b = opts.bin
@@ -333,12 +443,14 @@ def drawFromDC():
                     Overlay.Add(theShapes[Dict[s]])
                 sigCount += 1
             else:
+                theShapes[Dict[s]].Scale()
                 histos.append(theShapes[Dict[s]])
                 typs.append(s)
             for (lsyst,nofloat,pdf,pdfargs,errline) in DC.systs:
-                if errline[b][p] == 0: continue
-                if ("shape" in pdf) and not 'CMS_vhbb_stat' in lsyst:
-                    print 'syst %s'%lsyst
+                if errline[b][p] == 0:
+                    continue
+                if ("shape" in pdf) and not ('CMS_vhbb_ZnnHighPt_stats_'  in lsyst or 'CMS_vhbb_ZnnLowPt_stats_'  in lsyst ):
+                    print 'syst %s proc %s'%(lsyst,p)
                     shapesUp[setup2.index(s)].append(theShapes[Dict[s]+lsyst+'Up'])
                     shapesDown[setup2.index(s)].append(theShapes[Dict[s]+lsyst+'Down'])
 
@@ -349,7 +461,7 @@ def drawFromDC():
         sumErr = 0
         for p in procs:
             sumErr += errline[b][p]
-        if ("shape" in pdf) and not 'CMS_vhbb_stat' in lsyst and not sumErr == 0:
+        if ("shape" in pdf) and not ('CMS_vhbb_ZnnHighPt_stats_'  in lsyst or 'CMS_vhbb_ZnnLowPt_stats_'  in lsyst ) and not sumErr == 0:
             theSystUp = theSyst[lsyst+'Up'].Clone()
             theSystUp.Add(theSyst[lsyst].Clone(),-1.)
             theSystUp.Multiply(theSystUp)
@@ -394,9 +506,16 @@ def drawFromDC():
         errUp[bin-1] = [binError]
         errDown[bin-1] = [binError]
         #Relative norm uncertainty of the individual MC
+        print theNormUncert
         for h in range(0,len(histos)):
-            errUp[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[histos[h].GetName()])
-            errDown[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[histos[h].GetName()])
+            nome = histos[h].GetName()
+            nome = nome.replace("shapeBkg_","")
+            nome = nome.replace("shapeSig_","")
+            nome = nome.replace("_"+opts.bin,"")
+#            errUp[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[histos[h].GetName()])
+#            errDown[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[histos[h].GetName()])
+            errUp[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[nome])
+            errDown[bin-1].append(histos[h].GetBinContent(bin)*theNormUncert[nome])
     #Shape uncertainty of the MC
     for bin in range(1,nBins+1):
         #print sqrt(theSystUp.GetBinContent(bin))
@@ -430,19 +549,36 @@ def drawFromDC():
 
 
     if blind and 'BDT' in var:
-        for bin in range(10,datas[0].GetNbinsX()+1):
-            datas[0].SetBinContent(bin,0)
+        print "I'm blinding"
+        for bin in range(datas[0].FindBin(0.6),datas[0].GetNbinsX()+1):
+            datas[0].SetBinContent(bin,-1)
 
+    print "Stack.setup:",Stack.setup
+    print "signalList:",signalList
+    print "typs:",typs
+    Overlay.SetTitle("VH")
     histos.append(copy(Overlay))
-    if 'ZH' in signalList and 'WH' in signalList:
+    if ('ZH' in signalList or 'ZHpow' in signalList) and ('WH' in signalList or 'WHpow' in signalList) :
         typs.append('VH')
         if 'ZH' in Stack.setup: Stack.setup.remove('ZH')
         if 'WH' in Stack.setup: Stack.setup.remove('WH')
+        if 'ggZH' in Stack.setup: Stack.setup.remove('ggZH')
+        if 'ZHpow' in Stack.setup: Stack.setup.remove('ZHpow')
+        if 'WHpow' in Stack.setup: Stack.setup.remove('WHpow')
+        if 'ggZHpow' in Stack.setup: Stack.setup.remove('ggZHpow')
         Stack.setup.insert(0,'VH')
     elif 'ZH' in signalList:
         typs.append('ZH')
+    elif 'ggZH' in signalList:
+        typs.append('ggZH')
     elif 'WH' in signalList:
         typs.append('WH')
+    elif 'ZHpow' in signalList:
+        typs.append('ZHpow')
+    elif 'ggZHpow' in signalList:
+        typs.append('ggZHpow')
+    elif 'WHpow' in signalList:
+        typs.append('WHpow')
     elif 'VVb' in signalList:
         typs.append('VVb')
     print Stack.setup
@@ -457,6 +593,15 @@ def drawFromDC():
     if dataname == 'Wtn': 
         lumi = 18300.
     Stack.lumi = lumi
+    print "datas:",datas
+    if len(datas)>0:
+        print datas[0],"int:",datas[0].Integral()
+        axis = datas[0].GetXaxis()
+        print axis.GetNbins(),axis.GetXmin(),axis.GetXmax()
+    if len(histos)>0:
+        print histos[0],"int:",histos[0].Integral()
+        axis = histos[0].GetXaxis()
+        print axis.GetNbins(),axis.GetXmin(),axis.GetXmax()
     Stack.doPlot()
 
     print 'i am done!\n'
