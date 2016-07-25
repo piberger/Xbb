@@ -48,20 +48,8 @@ def getHistoContentInJson(histo):
             y_hi = histo.GetErrorYhigh(i)
             y_low = histo.GetErrorYlow(i)
             xBinValue=xaxisName+":["+str(x_low)+","+str(x_hi)+"]"
-            #xBinValue=xaxisName+":["+str(histo.GetXaxis().GetBinLowEdge(i))+","+str(histo.GetXaxis().GetBinUpEdge(i))+"]"
             print 'xBinValue is', xBinValue
             xBins[xBinValue]=getValueError(y, max(y_low,y_hi))
-            #print 'y_low is', y_low
-            #print 'y_hi is', y_hi
-            #print 'xBins is', xBins[xBinValue]
-    #else :
-    #    for i in range(1,histo.GetXaxis().GetNbins()+1):
-    #        yBins={}
-    #        xBinValue=xaxisName+":["+str(histo.GetXaxis().GetBinLowEdge(i))+","+str(histo.GetXaxis().GetBinUpEdge(i))+"]"
-    #        for j in range(1,histo.GetYaxis().GetNbins()+1):
-    #            yBinValue=yaxisName+":["+str(histo.GetYaxis().GetBinLowEdge(j))+","+str(histo.GetYaxis().GetBinUpEdge(j))+"]"
-    #            yBins[yBinValue]=getValueError(histo.GetBinContent(i,j), histo.GetBinError(i,j))
-    #        xBins[xBinValue]=yBins
     return xBins
 
 data={}
@@ -82,12 +70,3 @@ while (key): #loop
 
 with open(outputJson,"w") as f:
     json.dump(data, f, sort_keys = False, indent = 4)
-    #json.dumps(data)
-
-#outputPickle = outputJson.replace('json', 'pkl')
-
-#with open(outputPickle,"w") as f:
-    #pickle.dump(data, f)
-    #pickle.dump(data)
-
-
