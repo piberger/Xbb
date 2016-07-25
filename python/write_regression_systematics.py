@@ -467,7 +467,7 @@ for job in info:
             newtree.Branch('lepton_EvtWeight',lepton_EvtWeight,'lepton_EvtWeight/F')
 
         # Angular Likelihood
-        if channel == "Znn":
+        if channel == "Znn" or channel == "Zmm":
             angleHB = array('f',[0])
             newtree.Branch('angleHB',angleHB,'angleHB/F')
             angleLZ = array('f',[0])
@@ -509,7 +509,7 @@ for job in info:
 
 
         # if job.type != 'DATA': ##FIXME###
-        if channel == "Znn":
+        if channel == "Znn" or channel == "Zmm":
             #CSV branches
             hJet_hadronFlavour = array('f',[0]*2)
             hJet_btagCSV = array('f',[0]*2)
@@ -537,7 +537,7 @@ for job in info:
             Jet_bad = array('f',[0]*50)
             newtree.Branch('Jet_bad',Jet_bad,'Jet_bad[nJet]/F')
 
-            if channel == "Znn":
+            if channel == "Znn" or channel == "Zmm":
                 DiscardedJet_under = array('f',[0]*50)
                 newtree.Branch('DiscardedJet_under',DiscardedJet_under,'DiscardedJet_under[nDiscardedJet]/F')
                 DiscardedJet_over = array('f',[0]*50)
@@ -728,7 +728,7 @@ for job in info:
                 # fatHiggsFlag=fFatHFlag.EvalInstance()*fFatHnFilterJets.EvalInstance()
 
                 # get
-                if channel == "Znn":
+                if channel == "Znn" or channel == "Zmm":
                     vect.SetPtEtaPhiM(fVpt.EvalInstance(),fVeta.EvalInstance(),fVphi.EvalInstance(),fVmass.EvalInstance())
                     # print tree.Jet_pt
                     # print tree.hJCidx
@@ -913,73 +913,73 @@ for job in info:
 
                 # End JSON loop ====================================
 
-                ##########################
-                # Adding mu SFs
-                ##########################
+                ###########################
+                ## Adding mu SFs
+                ###########################
 
-                if not job.specialweight:
-                    DY_specialWeight[0] = 1
-                else :
-                    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
-                    specialWeight_ = specialWeight.EvalInstance()
-                    DY_specialWeight[0] = specialWeight_
+                #if not job.specialweight:
+                #    DY_specialWeight[0] = 1
+                #else :
+                #    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
+                #    specialWeight_ = specialWeight.EvalInstance()
+                #    DY_specialWeight[0] = specialWeight_
 
-                eTrigSFWeight = 1
-                eIDLooseSFWeight = 1
-                eTrigSFWeight= 1
+                #eTrigSFWeight = 1
+                #eIDLooseSFWeight = 1
+                #eTrigSFWeight= 1
 
-                HVdPhi_reg[0] = 300
+                #HVdPhi_reg[0] = 300
 
-                dphi = tree.HCSV_reg_phi - tree.V_phi
-                if dphi > math.pi:
-                    dphi = dphi - 2*math.pi
-                elif dphi <= -math.pi:
-                    dphi = dphi + 2*math.pi
-                HVdPhi_reg[0] = dphi
+                #dphi = tree.HCSV_reg_phi - tree.V_phi
+                #if dphi > math.pi:
+                #    dphi = dphi - 2*math.pi
+                #elif dphi <= -math.pi:
+                #    dphi = dphi + 2*math.pi
+                #HVdPhi_reg[0] = dphi
 
-                if job.type != 'DATA':
+                #if job.type != 'DATA':
 
-                    if tree.Vtype == 1:
-                        lepton_EvtWeight[0] = eIDLooseSFWeight*eTrigSFWeight
-#                elif channel == "Zmm":
-                    # Add trigger SF
-                    pTcut = 22;
+                #    if tree.Vtype == 1:
+                #        lepton_EvtWeight[0] = eIDLooseSFWeight*eTrigSFWeight
+#               # elif channel == "Zmm":
+                #    # Add trigger SF
+                #    pTcut = 22;
 
-                    DR = [999, 999]
-                    debug = False
+                #    DR = [999, 999]
+                #    debug = False
 
-                    # dR matching
-                    for k in range(0,2):
-                        for l in range(0,len(tree.trgObjects_hltIsoMu18_eta)):
-                            dr_ = deltaR(tree.vLeptons_eta[k], tree.vLeptons_phi[k], tree.trgObjects_hltIsoMu18_eta[l], tree.trgObjects_hltIsoMu18_phi[l])
-                            if dr_ < DR[k] and tree.vLeptons_pt[k] > 22:
-                                DR[k] = dr_
+                #    # dR matching
+                #    for k in range(0,2):
+                #        for l in range(0,len(tree.trgObjects_hltIsoMu18_eta)):
+                #            dr_ = deltaR(tree.vLeptons_eta[k], tree.vLeptons_phi[k], tree.trgObjects_hltIsoMu18_eta[l], tree.trgObjects_hltIsoMu18_phi[l])
+                #            if dr_ < DR[k] and tree.vLeptons_pt[k] > 22:
+                #                DR[k] = dr_
 
-                    Mu1pass = DR[0] < 0.5
-                    Mu2pass = DR[1] < 0.5
+                #    Mu1pass = DR[0] < 0.5
+                #    Mu2pass = DR[1] < 0.5
 
-                    SF1 = tree.vLeptons_SF_HLT_RunD4p2[0]*0.1801911165 + tree.vLeptons_SF_HLT_RunD4p3[0]*0.8198088835
-                    SF2 = tree.vLeptons_SF_HLT_RunD4p2[1]*0.1801911165 + tree.vLeptons_SF_HLT_RunD4p3[1]*0.8198088835
-                    eff1 = tree.vLeptons_Eff_HLT_RunD4p2[0]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[0]*0.8198088835
-                    eff2 = tree.vLeptons_Eff_HLT_RunD4p2[1]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[1]*0.8198088835
+                #    SF1 = tree.vLeptons_SF_HLT_RunD4p2[0]*0.1801911165 + tree.vLeptons_SF_HLT_RunD4p3[0]*0.8198088835
+                #    SF2 = tree.vLeptons_SF_HLT_RunD4p2[1]*0.1801911165 + tree.vLeptons_SF_HLT_RunD4p3[1]*0.8198088835
+                #    eff1 = tree.vLeptons_Eff_HLT_RunD4p2[0]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[0]*0.8198088835
+                #    eff2 = tree.vLeptons_Eff_HLT_RunD4p2[1]*0.1801911165 + tree.vLeptons_Eff_HLT_RunD4p3[1]*0.8198088835
 
-                    #print 'vLeptSFw is', vLeptons_SFweight_HLT[0]
-                    #print 'Vtype is', tree.Vtype
+                #    #print 'vLeptSFw is', vLeptons_SFweight_HLT[0]
+                #    #print 'Vtype is', tree.Vtype
 
-                    if tree.Vtype == 1:
-                        vLeptons_SFweight_HLT[0] = 1
-                    elif tree.Vtype == 0:
-                        if not Mu1pass and not Mu2pass:
-                            vLeptons_SFweight_HLT[0] = 0
-                        elif Mu1pass and not Mu2pass:
-                            vLeptons_SFweight_HLT[0] = SF1
-                        elif not Mu1pass and Mu2pass:
-                            vLeptons_SFweight_HLT[0] = SF2
-                        elif Mu1pass and Mu2pass:
-                            effdata = 1 - (1-SF1*eff1)*(1-SF2*eff2);
-                            effmc = 1 - (1-eff1)*(1-eff2);
-                            vLeptons_SFweight_HLT[0] = effdata/effmc
-                    #print 'vLeptSFw afer fill is', vLeptons_SFweight_HLT[0]
+                #    if tree.Vtype == 1:
+                #        vLeptons_SFweight_HLT[0] = 1
+                #    elif tree.Vtype == 0:
+                #        if not Mu1pass and not Mu2pass:
+                #            vLeptons_SFweight_HLT[0] = 0
+                #        elif Mu1pass and not Mu2pass:
+                #            vLeptons_SFweight_HLT[0] = SF1
+                #        elif not Mu1pass and Mu2pass:
+                #            vLeptons_SFweight_HLT[0] = SF2
+                #        elif Mu1pass and Mu2pass:
+                #            effdata = 1 - (1-SF1*eff1)*(1-SF2*eff2);
+                #            effmc = 1 - (1-eff1)*(1-eff2);
+                #            vLeptons_SFweight_HLT[0] = effdata/effmc
+                #    #print 'vLeptSFw afer fill is', vLeptons_SFweight_HLT[0]
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
@@ -1254,7 +1254,7 @@ for job in info:
             else:
                 # srmpathOUT = pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
                 # command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpfile+' '+outputFile.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-                command = 'xrdcp -d 1'+tmpfile+' '+outputFile
+                command = 'xrdcp -d 1 '+tmpfile+' '+outputFile
                 print command
                 subprocess.call([command], shell=True)
 
