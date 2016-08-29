@@ -127,7 +127,8 @@ class HistoMaker:
             #    treeCut= str(1)
             #else:
             #    treeCut='%s'%(options['cut'])
-            treeCut='%s & %s'%(options['cut'],addCut)
+            #treeCut='%s & %s'%(options['cut'],addCut)
+            treeCut='%s ' %addCut
 
 #            treeCut = "("+treeCut+")&&"+job.addtreecut
 
@@ -144,10 +145,10 @@ class HistoMaker:
             #print('hTree.name() 1 =',hTree.GetName())
             #print('treeVar 1 =',treeVar)
             drawoption = ''
-            print 'treeVar: %s'%(treeVar)
-            print 'weightF: %s'%(weightF)
-            print 'treeVar: %s'%(treeVar)
-            print 'treeCut: %s'%(treeCut)
+            #print 'treeVar: %s'%(treeVar)
+            #print 'weightF: %s'%(weightF)
+            #print 'treeVar: %s'%(treeVar)
+            #print 'treeCut: %s'%(treeCut)
 
 #            print("START DRAWING")
             if job.type != 'DATA':
