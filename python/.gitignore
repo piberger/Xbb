@@ -1,0 +1,12 @@
+*/
+*.swo
+!Gael*/
+!myutils/
+luca
+!json
+!*config/
+*/*.swo
+RunIIconfig/
+ZllHbb13TeV_v14config/
+spring15_13TeVconfig/
+myutils/
