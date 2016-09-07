@@ -185,24 +185,36 @@ EsScales = []
 #load trees
 for job in signal_samples:
     print '\tREADING IN %s AS SIG'%job.name
-    Tsignal = tc.get_tree(job,TrainCut)
+    input_sig = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
+    Tsignal = input_sig.Get(job.tree)
+
+    #Tsignal = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
     TsScale = tc.get_scale(job,config)*global_rescale    
     Tsignals.append(Tsignal)
     TsScales.append(TsScale)
-    Esignal = tc.get_tree(job,EvalCut)
+    input_Esig = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
+    Esignal = input_Esig.Get(job.tree)
+
+    #Esignal = tc.get_tree(job,EvalCut)
     Esignals.append(Esignal)
     EsScales.append(TsScale)
     print '\t\t\tTraining %s events'%Tsignal.GetEntries()
     print '\t\t\tEval %s events'%Esignal.GetEntries()
 for job in background_samples:
     print '\tREADING IN %s AS BKG'%job.name
-    Tbackground = tc.get_tree(job,TrainCut)
+    input_bkg = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
+    Tbackground= input_bkg.Get(job.tree)
+
+    #Tbackground = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
     TbScale = tc.get_scale(job,config)*global_rescale
     Tbackgrounds.append(Tbackground)
     TbScales.append(TbScale)
-    Ebackground = tc.get_tree(job,EvalCut)
+    input_Ebkg = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
+    Ebackground = input_Ebkg.Get(job.tree)
+
+    #Ebackground = tc.get_tree(job,EvalCut)
     ROOT.gDirectory.Cd(workdir)
     Ebackgrounds.append(Ebackground)
     EbScales.append(TbScale)
@@ -216,6 +228,7 @@ factory = ROOT.TMVA.Factory(factoryname, output, factorysettings)
 #set input trees
 # print 'set signal input trees'
 for i in range(len(Tsignals)):
+    print 'entries on the', i,'th signal are', Tsignals[i].GetEntries()
     factory.AddSignalTree(Tsignals[i], TsScales[i], ROOT.TMVA.Types.kTraining)
     factory.AddSignalTree(Esignals[i], EsScales[i], ROOT.TMVA.Types.kTesting)
 
