@@ -8,9 +8,9 @@ import os
 import ROOT
 
 #V20
-_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/prep_eandmu/'
+_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V23/prep_eandmu_new/'
 #V21
-_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_v2/'
+_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V23/singlesys_v2/'
 
 dummy_cut = ''
 
@@ -46,6 +46,8 @@ LISTNAME = ['Cut']
 FILE1 = os.listdir(_path1)
 FILE2 = os.listdir(_path2)
 
+FAILED = []
+
 for file1 in FILE1:
     if not '.root' in file1: continue
     print '#events in sample', file1
@@ -55,7 +57,8 @@ for file1 in FILE1:
         t = f.Get("tree")
         print 'for cut', LISTNAME[k]
         #print len(f)
-        print ' V20', t.GetEntries(CUTLISTV20[k])
+        n1 = t.GetEntries(CUTLISTV20[k])
+        print ' V20', n1
         for file2 in FILE2:
             if not '.root' in file2: continue
             if file2 != file1: continue
@@ -63,9 +66,17 @@ for file1 in FILE1:
             f = ROOT.TFile.Open('root://t3dcachedb03.psi.ch:1094/' + _path2 + file2)
             t = f.Get("tree")
             #print len(f)
-            print ' V21', t.GetEntries(CUTLISTV21[k])
+            n2 = t.GetEntries(CUTLISTV21[k])
+            print ' V21', n2
+            if n1 != n2:
+                FAILED.append(file1)
     if not file_found: print 'No such file in V20'
     print ''
+
+if len(FAILED) > 0:
+    print 'FAILED SAMPLES:'
+    for f in FAILED:
+        print f
 
 
 
