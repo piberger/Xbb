@@ -113,8 +113,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
