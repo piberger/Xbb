@@ -107,7 +107,8 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
             # print 't.AddFile('+outputFolder+file+')'
             # t.AddFile(outputFolder+file)
     print 'len(allFiles)',len(allFiles),'allFiles[0]',allFiles[0]
-    n=50
+    #n=50
+    n=20
     allFiles_chunks = [allFiles[i:i+n] for i in range(0, len(allFiles), n)]
     print 'len(allFiles_chunks)',len(allFiles_chunks),'allFiles_chunks[0]',allFiles_chunks[0]
     tmpfile_chunk = __tmpPath+'/'+newprefix+folderName+'_tmpfile_chunk_'
