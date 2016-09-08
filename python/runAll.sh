@@ -170,8 +170,8 @@ elif [ $task = "syseval" ]; then
     python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
 
 elif [ $task = "train" ]; then
-    echo "python ./train.py --training $sample ${config_filenames[@]} --local True"
-    python ./train.py --training $sample ${config_filenames[@]} --local True
+    echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
+    python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "singleplot" ]; then
     echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist ...(${#filelist} char)"

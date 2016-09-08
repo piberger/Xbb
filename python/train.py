@@ -76,9 +76,14 @@ MVAtype=config.get(run,'MVAtype')
 print opts.local
 optimisation_training = False
 if not  opts.MVAsettings == '':
-    print 'This is an optimisation training'
-    opt_MVAsettings = opts.MVAsettings
-    optimisation_training = True
+    if 'CUTBIN' in opts.MVAsettings:
+        subcut = opts.MVAsettings[opts.MVAsettings.find('CUTBIN')+7:].split('__')
+        subcut_ = '(' + str(subcut[1]) + ' < '+ subcut[0] + ' ) || ( ' + subcut[0] + ' < '+ str(subcut[2]) + ' )'
+        print 'subcut_ is', subcut_
+
+    #print 'The MVA settings are',opts.MVAsettings
+    #opt_MVAsettings = opts.MVAsettings
+    #optimisation_training = True
 
 if(eval(opts.local)):
   print 'Local run'
@@ -118,6 +123,10 @@ path=config.get('Directories','MVAin')
 TCutname=config.get(run, 'treeCut')
 TCut=config.get('Cuts',TCutname)
 print 'TCut is', TCut
+#adding the subcut
+#IMPORTANT: since subcuts is also present in the other steps (plot, dc), be sure the additional cut is performed the same way, so the caching would need to be performed only once.
+TCut += '&' + subcut_
+
 
 #signals
 signals=config.get(run,'signals')
