@@ -55,6 +55,65 @@ class TreeCache:
         self._cutList = effective_cuts
         self.minCut = '||'.join(self._cutList)
 
+    def _subtrim_tree(self, input_hash, output_hash, theCut):
+        '''Performs a finer caching from an already cached files, using as additional cuts the one used in the get_tree function'''
+
+        print("==================")
+        print("Perform subcaching")
+        print("==================\n")
+
+        print('Reading input', '%s/tmp_%s.root'%(self.__cachedPath,input_hash))
+        input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__cachedPath,input_hash),'read')
+
+        #if exist in tmpdir, just copy
+        tmpfile = "%s/%s" %(self.__tmpPath,'tmp_'+str(output_hash)+'.root')
+        outputFile = '%s/tmp_%s.root'%(self.__cachedPath,output_hash)
+        print('outputFile is', outputFile)
+
+        if self.__doCache and self.file_exists(tmpfile):
+            print ('File exists in TMPDIR, proceeding to the copy')
+            command = 'xrdcp -d 1 '+tmpfile+' '+ outputFile
+            print('the command is', command)
+            subprocess.call([command], shell=True)
+            return output_hash
+
+        output = ROOT.TFile.Open(tmpfile,'recreate')
+
+        #Skim input file
+        print('The input file is', '%s/tmp_%s.root'%(self.__cachedPath,input_hash))
+        input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__cachedPath,input_hash),'read')
+
+        input.Print()
+        print ("I read the tree")
+        tree = input.Get("tree")
+        assert type(tree) is ROOT.TTree
+
+        input.cd()
+        obj = ROOT.TObject
+        for key in ROOT.gDirectory.GetListOfKeys():
+            input.cd()
+            obj = key.ReadObj()
+            if obj.GetName() == 'tree':
+                continue
+            output.cd()
+            obj.Write(key.GetName())
+        output.cd()
+        print ("the cut is", theCut)
+        #Problem here: not working when empty tree
+        cuttedTree=tree.CopyTree(theCut)
+        cuttedTree.Write()
+        output.Write()
+        input.Close()
+        del input
+        output.Close()
+        del output
+        print ("Copying file to the tmp folder.")
+        print('outputFile',outputFile)
+        command = 'xrdcp -d 1 '+tmpfile+' '+ outputFile
+        subprocess.call([command], shell=True)
+        if '/scratch/' in  tmpfile: command = 'rm %s' %(tmpfile)
+        else: command = 'gfal-rm %s' %(tmpfile)
+
     def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False):
 
         start_time = time.time()
@@ -255,44 +314,6 @@ class TreeCache:
             else: command = 'gfal-rm %s' %(tmpfile)
             if not filelist or len(filelist) == 0: return (theName,theHash)
 
-            # ######################################################################
-            # print('Exit loop')
-            # newtree.AutoSave()
-            # print('Save')
-            # output.Close()
-            # print('Close')
-            # targetStorage = pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')+'/'+job.prefix+job.identifier+'.root'
-            # if('pisa' in config.get('Configuration','whereToLaunch')):
-                # command = 'cp %s %s' %(tmpDir+'/'+job.prefix+job.identifier+'.root',targetStorage)
-                # print(command)
-                # subprocess.call([command], shell=True)
-            # else:
-                # command = 'srmmkdir %s' %(pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')+'/'+job.identifier).replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/')
-                # print(command)
-                # subprocess.call([command], shell=True)
-                # if len(filelist) == 0:
-                    # command = 'srmrm %s' %(targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/'))
-                    # print(command)
-                    # os.system(command)
-                    # command = 'env -i X509_USER_PROXY=/shome/$USER/.x509up_u`id -u` gfal-copy file:////%s %s' %(tmpDir.replace('/mnt/t3nfs01/data01','')+'/'+job.prefix+job.identifier+'.root',targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/'))
-                    # print(command)
-                    # os.system(command)
-                # else:
-                    # srmpathOUT = pathOUT.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-                    # command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+tmpfile+' '+outputFile.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
-                    # print(command)
-                    # subprocess.call([command], shell=True)
-
-                    # print('checking output file',outputFile)
-                    # f = ROOT.TFile.Open(outputFile,'read')
-                    # if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
-                        # print('TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! ERROR: exiting'
-                        # sys.exit(1)
-
-                    # command = 'rm '+tmpfile
-                    # print(command)
-                    # subprocess.call([command], shell=True)
-            # ######################################################################
 
     def __cache_samples(self,filelist=None,mergeplot=False):
         inputs=[]
@@ -363,7 +384,6 @@ class TreeCache:
 
     def get_tree(self, sample, cut):
         print('input file %s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]))
-        # print ('Opening %s/tmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
         input = ROOT.TFile.Open('%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]),'read')
         print ('Opening %s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name]))
         try:
@@ -393,21 +413,41 @@ class TreeCache:
 
                 setattr(self,name,counts)
 
-        #cut += 'groovy baby'
-        #if sample.subsample:
-        #    cut += '& (%s)' %(sample.subcut)
         print('cut is', cut)
         ROOT.gROOT.cd()
         print('getting the tree after applying cuts')
-        #CopyTree overload the memory
-        #cuttedTree=tree.CopyTree(cut)
-        # cuttedTree.SetDirectory(0)
         input.Close()
         del input
         del tree
-        #return cuttedTree
-        #return tree
-        return '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
+        if cut == '' or cut == '1':
+            return '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
+        else:
+            #Hash of the subtree
+            subcut_hash = hashlib.sha224('%s_%s' %(self.__hashDict[sample.name],cut)).hexdigest()
+            print('subcut input file %s/tmp_%s.root'%(self.__cachedPath, subcut_hash))
+            input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+            input = ROOT.TFile.Open(input_,'read')
+            print('Opening ', input_)
+            try:
+                tree = input.Get(sample.tree)
+                assert type(tree) is ROOT.TTree
+            except:
+                print (input_,"is corrupted. I'm relaunching _subtrim_tree")
+                self._subtrim_tree(self.__hashDict[sample.name], subcut_hash, cut)
+                input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                input = ROOT.TFile.Open(input_,'read')
+                tree = input.Get(sample.tree)
+        return '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+
+
+
+    #def get_copy_tree(self, sample, cut):
+    #    input = ROOT.TFile.Open(self.get_tree(sample, cut),'read')
+    #    tree = input.Get(sample.tree)
+    #    cuttedTree=tree.CopyTree(cut)
+    #    cuttedTree.SetDirectory(0)
+    #    return cuttedTree
+
 
     @staticmethod
     def get_slc_version():

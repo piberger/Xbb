@@ -182,19 +182,55 @@ EbScales = []
 Esignals = []
 EsScales = []
 
+INPUT_SIG = []
+INPUT_ESIG = []
+INPUT_BKG = []
+INPUT_EBKG = []
+
+#load trees
+#for job in signal_samples:
+#    print '\tREADING IN %s AS SIG'%job.name
+#    Tsignal = tc.get_copy_tree(job,TrainCut)
+#    ROOT.gDirectory.Cd(workdir)
+#    TsScale = tc.get_scale(job,config)*global_rescale
+#    Tsignals.append(Tsignal)
+#    TsScales.append(TsScale)
+#    Esignal = tc.get_copy_tree(job,EvalCut)
+#    Esignals.append(Esignal)
+#    EsScales.append(TsScale)
+#    print '\t\t\tTraining %s events'%Tsignal.GetEntries()
+#    print '\t\t\tEval %s events'%Esignal.GetEntries()
+#for job in background_samples:
+#    print '\tREADING IN %s AS BKG'%job.name
+#    Tbackground = tc.get_copy_tree(job,TrainCut)
+#    ROOT.gDirectory.Cd(workdir)
+#    TbScale = tc.get_scale(job,config)*global_rescale
+#    Tbackgrounds.append(Tbackground)
+#    TbScales.append(TbScale)
+#    Ebackground = tc.get_copy_tree(job,EvalCut)
+#    ROOT.gDirectory.Cd(workdir)
+#    Ebackgrounds.append(Ebackground)
+#    EbScales.append(TbScale)
+#    print '\t\t\tTraining %s events'%Tbackground.GetEntries()
+#    print '\t\t\tEval %s events'%Ebackground.GetEntries()
+
 #load trees
 for job in signal_samples:
     print '\tREADING IN %s AS SIG'%job.name
-    input_sig = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
-    Tsignal = input_sig.Get(job.tree)
+    #input_sig = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
+    INPUT_SIG.append(ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read'))
+    #Tsignal = input_sig.Get(job.tree)
+    Tsignal = INPUT_SIG[-1].Get(job.tree)
 
     #Tsignal = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
     TsScale = tc.get_scale(job,config)*global_rescale    
     Tsignals.append(Tsignal)
     TsScales.append(TsScale)
-    input_Esig = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
-    Esignal = input_Esig.Get(job.tree)
+    #input_Esig = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
+    INPUT_ESIG.append(ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read'))
+    #Esignal = input_Esig.Get(job.tree)
+    Esignal = INPUT_ESIG[-1].Get(job.tree)
 
     #Esignal = tc.get_tree(job,EvalCut)
     Esignals.append(Esignal)
@@ -203,16 +239,20 @@ for job in signal_samples:
     print '\t\t\tEval %s events'%Esignal.GetEntries()
 for job in background_samples:
     print '\tREADING IN %s AS BKG'%job.name
-    input_bkg = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
-    Tbackground= input_bkg.Get(job.tree)
+    #input_bkg = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
+    INPUT_BKG.append(ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read'))
+    #Tbackground= input_bkg.Get(job.tree)
+    Tbackground = INPUT_BKG[-1].Get(job.tree)
 
     #Tbackground = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
     TbScale = tc.get_scale(job,config)*global_rescale
     Tbackgrounds.append(Tbackground)
     TbScales.append(TbScale)
-    input_Ebkg = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
-    Ebackground = input_Ebkg.Get(job.tree)
+    #input_Ebkg = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
+    INPUT_EBKG.append(ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read'))
+    #Ebackground = input_Ebkg.Get(job.tree)
+    Ebackground = INPUT_EBKG[-1].Get(job.tree)
 
     #Ebackground = tc.get_tree(job,EvalCut)
     ROOT.gDirectory.Cd(workdir)
@@ -228,7 +268,6 @@ factory = ROOT.TMVA.Factory(factoryname, output, factorysettings)
 #set input trees
 # print 'set signal input trees'
 for i in range(len(Tsignals)):
-    print 'entries on the', i,'th signal are', Tsignals[i].GetEntries()
     factory.AddSignalTree(Tsignals[i], TsScales[i], ROOT.TMVA.Types.kTraining)
     factory.AddSignalTree(Esignals[i], EsScales[i], ROOT.TMVA.Types.kTesting)
 
@@ -245,21 +284,21 @@ for var in MVA_Vars['Nominal']:
     factory.AddVariable(var,'D') # add the variables
 
 #Execute TMVA
-# print 'Execute TMVA: SetSignalWeightExpression'
+print 'Execute TMVA: SetSignalWeightExpression'
 factory.SetSignalWeightExpression(weightF)
-# print 'Execute TMVA: SetBackgroundWeightExpression'
+print 'Execute TMVA: SetBackgroundWeightExpression'
 factory.SetBackgroundWeightExpression(weightF)
 factory.Verbose()
-# print 'Execute TMVA: factory.BookMethod'
+print 'Execute TMVA: factory.BookMethod'
 my_methodBase_bdt = factory.BookMethod(MVAtype,MVAname,MVAsettings)
-# print 'Execute TMVA: TrainMethod'
+print 'Execute TMVA: TrainMethod'
 my_methodBase_bdt.TrainMethod()
 #factory.TrainAllMethods()
-# print 'Execute TMVA: TestAllMethods'
+print 'Execute TMVA: TestAllMethods'
 factory.TestAllMethods()
-# print 'Execute TMVA: EvaluateAllMethods'
+print 'Execute TMVA: EvaluateAllMethods'
 factory.EvaluateAllMethods()
-# print 'Execute TMVA: output.Write'
+print 'Execute TMVA: output.Write'
 output.Write()
 
 
@@ -270,49 +309,49 @@ output.cd('Method_%s'%MVAtype)
 #ROOT.gDirectory.ls()
 ROOT.gDirectory.cd(MVAname)
 
-# print 'Get ROCs'
-rocIntegral_default=my_methodBase_bdt.GetROCIntegral()
-roc_integral_test = my_methodBase_bdt.GetROCIntegral(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B'))
-roc_integral_train = my_methodBase_bdt.GetROCIntegral(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
-# print 'Get significances'
-significance = my_methodBase_bdt.GetSignificance()
-separation_test = my_methodBase_bdt.GetSeparation(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B'))
-separation_train = my_methodBase_bdt.GetSeparation(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
-ks_signal = (ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S')).KolmogorovTest(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'))
-ks_bkg= (ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B')).KolmogorovTest(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
-
-
-print '@DEBUG: Test Integral'
-print ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S').Integral()
-print '@LOG: ROC integral (default)'
-print rocIntegral_default
-print '@LOG: ROC integral using signal and background'
-print roc_integral_test
-print '@LOG: ROC integral using train signal and background'
-print roc_integral_train
-print '@LOG: ROC integral ratio (Test/Train)'
-print roc_integral_test/roc_integral_train
-print '@LOG: Significance'
-print significance
-print '@LOG: Separation for test sample'
-print separation_test
-print '@LOG: Separation for test train'
-print separation_train
-print '@LOG: Kolmogorov test on signal'
-print ks_signal
-print '@LOG: Kolmogorov test on background'
-print ks_bkg
-
-#!! update the database
-import sqlite3 as lite
-con = lite.connect(MVAdir+'Trainings.db',timeout=10000) #timeout in milliseconds. default 5 sec
-with con: # here DB is locked
-    cur = con.cursor()
-    cur.execute("create table if not exists trainings (Roc_integral real, Separation real, Significance real, Ks_signal real, Ks_background real, Roc_integral_train real, Separation_train real, MVASettings text)");
-    cur.execute("insert into trainings values(?,?,?,?,?,?,?,?)",(roc_integral_test,separation_test,significance,ks_signal,ks_bkg,roc_integral_train,separation_train,MVAsettings));
-#!! here is unlocked
-
-#!! Close the output file to avoid memory leak
+## print 'Get ROCs'
+#rocIntegral_default=my_methodBase_bdt.GetROCIntegral()
+#roc_integral_test = my_methodBase_bdt.GetROCIntegral(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B'))
+#roc_integral_train = my_methodBase_bdt.GetROCIntegral(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
+## print 'Get significances'
+#significance = my_methodBase_bdt.GetSignificance()
+#separation_test = my_methodBase_bdt.GetSeparation(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B'))
+#separation_train = my_methodBase_bdt.GetSeparation(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'),ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
+#ks_signal = (ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S')).KolmogorovTest(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_S'))
+#ks_bkg= (ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_B')).KolmogorovTest(ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_Train_B'))
+#
+#
+#print '@DEBUG: Test Integral'
+#print ROOT.gDirectory.Get(factoryname+'_'+MVAname+'_S').Integral()
+#print '@LOG: ROC integral (default)'
+#print rocIntegral_default
+#print '@LOG: ROC integral using signal and background'
+#print roc_integral_test
+#print '@LOG: ROC integral using train signal and background'
+#print roc_integral_train
+#print '@LOG: ROC integral ratio (Test/Train)'
+#print roc_integral_test/roc_integral_train
+#print '@LOG: Significance'
+#print significance
+#print '@LOG: Separation for test sample'
+#print separation_test
+#print '@LOG: Separation for test train'
+#print separation_train
+#print '@LOG: Kolmogorov test on signal'
+#print ks_signal
+#print '@LOG: Kolmogorov test on background'
+#print ks_bkg
+#
+##!! update the database
+#import sqlite3 as lite
+#con = lite.connect(MVAdir+'Trainings.db',timeout=10000) #timeout in milliseconds. default 5 sec
+#with con: # here DB is locked
+#    cur = con.cursor()
+#    cur.execute("create table if not exists trainings (Roc_integral real, Separation real, Significance real, Ks_signal real, Ks_background real, Roc_integral_train real, Separation_train real, MVASettings text)");
+#    cur.execute("insert into trainings values(?,?,?,?,?,?,?,?)",(roc_integral_test,separation_test,significance,ks_signal,ks_bkg,roc_integral_train,separation_train,MVAsettings));
+##!! here is unlocked
+#
+##!! Close the output file to avoid memory leak
 output.Close()
 
 
@@ -334,9 +373,9 @@ pickle.dump(info,infofile)
 infofile.close()
 
 # open the TMVA Gui 
-if gui == True: 
-    ROOT.gROOT.ProcessLine( ".L myutils/TMVAGui.C")
-    ROOT.gROOT.ProcessLine( "TMVAGui(\"%s\")" % fnameOutput )
-    ROOT.gApplication.Run() 
+#if gui == True:
+#    ROOT.gROOT.ProcessLine( ".L myutils/TMVAGui.C")
+#    ROOT.gROOT.ProcessLine( "TMVAGui(\"%s\")" % fnameOutput )
+#    ROOT.gApplication.Run()
 
 
