@@ -7,11 +7,12 @@ from Ratio import getRatio
 from HistoMaker import HistoMaker
 
 class StackMaker:
-    def __init__(self, config, var,region,SignalRegion,setup=None):
+    def __init__(self, config, var,region,SignalRegion,setup=None, subcut = ''):
         section='Plot:%s'%region
         self.var = var
         self.SignalRegion=SignalRegion
         self.region = region
+        self.subcut = subcut
         #print "region:",region
         self.normalize = eval(config.get(section,'Normalize'))
         self.log = eval(config.get(section,'log'))
@@ -95,7 +96,8 @@ class StackMaker:
         # self.hname = self.hname.replace('$','')
 # >>>>>>> silviodonato/master
         #print ('self.hname',self.hname)
-        self.options = {'var': self.name,'name':self.hname,'xAxis': self.xAxis, 'nBins': self.nBins, 'xMin': self.xMin, 'xMax': self.xMax,'pdfName': '%s_%s_%s.pdf'%(region,var,self.mass),'cut':cut,'mass': self.mass, 'data': data, 'blind': self.blind}
+        print 'test of the sample name', '%s%s_%s_%s.pdf'%(region,self.subcut,var,self.mass)
+        self.options = {'var': self.name,'name':self.hname,'xAxis': self.xAxis, 'nBins': self.nBins, 'xMin': self.xMin, 'xMax': self.xMax,'pdfName': '%s%s_%s_%s.pdf'%(region,self.subcut,var,self.mass),'cut':cut,'mass': self.mass, 'data': data, 'blind': self.blind}
         if config.has_option('Weights','weightF'):
             self.options['weight'] = config.get('Weights','weightF')
         else:

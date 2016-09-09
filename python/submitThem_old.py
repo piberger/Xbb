@@ -191,7 +191,6 @@ def training(additional_):
 
     train_list = (config.get('MVALists','List_for_submitscript')).split(',')
     print train_list
-    print 'debug'
     for item in train_list:
         #No subcut declared. Just perform classical training
         if not config.has_option(item, 'subcut'):
@@ -212,6 +211,29 @@ def training(additional_):
                 #Need to propagate the cutbin param
                 repDict['additional']= additional_ +'__'+cut_
                 submit(item,repDict, False)
+
+def ploting(additional_ = None):
+
+    repDict['queue'] = 'all.q'
+    for region in Plot_vars:
+        section='Plot:%s'%region
+        if not config.has_option(section, 'subcut'):
+            print 'No subcut for the plot region', region
+            submit(region,repDict)
+            continue
+        subcut = eval(config.get(section,'subcut'))
+        print 'subcut is', subcut
+        for cutvar, CUTBIN in subcut.iteritems():
+            print 'cutvar is', cutvar
+            #cutbin_first = CUTBIN[0]
+            for cutbins in CUTBIN:
+                print 'cutbins is', cutbins
+                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+                print 'cut_ is', cut_
+                #Need to propagate the cutbin param
+                if additional_: repDict['additional']= additional_ +'__'+cut_
+                else: repDict['additional']= cut_
+                submit(region,repDict)
 
 print '===============================\n'
 print 'Compiling the macros'
@@ -249,13 +271,13 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         waiting_time_before_retry = 60
         number_symultaneous_process = 4
-        counter  =  int(subprocess.check_output('ps aux | grep $USER | grep '+opts.task +' | wc -l', shell=True))-1# add 1 to remove submithem count
-        print 'counter command is', 'ps aux | grep $USER | grep '+opts.task +' | wc -l'
+        counter  =  int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))-1# add 1 to remove submithem count
+        print 'counter command is', 'ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l'
         while counter > number_symultaneous_process:
             print 'counter is', counter
             print 'waiting',waiting_time_before_retry,'seconds before to retry'
             os.system('sleep '+str(waiting_time_before_retry))
-            counter = int(subprocess.check_output('ps aux | grep $USER | grep '+opts.task +' | wc -l', shell=True))
+            counter = int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))
 
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
@@ -329,29 +351,6 @@ def getfilelist(job):
 
 
 if opts.task == 'train': training('')
-#    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
-#    print train_list
-#    print 'debug'
-#    for item in train_list:
-#        #No subcut declared. Just perform classical training
-#        if not config.has_option(item, 'subcut'):
-#            print 'No subcuts in this training'
-#            submit(item,repDict)
-#            continue
-#        #subcut_ = eval(config.get(item,'subcut'))
-#        subcut = eval(config.get(item,'subcut'))
-#        print 'subcut_ is', subcut
-#        #Performs loop over all the subcuts to create corresponding bins
-#        for cutvar, CUTBIN in subcut.iteritems():
-#            print 'cutvar is', cutvar
-#            #cutbin_first = CUTBIN[0]
-#            for cutbins in CUTBIN:
-#                print 'cutbins is', cutbins
-#                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
-#                print 'cut_ is', cut_
-#                #Need to propagate the cutbin param
-#                repDict['additional']=cut_
-#                submit(item,repDict, False)
 
 elif opts.task == 'splitsubcaching':
     train_list = (config.get('MVALists','List_for_submitscript')).split(',')
@@ -383,30 +382,52 @@ if not opts.task == 'prep':
     path = config.get("Directories","samplepath")
     info = ParseInfo(samplesinfo,path)
 
-
 if opts.task == 'plot':
-    repDict['queue'] = 'all.q'
-    for item in Plot_vars:
-        submit(item,repDict)
+    ploting()
 
-elif opts.task == 'splitcaching':
-    Plot_vars= (config.get('Plot_general','List')).split(',')
-    for region in Plot_vars:
-        print 'region is', region
-        samplesinfo=config.get('Directories','samplesinfo')
-        section='Plot:%s'%region
-        data = eval(config.get(section,'Datas'))
-        mc = eval(config.get('Plot_general','samples'))
-        info = ParseInfo(samplesinfo,path)
-        datasamples = info.get_samples(data)
-        mcsamples = info.get_samples(mc)
-        samples= mcsamples+datasamples
+#Old and working
+#if opts.task == 'plot':
+#
+#    repDict['queue'] = 'all.q'
+#    for region in Plot_vars:
+#        section='Plot:%s'%region
+#        if not config.has_option(section, 'subcut'):
+#            print 'No subcut for the plot region', region
+#            submit(region,repDict)
+#            continue
+#        subcut = eval(config.get(section,'subcut'))
+#        print 'subcut is', subcut
+#        for cutvar, CUTBIN in subcut.iteritems():
+#            print 'cutvar is', cutvar
+#            #cutbin_first = CUTBIN[0]
+#            for cutbins in CUTBIN:
+#                print 'cutbins is', cutbins
+#                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+#                print 'cut_ is', cut_
+#                #Need to propagate the cutbin param
+#                repDict['additional']= cut_
+#                submit(region,repDict)
 
-        for sample in samples:
-            print 'sample is', sample
-            repDict['additional']=str(sample)
-            repDict['queue'] = 'all.q'
-            submit(region,repDict)
+if opts.task == 'splitcaching':
+  Plot_vars= (config.get('Plot_general','List')).split(',')
+  for region in Plot_vars:
+      print 'region is', region
+      samplesinfo=config.get('Directories','samplesinfo')
+      section='Plot:%s'%region
+      data = eval(config.get(section,'Datas'))
+      mc = eval(config.get('Plot_general','samples'))
+      info = ParseInfo(samplesinfo,path)
+      datasamples = info.get_samples(data)
+      mcsamples = info.get_samples(mc)
+      samples= mcsamples+datasamples
+
+      for sample in samples:
+          print 'sample is', sample
+          #repDict['additional']=str(sample)
+          additional_ = str(sample)
+          ploting(additional_)
+          #repDict['queue'] = 'all.q'
+          #submit(region,repDict)
 
 
     #Plot_vars= (config.get('Plot_general','List')).split(',')

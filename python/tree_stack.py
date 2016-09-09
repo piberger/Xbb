@@ -29,17 +29,32 @@ parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
 parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
                               help="option to merge")
-parser.add_option("-s", "--sample_to_merge", dest="sample_to_merge", default=False,
-                              help="sample you want to merge")
+parser.add_option("-s", "--settings", dest="settings", default=False,
+                              help="co ntains sample you want to merge, as well as the subcut bin")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
         
 from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, HistoMaker
 
-print 'sample_to_merge is', opts.sample_to_merge
+print 'opts.settings is', opts.settings
 print 'mergeplot is', opts.mergeplot
 
+sample_to_merge_ = None
+subcut_ =  None
+#This will go in the name of the pdf, png etc file
+subcut_plotname = ''
+if opts.settings:
+    print 'settings is', opts.settings
+    if 'CUTBIN' in opts.settings:
+        print '@INFO: The PLOT regions contains subcuts'
+        subcut = opts.settings[opts.settings.find('CUTBIN')+7:].split('__')
+        subcut_ = '(' + str(subcut[1]) + ' < '+ subcut[0] + ' ) & ( ' + subcut[0] + ' < '+ str(subcut[2]) + ' )'
+        subcut_plotname = '%s_%s_%s'%(subcut[0],subcut[1],subcut[2])
+        print 'subcut_ is', subcut_
+    if 'CACHING' in opts.settings:
+        sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+        print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
 
 #adds the file vhbbPlotDef.ini to the config list
 #print 'opts.config',opts.config
@@ -133,15 +148,13 @@ def doPlot():
     #print "Start Loop over the list of variables(to fill the StackMaker )" print "==============================================================\n"
     for i in range(len(vars)):# loop over the list of variables to be ploted in each reagion
         #print "The variable is ", vars[i], "\n"
-        Stacks.append(StackMaker(config,vars[i],region,SignalRegion))# defined in myutils DoubleStackMaker. The StackMaker merge together all the informations necessary to perform the plot (plot region, variables, samples and signal region ). "options" contains the variables information, including the cuts. 
+        Stacks.append(StackMaker(config,vars[i],region,SignalRegion, None, '_'+subcut_plotname))# defined in myutils DoubleStackMaker. The StackMaker merge together all the informations necessary to perform the plot (plot region, variables, samples and signal region ). "options" contains the variables information, including the cuts.
         options.append(Stacks[i].options)
     #print "Finished Loop over the list of variables(to fill the StackMaker )"
     #print "================================================================\n"
-    #print 'loop options',options
-    # print 'options',options
 
     #Prepare cached files in the temporary (tmpSamples) folder.
-    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot,opts.sample_to_merge)
+    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot,sample_to_merge_)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)
@@ -183,7 +196,7 @@ def doPlot():
 #        cutOverWrite = None
 #        if addBlindingCut:
 #            cutOverWrite = config.get('Cuts',region)+' & ' + addBlindingCut
-        inputs.append((Plotter,"get_histos_from_tree",(job,True)))
+        inputs.append((Plotter,"get_histos_from_tree",(job,True, subcut_)))
 
     #print 'inputs are', inputs
     
@@ -278,9 +291,11 @@ def doPlot():
     #! Get the data histograms
     for job in datasamples:
         if addBlindingCut:
-            dDictList = Plotter.get_histos_from_tree(job,config.get('Cuts',region)+' & ' + addBlindingCut)
+            if subcut_: dDictList = Plotter.get_histos_from_tree(job,True, config.get('Cuts',region)+' & ' + addBlindingCut +' & ' + subcut_)
+            else: dDictList = Plotter.get_histos_from_tree(job, True, config.get('Cuts',region)+' & ' + addBlindingCut)
         else:
-            dDictList = Plotter.get_histos_from_tree(job)
+            if subcut_: dDictList = Plotter.get_histos_from_tree(job, True, config.get('Cuts',region)+' & ' + subcut_)
+            else: dDictList = Plotter.get_histos_from_tree(job)
         #! add the variables list for each job (Samples)
         for v in range(0,len(vars)):
             Ldatas[v].append(dDictList[v].values()[0])
@@ -308,6 +323,9 @@ def doPlot():
         Stacks[v].lumi = lumi
         Stacks[v].jobnames= Ljobnames[v]
         Stacks[v].normalize = eval(config.get(section,'Normalize'))
+        #print 'Stack[v].subcut is', Stacks[v].subcut
+        #if subcut_plotname: Stacks[v].subcut = '_'+subcut_plotname
+        #print 'again, Stack[v].subcut is', Stacks[v].subcut
         Stacks[v].doPlot()
         ##FIXME##
 #        Stacks[v].histos = Lhistos[v]

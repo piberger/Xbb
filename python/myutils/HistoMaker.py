@@ -30,12 +30,12 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "Cuts:",self.cuts
+        print 'Oh baby, I feel so bluuuuuuuuuuuuuuuuuue !'
         self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge)# created cached tree i.e. create new skimmed trees using the list of cuts
+        print 'My job here is done muthafucka'
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             sys.exit(1)
-        #print self.cuts
-        # self.tc = TreeCache(self.cuts,samples,path,config)
         self._rebin = False
         self.mybinning = None
         self.GroupDict=GroupDict
@@ -47,7 +47,7 @@ class HistoMaker:
         print "Done Creating HistoMaker"
         print "========================\n"
 
-    def get_histos_from_tree(self,job,quick=True):
+    def get_histos_from_tree(self,job,quick=True, subcut_ = None):
         start_time = time.time()
 
         #print "=============================================================\n"
@@ -85,6 +85,10 @@ class HistoMaker:
 
         # get all Histos at once
         addCut = '1'
+        print 'subcut_ is', subcut_
+        if subcut_:
+            addCut = subcut_
+        print 'addCut is', addCut
         input = ROOT.TFile.Open(self.tc.get_tree(job, addCut),'read')
         if job.subsample:
             addCut += '& (%s)' %(job.subcut)

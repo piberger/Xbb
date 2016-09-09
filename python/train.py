@@ -21,7 +21,7 @@ parser.add_option("-S","--setting", dest="MVAsettings", default='',
                       help="Parameter setting string")
 parser.add_option("-N","--name", dest="set_name", default='',
                       help="Parameter setting name. Output files will have this name")
-parser.add_option("-L","--local",dest="local", default=True,
+parser.add_option("-L","--local",dest="local", default='True',
                       help="True to run it locally. False to run on batch system using config")
 
 (opts, args) = parser.parse_args(argv)
@@ -73,10 +73,10 @@ factorysettings=config.get('factory','factorysettings')
 #MVA
 MVAtype=config.get(run,'MVAtype')
 #MVA name and settings. From local running or batch running different option
-print 'yeah muthafucka !'
-print opts.local
+print 'opts.local is', opts.local
 optimisation_training = False
 sample_to_cache_ = None
+subcut_ = None
 if not  opts.MVAsettings == '':
     print 'MVAsettins are', opts.MVAsettings
     if 'CUTBIN' in opts.MVAsettings:
@@ -122,7 +122,6 @@ fnameOutput = MVAdir+factoryname+'_'+MVAname+'_'+opts.MVAsettings+'.root'
 print '@DEBUG: output file name : ' + fnameOutput
 
 
-#sys.exit()
 
 #locations
 path=config.get('Directories','MVAin')
@@ -132,7 +131,7 @@ TCut=config.get('Cuts',TCutname)
 print 'TCut is', TCut
 #adding the subcut
 #IMPORTANT: since subcuts is also present in the other steps (plot, dc), be sure the additional cut is performed the same way, so the caching would need to be performed only once.
-TCut += '&' + subcut_
+if subcut_: TCut += '&' + subcut_
 
 
 #signals
@@ -274,7 +273,6 @@ if sample_to_cache_:
     print '@INFO:',sample_to_cache_,'has beeen cached and subcached. Exiting.'
     sys.exit(1)
 
-print 'SHOULD HAVE EXITED NOW...'
 # print 'creating TMVA.Factory object'
 factory = ROOT.TMVA.Factory(factoryname, output, factorysettings)
 
