@@ -73,13 +73,20 @@ factorysettings=config.get('factory','factorysettings')
 #MVA
 MVAtype=config.get(run,'MVAtype')
 #MVA name and settings. From local running or batch running different option
+print 'yeah muthafucka !'
 print opts.local
 optimisation_training = False
+sample_to_cache_ = None
 if not  opts.MVAsettings == '':
+    print 'MVAsettins are', opts.MVAsettings
     if 'CUTBIN' in opts.MVAsettings:
+        print '@INFO: The MVA regions contains subcuts'
         subcut = opts.MVAsettings[opts.MVAsettings.find('CUTBIN')+7:].split('__')
-        subcut_ = '(' + str(subcut[1]) + ' < '+ subcut[0] + ' ) || ( ' + subcut[0] + ' < '+ str(subcut[2]) + ' )'
+        subcut_ = '(' + str(subcut[1]) + ' < '+ subcut[0] + ' ) & ( ' + subcut[0] + ' < '+ str(subcut[2]) + ' )'
         print 'subcut_ is', subcut_
+    if 'CACHING' in opts.MVAsettings:
+        sample_to_cache_ = opts.MVAsettings[opts.MVAsettings.find('CACHING')+7:].split('__')[1]
+        print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_cache_
 
     #print 'The MVA settings are',opts.MVAsettings
     #opt_MVAsettings = opts.MVAsettings
@@ -111,7 +118,7 @@ print '@DEBUG: MVAname'
 print 'input : ' + opts.set_name
 print 'used : ' + MVAname
 
-fnameOutput = MVAdir+factoryname+'_'+MVAname+'.root'
+fnameOutput = MVAdir+factoryname+'_'+MVAname+'_'+opts.MVAsettings+'.root'
 print '@DEBUG: output file name : ' + fnameOutput
 
 
@@ -164,14 +171,31 @@ print "EvalCut:",EvalCut
 #cuts = [TrainCut,EvalCut]
 cuts = [TCut]
 
+if sample_to_cache_:
+    #Doing splitsubcaching: only one sample shous remain
+    if sample_to_cache_ in signals:
+        signals = []
+        backgrounds = []
+        signals.append(sample_to_cache_)
+    elif sample_to_cache_ in backgrounds:
+        signals = []
+        backgrounds = []
+        backgrounds.append(sample_to_cache_)
+    else:
+        print "@ERROR: The target sample in splitsubcaching is not used in the bdt. Aborting."
+        sys.exit()
 
+print 'after the selections, backgrounds are', backgrounds
+print 'after the selections, signals are', signals
 samples = []
-print 'agains, signals is', signals
 samples = info.get_samples(signals+backgrounds)
 
 print "XXXXXXXXXXXXXXXX"
 
 tc = TreeCache(cuts,samples,path,config, [])
+#if sample_to_cache_:
+#    print "@INFO: performed caching only. bye"
+#    sys.exit(1)
 
 output = ROOT.TFile.Open(fnameOutput, "RECREATE")
 
@@ -197,34 +221,9 @@ INPUT_BKG = []
 INPUT_EBKG = []
 
 #load trees
-#for job in signal_samples:
-#    print '\tREADING IN %s AS SIG'%job.name
-#    Tsignal = tc.get_copy_tree(job,TrainCut)
-#    ROOT.gDirectory.Cd(workdir)
-#    TsScale = tc.get_scale(job,config)*global_rescale
-#    Tsignals.append(Tsignal)
-#    TsScales.append(TsScale)
-#    Esignal = tc.get_copy_tree(job,EvalCut)
-#    Esignals.append(Esignal)
-#    EsScales.append(TsScale)
-#    print '\t\t\tTraining %s events'%Tsignal.GetEntries()
-#    print '\t\t\tEval %s events'%Esignal.GetEntries()
-#for job in background_samples:
-#    print '\tREADING IN %s AS BKG'%job.name
-#    Tbackground = tc.get_copy_tree(job,TrainCut)
-#    ROOT.gDirectory.Cd(workdir)
-#    TbScale = tc.get_scale(job,config)*global_rescale
-#    Tbackgrounds.append(Tbackground)
-#    TbScales.append(TbScale)
-#    Ebackground = tc.get_copy_tree(job,EvalCut)
-#    ROOT.gDirectory.Cd(workdir)
-#    Ebackgrounds.append(Ebackground)
-#    EbScales.append(TbScale)
-#    print '\t\t\tTraining %s events'%Tbackground.GetEntries()
-#    print '\t\t\tEval %s events'%Ebackground.GetEntries()
-
-#load trees
 for job in signal_samples:
+    print 'job.name is', job.name
+    if  sample_to_cache_ and sample_to_cache_!= job.name: continue
     print '\tREADING IN %s AS SIG'%job.name
     #input_sig = ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read')
     INPUT_SIG.append(ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read'))
@@ -271,6 +270,11 @@ for job in background_samples:
     print '\t\t\tEval %s events'%Ebackground.GetEntries()
 
 
+if sample_to_cache_:
+    print '@INFO:',sample_to_cache_,'has beeen cached and subcached. Exiting.'
+    sys.exit(1)
+
+print 'SHOULD HAVE EXITED NOW...'
 # print 'creating TMVA.Factory object'
 factory = ROOT.TMVA.Factory(factoryname, output, factorysettings)
 
@@ -365,21 +369,21 @@ output.Close()
 
 
 #WRITE INFOFILE
-infofile = open(MVAdir+factoryname+'_'+MVAname+'.info','w')
-print '@DEBUG: output infofile name'
-print infofile
-
-info=mvainfo(MVAname)
-info.factoryname=factoryname
-info.factorysettings=factorysettings
-info.MVAtype=MVAtype
-info.MVAsettings=MVAsettings
-info.weightfilepath=MVAdir
-info.path=path
-info.varset=treeVarSet
-info.vars=MVA_Vars['Nominal']
-pickle.dump(info,infofile)
-infofile.close()
+#infofile = open(MVAdir+factoryname+'_'+MVAname+'.info','w')
+#print '@DEBUG: output infofile name'
+#print infofile
+#
+#info=mvainfo(MVAname)
+#info.factoryname=factoryname
+#info.factorysettings=factorysettings
+#info.MVAtype=MVAtype
+#info.MVAsettings=MVAsettings
+#info.weightfilepath=MVAdir
+#info.path=path
+#info.varset=treeVarSet
+#info.vars=MVA_Vars['Nominal']
+#pickle.dump(info,infofile)
+#infofile.close()
 
 # open the TMVA Gui 
 #if gui == True:

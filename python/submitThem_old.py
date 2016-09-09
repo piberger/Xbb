@@ -187,6 +187,32 @@ def compile_macro(config,macro):
         sys.exit(1)
     os.chdir(submitDir)
 
+def training(additional_):
+
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    print train_list
+    print 'debug'
+    for item in train_list:
+        #No subcut declared. Just perform classical training
+        if not config.has_option(item, 'subcut'):
+            print 'No subcuts in this training'
+            submit(item,repDict)
+            continue
+        #subcut_ = eval(config.get(item,'subcut'))
+        subcut = eval(config.get(item,'subcut'))
+        print 'subcut_ is', subcut
+        #Performs loop over all the subcuts to create corresponding bins
+        for cutvar, CUTBIN in subcut.iteritems():
+            print 'cutvar is', cutvar
+            #cutbin_first = CUTBIN[0]
+            for cutbins in CUTBIN:
+                print 'cutbins is', cutbins
+                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+                print 'cut_ is', cut_
+                #Need to propagate the cutbin param
+                repDict['additional']= additional_ +'__'+cut_
+                submit(item,repDict, False)
+
 print '===============================\n'
 print 'Compiling the macros'
 print '===============================\n'
@@ -302,31 +328,47 @@ def getfilelist(job):
     return list
 
 
-if opts.task == 'train':
-    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
-    print train_list
-    print 'debug'
-    for item in train_list:
-        #No subcut declared. Just perform classical training
-        if not config.has_option(item, 'subcut'):
-            print 'No subcuts in this training'
-            submit(item,repDict)
-            continue
-        #subcut_ = eval(config.get(item,'subcut'))
-        subcut = eval(config.get(item,'subcut'))
-        print 'subcut_ is', subcut
-        #Performs loop over all the subcuts to create corresponding bins
-        for cutvar, CUTBIN in subcut.iteritems():
-            print 'cutvar is', cutvar
-            #cutbin_first = CUTBIN[0]
-            for cutbins in CUTBIN:
-                print 'cutbins is', cutbins
-                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
-                print 'cut_ is', cut_
-                #Need to propagate the cutbin param
-                repDict['additional']=cut_
-                submit(item,repDict, False)
+if opts.task == 'train': training('')
+#    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+#    print train_list
+#    print 'debug'
+#    for item in train_list:
+#        #No subcut declared. Just perform classical training
+#        if not config.has_option(item, 'subcut'):
+#            print 'No subcuts in this training'
+#            submit(item,repDict)
+#            continue
+#        #subcut_ = eval(config.get(item,'subcut'))
+#        subcut = eval(config.get(item,'subcut'))
+#        print 'subcut_ is', subcut
+#        #Performs loop over all the subcuts to create corresponding bins
+#        for cutvar, CUTBIN in subcut.iteritems():
+#            print 'cutvar is', cutvar
+#            #cutbin_first = CUTBIN[0]
+#            for cutbins in CUTBIN:
+#                print 'cutbins is', cutbins
+#                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+#                print 'cut_ is', cut_
+#                #Need to propagate the cutbin param
+#                repDict['additional']=cut_
+#                submit(item,repDict, False)
 
+elif opts.task == 'splitsubcaching':
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    for region in train_list:
+         print 'region is', region
+         path = config.get("Directories","samplepath")
+         samplesinfo=config.get('Directories','samplesinfo')
+         info = ParseInfo(samplesinfo,path)
+         signals = eval(config.get(region,'signals'))
+         backgrounds = eval(config.get(region,'backgrounds'))
+         samples = info.get_samples(signals+backgrounds)
+         for sample in samples:
+             print 'sample is', sample
+             #repDict['additional']='CACHING'+'__'+str(sample)
+             additional_ = 'CACHING'+'__'+str(sample)
+             repDict['queue'] = 'all.q'
+             training(additional_)
 
 if opts.task == 'dc':
     DC_vars= (config.get('LimitGeneral','List')).split(',')
@@ -348,7 +390,6 @@ if opts.task == 'plot':
         submit(item,repDict)
 
 elif opts.task == 'splitcaching':
-    print "gonna do splitcaching"
     Plot_vars= (config.get('Plot_general','List')).split(',')
     for region in Plot_vars:
         print 'region is', region
@@ -366,6 +407,25 @@ elif opts.task == 'splitcaching':
             repDict['additional']=str(sample)
             repDict['queue'] = 'all.q'
             submit(region,repDict)
+
+
+    #Plot_vars= (config.get('Plot_general','List')).split(',')
+    #for region in Plot_vars:
+    #    print 'region is', region
+    #    samplesinfo=config.get('Directories','samplesinfo')
+    #    section='Plot:%s'%region
+    #    data = eval(config.get(section,'Datas'))
+    #    mc = eval(config.get('Plot_general','samples'))
+    #    info = ParseInfo(samplesinfo,path)
+    #    datasamples = info.get_samples(data)
+    #    mcsamples = info.get_samples(mc)
+    #    samples= mcsamples+datasamples
+
+    #    for sample in samples:
+    #        print 'sample is', sample
+    #        repDict['additional']=str(sample)
+    #        repDict['queue'] = 'all.q'
+    #        submit(region,repDict)
 
 
 if opts.task == 'trainReg':

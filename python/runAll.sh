@@ -169,7 +169,7 @@ elif [ $task = "syseval" ]; then
     echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}"
     python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
 
-elif [ $task = "train" ]; then
+elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
