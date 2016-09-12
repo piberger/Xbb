@@ -35,7 +35,9 @@ else:
     print ''
 
 from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
-from btagSF import *
+from btagSF import BtagSF
+btagCorr = BtagSF()
+
 
 print opts.config
 config = BetterConfigParser()
@@ -1014,7 +1016,7 @@ for job in info:
                     JET.btag = 0.0
                     JETS.append(JET)
 
-                print 'the CSVweight SF is', get_event_SF(JETS)
+                print 'the CSVweight SF is', btagCorr.get_event_SF(JETS)
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
