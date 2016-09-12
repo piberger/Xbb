@@ -35,6 +35,7 @@ else:
     print ''
 
 from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
+from btagSF import *
 
 print opts.config
 config = BetterConfigParser()
@@ -155,6 +156,14 @@ for job in info:
         float         dEta;\
         } ;"
     )
+    ROOT.gROOT.ProcessLine(
+        "struct JET{\
+        float         pt;\
+        float         eta;\
+        float         hadronFlavour;\
+        float         btag;\
+        } ;"
+    )
     
     lhe_weight_map = False if not config.has_option('LHEWeights', 'weights_per_bin') else eval(config.get('LHEWeights', 'weights_per_bin'))
     
@@ -232,6 +241,9 @@ for job in info:
         HNoReg = ROOT.H()
         HaddJetsdR08 = ROOT.H()
         HaddJetsdR08NoReg = ROOT.H()
+
+        #Jet structure (to apply CSV weight)
+
         
        # tree.SetBranchStatus('H',0)
         output.cd()
@@ -451,6 +463,12 @@ for job in info:
             HVdPhi_reg = array('f',[0])
             HVdPhi_reg[0] = 300
             newtree.Branch('HVdPhi_reg',HVdPhi_reg,'HVdPhi_reg/F')
+
+        # Add CSV
+
+            bTagWeight_ichep = array('f',[0])
+            bTagWeight_ichep[0] = 1
+            newtree.Branch('bTagWeight_ichep',bTagWeight_ichep,'bTagWeight_ichep/F')
 
         # Add muon SF
             vLeptons_SFweight_HLT = array('f',[0])
@@ -728,7 +746,7 @@ for job in info:
                 # fatHiggsFlag=fFatHFlag.EvalInstance()*fFatHnFilterJets.EvalInstance()
 
                 # get
-                if channel == "Znn" or channel == "Zmm":
+                if channel == "Znn":
                     vect.SetPtEtaPhiM(fVpt.EvalInstance(),fVeta.EvalInstance(),fVphi.EvalInstance(),fVmass.EvalInstance())
                     # print tree.Jet_pt
                     # print tree.hJCidx
@@ -980,6 +998,23 @@ for job in info:
                 #            effmc = 1 - (1-eff1)*(1-eff2);
                 #            vLeptons_SFweight_HLT[0] = effdata/effmc
                 #    #print 'vLeptSFw afer fill is', vLeptons_SFweight_HLT[0]
+
+		        # ================ BTag weights from CSV =================
+                #
+
+                #setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
+
+                JETS = []
+                for i in range(0, len(tree.Jet_pt)-1):
+                    JET = ROOT.JET()
+
+                    JET.pt = tree.Jet_pt[i]
+                    JET.eta = tree.Jet_eta[i]
+                    JET.id = tree.Jet_id[i]
+                    JET.btag = 0.0
+                    JETS.append(JET)
+
+                print 'the CSVweight SF is', get_event_SF(JETS)
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
