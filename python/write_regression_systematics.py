@@ -36,7 +36,15 @@ else:
 
 from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
 from btagSF import BtagSF
+
+#EXAMPLE: Can define loop to test different CSV weights
+#csvs = ['CSVv2_ichep.csv']
+#btagCorrs = []
+#for csv in csvs:
+#    btagCorr = BtagSF(csv)
+#    btagCorrs.append(btagCorr)
 btagCorr = BtagSF()
+
 
 
 print opts.config
@@ -1007,7 +1015,7 @@ for job in info:
                 #setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
 
                 JETS = []
-                for i in range(0, len(tree.Jet_pt)-1):
+                for i in range(0, len(tree.Jet_pt)):
                     JET = ROOT.JET()
 
                     JET.pt = tree.Jet_pt[i]

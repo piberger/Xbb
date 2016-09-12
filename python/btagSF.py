@@ -14,6 +14,7 @@ class BtagSF:
         ROOT.gSystem.Load(csvpath+'/BTagCalibrationStandalone_cpp.so')
 
         # CSVv2
+        print 'csvfile is', csvfile
         if csvfile:
             calib_csv = ROOT.BTagCalibration("csvv2", csvpath+csvfile)
         else:
@@ -163,10 +164,10 @@ class BtagSF:
             #print sf
             return  sf
 
-    def get_event_SF(self, jets=[], syst="central", algo="CSV"):#, btag_calibrators=btag_calibrators):
+    def get_event_SF(self, jets=[], syst="central", algo="CSV"):
         btag_calibrators=self.btag_calibrators
         weight = 1.0
         for jet in jets:
-            weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=(jet.btag if algo=="CSV" else jet.btag), syst=syst, algo=algo, wp="", shape_corr=True)
+            weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=(jet.btag if algo=="CSV" else jet.btag), syst=syst, algo=algo, wp="M", shape_corr=True)
         return weight
 
