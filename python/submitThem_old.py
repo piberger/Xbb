@@ -213,7 +213,7 @@ def training(additional_):
                 submit(item,repDict, False)
 
 def ploting(additional_ = None):
-
+    repDict['additional'] = 'dummy'
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
         section='Plot:%s'%region
@@ -234,6 +234,38 @@ def ploting(additional_ = None):
                 if additional_: repDict['additional']= additional_ +'__'+cut_
                 else: repDict['additional']= cut_
                 submit(region,repDict)
+
+#def splitcaching()
+#
+#    repDict['queue'] = 'all.q'
+#    for region in Plot_vars:
+#        section='Plot:%s'%region
+#        samplesinfo=config.get('Directories','samplesinfo')
+#        data = eval(config.get(section,'Datas'))
+#        mc = eval(config.get('Plot_general','samples'))
+#        info = ParseInfo(samplesinfo,path)
+#        datasamples = info.get_samples(data)
+#        mcsamples = info.get_samples(mc)
+#        samples= mcsamples+datasamples
+#        for sample in samples:
+#            #include caching parameter such that only one sample is processed
+#            repDict['additional'] = 'CACHING'+'__'+str(sample)
+#            if not config.has_option(section, 'subcut'):
+#                print 'No subcut for the plot region', region
+#                submit(region,repDict)
+#                continue
+#            subcut = eval(config.get(section,'subcut'))
+#            print 'subcut is', subcut
+#            for cutvar, CUTBIN in subcut.iteritems():
+#                print 'cutvar is', cutvar
+#                #cutbin_first = CUTBIN[0]
+#                for cutbins in CUTBIN:
+#                    print 'cutbins is', cutbins
+#                    cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+#                    print 'cut_ is', cut_
+#                    #Need to propagate the cutbin param
+#                    else: repDict['additional'] += cut_
+#                    submit(region,repDict)
 
 print '===============================\n'
 print 'Compiling the macros'
@@ -408,26 +440,62 @@ if opts.task == 'plot':
 #                repDict['additional']= cut_
 #                submit(region,repDict)
 
+#if opts.task == 'splitcaching':
+#    plitcaching()
+
 if opts.task == 'splitcaching':
     Plot_vars= (config.get('Plot_general','List')).split(',')
+    repDict['queue'] = 'all.q'
     for region in Plot_vars:
-        print 'region is', region
-        samplesinfo=config.get('Directories','samplesinfo')
         section='Plot:%s'%region
+        print 'section is', section
+        samplesinfo=config.get('Directories','samplesinfo')
         data = eval(config.get(section,'Datas'))
         mc = eval(config.get('Plot_general','samples'))
         info = ParseInfo(samplesinfo,path)
         datasamples = info.get_samples(data)
         mcsamples = info.get_samples(mc)
         samples= mcsamples+datasamples
-
         for sample in samples:
-            print 'sample is', sample
-            #repDict['additional']=str(sample)
-            additional_ = str(sample)
-            ploting(additional_)
-            #repDict['queue'] = 'all.q'
-            #submit(region,repDict)
+            #include caching parameter such that only one sample is processed
+            repDict['additional'] = 'CACHING'+'__'+str(sample)
+            if not config.has_option(section, 'subcut'):
+                print 'No subcut for the plot region', region
+                submit(region,repDict)
+                continue
+            subcut = eval(config.get(section,'subcut'))
+            print 'subcut is', subcut
+            for cutvar, CUTBIN in subcut.iteritems():
+                print 'cutvar is', cutvar
+                #cutbin_first = CUTBIN[0]
+                for cutbins in CUTBIN:
+                    print 'cutbins is', cutbins
+                    cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+                    print 'cut_ is', cut_
+                    #Need to propagate the cutbin param
+                    repDict['additional'] += cut_
+                    submit(region,repDict)
+
+#if opts.task == 'splitcaching':
+#    Plot_vars= (config.get('Plot_general','List')).split(',')
+#    for region in Plot_vars:
+#        print 'region is', region
+#        samplesinfo=config.get('Directories','samplesinfo')
+#        section='Plot:%s'%region
+#        data = eval(config.get(section,'Datas'))
+#        mc = eval(config.get('Plot_general','samples'))
+#        info = ParseInfo(samplesinfo,path)
+#        datasamples = info.get_samples(data)
+#        mcsamples = info.get_samples(mc)
+#        samples= mcsamples+datasamples
+#
+#        for sample in samples:
+#            print 'sample is', sample
+#            #repDict['additional']=str(sample)
+#            additional_ = str(sample)
+#            ploting(additional_)
+#            #repDict['queue'] = 'all.q'
+#            #submit(region,repDict)
 
 
     #Plot_vars= (config.get('Plot_general','List')).split(',')
