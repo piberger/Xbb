@@ -509,6 +509,15 @@ for job in info:
             weight_trk_electron = array('f',[0])
             weight_trk_electron[0] = 1
             newtree.Branch('weight_trk_electron',weight_trk_electron,'weight_trk_electron/F')
+               #final weight (without triggers):
+
+            muweight = array('f',[0])
+            muweight[0] = 1
+            newtree.Branch('muweight',muweight,'muweight/F')
+            eleweight= array('f',[0])
+            eleweight[0] = 1
+            newtree.Branch('eleweight',eleweight,'eleweight/F')
+
 
 
             #vLeptons_SFweight_HLT = array('f',[0])
@@ -950,7 +959,7 @@ for job in info:
                 muTrigEffAftr = []
                 wdir = config.get('Directories','vhbbpath')
                 jsons = {
-                    wdir+'/python/json/EfficienciesAndSF_ISO.json' : ['MC_NUM_LooseRelIso_DEN_LooseID_PAR_pt_spliteta_bin1', 'eta_pt_ratiobseta_ratio'],
+                    wdir+'/python/json/EfficienciesAndSF_ISO.json' : ['MC_NUM_LooseRelIso_DEN_LooseID_PAR_pt_spliteta_bin1', 'abseta_pt_ratio'],
                     wdir+'/python/json/ScaleFactor_egammaEff_WP80.json' : ['ScaleFactor_egammaEff_WP80', 'eta_pt_ratio'],
                     wdir+'/python/json/eff_Ele27_WPLoose_Eta2p1_RunBtoF.json' : ['Trigger_Eff', 'eta_pt_ratio'],
                     wdir+'/python/json/egammaEffi_tracker.json' : ['egammaEffi_tracker', 'eta_pt_ratio'],
@@ -964,28 +973,29 @@ for job in info:
 
                     weight.append(lepCorr.get_2D( tree.vLeptons_pt[0], tree.vLeptons_eta[0]))
                     weight.append(lepCorr.get_2D( tree.vLeptons_pt[1], tree.vLeptons_eta[1]))
+                    if tree.Vtype == 0:
+                        if j.find('EfficienciesAndSF_ISO') != -1:
+                            weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
 
-                    if j.find('EfficienciesAndSF_ISO') != -1:
-                        weight_SF_LooseISOp[0] = weight[0][0]*weight[1][0]
+                        elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
+                            muTrigEffBfr.append(weight[0][0])
+                            muTrigEffBfr.append(weight[1][0])
 
-                    elif j.find('ScaleFactor_egammaEff_WP80') != -1:
-                        weight_SF_LooseMVAID[0] = weight[0][0]*weight[1][0]
+                        elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
+                            muTrigEffAftr.append(weight[0][0])
+                            muTrigEffAftr.append(weight[1][0])
+                    elif tree.Vtype == 1:
+                        if j.find('ScaleFactor_egammaEff_WP80') != -1:
+                            weight_SF_LooseMVAID[0] = weight[0][0]*weight[1][0]
 
-                    elif j.find('egammaEffi_tracker') != -1:
-                        weight_trk_electron[0] = weight[0][0]*weight[1][0]
+                        elif j.find('egammaEffi_tracker') != -1:
+                            weight_trk_electron[0] = weight[0][0]*weight[1][0]
 
-                    elif j.find('eff_Ele27_WPLoose_Eta2p1_RunBtoF') != -1:
-                        eff1 = weight[0][0]
-                        eff2 = weight[1][0]
-                        weight_Eff_eletrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                        elif j.find('eff_Ele27_WPLoose_Eta2p1_RunBtoF') != -1:
+                            eff1 = weight[0][0]
+                            eff2 = weight[1][0]
+                            weight_Eff_eletrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
 
-                    elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                        muTrigEffBfr.append(weight[0][0])
-                        muTrigEffBfr.append(weight[1][0])
-
-                    elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                        muTrigEffAftr.append(weight[0][0])
-                        muTrigEffAftr.append(weight[1][0])
 
                     else:
                         sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
@@ -994,15 +1004,20 @@ for job in info:
 
                 #Fill muon triggers
 
-                   #for ICHEP dataset
-                eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
-                eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
-                weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                if tree.Vtype == 0:
 
-                   #for full 22/fb dataset
-                eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
-                eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
-                weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                       #for ICHEP dataset
+                    eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
+                    eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
+                    weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+
+                       #for full 22/fb dataset
+                    eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
+                    eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
+                    weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+
+                muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*vLeptons_SF_trk_eta[1]
+                eleweight[0] = weight_SF_LooseMVAID[0]*weight_trk_electron[0]
 
                 ###########################
                 ## Adding mu SFs
