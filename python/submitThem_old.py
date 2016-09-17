@@ -667,8 +667,6 @@ elif opts.task == 'mva_opt':
         setting+=par+'='+str(scan_par[0])+':'
         if len(scan_par) > 1 and scan_par[2] != 0:
             total_number_of_steps+=scan_par[2]
-    #setting=setting[:-1] # eliminate last column at the end of the setting string
-    #repDict['additional']=setting
     repDict['additional']='main_par'
     repDict['job_id']=config.get('Optimisation','training')
     submit('OPT_main_set',repDict,False)
@@ -682,7 +680,6 @@ elif opts.task == 'mva_opt':
                 setting=re.sub(par+'.*?:',par+'='+str(value)+':',main_setting)
                 repDict['additional']=setting
                 submit('OPT_'+par+str(value),repDict,False)
-                # submit(config.get('Optimisation','training'),repDict)
 
 elif opts.task == 'mva_opt_eval':
     #
