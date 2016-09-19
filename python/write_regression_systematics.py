@@ -43,7 +43,7 @@ from btagSF import BtagSF
 #for csv in csvs:
 #    btagCorr = BtagSF(csv)
 #    btagCorrs.append(btagCorr)
-btagCorr = BtagSF()
+#btagCorr = BtagSF()
 
 
 
@@ -955,80 +955,100 @@ for job in info:
 		        # ================ Lepton Scale Factors =================
                 # For custom made form own JSON files
 
-                muTrigEffBfr = []
-                muTrigEffAftr = []
-                wdir = config.get('Directories','vhbbpath')
-                jsons = {
-                    wdir+'/python/json/EfficienciesAndSF_ISO.json' : ['MC_NUM_LooseRelIso_DEN_LooseID_PAR_pt_spliteta_bin1', 'abseta_pt_ratio'],
-                    wdir+'/python/json/ScaleFactor_egammaEff_WP80.json' : ['ScaleFactor_egammaEff_WP80', 'eta_pt_ratio'],
-                    wdir+'/python/json/eff_Ele27_WPLoose_Eta2p1_RunBtoF.json' : ['Trigger_Eff', 'eta_pt_ratio'],
-                    wdir+'/python/json/egammaEffi_tracker.json' : ['egammaEffi_tracker', 'eta_pt_ratio'],
-                    wdir+'/python/json/SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_beforeL2Fix', 'abseta_pt_MC'],
-                    wdir+'/python/json/SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_afterL2Fix', 'abseta_pt_MC']
-                    }
-                for j, name in jsons.iteritems():
+                    #Reinitialize all the variables
 
-                    weight = []
-                    lepCorr = LeptonSF(j , name[0], name[1])
+                DY_specialWeight[0] = 1.
+                weight_SF_LooseISO[0] = 1.
+                weight_SF_LooseMVAID[0] = 1.
+                weight_Eff_eletrigloose[0] = 1.
+                weight_Eff_mutriglooseICHEP[0] = 1.
+                weight_Eff_mutrigloose[0] = 1.
+                weight_trk_electron[0] = 1.
+                eleweight[0] = 1.
+                muweight[0] = 1.
 
-                    weight.append(lepCorr.get_2D( tree.vLeptons_pt[0], tree.vLeptons_eta[0]))
-                    weight.append(lepCorr.get_2D( tree.vLeptons_pt[1], tree.vLeptons_eta[1]))
+                if not job.type == 'DATA':
+
+                    muTrigEffBfr = []
+                    muTrigEffAftr = []
+                    wdir = config.get('Directories','vhbbpath')
+                    jsons = {
+                        wdir+'/python/json/EfficienciesAndSF_ISO.json' : ['MC_NUM_LooseRelIso_DEN_LooseID_PAR_pt_spliteta_bin1', 'abseta_pt_ratio'],
+                        wdir+'/python/json/ScaleFactor_egammaEff_WP80.json' : ['ScaleFactor_egammaEff_WP80', 'pt_eta_ratio'],
+                        wdir+'/python/json/eff_Ele27_WPLoose_Eta2p1_RunBtoF.json' : ['Trigger_Eff', 'eta_pt_ratio'],
+                        wdir+'/python/json/egammaEffi_tracker.json' : ['egammaEffi_tracker', 'eta_pt_ratio'],
+                        wdir+'/python/json/SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_beforeL2Fix', 'abseta_pt_MC'],
+                        wdir+'/python/json/SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_afterL2Fix', 'abseta_pt_MC']
+                        }
+                    for j, name in jsons.iteritems():
+
+                        weight = []
+                        lepCorr = LeptonSF(j , name[0], name[1])
+
+                        if not j.find('ScaleFactor_egammaEff_WP80') != -1:
+                            weight.append(lepCorr.get_2D( tree.vLeptons_pt[0], tree.vLeptons_eta[0]))
+                            weight.append(lepCorr.get_2D( tree.vLeptons_pt[1], tree.vLeptons_eta[1]))
+                        else: 
+                            weight.append(lepCorr.get_2D( tree.vLeptons_eta[0], tree.vLeptons_pt[0]))
+                            weight.append(lepCorr.get_2D( tree.vLeptons_eta[1], tree.vLeptons_pt[1]))
+
+                        if tree.Vtype == 0:
+                            if j.find('EfficienciesAndSF_ISO') != -1:
+                                weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
+
+                            elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
+                                muTrigEffBfr.append(weight[0][0])
+                                muTrigEffBfr.append(weight[1][0])
+
+                            elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
+                                muTrigEffAftr.append(weight[0][0])
+                                muTrigEffAftr.append(weight[1][0])
+                        elif tree.Vtype == 1:
+                            if j.find('ScaleFactor_egammaEff_WP80') != -1:
+                                weight_SF_LooseMVAID[0] = weight[0][0]*weight[1][0]
+
+                            elif j.find('egammaEffi_tracker') != -1:
+                                weight_trk_electron[0] = weight[0][0]*weight[1][0]
+
+                            elif j.find('eff_Ele27_WPLoose_Eta2p1_RunBtoF') != -1:
+                                eff1 = weight[0][0]
+                                eff2 = weight[1][0]
+                                weight_Eff_eletrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+
+
+                        else:
+                            sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
+
+                    # End JSON loop ====================================
+
+                    #Fill muon triggers
+
                     if tree.Vtype == 0:
-                        if j.find('EfficienciesAndSF_ISO') != -1:
-                            weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
 
-                        elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                            muTrigEffBfr.append(weight[0][0])
-                            muTrigEffBfr.append(weight[1][0])
+                           #for ICHEP dataset
+                        eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
+                        eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
+                        weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
 
-                        elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                            muTrigEffAftr.append(weight[0][0])
-                            muTrigEffAftr.append(weight[1][0])
-                    elif tree.Vtype == 1:
-                        if j.find('ScaleFactor_egammaEff_WP80') != -1:
-                            weight_SF_LooseMVAID[0] = weight[0][0]*weight[1][0]
+                           #for full 22/fb dataset
+                        eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
+                        eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
+                        weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
 
-                        elif j.find('egammaEffi_tracker') != -1:
-                            weight_trk_electron[0] = weight[0][0]*weight[1][0]
+                    muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
+                    eleweight[0] = weight_SF_LooseMVAID[0]*weight_trk_electron[0]
 
-                        elif j.find('eff_Ele27_WPLoose_Eta2p1_RunBtoF') != -1:
-                            eff1 = weight[0][0]
-                            eff2 = weight[1][0]
-                            weight_Eff_eletrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-
-
-                    else:
-                        sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
-
-                # End JSON loop ====================================
-
-                #Fill muon triggers
-
-                if tree.Vtype == 0:
-
-                       #for ICHEP dataset
-                    eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
-                    eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
-                    weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-
-                       #for full 22/fb dataset
-                    eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
-                    eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
-                    weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-
-                muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*vLeptons_SF_trk_eta[1]
-                eleweight[0] = weight_SF_LooseMVAID[0]*weight_trk_electron[0]
+                    if not job.specialweight:
+                        DY_specialWeight[0] = 1
+                    else :
+                        specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
+                        specialWeight_ = specialWeight.EvalInstance()
+                        DY_specialWeight[0] = specialWeight_
 
                 ###########################
                 ## Adding mu SFs
                 ###########################
 
-                #if not job.specialweight:
-                #    DY_specialWeight[0] = 1
-                #else :
-                #    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
-                #    specialWeight_ = specialWeight.EvalInstance()
-                #    DY_specialWeight[0] = specialWeight_
 
                 #eTrigSFWeight = 1
                 #eIDLooseSFWeight = 1
@@ -1090,19 +1110,19 @@ for job in info:
 		        # ================ BTag weights from CSV =================
                 #
 
-                #setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
+                ##setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
 
-                JETS = []
-                for i in range(0, len(tree.Jet_pt)):
-                    JET = ROOT.JET()
+                #JETS = []
+                #for i in range(0, len(tree.Jet_pt)):
+                #    JET = ROOT.JET()
 
-                    JET.pt = tree.Jet_pt[i]
-                    JET.eta = tree.Jet_eta[i]
-                    JET.id = tree.Jet_id[i]
-                    JET.btag = 0.0
-                    JETS.append(JET)
+                #    JET.pt = tree.Jet_pt[i]
+                #    JET.eta = tree.Jet_eta[i]
+                #    JET.id = tree.Jet_id[i]
+                #    JET.btag = 0.0
+                #    JETS.append(JET)
 
-                print 'the CSVweight SF is', btagCorr.get_event_SF(JETS)
+                #print 'the CSVweight SF is', btagCorr.get_event_SF(JETS)
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
