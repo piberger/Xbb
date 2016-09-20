@@ -4,7 +4,7 @@ import ROOT
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_eandmu/ZmmH.BestCSV.heppy."
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/prep_eandmu/ZmmH.BestCSV.heppy."
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_eandmu_v3/ZmmH.BestCSV.heppy."
-prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prep/ZmmH.BestCSV.heppy."
+prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv2/ZmmH.BestCSV.heppy."
 
 
 def getWeight(fileInc, fileB, region):
@@ -90,9 +90,10 @@ print "weightZBGenjetsHT600=\t%.2f\n" %getWeight(ZLLjetsHT600,   ZLLjetsBGenFilt
 
 ##If you use extension only
 #getExtWeight(['ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8','ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1'])
-getExtWeight(['ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8','ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1'])
+getExtWeight(['ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8','ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1','ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext2'])
 getExtWeight(['DYJetsToLL_M-5to50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8','DYJetsToLL_M-5to50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1'])
 getExtWeight(['DYJetsToLL_M-5to50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8','DYJetsToLL_M-5to50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1'])
+getExtWeight(['DYJetsToLL_M-5to50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8','DYJetsToLL_M-5to50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1'])
 getExtWeight(['DYJetsToLL_M-5to50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8','DYJetsToLL_M-5to50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1'])
 #
 getExtWeight(['DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1'])

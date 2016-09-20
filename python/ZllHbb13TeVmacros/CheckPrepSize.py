@@ -8,9 +8,9 @@ import os
 import ROOT
 
 #V20
-_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V23/prep_eandmu_new/'
-#V21
-_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V23/singlesys_v2/'
+_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv2/'
+#V24
+_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/mva/'
 
 dummy_cut = ''
 
@@ -50,7 +50,9 @@ FAILED = []
 
 for file1 in FILE1:
     if not '.root' in file1: continue
+    #if not 'Single' in file1: continue
     print '#events in sample', file1
+    print 'file is', file1
     file_found = False
     for k in range(0, len(CUTLISTV20)):
         f = ROOT.TFile.Open('root://t3dcachedb03.psi.ch:1094/' + _path1 + file1)
