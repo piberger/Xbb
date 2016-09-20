@@ -172,6 +172,9 @@ elif [ $task = "syseval" ]; then
 elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
+elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
+    echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
+    python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "singleplot" ]; then
     echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist ...(${#filelist} char)"
@@ -216,10 +219,10 @@ elif [ $task = "plot_sys" ]; then
     echo "python ./plot_systematics.py ${config_filenames[@]}"
     python ./plot_systematics.py ${config_filenames[@]}
 
-elif [ $task = "mva_opt" ]; then
-    echo "BDT Hyperparameters: $bdt_params"
-    echo "python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params  --local True"
-    python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params --local True
+#elif [ $task = "mva_opt" ]; then
+#    echo "BDT Hyperparameters: $bdt_params"
+#    echo "python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params  --local True"
+#    python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "mva_opt_eval" ]; then
     echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params"
