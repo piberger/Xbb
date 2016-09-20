@@ -107,6 +107,7 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
             # print 't.AddFile('+outputFolder+file+')'
             # t.AddFile(outputFolder+file)
     print 'len(allFiles)',len(allFiles),'allFiles[0]',allFiles[0]
+    #n=100
     #n=50
     n=20
     allFiles_chunks = [allFiles[i:i+n] for i in range(0, len(allFiles), n)]
@@ -148,7 +149,8 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
     print 'checking output file',outputfile
     f = ROOT.TFile.Open(outputfile,'read')
     if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
-        print 'TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! ERROR: exiting'
+        print 'TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! Deleting it. ERROR: exiting'
+        command = 'srmrm %s' %(del_merged)
         sys.exit(1)
     f.Close()
 
