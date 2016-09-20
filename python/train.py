@@ -77,6 +77,7 @@ print 'opts.local is', opts.local
 optimisation_training = False
 sample_to_cache_ = None
 subcut_ = None
+par_optimisation = None
 if not  opts.MVAsettings == '':
     print 'MVAsettins are', opts.MVAsettings
     if 'CUTBIN' in opts.MVAsettings:
@@ -87,41 +88,60 @@ if not  opts.MVAsettings == '':
     if 'CACHING' in opts.MVAsettings:
         sample_to_cache_ = opts.MVAsettings[opts.MVAsettings.find('CACHING')+7:].split('__')[1]
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_cache_
+    if 'OPT' in opts.MVAsettings:
+        par_optimisation = opts.MVAsettings[opts.MVAsettings.find('OPT')+3:].split('__')[1]
+        if par_optimisation == 'mainpar':
+            print 'using main BDT parameters'
+        else:
+            value_optimisation =opts.MVAsettings[opts.MVAsettings.find('OPT')+3:].split('__')[2]
+            print '@INFO: Optimisation will be performed. The optimisation parameter is',par_optimisation,'with a value of',value_optimisation
+        #opt_MVAsettings = opts.MVAsettings
+        optimisation_training = True
 
-    #print 'The MVA settings are',opts.MVAsettings
-    #opt_MVAsettings = opts.MVAsettings
-    #optimisation_training = True
 
-if(eval(opts.local)):
-  print 'Local run'
-  MVAname=run
-  MVAsettings=config.get(run,'MVAsettings')
-  if optimisation_training:
-      MVAname=opts.set_name
-      if not opt_MVAsettings == 'main_par':
-          opt_Dict = dict(item.split("=") for item in opt_MVAsettings.split(","))
-          for key in opt_Dict:
-              for par in MVAsettings.split(':'):
-                  if not key in par: continue
-                  par_new = par[:par.find('=')+1]
-                  par_new += opt_Dict[key]
-                  MVAsettings = MVAsettings.replace(par,par_new)
 
-elif(opts.set_name!='' and opts.MVAsettings!=''):
-  print 'Batch run'
-  MVAname=opts.set_name
-  MVAsettings=opts.MVAsettings
-else :
-  print 'Problem in configuration. Missing or inconsitent information Check input options'
-  sys.exit()  
+#setupt MVAsettings
+MVAsettings=config.get(run,'MVAsettings')
+#print 'MVAsettings are',MVAsettings
+
+
+#if(eval(opts.local)):
+#  print 'Local run'
+MVAname=run
+#print 'MVAname before opt is', MVAname
+#MVAsettings=config.get(run,'MVAsettings')
+#MVAname=opts.set_name
+if par_optimisation:
+    if not par_optimisation == 'mainpar':
+        #opt_Dict = dict(item.split("=") for item in opt_MVAsettings.split(","))
+        #for key in opt_Dict:
+        for par in MVAsettings.split(':'):
+            #if not key in par: continue
+            if not par_optimisation in par: continue
+            par_old= par.split('=')[1]
+            #par_new += opt_Dict[key]
+            print 'goona replace','%s=%s'%(par_optimisation,par_old),'by','%s=%s'%(par_optimisation,value_optimisation)
+            MVAsettings = MVAsettings.replace('%s=%s'%(par_optimisation,par_old),'%s=%s'%(par_optimisation,value_optimisation))
+            MVAname += '_OPT_%s_%s'%(par_optimisation,value_optimisation)
+
+#print 'MVAsettings after replacements are',MVAsettings
+#print 'MVAname after replacement is', MVAname
+
+
+#elif(opts.set_name!='' and opts.MVAsettings!=''):
+#  print 'Batch run'
+#  MVAname=opts.set_name
+#  MVAsettings=opts.MVAsettings
+#else :
+#  print 'Problem in configuration. Missing or inconsitent information Check input options'
+#  sys.exit()  
 print '@DEBUG: MVAname'
 print 'input : ' + opts.set_name
 print 'used : ' + MVAname
 
-fnameOutput = MVAdir+factoryname+'_'+MVAname+'_'+opts.MVAsettings+'.root'
+fnameOutput = MVAdir+factoryname+'_'+MVAname+'.root'
+#fnameOutput = MVAdir+factoryname+'_'+MVAname+'_'+opts.MVAsettings+'.root'
 print '@DEBUG: output file name : ' + fnameOutput
-
-
 
 #locations
 path=config.get('Directories','MVAin')
@@ -367,21 +387,21 @@ output.Close()
 
 
 #WRITE INFOFILE
-#infofile = open(MVAdir+factoryname+'_'+MVAname+'.info','w')
-#print '@DEBUG: output infofile name'
-#print infofile
-#
-#info=mvainfo(MVAname)
-#info.factoryname=factoryname
-#info.factorysettings=factorysettings
-#info.MVAtype=MVAtype
-#info.MVAsettings=MVAsettings
-#info.weightfilepath=MVAdir
-#info.path=path
-#info.varset=treeVarSet
-#info.vars=MVA_Vars['Nominal']
-#pickle.dump(info,infofile)
-#infofile.close()
+infofile = open(MVAdir+factoryname+'_'+MVAname+'.info','w')
+print '@DEBUG: output infofile name'
+print infofile
+
+info=mvainfo(MVAname)
+info.factoryname=factoryname
+info.factorysettings=factorysettings
+info.MVAtype=MVAtype
+info.MVAsettings=MVAsettings
+info.weightfilepath=MVAdir
+info.path=path
+info.varset=treeVarSet
+info.vars=MVA_Vars['Nominal']
+pickle.dump(info,infofile)
+infofile.close()
 
 # open the TMVA Gui 
 #if gui == True:
