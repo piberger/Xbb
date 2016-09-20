@@ -194,6 +194,7 @@ def training(additional_):
     for item in train_list:
         #No subcut declared. Just perform classical training
         if not config.has_option(item, 'subcut'):
+            repDict['additional']= additional_ 
             print 'No subcuts in this training'
             submit(item,repDict)
             continue
@@ -302,7 +303,7 @@ def submit(job,repDict,redirect_to_null=False):
         subprocess.call([command], shell=True)
     else:
         waiting_time_before_retry = 60
-        number_symultaneous_process = 4
+        number_symultaneous_process = 2
         counter  =  int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))-1# add 1 to remove submithem count
         print 'counter command is', 'ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l'
         while counter > number_symultaneous_process:
@@ -333,6 +334,7 @@ def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="n
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=False):
+    print 'oh yeah'
     global counter
     repDict['job'] = job
     nJob = counter % len(logo)
@@ -660,26 +662,31 @@ elif( opts.task == 'split' ):
 
 # BDT optimisation
 elif opts.task == 'mva_opt':
-    total_number_of_steps=1
-    setting = ''
-    for par in (config.get('Optimisation','parameters').split(',')):
-        scan_par=eval(config.get('Optimisation',par))
-        setting+=par+'='+str(scan_par[0])+':'
-        if len(scan_par) > 1 and scan_par[2] != 0:
-            total_number_of_steps+=scan_par[2]
-    repDict['additional']='main_par'
-    repDict['job_id']=config.get('Optimisation','training')
-    submit('OPT_main_set',repDict,False)
-    main_setting=setting
-    # Scanning all the parameters found in the training config in the Optimisation sector
-    for par in (config.get('Optimisation','parameters').split(',')):
-        scan_par=eval(config.get('Optimisation',par))
-        if len(scan_par) > 1 and scan_par[2] != 0:
-            for step in range(scan_par[2]):
-                value = (scan_par[0])+((1+step)*(scan_par[1]-scan_par[0])/scan_par[2])
-                setting=re.sub(par+'.*?:',par+'='+str(value)+':',main_setting)
-                repDict['additional']=setting
-                submit('OPT_'+par+str(value),repDict,False)
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    print train_list
+    for item in train_list:
+        total_number_of_steps=1
+        setting = ''
+        for par in (config.get('Optimisation','parameters').split(',')):
+            scan_par=eval(config.get('Optimisation',par))
+            setting+=par+'='+str(scan_par[0])+':'
+            if len(scan_par) > 1 and scan_par[2] != 0:
+                total_number_of_steps+=scan_par[2]
+        repDict['additional']='OPT__mainpar'
+        #item=config.get('Optimisation','training')
+        submit(item,repDict,False)
+        main_setting=setting
+        # Scanning all the parameters found in the training config in the Optimisation sector
+        for par in (config.get('Optimisation','parameters').split(',')):
+            scan_par=eval(config.get('Optimisation',par))
+            if len(scan_par) > 1 and scan_par[2] != 0:
+                for step in range(scan_par[2]):
+                    value = (scan_par[0])+((1+step)*(scan_par[1]-scan_par[0])/scan_par[2])
+                    #setting=re.sub(par+'.*?:',par+'='+str(value)+':',main_setting)
+                    print 'settings is', setting
+                    repDict['additional']='OPT__'+par+'__'+str(value)
+                    print 'additional is', 'OPT__'+par+'__'+str(value)
+                    submit(item,repDict,False)
 
 elif opts.task == 'mva_opt_eval':
     #
