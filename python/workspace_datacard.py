@@ -11,11 +11,15 @@ from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebi
 
 
 def useSpacesInDC(fileName):
+    print 'useSpacesInDC'
+    print 'debug1'
     file_ = open(fileName,"r+")
-
+     
+    print 'debug2'
     old = file_.read()
     ## get the maximum width of each colum (excluding the first lines)
     lineN = 0
+    print 'debug3'
     maxColumnWidth = [0]
     for line in old.split('\n'):
         lineN += 1
@@ -24,10 +28,12 @@ def useSpacesInDC(fileName):
         for i in range(len(words)):
             if i>=len(maxColumnWidth): maxColumnWidth.append(0)
             if len(words[i])>maxColumnWidth[i]: maxColumnWidth[i]=len(words[i])
+    print 'debug4'
     ## replace the tabs with the new formatting (excluding the first lines)
     #newfile = open("newFile.txt","w+")
     lineN = 0
     file_.seek(0)
+    print 'debug5'
     for line in old.split('\n'):
         lineN += 1
         if lineN<10: #in the first 10 lines just replace '\t' with ' '
@@ -38,7 +44,9 @@ def useSpacesInDC(fileName):
         for i in range(len(words)): #use the new format!
             newLine += words[i].ljust(maxColumnWidth[i]+1)
         file_.write(newLine+'\n')
+    print 'debug6'
     file_.close()
+    print 'debug7'
     return
 
 print '_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_'
@@ -58,6 +66,8 @@ parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration file")
 parser.add_option("-O", "--optimisation", dest="optimisation", default="",#not used for the moment
                       help="variable for shape when optimising the BDT")
+parser.add_option("-s", "--settings", dest="settings", default=False,
+                              help="contains target sample for the splitsubcaching")
 (opts, args) = parser.parse_args(argv)
 config = BetterConfigParser()
 config.read(opts.config)
@@ -69,6 +79,13 @@ var=opts.variable
 
 print "Compile external macros"
 print "=======================\n"
+
+if os.path.exists("../interface/DrawFunctions_C.so"):
+    print 'ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")'
+    ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")
+if os.path.exists("../interface/VHbbNameSpace_h.so"):
+    print 'ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")'
+    ROOT.gROOT.LoadMacro("../interface/VHbbNameSpace_h.so")
 
 # compile external macros to compute variables on the fly
 #ROOT.gSystem.CompileMacro("../plugins/PU.C")
@@ -100,12 +117,14 @@ except:
     os.mkdir(outpath)
 # parse histogram config:
 treevar = config.get('dc:%s'%var,'var')
+print 'treevar is', treevar
 name = config.get('dc:%s'%var,'wsVarName')
 if optimisation_training:
     treevar = optimisation+'.Nominal'
     name += '_'+ optimisation
     if UseTrainSample:
         name += '_Train'
+print 'again, treevar is', treevar
 title = name
 # set binning
 nBins = int(config.get('dc:%s'%var,'range').split(',')[0])
@@ -133,6 +152,18 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
 if os.path.exists("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so"):
     print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")'
     ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so")
+
+###
+
+print 'opts.settings is', opts.settings
+sample_to_merge_ = None
+if opts.settings:
+    if 'CACHING' in opts.settings:
+        sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+        print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
+        print 'sample_to_merge is', sample_to_merge_
+
+###
 
 
 print "Using",('dc:%s'%var,'var')
@@ -349,7 +380,9 @@ for syst in systematics:
             _name = title
             _weight = weightF
         if syst in sys_weight_corr:
+            print 'sys_weight is',sys_weight_corr[syst]+'_%s' %(Q.upper())
             _weight = config.get('Weights',sys_weight_corr[syst]+'_%s' %(Q.upper()))
+            print '_weight is', _weight
         #replace tree variable
         if bdt == True:
             #ff[1]='%s_%s'%(sys,Q.lower())
@@ -409,8 +442,13 @@ _countbin = 0
 print 'Preparations for Histograms (HistoMakeri)'
 print '=========================================\n'
 
-mc_hMaker = HistoMaker(all_samples,path,config,optionsList,GroupDict)
-data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]])
+mc_hMaker = HistoMaker(all_samples,path,config,optionsList,GroupDict, None, False, sample_to_merge_)
+data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None, None, False, sample_to_merge_)
+
+if sample_to_merge_:
+    print "@INFO: Done splitcachingdc. Bye !"
+    sys.exit()
+
 
 print 'Calculate luminosity'
 print '====================\n'
@@ -464,6 +502,7 @@ print '\n\t...fetching histos...\n'
 inputs=[]
 for job in all_samples:
     inputs.append((mc_hMaker,"get_histos_from_tree",(job,True)))
+
 
 # multiprocess=0
 # if('pisa' in config.get('Configuration','whereToLaunch')):
@@ -684,7 +723,7 @@ if not ignore_stats:
                             final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
     else:
         print "Running Statistical uncertainty"
-        threshold =  1 #stat error / sqrt(value). It was 0.5
+        threshold =  0.5 #stat error / sqrt(value). It was 0.5
         print "threshold",threshold
         binsBelowThreshold = {}
         for bin in range(1,nBins+1):
@@ -804,8 +843,10 @@ for DCtype in ['WS','TH']:
     for c in setup: 
         f.write('\t%s'%final_histos['nominal'][c].Integral())
     f.write('\n')
+    print 'debug1'
     # get list of systematics in use
     InUse=eval(config.get('Datacard','InUse_%s_%s'%(str(anType), pt_region)))
+    print 'debug2'
     # write non-shape systematics
     for item in InUse:
         f.write(item)
@@ -822,6 +863,7 @@ for DCtype in ['WS','TH']:
             else:
                 f.write('\t-')
         f.write('\n')
+    print 'debug3'
     if not ignore_stats:
     # Write statistical shape variations
         if binstat:
@@ -845,11 +887,17 @@ for DCtype in ['WS','TH']:
                         f.write('\t-')
                 f.write('\n')
     # UEPS systematics
+    print 'debug4'
     for weightF_sys in weightF_systematics:
+        print 'debug4.1'
+        print 'the sys is', systematicsnaming[weightF_sys]
         f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
         for it in range(0,columns): f.write('\t1.0')
+        print 'debug 4.2'
         f.write('\n')
+        print 'debug 4.3'
     # LHE systematics
+    print 'debug5'
     if len(lhe_muF)==2:
         for group in sys_lhe_affecting.keys():
             f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
@@ -860,6 +908,7 @@ for DCtype in ['WS','TH']:
                 else:
                     f.write('\t-')
             f.write('\n')
+    print 'debug6'
     if len(lhe_muR)==2:
         for group in sys_lhe_affecting.keys():
             f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
@@ -871,6 +920,7 @@ for DCtype in ['WS','TH']:
                     f.write('\t-')
             f.write('\n')
     # additional sample systematics
+    print 'debug7'
     if addSample_sys:
         alreadyAdded = []
         for newSample in addSample_sys.iterkeys():
@@ -887,6 +937,7 @@ for DCtype in ['WS','TH']:
                 f.write('\n')
                 alreadyAdded.append(Dict[c])
     # regular systematics
+    print 'debug8'
     for sys in systematics:
         sys_factor=sys_factor_dict[sys]
         f.write('%s\tshape'%systematicsnaming[sys])
@@ -898,6 +949,7 @@ for DCtype in ['WS','TH']:
         f.write('\n')
     # write rateParams systematics (free parameters)
 
+    print 'debug9'
     rateParams=eval(config.get('Datacard','rateParams_%s_%s'%(str(anType), pt_region)))
     try:
         rateParamRange=eval(config.get('Datacard','rateParamRange'))
@@ -909,12 +961,15 @@ for DCtype in ['WS','TH']:
         for proc in dictProcs.keys():
             f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
 
+    print 'debug10'
     f.close()
+    print 'debug11'
     useSpacesInDC(fileName)
+    print 'end useSpacesInDC'
 
 # --------------------------------------------------------------------------
 
-
-
-
+outfile.Write()
 outfile.Close()
+print 'closed outputfile'
+sys.exit(0)

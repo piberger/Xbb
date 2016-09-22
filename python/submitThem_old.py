@@ -478,45 +478,51 @@ if opts.task == 'splitcaching':
                     repDict['additional'] += cut_
                     submit(region,repDict)
 
-#if opts.task == 'splitcaching':
-#    Plot_vars= (config.get('Plot_general','List')).split(',')
-#    for region in Plot_vars:
-#        print 'region is', region
-#        samplesinfo=config.get('Directories','samplesinfo')
-#        section='Plot:%s'%region
-#        data = eval(config.get(section,'Datas'))
-#        mc = eval(config.get('Plot_general','samples'))
-#        info = ParseInfo(samplesinfo,path)
-#        datasamples = info.get_samples(data)
-#        mcsamples = info.get_samples(mc)
-#        samples= mcsamples+datasamples
-#
-#        for sample in samples:
-#            print 'sample is', sample
-#            #repDict['additional']=str(sample)
-#            additional_ = str(sample)
-#            ploting(additional_)
-#            #repDict['queue'] = 'all.q'
-#            #submit(region,repDict)
-
-
-    #Plot_vars= (config.get('Plot_general','List')).split(',')
-    #for region in Plot_vars:
-    #    print 'region is', region
-    #    samplesinfo=config.get('Directories','samplesinfo')
-    #    section='Plot:%s'%region
-    #    data = eval(config.get(section,'Datas'))
-    #    mc = eval(config.get('Plot_general','samples'))
-    #    info = ParseInfo(samplesinfo,path)
-    #    datasamples = info.get_samples(data)
-    #    mcsamples = info.get_samples(mc)
-    #    samples= mcsamples+datasamples
-
-    #    for sample in samples:
-    #        print 'sample is', sample
-    #        repDict['additional']=str(sample)
-    #        repDict['queue'] = 'all.q'
-    #        submit(region,repDict)
+if opts.task == 'splitcachingdc':
+    DC_vars= (config.get('LimitGeneral','List')).split(',')
+    repDict['queue'] = 'all.q'
+    #Loop over all the dcs
+    for item in DC_vars:
+        #get all the samples list
+        print 'item is', item 
+        signals = config.get('dc:%s'%item,'signal').split(' ')
+        backgrounds = eval(config.get('LimitGeneral','BKG'))
+        all_samples = info.get_samples(signals+backgrounds)
+        data_sample_names = config.get('dc:%s'%item,'data').split(' ')
+        data_samples = info.get_samples(data_sample_names)
+        samples = all_samples+data_samples
+        for sample in samples:
+            print 'sample is', sample
+            repDict['additional'] = 'CACHING'+'__'+str(sample)
+            submit(item,repDict)
+        #submit(item,repDict)
+   ######## 
+        #section='Plot:%s'%item
+        #print 'section is', section
+        #samplesinfo=config.get('Directories','samplesinfo')
+        #data = eval(config.get(section,'Datas'))
+        #mc = eval(config.get('Plot_general','samples'))
+        #info = ParseInfo(samplesinfo,path)
+        #datasamples = info.get_samples(data)
+        #mcsamples = info.get_samples(mc)
+        #samples= mcsamples+datasamples
+        #for sample in samples:
+        #    #include caching parameter such that only one sample is processed
+        #    repDict['additional'] = 'CACHING'+'__'+str(sample)
+        #    if not config.has_option(section, 'subcut'):
+        #        print 'No subcut for the plot item', item
+        #        submit(item,repDict)
+        #        continue
+        #    subcut = eval(config.get(section,'subcut'))
+        #    print 'subcut is', subcut
+        #    for cutvar, CUTBIN in subcut.iteritems():
+        #        print 'cutvar is', cutvar
+        #        for cutbins in CUTBIN:
+        #            print 'cutbins is', cutbins
+        #            cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+        #            print 'cut_ is', cut_
+        #            repDict['additional'] += cut_
+        #            submit(item,repDict)
 
 
 if opts.task == 'trainReg':

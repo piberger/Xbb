@@ -317,6 +317,7 @@ class TreeCache:
 
     def __cache_samples(self,filelist=None,mergeplot=False):
         inputs=[]
+        skip = True 
         for job in self.__sampleList:
             # test1 = [method for method in dir(job) if callable(getattr(job, method))]
             # print(test1)
@@ -327,6 +328,7 @@ class TreeCache:
             # print("__cache_samples(",filelist,",",mergeplot,")")
             if self.sample_to_merge and (str(job) != self.sample_to_merge):
                 continue
+            skip = False 
             samplematch = False
             if filelist and not mergeplot:
                 if not 'Run' in job.identifier:
@@ -362,6 +364,9 @@ class TreeCache:
             if samplematch:
                 inputs.append((self,"_trim_tree",(job),(filelist),(mergeplot)))
 
+        if skip:
+            print('@INFO: no samples has been found')
+            return 1
         multiprocess=0
         # if('pisa' in self.config.get('Configuration','whereToLaunch')):
         multiprocess=int(self.config.get('Configuration','nprocesses'))

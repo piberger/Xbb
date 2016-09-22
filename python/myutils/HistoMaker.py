@@ -35,7 +35,8 @@ class HistoMaker:
         print 'My job here is done muthafucka'
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
-            sys.exit(1)
+            return 
+            #sys.exit(1)
         self._rebin = False
         self.mybinning = None
         self.GroupDict=GroupDict
@@ -131,8 +132,9 @@ class HistoMaker:
             #    treeCut= str(1)
             #else:
             #    treeCut='%s'%(options['cut'])
-            #treeCut='%s & %s'%(options['cut'],addCut)
-            treeCut='%s ' %addCut
+            treeCut='%s & %s'%(options['cut'],addCut)
+            print 'TreeCut (for the ploting) is', treeCut
+            #treeCut='%s ' %addCut
 
 #            treeCut = "("+treeCut+")&&"+job.addtreecut
 
@@ -187,6 +189,7 @@ class HistoMaker:
                     elif 'BDT' in treeVar or 'bdt' in treeVar or 'nominal' in treeVar in treeVar:
                         lowLimitBlindingBDT = hTree.GetBinLowEdge(hTree.FindBin(lowLimitBlindingBDT))
                         veto = "(%s <%s)" %(treeVar,lowLimitBlindingBDT)
+                        print 'I will add the veto', veto
                         #if First_iter: print "Using veto:",veto
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),veto +'&'+' %(cut)s'%options, "goff,e")
                     elif 'dR' in treeVar and 'H' in treeVar:

@@ -206,6 +206,9 @@ elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = 
 elif [ $task = "dc" ]; then
     echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]}"
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]}
+elif [ $task = "splitcachingdc" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params
 
 elif [ $task = "split" ]; then
     echo "python ./split_tree.py --samples $sample ${config_filenames[@]} --max-events $job_id"
