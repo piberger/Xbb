@@ -119,6 +119,7 @@ class StackMaker:
         self.AddErrors = None
         self.jobnames = None
         self.addFlag2 = ''
+        self.prefit_overlay = None
         if 'TTbar' in self.region:
             self.addFlag2 = 't#bar{t} enriched'
         elif 'ZLight' in self.region:
@@ -274,6 +275,18 @@ class StackMaker:
             self.histos[i].SetLineColor(1)
             allStack.Add(self.histos[i])
 
+        datas_nbins = self.datas[i].GetXaxis().GetNbins()
+        datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
+        datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
+
+        print 'data_nbins:', datas_nbins
+        print 'datas_xMin:', datas_xMin
+        print 'datas_xMax:', datas_xMax
+        print 'nbins:', self.nBins
+        print 'xMin:', self.xMin
+        print 'xMax:',self.xMax
+
+
         d1 = ROOT.TH1F('noData','noData',self.nBins,self.xMin,self.xMax)
         datatitle='Data'
         addFlag = ''
@@ -310,6 +323,16 @@ class StackMaker:
                 _overlay.SetLineWidth(3)
                 _overlay.SetFillColor(0)
                 _overlay.SetFillStyle(4000)
+
+                # PREfit overlay
+                if self.prefit_overlay:
+                    print '\n\n\t\t========PREFIT OVERLAY==========',self.prefit_overlay
+                    for _prefit_overlay in self.prefit_overlay:
+                        _prefit_overlay.SetLineColor(ROOT.kRed)
+                        _prefit_overlay.SetLineWidth(2)
+                        _prefit_overlay.SetFillColor(0)
+                        _prefit_overlay.SetFillStyle(4000)
+                        l_2.AddEntry(_prefit_overlay,'PreFit','L')
 
         numLegend = 2+k
         if self.overlay:
@@ -718,6 +741,8 @@ class StackMaker:
             for _overlay in self.overlay:
                 print "Drawing overlay"
                 _overlay.Draw('hist,same')
+                for _prefit_overlay in self.prefit_overlay:
+                                    _prefit_overlay.Draw('same')
         sub_d1.Draw("E,same")
         l.Draw()
 

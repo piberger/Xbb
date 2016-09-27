@@ -231,7 +231,8 @@ def drawFromDC():
     if 'BDT' in opts.var:
         region = 'BDT'
     else:
-        region = opts.var
+        #region = opts.var
+        region = 'Zuu_CRZlight'
 
     ws_var = config.get('plotDef:%s'%var,'relPath')
     ws_var = ROOT.RooRealVar(ws_var,ws_var,-500.,500.)

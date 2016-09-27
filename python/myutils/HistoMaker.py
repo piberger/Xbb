@@ -177,7 +177,7 @@ class HistoMaker:
                 if options['blind']:
                     lowLimitBlindingMass    = 90
                     highLimitBlindingMass   = 140
-                    lowLimitBlindingBDT     = 0.3
+                    lowLimitBlindingBDT     = 0.9
                     lowLimitBlindingDR      = 0.8
                     highLimitBlindingDR     = 1.6
                     if 'H' in treeVar and 'mass' in treeVar:

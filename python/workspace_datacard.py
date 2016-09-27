@@ -217,7 +217,6 @@ sys_weight_corr=eval(config.get('LimitGeneral','sys_weight_corr'))
 sys_cut_include=[]
 if config.has_option('LimitGeneral','sys_cut_include'):
     sys_cut_include=eval(config.get('LimitGeneral','sys_cut_include'))
-systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
 sys_factor_dict = eval(config.get('LimitGeneral','sys_factor'))
 sys_affecting = eval(config.get('LimitGeneral','sys_affecting'))
 sys_lhe_affecting = {}
@@ -225,8 +224,6 @@ if config.has_option('LimitGeneral','sys_lhe_affecting'): sys_lhe_affecting = ev
 
 # weightF:
 weightF = config.get('Weights','weightF')
-if str(anType) == 'cr': weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
-else: weightF_systematics = eval(config.get('LimitGeneral','weightF_sys'))
 # rescale stat shapes by sqrtN
 rescaleSqrtN=eval(config.get('LimitGeneral','rescaleSqrtN'))
 # get nominal cutstring:
@@ -300,6 +297,24 @@ else:
     print "Unknown Pt region"
     pt_region = 'NoSysRegion'
     #sys.exit("Unknown Pt region")
+
+systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_%s'%pt_region))
+weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
+#if str(anType) == 'cr': 
+#    if pt_region == 'NoSysRegion':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
+#    elif pt_region == 'HighPt':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR_HighPt'))
+#    elif pt_region == 'LowPt':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR_LowPt'))
+#elif str(anType) == 'BDT': 
+#    if pt_region == 'NoSysRegion':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
+#    elif pt_region == 'HighPt':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_BDT_HighPt'))
+#    elif pt_region == 'LowPt':
+#        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_BDT_LowPt'))
+#else: weightF_systematics = eval(config.get('LimitGeneral','weightF_sys'))
 # Set rescale factor of 2 in case of TrainFalg
 if TrainFlag:
     MC_rescale_factor=2.
@@ -834,7 +849,8 @@ for DCtype in ['WS','TH']:
     for c in setup: f.write('\t%s'%Dict[c])
     f.write('\n')
     f.write('process\t')
-    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
+    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
+    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
     f.write('\n')
     # datacard yields
     f.write('rate\t')
@@ -846,7 +862,6 @@ for DCtype in ['WS','TH']:
     print 'debug1'
     # get list of systematics in use
     InUse=eval(config.get('Datacard','InUse_%s_%s'%(str(anType), pt_region)))
-    print 'debug2'
     # write non-shape systematics
     for item in InUse:
         f.write(item)
@@ -908,7 +923,6 @@ for DCtype in ['WS','TH']:
                 else:
                     f.write('\t-')
             f.write('\n')
-    print 'debug6'
     if len(lhe_muR)==2:
         for group in sys_lhe_affecting.keys():
             f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
@@ -920,7 +934,6 @@ for DCtype in ['WS','TH']:
                     f.write('\t-')
             f.write('\n')
     # additional sample systematics
-    print 'debug7'
     if addSample_sys:
         alreadyAdded = []
         for newSample in addSample_sys.iterkeys():
@@ -949,7 +962,6 @@ for DCtype in ['WS','TH']:
         f.write('\n')
     # write rateParams systematics (free parameters)
 
-    print 'debug9'
     rateParams=eval(config.get('Datacard','rateParams_%s_%s'%(str(anType), pt_region)))
     try:
         rateParamRange=eval(config.get('Datacard','rateParamRange'))
@@ -959,7 +971,8 @@ for DCtype in ['WS','TH']:
     for rateParam in rateParams:
         dictProcs=eval(config.get('Datacard',rateParam))
         for proc in dictProcs.keys():
-            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
+            #f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
+            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
 
     print 'debug10'
     f.close()
