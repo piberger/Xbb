@@ -16,7 +16,7 @@ def getWeight(fileInc, fileB, region):
         # print 'adding',file
         tree = f.Get("tree")
         countInc    = countInc + 1.* tree.Draw("",region)
-        # print 'countInc',countInc,'\n'
+        print 'countInc',countInc,'\n'
         #countInc    = 1.* tree.GetEntries(region)
         f.Close()
 
@@ -26,7 +26,7 @@ def getWeight(fileInc, fileB, region):
         # print 'adding',file
         tree = f.Get("tree")
         countB      = countB + 1.* tree.Draw("",region)
-        # print 'countB',countB,'\n'
+        print 'countB',countB,'\n'
         #countB      = 1.* tree.GetEntries(region)
         f.Close()
 #    print 'countInc is', countInc
