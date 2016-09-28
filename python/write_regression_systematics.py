@@ -34,18 +34,10 @@ if len(filelist)>0:
 else:
     print ''
 
-from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
-from btagSF import BtagSF
-
-#EXAMPLE: Can define loop to test different CSV weights
-#csvs = ['CSVv2_ichep.csv']
-#btagCorrs = []
-#for csv in csvs:
-#    btagCorr = BtagSF(csv)
-#    btagCorrs.append(btagCorr)
-#btagCorr = BtagSF()
-
-
+from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF, bTagSF
+#from btagSF import BtagSF
+#import BtagSF
+from bTagSF import *
 
 print opts.config
 config = BetterConfigParser()
@@ -166,14 +158,21 @@ for job in info:
         float         dEta;\
         } ;"
     )
-    ROOT.gROOT.ProcessLine(
-        "struct JET{\
-        float         pt;\
-        float         eta;\
-        float         hadronFlavour;\
-        float         btag;\
-        } ;"
-    )
+    #ROOT.gROOT.ProcessLine(
+    #    "struct JET{\
+    #    float         pt;\
+    #    float         eta;\
+    #    int         hadronFlavour;\
+    #    float         btag;\
+    #    } ;"
+    #)
+    class Jet :
+        def __init__(self, pt, eta, fl, csv) :
+            self.pt = pt
+            self.eta = eta
+            self.hadronFlavour = fl
+            self.csv = csv
+
     
     lhe_weight_map = False if not config.has_option('LHEWeights', 'weights_per_bin') else eval(config.get('LHEWeights', 'weights_per_bin'))
     
@@ -400,66 +399,66 @@ for job in info:
 
         # Add bTag weights
         if applyBTagweights:
-            bTagWeight_new = array('f',[0])
-            bTagWeightJESUp_new = array('f',[0])
-            bTagWeightJESDown_new = array('f',[0])
-            bTagWeightLFUp_new = array('f',[0])
-            bTagWeightLFDown_new = array('f',[0])
-            bTagWeightHFUp_new = array('f',[0])
-            bTagWeightHFDown_new = array('f',[0])
-            bTagWeightLFStats1Up_new = array('f',[0])
-            bTagWeightLFStats1Down_new = array('f',[0])
-            bTagWeightLFStats2Up_new = array('f',[0])
-            bTagWeightLFStats2Down_new = array('f',[0])
-            bTagWeightHFStats1Up_new = array('f',[0])
-            bTagWeightHFStats1Down_new = array('f',[0])
-            bTagWeightHFStats2Up_new = array('f',[0])
-            bTagWeightHFStats2Down_new = array('f',[0])
-            bTagWeightcErr1Up_new = array('f',[0])
-            bTagWeightcErr1Down_new = array('f',[0])
-            bTagWeightcErr2Up_new = array('f',[0])
-            bTagWeightcErr2Down_new = array('f',[0])
+            bTagWeight_RunEF = array('f',[0])
+            bTagWeightJESUp_RunEF = array('f',[0])
+            bTagWeightJESDown_RunEF = array('f',[0])
+            bTagWeightLFUp_RunEF = array('f',[0])
+            bTagWeightLFDown_RunEF = array('f',[0])
+            bTagWeightHFUp_RunEF = array('f',[0])
+            bTagWeightHFDown_RunEF = array('f',[0])
+            bTagWeightLFStats1Up_RunEF = array('f',[0])
+            bTagWeightLFStats1Down_RunEF = array('f',[0])
+            bTagWeightLFStats2Up_RunEF = array('f',[0])
+            bTagWeightLFStats2Down_RunEF = array('f',[0])
+            bTagWeightHFStats1Up_RunEF = array('f',[0])
+            bTagWeightHFStats1Down_RunEF = array('f',[0])
+            bTagWeightHFStats2Up_RunEF = array('f',[0])
+            bTagWeightHFStats2Down_RunEF = array('f',[0])
+            bTagWeightcErr1Up_RunEF = array('f',[0])
+            bTagWeightcErr1Down_RunEF = array('f',[0])
+            bTagWeightcErr2Up_RunEF = array('f',[0])
+            bTagWeightcErr2Down_RunEF = array('f',[0])
 
 
-            bTagWeight_new[0] = 1
-            bTagWeightJESUp_new[0] = 1
-            bTagWeightJESDown_new[0] = 1
-            bTagWeightLFUp_new[0] = 1
-            bTagWeightLFDown_new[0] = 1
-            bTagWeightHFUp_new[0] = 1
-            bTagWeightHFDown_new[0] = 1
-            bTagWeightLFStats1Up_new[0] = 1
-            bTagWeightLFStats1Down_new[0] = 1
-            bTagWeightLFStats2Up_new[0] = 1
-            bTagWeightLFStats2Down_new[0] = 1
-            bTagWeightHFStats1Up_new[0] = 1
-            bTagWeightHFStats1Down_new[0] = 1
-            bTagWeightHFStats2Up_new[0] = 1
-            bTagWeightHFStats2Down_new[0] = 1
-            bTagWeightcErr1Up_new[0] = 1
-            bTagWeightcErr1Down_new[0] = 1
-            bTagWeightcErr2Up_new[0] = 1
-            bTagWeightcErr2Down_new[0] = 1
+            bTagWeight_RunEF[0] = 1
+            bTagWeightJESUp_RunEF[0] = 1
+            bTagWeightJESDown_RunEF[0] = 1
+            bTagWeightLFUp_RunEF[0] = 1
+            bTagWeightLFDown_RunEF[0] = 1
+            bTagWeightHFUp_RunEF[0] = 1
+            bTagWeightHFDown_RunEF[0] = 1
+            bTagWeightLFStats1Up_RunEF[0] = 1
+            bTagWeightLFStats1Down_RunEF[0] = 1
+            bTagWeightLFStats2Up_RunEF[0] = 1
+            bTagWeightLFStats2Down_RunEF[0] = 1
+            bTagWeightHFStats1Up_RunEF[0] = 1
+            bTagWeightHFStats1Down_RunEF[0] = 1
+            bTagWeightHFStats2Up_RunEF[0] = 1
+            bTagWeightHFStats2Down_RunEF[0] = 1
+            bTagWeightcErr1Up_RunEF[0] = 1
+            bTagWeightcErr1Down_RunEF[0] = 1
+            bTagWeightcErr2Up_RunEF[0] = 1
+            bTagWeightcErr2Down_RunEF[0] = 1
 
-            newtree.Branch('bTagWeight_new',bTagWeight_new,'bTagWeight_new/F')
-            newtree.Branch('bTagWeightJESUp_new',bTagWeightJESUp_new,'bTagWeightJESUp_new/F')
-            newtree.Branch('bTagWeightJESDown_new',bTagWeightJESDown_new,'bTagWeightJESDown_new/F')
-            newtree.Branch('bTagWeightLFUp_new',bTagWeightLFUp_new,'bTagWeightLFUp_new/F')
-            newtree.Branch('bTagWeightLFDown_new',bTagWeightLFDown_new,'bTagWeightLFDown_new/F')
-            newtree.Branch('bTagWeightHFUp_new',bTagWeightHFUp_new,'bTagWeightHFUp_new/F')
-            newtree.Branch('bTagWeightHFDown_new',bTagWeightHFDown_new,'bTagWeightHFDown_new/F')
-            newtree.Branch('bTagWeightLFStats1Up_new',bTagWeightLFStats1Up_new,'bTagWeightLFStats1Up_new/F')
-            newtree.Branch('bTagWeightLFStats1Down_new',bTagWeightLFStats1Down_new,'bTagWeightLFStats1Down_new/F')
-            newtree.Branch('bTagWeightLFStats2Up_new',bTagWeightLFStats2Up_new,'bTagWeightLFStats2Up_new/F')
-            newtree.Branch('bTagWeightLFStats2Down_new',bTagWeightLFStats2Down_new,'bTagWeightLFStats2Down_new/F')
-            newtree.Branch('bTagWeightHFStats1Up_new',bTagWeightHFStats1Up_new,'bTagWeightHFStats1Up_new/F')
-            newtree.Branch('bTagWeightHFStats1Down_new',bTagWeightHFStats1Down_new,'bTagWeightHFStats1Down_new/F')
-            newtree.Branch('bTagWeightHFStats2Up_new',bTagWeightHFStats2Up_new,'bTagWeightHFStats2Up_new/F')
-            newtree.Branch('bTagWeightHFStats2Down_new',bTagWeightHFStats2Down_new,'bTagWeightHFStats2Down_new/F')
-            newtree.Branch('bTagWeightcErr1Up_new',bTagWeightcErr1Up_new,'bTagWeightcErr1Up_new/F')
-            newtree.Branch('bTagWeightcErr1Down_new',bTagWeightcErr1Down_new,'bTagWeightcErr1Down_new/F')
-            newtree.Branch('bTagWeightcErr2Up_new',bTagWeightcErr2Up_new,'bTagWeightcErr2Up_new/F')
-            newtree.Branch('bTagWeightcErr2Down_new',bTagWeightcErr2Down_new,'bTagWeightcErr2Down_new/F')
+            newtree.Branch('bTagWeight_RunEF',bTagWeight_RunEF,'bTagWeight_RunEF/F')
+            newtree.Branch('bTagWeightJESUp_RunEF',bTagWeightJESUp_RunEF,'bTagWeightJESUp_RunEF/F')
+            newtree.Branch('bTagWeightJESDown_RunEF',bTagWeightJESDown_RunEF,'bTagWeightJESDown_RunEF/F')
+            newtree.Branch('bTagWeightLFUp_RunEF',bTagWeightLFUp_RunEF,'bTagWeightLFUp_RunEF/F')
+            newtree.Branch('bTagWeightLFDown_RunEF',bTagWeightLFDown_RunEF,'bTagWeightLFDown_RunEF/F')
+            newtree.Branch('bTagWeightHFUp_RunEF',bTagWeightHFUp_RunEF,'bTagWeightHFUp_RunEF/F')
+            newtree.Branch('bTagWeightHFDown_RunEF',bTagWeightHFDown_RunEF,'bTagWeightHFDown_RunEF/F')
+            newtree.Branch('bTagWeightLFStats1Up_RunEF',bTagWeightLFStats1Up_RunEF,'bTagWeightLFStats1Up_RunEF/F')
+            newtree.Branch('bTagWeightLFStats1Down_RunEF',bTagWeightLFStats1Down_RunEF,'bTagWeightLFStats1Down_RunEF/F')
+            newtree.Branch('bTagWeightLFStats2Up_RunEF',bTagWeightLFStats2Up_RunEF,'bTagWeightLFStats2Up_RunEF/F')
+            newtree.Branch('bTagWeightLFStats2Down_RunEF',bTagWeightLFStats2Down_RunEF,'bTagWeightLFStats2Down_RunEF/F')
+            newtree.Branch('bTagWeightHFStats1Up_RunEF',bTagWeightHFStats1Up_RunEF,'bTagWeightHFStats1Up_RunEF/F')
+            newtree.Branch('bTagWeightHFStats1Down_RunEF',bTagWeightHFStats1Down_RunEF,'bTagWeightHFStats1Down_RunEF/F')
+            newtree.Branch('bTagWeightHFStats2Up_RunEF',bTagWeightHFStats2Up_RunEF,'bTagWeightHFStats2Up_RunEF/F')
+            newtree.Branch('bTagWeightHFStats2Down_RunEF',bTagWeightHFStats2Down_RunEF,'bTagWeightHFStats2Down_RunEF/F')
+            newtree.Branch('bTagWeightcErr1Up_RunEF',bTagWeightcErr1Up_RunEF,'bTagWeightcErr1Up_RunEF/F')
+            newtree.Branch('bTagWeightcErr1Down_RunEF',bTagWeightcErr1Down_RunEF,'bTagWeightcErr1Down_RunEF/F')
+            newtree.Branch('bTagWeightcErr2Up_RunEF',bTagWeightcErr2Up_RunEF,'bTagWeightcErr2Up_RunEF/F')
+            newtree.Branch('bTagWeightcErr2Down_RunEF',bTagWeightcErr2Down_RunEF,'bTagWeightcErr2Down_RunEF/F')
 
         if channel == "Zmm":
         #Special weights
@@ -757,7 +756,7 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
-                # if entry>1000: break
+                #if entry>1000: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -920,37 +919,59 @@ for job in info:
 
                 if applyBTagweights:
                     if not job.type == 'DATA':
-                        jetsForBtagWeight = []
-                        for i in range(tree.nJet):
-                            jetsForBtagWeight.append(Jet(tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCSV[i], bweightcalc.btag))
 
-                        bTagWeight_new[0] = bweightcalc.calcEventWeight(
-                            jetsForBtagWeight, kind="final", systematic="nominal",
-                        )
-                        weights = {}
-                        for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
+                         sysMap = {}
+                         sysMap["JESUp"] = "up_jes"
+                         sysMap["JESDown"] = "down_jes"
+                         sysMap["LFUp"] = "up_lf"
+                         sysMap["LFDown"] = "down_lf"
+                         sysMap["HFUp"] = "up_hf"
+                         sysMap["HFDown"] = "down_hf"
+                         sysMap["HFStats1Up"] = "up_hfstats1"
+                         sysMap["HFStats1Down"] = "down_hfstats1"
+                         sysMap["HFStats2Up"] = "up_hfstats2"
+                         sysMap["HFStats2Down"] = "down_hfstats2"
+                         sysMap["LFStats1Up"] = "up_lfstats1"
+                         sysMap["LFStats1Down"] = "down_lfstats1"
+                         sysMap["LFStats2Up"] = "up_lfstats2"
+                         sysMap["LFStats2Down"] = "down_lfstats2"
+                         sysMap["cErr1Up"] = "up_cferr1"
+                         sysMap["cErr1Down"] = "down_cferr1"
+                         sysMap["cErr2Up"] = "up_cferr2"
+                         sysMap["cErr2Down"] = "down_cferr2"
+
+                         jets = []
+                         for i in range(tree.nJet):
+                             if (tree.Jet_pt[i] > 25 and abs(tree.Jet_eta[i]) < 2.4):
+                                 jet = Jet(tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCSV[i])
+                                 jets.append(jet)
+
+                         weights = {}
+                         for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                             for sdir in ["Up", "Down"]:
-                                weights[syst+sdir] = bweightcalc.calcEventWeight(
-                                    jetsForBtagWeight, kind="final", systematic=syst+sdir
-                                    )
-                        bTagWeightJESUp_new[0] = weights["JESUp"]
-                        bTagWeightJESDown_new[0] = weights["JESDown"]
-                        bTagWeightLFUp_new[0] = weights["LFUp"]
-                        bTagWeightLFDown_new[0] = weights["LFDown"]
-                        bTagWeightHFUp_new[0] = weights["HFUp"]
-                        bTagWeightHFDown_new[0] = weights["HFDown"]
-                        bTagWeightLFStats1Up_new[0] = weights["LFStats1Up"]
-                        bTagWeightLFStats1Down_new[0] = weights["LFStats1Down"]
-                        bTagWeightLFStats2Up_new[0] = weights["LFStats2Up"]
-                        bTagWeightLFStats2Down_new[0] = weights["LFStats2Down"]
-                        bTagWeightHFStats1Up_new[0] = weights["HFStats1Up"]
-                        bTagWeightHFStats1Down_new[0] = weights["HFStats1Down"]
-                        bTagWeightHFStats2Up_new[0] = weights["HFStats2Up"]
-                        bTagWeightHFStats2Down_new[0] = weights["HFStats2Down"]
-                        bTagWeightcErr1Up_new[0] = weights["cErr1Up"]
-                        bTagWeightcErr1Down_new[0] = weights["cErr1Down"]
-                        bTagWeightcErr2Up_new[0] = weights["cErr2Up"]
-                        bTagWeightcErr2Down_new[0] = weights["cErr2Down"]
+                                weights[syst+sdir] = get_event_SF( jets, sysMap[syst+sdir], "CSV")
+
+                         weights["central"] = get_event_SF( jets, "central", "CSV")
+                         bTagWeight_RunEF[0] = weights["central"]
+                         bTagWeightJESUp_RunEF[0] = weights["JESUp"]
+                         bTagWeightJESDown_RunEF[0] = weights["JESDown"]
+                         bTagWeightLFUp_RunEF[0] = weights["LFUp"]
+                         bTagWeightLFDown_RunEF[0] = weights["LFDown"]
+                         bTagWeightHFUp_RunEF[0] = weights["HFUp"]
+                         bTagWeightHFDown_RunEF[0] = weights["HFDown"]
+                         bTagWeightLFStats1Up_RunEF[0] = weights["LFStats1Up"]
+                         bTagWeightLFStats1Down_RunEF[0] = weights["LFStats1Down"]
+                         bTagWeightLFStats2Up_RunEF[0] = weights["LFStats2Up"]
+                         bTagWeightLFStats2Down_RunEF[0] = weights["LFStats2Down"]
+                         bTagWeightHFStats1Up_RunEF[0] = weights["HFStats1Up"]
+                         bTagWeightHFStats1Down_RunEF[0] = weights["HFStats1Down"]
+                         bTagWeightHFStats2Up_RunEF[0] = weights["HFStats2Up"]
+                         bTagWeightHFStats2Down_RunEF[0] = weights["HFStats2Down"]
+                         bTagWeightcErr1Up_RunEF[0] = weights["cErr1Up"]
+                         bTagWeightcErr1Down_RunEF[0] = weights["cErr1Down"]
+                         bTagWeightcErr2Up_RunEF[0] = weights["cErr2Up"]
+                         bTagWeightcErr2Down_RunEF[0] = weights["cErr2Down"]
+
 
 		        # ================ Lepton Scale Factors =================
                 # For custom made form own JSON files
@@ -1112,17 +1133,6 @@ for job in info:
 
                 ##setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
 
-                #JETS = []
-                #for i in range(0, len(tree.Jet_pt)):
-                #    JET = ROOT.JET()
-
-                #    JET.pt = tree.Jet_pt[i]
-                #    JET.eta = tree.Jet_eta[i]
-                #    JET.id = tree.Jet_id[i]
-                #    JET.btag = 0.0
-                #    JETS.append(JET)
-
-                #print 'the CSVweight SF is', btagCorr.get_event_SF(JETS)
 
                 if applyRegression:
                     HNoReg.HiggsFlag = 1
