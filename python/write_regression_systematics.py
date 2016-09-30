@@ -494,6 +494,10 @@ for job in info:
             weight_Eff_eletrigloose = array('f',[0])
             weight_Eff_eletrigloose[0] = 1
             newtree.Branch('weight_Eff_eletrigloose',weight_Eff_eletrigloose,'weight_Eff_eletrigloose/F')
+               #pt23
+            weight_Eff_eletrigloosept23 = array('f',[0])
+            weight_Eff_eletrigloosept23[0] = 1
+            newtree.Branch('weight_Eff_eletrigloosept23',weight_Eff_eletrigloosept23,'weight_Eff_eletrigloosept23/F')
                #muon
                #for ICHEP dataset
             weight_Eff_mutriglooseICHEP = array('f',[0])
@@ -982,6 +986,7 @@ for job in info:
                 weight_SF_LooseISO[0] = 1.
                 weight_SF_LooseMVAID[0] = 1.
                 weight_Eff_eletrigloose[0] = 1.
+                weight_Eff_eletrigloosept23[0] = 1.
                 weight_Eff_mutriglooseICHEP[0] = 1.
                 weight_Eff_mutrigloose[0] = 1.
                 weight_trk_electron[0] = 1.
@@ -995,6 +1000,7 @@ for job in info:
                     wdir = config.get('Directories','vhbbpath')
                     jsons = {
                         wdir+'/python/json/EfficienciesAndSF_ISO.json' : ['MC_NUM_LooseRelIso_DEN_LooseID_PAR_pt_spliteta_bin1', 'abseta_pt_ratio'],
+                        wdir+'/python/json/HLT_Ele23_WPLoose.json' : ['ScaleFactor_egammaEff_WP80', 'eta_pt_ratio'],
                         wdir+'/python/json/ScaleFactor_egammaEff_WP80.json' : ['ScaleFactor_egammaEff_WP80', 'pt_eta_ratio'],
                         wdir+'/python/json/eff_Ele27_WPLoose_Eta2p1_RunBtoF.json' : ['Trigger_Eff', 'eta_pt_ratio'],
                         wdir+'/python/json/egammaEffi_tracker.json' : ['egammaEffi_tracker', 'eta_pt_ratio'],
@@ -1035,6 +1041,10 @@ for job in info:
                                 eff1 = weight[0][0]
                                 eff2 = weight[1][0]
                                 weight_Eff_eletrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                            elif j.find('HLT_Ele23_WPLoose') != -1:
+                                eff1 = weight[0][0]
+                                eff2 = weight[1][0]
+                                weight_Eff_eletrigloosept23[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
 
 
                         else:

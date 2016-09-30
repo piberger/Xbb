@@ -7,22 +7,24 @@ class LeptonSF:
         if not os.path.isfile(lep_json):
             self.valid = False
             if lep_json!="":
-                print "[LeptonSF]: Warning: ", lep_json, " is not a valid file. Return."
+                pass
+                #print "[LeptonSF]: Warning: ", lep_json, " is not a valid file. Return."
             else:
-                print "[LeptonSF]: No file has been specified. Return."
+                pass
+                #print "[LeptonSF]: No file has been specified. Return."
         else:
             self.init(lep_json, lep_name, lep_binning, extrapolateFromClosestBin)
 
     def init(self, lep_json, lep_name, lep_binning, extrapolateFromClosestBin) :
         f = open(lep_json, 'r')             
-        print '[LeptonSF]: Initialize with the following parameters:'
-        print '\tfile:',lep_json
-        print '\titem:', lep_name
-        print '\tbinning:', lep_binning
+        #print '[LeptonSF]: Initialize with the following parameters:'
+        #print '\tfile:',lep_json
+        #print '\titem:', lep_name
+        #print '\tbinning:', lep_binning
         results = json.load(f)
         if lep_name not in results.keys():
             self.valid = False
-            print "[LeptonSF]: Warning: ", lep_name , " is not a valid item. Return."
+            #print "[LeptonSF]: Warning: ", lep_name , " is not a valid item. Return."
             return False
         self.res = results[lep_name]
         self.lep_name = lep_name
