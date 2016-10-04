@@ -22,10 +22,12 @@ xMin=-1
 xMax=1
 masses = ['125']
 #Abins = ['HighPt','LowPt']
-Abins = ['HighPt']
-#Abins = ['LowPt']
+#Abins = ['HighPt']
+Abins = ['LowPt']
 #channels= ['Zee','Zmm']
-channels= ['Zmm']
+#channels= ['Zmm']
+channels= ['ZllBDT_lowpt']
+#channels= ['ZllBDT_highpt']
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
 #mode = 'Mjj'
@@ -44,7 +46,9 @@ Dict = eval(config.get('LimitGeneral','Dict'))
 MCs = [Dict[s] for s in setup]
 
 sys_BDT= eval(config.get('LimitGeneral','sys_BDT'))
-systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
+#systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
+#systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_HighPt'))
+systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_LowPt'))
 systs=[systematicsnaming[s] for s in sys_BDT]
 sys_weight = eval(config.get('LimitGeneral','weightF_sys'))
 
@@ -74,7 +78,12 @@ for mass in masses:
 
                 #input = TFile.Open(path+'vhbb_TH_ZmmLowPt_13TeV.root','read')
                 #input = TFile.Open(path+'vhbb_TH_ZmmHighPt_13TeV.root','read')
-                input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
+                #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
+                #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
+                #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v9/vhbb_TH_ZuuBDT_lowpt.root','read')
+                #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_highpt.root','read')
+                input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_lowpt.root','read')
+                #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/dc_v9_allpt_4/Limits/vhbb_TH_ZllBDT_highpt.root','read')
             if mode == 'Mjj':
                 input = TFile.Open(path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root','read')
 
@@ -113,7 +122,9 @@ for mass in masses:
 
 
                     #input.cd("Vpt1")
-                    input.cd("Vpt2")
+                    #input.cd("Vpt2")
+                    input.cd("ZllBDT_lowpt")
+                    #input.cd("ZllBDT_highpt")
                     print 'Ntotal is', MC
                     print 'Utotal is', MC+syst+'Up'
                     print 'Dtotal is', MC+syst+'Down'

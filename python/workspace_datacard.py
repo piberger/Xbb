@@ -12,14 +12,11 @@ from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebi
 
 def useSpacesInDC(fileName):
     print 'useSpacesInDC'
-    print 'debug1'
     file_ = open(fileName,"r+")
      
-    print 'debug2'
     old = file_.read()
     ## get the maximum width of each colum (excluding the first lines)
     lineN = 0
-    print 'debug3'
     maxColumnWidth = [0]
     for line in old.split('\n'):
         lineN += 1
@@ -28,12 +25,10 @@ def useSpacesInDC(fileName):
         for i in range(len(words)):
             if i>=len(maxColumnWidth): maxColumnWidth.append(0)
             if len(words[i])>maxColumnWidth[i]: maxColumnWidth[i]=len(words[i])
-    print 'debug4'
     ## replace the tabs with the new formatting (excluding the first lines)
     #newfile = open("newFile.txt","w+")
     lineN = 0
     file_.seek(0)
-    print 'debug5'
     for line in old.split('\n'):
         lineN += 1
         if lineN<10: #in the first 10 lines just replace '\t' with ' '
@@ -298,7 +293,9 @@ else:
     pt_region = 'NoSysRegion'
     #sys.exit("Unknown Pt region")
 
+print 'pt_region is', pt_region
 systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_%s'%pt_region))
+print 'systematicsnaming is', systematicsnaming
 weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
 #if str(anType) == 'cr': 
 #    if pt_region == 'NoSysRegion':

@@ -321,24 +321,26 @@ print 'Execute TMVA: SetBackgroundWeightExpression'
 factory.SetBackgroundWeightExpression(weightF)
 factory.Verbose()
 print 'Execute TMVA: factory.BookMethod'
-my_methodBase_bdt = factory.BookMethod(MVAtype,MVAname,MVAsettings)
+#my_methodBase_bdt = factory.BookMethod(MVAtype,MVAname,MVAsettings)
+factory.BookMethod(MVAtype,MVAname,MVAsettings)
 print 'Execute TMVA: TrainMethod'
-my_methodBase_bdt.TrainMethod()
+#my_methodBase_bdt.TrainAllMethod()
+factory.TrainAllMethods()
 #factory.TrainAllMethods()
 print 'Execute TMVA: TestAllMethods'
 factory.TestAllMethods()
 print 'Execute TMVA: EvaluateAllMethods'
 factory.EvaluateAllMethods()
 print 'Execute TMVA: output.Write'
-output.Write()
+output.Close()
 
 
 #training performance parameters
 
 #output.ls()
-output.cd('Method_%s'%MVAtype)
+#output.cd('Method_%s'%MVAtype)
 #ROOT.gDirectory.ls()
-ROOT.gDirectory.cd(MVAname)
+#ROOT.gDirectory.cd(MVAname)
 
 ## print 'Get ROCs'
 #rocIntegral_default=my_methodBase_bdt.GetROCIntegral()

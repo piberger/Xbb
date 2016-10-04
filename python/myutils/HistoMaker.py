@@ -32,7 +32,6 @@ class HistoMaker:
         #print "Cuts:",self.cuts
         print 'Oh baby, I feel so bluuuuuuuuuuuuuuuuuue !'
         self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge)# created cached tree i.e. create new skimmed trees using the list of cuts
-        print 'My job here is done muthafucka'
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             return 
@@ -51,9 +50,9 @@ class HistoMaker:
     def get_histos_from_tree(self,job,quick=True, subcut_ = None):
         start_time = time.time()
 
-        #print "=============================================================\n"
-        #print "THE SAMPLE IS ",job.name
-        #print "=============================================================\n"
+        print "=============================================================\n"
+        print "THE SAMPLE IS ",job.name
+        print "=============================================================\n"
 
         '''Function that produce the trees from a HistoMaker'''
          
@@ -71,15 +70,25 @@ class HistoMaker:
         TrainFlag = eval(self.config.get('Analysis','TrainFlag'))
 
         # #Remove EventForTraining in order to run the MVA directly from the PREP step
+
         if not 'PSI' in self.config.get('Configuration','whereToLaunch'):
 #            BDT_add_cut='((evt%2) == 0 || Alt$(isData,0))'
-            BDT_add_cut='((evt%2) == 0 || isData)'
+            if 'ZJets_amc' in job.name:
+                print 'No training cut for the sample', job.name
+                BDT_add_cut='1'
+            else:
+                BDT_add_cut='((evt%2) == 0 || isData)'
         else:
+            print 'Adding training cut'
             UseTrainSample = eval(self.config.get('Analysis','UseTrainSample'))
             if UseTrainSample:
                 BDT_add_cut='((evt%2) == 0 || isData)'
             else:
-                BDT_add_cut='!((evt%2) == 0 || isData)'
+                if 'ZJets_amc' in job.name:
+                    print 'No evt%2 cut for sample', job.name
+                    BDT_add_cut='1'
+                else:
+                    BDT_add_cut='!((evt%2) == 0 || isData)'
 
         plot_path = self.config.get('Directories','plotpath')
         addOverFlow=eval(self.config.get('Plot_general','addOverFlow'))
@@ -169,7 +178,7 @@ class HistoMaker:
                     drawoption = '(%s)*(%s)'%(weightF,treeCut)
                 #print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
                 print 'drawoptions are', drawoption
-                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), drawoption, "goff,e")
+                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
                 if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True
@@ -218,8 +227,11 @@ class HistoMaker:
             if job.type != 'DATA':
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:
                     if TrainFlag:
-                        MC_rescale_factor=2. ##FIXME## only dataset used for training must be rescaled!!
-                        #print 'I RESCALE BY 2.0'
+                        if 'ZJets_amc' in job.name:
+                            print 'No rescale applied for the sample', job.name
+                            MC_rescale_factor = 1.
+                        else:
+                            MC_rescale_factor=2. ##FIXME## only dataset used for training must be rescaled!!
                     else: 
                         MC_rescale_factor = 1.
                     ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)*MC_rescale_factor
