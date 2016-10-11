@@ -4,7 +4,10 @@ import ROOT
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_eandmu/ZmmH.BestCSV.heppy."
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/prep_eandmu/ZmmH.BestCSV.heppy."
 #prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V21bis/singlesys_eandmu_v3/ZmmH.BestCSV.heppy."
-prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv2/ZmmH.BestCSV.heppy."
+#prefix = "root://t3dcachedb03.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv2/ZmmH.BestCSV.heppy."
+#prefix = "root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/mva_v9/ZmmH.BestCSV.heppy."
+#prefix = "root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v5/ZmmH.BestCSV.heppy."
+prefix = "root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v10/ZmmH.BestCSV.heppy."
 
 
 def getWeight(fileInc, fileB, region):
@@ -16,7 +19,7 @@ def getWeight(fileInc, fileB, region):
         # print 'adding',file
         tree = f.Get("tree")
         countInc    = countInc + 1.* tree.Draw("",region)
-        print 'countInc',countInc,'\n'
+        #print 'countInc',countInc,'\n'
         #countInc    = 1.* tree.GetEntries(region)
         f.Close()
 
@@ -26,7 +29,7 @@ def getWeight(fileInc, fileB, region):
         # print 'adding',file
         tree = f.Get("tree")
         countB      = countB + 1.* tree.Draw("",region)
-        print 'countB',countB,'\n'
+        #print 'countB',countB,'\n'
         #countB      = 1.* tree.GetEntries(region)
         f.Close()
 #    print 'countInc is', countInc
@@ -55,8 +58,14 @@ def getExtWeight(files):
 ZLLjetsHT0       = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
 ZLLjetsHT100     = ["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
 ZLLjetsHT200     = ["DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-ZLLjetsHT400     = ["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+ZLLjetsHT400     = ["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
 ZLLjetsHT600     = ["DYJetsToLL_M-50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+
+#ZLLNlojetsVPTINCL       = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8"]
+#ZLLNlojetsVPT150     = ["DYJetsToLL_Pt-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8_ext1"]
+#ZLLNlojetsVPT250     = ["DYJetsToLL_Pt-250To400_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8_ext1"]
+#ZLLNlojetsVPT400     = ["DYJetsToLL_Pt-400To650_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8_ext1"]
+#ZLLNlojetsVPT650     = ["DYJetsToLL_Pt-650ToInf_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8_ext1"]
 
 ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 ZLLjetsBGenFilter= ["DYJetsToLL_BGenFilter_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
@@ -69,6 +78,11 @@ HT100            = "(lheHT>100 && lheHT<200)"
 HT200            = "(lheHT>200 && lheHT<400)"
 HT400            = "(lheHT>400 && lheHT<600)"
 HT600            = "(lheHT>600)"
+
+VPT100            = "(lheV_pt>100 && lheV_pt<250)"
+VPT250            = "(lheV_pt>250 && lheV_pt<400)"
+VPT400            = "(lheV_pt>400 && lheV_pt<650)"
+VPT650            = "(lheV_pt>650)"
 
 ########
 #ZLL
@@ -87,6 +101,12 @@ print "weightZBGenjetsHT100=\t%.2f\n" %getWeight(ZLLjetsHT100,   ZLLjetsBGenFilt
 print "weightZBGenjetsHT200=\t%.2f\n" %getWeight(ZLLjetsHT200,   ZLLjetsBGenFilter, HT200+"&&"+DYJetsBGenFilter)
 print "weightZBGenjetsHT400=\t%.2f\n" %getWeight(ZLLjetsHT400,   ZLLjetsBGenFilter, HT400+"&&"+DYJetsBGenFilter)
 print "weightZBGenjetsHT600=\t%.2f\n" %getWeight(ZLLjetsHT600,   ZLLjetsBGenFilter, HT600+"&&"+DYJetsBGenFilter)
+
+print "weightNloHT100=\t%.2f\n" %getWeight(ZLLNlojetsVPTINCL, ZLLNlojetsVPT150 , VPT100)
+print "weightNloHT250=\t%.2f\n" %getWeight(ZLLNlojetsVPTINCL, ZLLNlojetsVPT250 , VPT250)
+print "weightNloHT400=\t%.2f\n" %getWeight(ZLLNlojetsVPTINCL, ZLLNlojetsVPT400 , VPT400)
+print "weightNloHT650=\t%.2f\n" %getWeight(ZLLNlojetsVPTINCL, ZLLNlojetsVPT650 , VPT650)
+
 
 ##If you use extension only
 #getExtWeight(['ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8','ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1'])
