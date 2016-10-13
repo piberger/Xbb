@@ -78,6 +78,12 @@ optimisation_training = False
 sample_to_cache_ = None
 subcut_ = None
 par_optimisation = None
+
+data_as_signal = eval(config.get("Analysis","Data_as_signal"))
+if data_as_signal:
+    global_rescale=1.
+    print '@INFO: Signal is data. Will change the weights accordingly (this should be used for correlation plots only)'
+
 if not  opts.MVAsettings == '':
     print 'MVAsettins are', opts.MVAsettings
     if 'CUTBIN' in opts.MVAsettings:
@@ -97,6 +103,7 @@ if not  opts.MVAsettings == '':
             print '@INFO: Optimisation will be performed. The optimisation parameter is',par_optimisation,'with a value of',value_optimisation
         #opt_MVAsettings = opts.MVAsettings
         optimisation_training = True
+
 
 
 
@@ -185,6 +192,10 @@ EvalCut= '((evt%2)==0 || isData)'
 #TrainCut='%s & EventForTraining==1'%TCut
 #EvalCut='%s & EventForTraining==0'%TCut
 
+if data_as_signal:
+    TrainCut = '1'
+    EvalCut = '1'
+
 print "TrainCut:",TrainCut
 print "EvalCut:",EvalCut
 #cuts = [TrainCut,EvalCut]
@@ -251,7 +262,10 @@ for job in signal_samples:
 
     #Tsignal = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
-    TsScale = tc.get_scale(job,config)*global_rescale    
+    if not data_as_signal:
+        TsScale = tc.get_scale(job,config)*global_rescale
+    else:
+        TsScale = 1
     Tsignals.append(Tsignal)
     TsScales.append(TsScale)
     #input_Esig = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
@@ -316,7 +330,10 @@ for var in MVA_Vars['Nominal']:
 
 #Execute TMVA
 print 'Execute TMVA: SetSignalWeightExpression'
-factory.SetSignalWeightExpression(weightF)
+if data_as_signal:
+    factory.SetSignalWeightExpression('1')
+else:
+    factory.SetSignalWeightExpression(weightF)
 print 'Execute TMVA: SetBackgroundWeightExpression'
 factory.SetBackgroundWeightExpression(weightF)
 factory.Verbose()

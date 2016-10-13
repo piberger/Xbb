@@ -848,6 +848,7 @@ for DCtype in ['WS','TH']:
     f.write('process\t')
     #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
     for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
+    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+2))
     f.write('\n')
     # datacard yields
     f.write('rate\t')

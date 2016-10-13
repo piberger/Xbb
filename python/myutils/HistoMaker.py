@@ -397,6 +397,7 @@ class HistoMaker:
         #print "orderandadd-setup",setup
         #print "orderandadd-histo_dicts",histo_dicts
         for sample in setup:
+            sumintegral = 0
             nSample = 0
             for histo_dict in histo_dicts:
                 if histo_dict.has_key(sample):
@@ -409,7 +410,9 @@ class HistoMaker:
                     else:
                         ordered_histo_dict[sample].Add(histo_dict[sample])
                     printc('magenta','','\t--> added %s to %s Integral: %s Entries: %s Error: %s'%(subsamplename,sample,integral,entries,error))
+                    sumintegral += integral
                     nSample += 1
+            print 'The final integral is %s' % sumintegral
         del histo_dicts
         #print "Output dict is", ordered_histo_dict
         return ordered_histo_dict 
