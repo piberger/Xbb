@@ -479,6 +479,30 @@ class TreeCache:
         #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
+    def get_scale_training(self, sample, config, lumi = None, count=1):
+#        print float(sample.lumi)
+        try: sample.xsec = sample.xsec[0]
+        except: pass
+        # get the weights from the file,. not the tree
+        #input = ROOT.TFile('%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]),'read')
+        #print ('the root file is', '%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
+
+        tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
+        input = ROOT.TFile.Open(tmpCache,'read')
+        print ('the root file is', tmpCache)
+        #print ('list the content of the root file')
+        input.GetListOfKeys().Print()
+        posWeight = input.Get('CountPosWeight')
+        negWeight = input.Get('CountNegWeight')
+        anaTag=config.get('Analysis','tag')
+        theScale = 1.
+        count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        print ('count is', (posWeight.GetBinContent(1) - negWeight.GetBinContent(1)))
+        lumi = float(sample.lumi)
+        theScale = lumi*sample.xsec*sample.sf/(count)
+        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        return theScale
+
     @staticmethod
     def get_checksum(file):
         if 'gsidcap://t3se01.psi.ch:22128' in file:
