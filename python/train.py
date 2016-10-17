@@ -263,7 +263,7 @@ for job in signal_samples:
     #Tsignal = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
     if not data_as_signal:
-        TsScale = tc.get_scale(job,config)*global_rescale
+        TsScale = tc.get_scale_training(job,config)*global_rescale
     else:
         TsScale = 1
     Tsignals.append(Tsignal)
@@ -287,7 +287,7 @@ for job in background_samples:
 
     #Tbackground = tc.get_tree(job,TrainCut)
     ROOT.gDirectory.Cd(workdir)
-    TbScale = tc.get_scale(job,config)*global_rescale
+    TbScale = tc.get_scale_training(job,config)*global_rescale
     Tbackgrounds.append(Tbackground)
     TbScales.append(TbScale)
     #input_Ebkg = ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read')
