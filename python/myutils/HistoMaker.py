@@ -303,7 +303,7 @@ class HistoMaker:
         elif not self._rebin and not self.value:
             return False
 
-    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.25):
+    def calc_rebin(self, bg_list, nBins_start=100, tolerance=0.25):
         #print "START calc_rebin"
         self.calc_rebin_flag = True
         self.norebin_nBins = copy(self.nBins)
@@ -329,51 +329,49 @@ class HistoMaker:
         binR=self.rebin_nBins
         binL=1
         rel=1.0
-        #print "START loop from right"
+        print "START loop from right"
         #print "totalBG.Draw("","")",totalBG.Integral()
         #---- from right
-        while rel > tolerance:
+        while rel > tolerance or TotR < 1.:
             TotR+=totalBG.GetBinContent(binR)
             ErrorR=sqrt(ErrorR**2+totalBG.GetBinError(binR)**2)
             binR-=1
-            # print 'is this loop infinite ?'
-            # print "TotR",TotR
-            # print "ErrorR",ErrorR
-            # print "rel",rel
-            if not TotR == 0 and not ErrorR == 0:
-                rel=ErrorR/TotR
-                print rel
-        #print 'upper bin is %s'%binR
+            print 'TotR is', TotR
+            print 'ErrorR is', ErrorR
+            if not TotR <= 0 and not ErrorR == 0:
+                rel=ErrorR/sqrt(TotR)
+                print 'rel is',  rel
+        print 'upper bin is %s'%binR
         print "END loop from right"
 
         #---- from left
         rel=1.0
         print "START loop from left"
-        while rel > tolerance:
+        while rel > tolerance or TotL < 1.:
             TotL+=totalBG.GetBinContent(binL)
             ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
             binL+=1
-            if not TotL == 0 and not ErrorL == 0:
-                rel=ErrorL/TotL
-                #print rel
+            if not TotL <= 0 and not ErrorL == 0:
+                rel=ErrorL/sqrt(TotL)
+                print rel
         #it's the lower edge
         print "STOP loop from left"
         binL+=1
-        #print 'lower bin is %s'%binL
+        print 'lower bin is %s'%binL
 
         inbetween=binR-binL
         stepsize=int(inbetween)/(int(self.norebin_nBins)-2)
         modulo = int(inbetween)%(int(self.norebin_nBins)-2)
 
-        #print 'stepsize %s'% stepsize
-        #print 'modulo %s'%modulo
+        print 'stepsize %s'% stepsize
+        print 'modulo %s'%modulo
         binlist=[binL]
         for i in range(0,int(self.norebin_nBins)-3):
             binlist.append(binlist[-1]+stepsize)
         binlist[-1]+=modulo
         binlist.append(binR)
         binlist.append(self.rebin_nBins+1)
-        #print 'binning set to %s'%binlist
+        print 'binning set to %s'%binlist
         #print "START REBINNER"
         self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
