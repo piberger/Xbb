@@ -303,7 +303,7 @@ class HistoMaker:
         elif not self._rebin and not self.value:
             return False
 
-    def calc_rebin(self, bg_list, nBins_start=100, tolerance=0.25):
+    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.5):
         #print "START calc_rebin"
         self.calc_rebin_flag = True
         self.norebin_nBins = copy(self.nBins)
@@ -332,14 +332,17 @@ class HistoMaker:
         print "START loop from right"
         #print "totalBG.Draw("","")",totalBG.Integral()
         #---- from right
-        while rel > tolerance or TotR < 1.:
+        while rel > tolerance :
             TotR+=totalBG.GetBinContent(binR)
             ErrorR=sqrt(ErrorR**2+totalBG.GetBinError(binR)**2)
             binR-=1
+            if binR < 0: break
+            if TotR < 1.: continue
+            print 'binR is', binR
             print 'TotR is', TotR
             print 'ErrorR is', ErrorR
             if not TotR <= 0 and not ErrorR == 0:
-                rel=ErrorR/sqrt(TotR)
+                rel=ErrorR/TotR
                 print 'rel is',  rel
         print 'upper bin is %s'%binR
         print "END loop from right"
@@ -347,12 +350,14 @@ class HistoMaker:
         #---- from left
         rel=1.0
         print "START loop from left"
-        while rel > tolerance or TotL < 1.:
+        while rel > tolerance:
             TotL+=totalBG.GetBinContent(binL)
             ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
             binL+=1
+            if binL > nBins_start: break
+            if TotL < 1.: continue
             if not TotL <= 0 and not ErrorL == 0:
-                rel=ErrorL/sqrt(TotL)
+                rel=ErrorL/TotL
                 print rel
         #it's the lower edge
         print "STOP loop from left"
