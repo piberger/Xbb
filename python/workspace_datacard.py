@@ -735,7 +735,7 @@ if not ignore_stats:
                             final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
     else:
         print "Running Statistical uncertainty"
-        threshold =  0.5 #stat error / sqrt(value). It was 0.5
+        threshold =  0.75 #stat error / sqrt(value). It was 0.5
         print "threshold",threshold
         binsBelowThreshold = {}
         for bin in range(1,nBins+1):
@@ -867,10 +867,10 @@ for DCtype in ['WS','TH']:
         f.write('\t%s'%what['type'])
         for c in setup:
             if c in what:
-                if '_eff_e' in item and 'Zmm' in data_sample_names: f.write('\t-')
-                elif '_eff_m' in item and 'Zee' in data_sample_names: f.write('\t-')
-                elif '_trigger_e' in item and 'Zmm' in data_sample_names: f.write('\t-')
-                elif '_trigger_m' in item and 'Zee' in data_sample_names: f.write('\t-')
+                if '_eff_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
+                elif '_eff_m' in item and 'Zee' in ROOToutname : f.write('\t-')
+                elif '_trigger_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
+                elif '_trigger_m' in item and 'Zee' in ROOToutname : f.write('\t-')
                 else:
                     f.write('\t%s'%what[c])
             else:

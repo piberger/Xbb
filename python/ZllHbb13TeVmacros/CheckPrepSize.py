@@ -8,12 +8,17 @@ import os
 import ROOT
 
 #V20
-_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/mva_v9/'
+_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv3/'
+#_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v10/'
 #V24
-_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v5/'
+_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v21/'
 
 dummy_cut = ''
+SR_low_cut = '(V_mass>75&V_mass<105&(HCSV_reg_mass>90&HCSV_reg_mass<150)&Jet_btagCSV[hJCidx[0]]>0.46&Jet_btagCSV[hJCidx[1]]>0.46&(1)&sys_puID&sys_LooseIso&(Jet_puId[hJCidx[1]]>=4)&(Jet_puId[hJCidx[0]]>=4)&vLeptons_pt[0]>20&vLeptons_pt[1]>20&abs(Jet_eta[hJCidx[0]])<2.4&abs(Jet_eta[hJCidx[1]])<2.4&V_pt>50&sys_puID&V_pt>20&V_pt>30&(((Vtype==0)&(run<=276811))||((Vtype==1)&(run<=276811)))&(V_pt>50&V_pt<150))'
 
+#CUTLISTV20 = [dummy_cut,SR_low_cut]
+#CUTLISTV21 = [dummy_cut,SR_low_cut]
+#LISTNAME = ['Cut','SR_low']
 CUTLISTV20 = [dummy_cut]
 CUTLISTV21 = [dummy_cut]
 LISTNAME = ['Cut']
@@ -51,6 +56,10 @@ FAILED = []
 for file1 in FILE1:
     if not '.root' in file1: continue
     #if not 'Single' in file1: continue
+    ###if 'TT' in file1: continue
+    ###if 'SingleElectron' in file1 or 'SingleMuon' in file1: continue
+    #if not 'SingleMuon__Run2016E-PromptReco-v2' in file1: continue
+    if not 'SingleElectron' in file1: continue
     print '#events in sample', file1
     print 'file is', file1
     file_found = False
