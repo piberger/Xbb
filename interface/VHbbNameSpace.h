@@ -820,6 +820,19 @@ double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nG
     return (SF > 0) ? SF : 0;
   }
 
+double LOtoNLOWeightEtabb(double etabb){
+
+    double SF = 1.;
+    if(etabb < 5){
+
+        SF = 0.895074 + 0.0621916*etabb -0.00512346*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
+
+    }
+
+    return SF;
+
+}
+
 float puWeight_ichep(int i){
 
 if (i < 0) return 1.;
