@@ -860,13 +860,17 @@ for job in info:
             weight_SF_LooseISO[0] = 1
             newtree.Branch('weight_SF_LooseISO',weight_SF_LooseISO,'weight_SF_LooseISO/F')
                #electron MVAID (wrong in the ntuples)
-            weight_SF_LooseMVAID = array('f',[0])
-            weight_SF_LooseMVAID[0] = 1
-            newtree.Branch('weight_SF_LooseMVAID',weight_SF_LooseMVAID,'weight_SF_LooseMVAID/F')
+            weight_SF_LooseMVAID_BCD = array('f',[0])
+            weight_SF_LooseMVAID_BCD[0] = 1
+            newtree.Branch('weight_SF_LooseMVAID_BCD',weight_SF_LooseMVAID_BCD,'weight_SF_LooseMVAID_BCD/F')
+               #
+            weight_SF_LooseMVAID_BCDEF = array('f',[0])
+            weight_SF_LooseMVAID_BCDEF[0] = 1
+            newtree.Branch('weight_SF_LooseMVAID_BCDEF',weight_SF_LooseMVAID_BCDEF,'weight_SF_LooseMVAID_BCDEF/F')
                #electron tight MVAID (wrong in the ntuples)
-            weight_SF_TightMVAID = array('f',[0])
-            weight_SF_TightMVAID[0] = 1
-            newtree.Branch('weight_SF_TightMVAID',weight_SF_TightMVAID,'weight_SF_TightMVAID/F')
+            #weight_SF_TightMVAID = array('f',[0])
+            #weight_SF_TightMVAID[0] = 1
+            #newtree.Branch('weight_SF_TightMVAID',weight_SF_TightMVAID,'weight_SF_TightMVAID/F')
             #Lepton trigger
                #electron
             weight_Eff_eletriglooseBCD = array('f',[0])
@@ -1365,8 +1369,9 @@ for job in info:
 
                 DY_specialWeight[0] = 1.
                 weight_SF_LooseISO[0] = 1.
-                weight_SF_LooseMVAID[0] = 1.
-                weight_SF_TightMVAID[0] = 1.
+                weight_SF_LooseMVAID_BCD[0] = 1.
+                weight_SF_LooseMVAID_BCDEF[0] = 1.
+                #weight_SF_TightMVAID[0] = 1.
                 weight_Eff_eletriglooseBCD[0] = 1.
                 weight_Eff_eletriglooseBCDEF[0] = 1.
                 weight_Eff_eletrigloosept23[0] = 1.
@@ -1390,8 +1395,12 @@ for job in info:
                         wdir+'/python/json/egammaEffi_tracker.json' : ['egammaEffi_tracker', 'eta_pt_ratio'],
                         wdir+'/python/json/SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_beforeL2Fix', 'abseta_pt_MC'],
                         wdir+'/python/json/SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65.json' : ['MuonTrigger_data_all_IsoMu22_OR_IsoTkMu22_pteta_Run2016B_afterL2Fix', 'abseta_pt_MC'],
-                        wdir+'/python/json/WP90_BCD.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCD', 'eta_pt_ratio'],
-                        wdir+'/python/json/WP90_BCDEF.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCDEF', 'eta_pt_ratio']
+                        #ID+ISO
+                        wdir+'/python/json/WP90PlusIso_BCD.json' : ['WP90PlusIso_BCD', 'eta_pt_ratio'],
+                        wdir+'/python/json/WP90PlusIso_BCDEF.json' : ['WP90PlusIso_BCDEF', 'eta_pt_ratio'],
+                        #trigg
+                        wdir+'/python/json/WP90_BCD_withRelIso.json' : ['electronTriggerEfficiencyHLT_Ele27_WPLoose_eta2p1_WP90_BCD', 'eta_pt_ratio'],
+                        wdir+'/python/json/WP90_BCDEF_withRelIso.json' : ['electronTriggerEfficiencyHLT_Ele27_WPLoose_eta2p1_WP90_BCDEF', 'eta_pt_ratio']
                         }
                     for j, name in jsons.iteritems():
 
@@ -1417,19 +1426,19 @@ for job in info:
                                 muTrigEffAftr.append(weight[0][0])
                                 muTrigEffAftr.append(weight[1][0])
                         elif tree.Vtype == 1:
-                            if j.find('ScaleFactor_egammaEff_WP80') != -1:
-                                weight_SF_TightMVAID[0] = weight[0][0]*weight[1][0]
-                            elif j.find('ScaleFactor_egammaEff_WP90') != -1:
-                                weight_SF_LooseMVAID[0] = weight[0][0]*weight[1][0]
-
+                            #if j.find('ScaleFactor_egammaEff_WP80') != -1:
+                            #    weight_SF_TightMVAID[0] = weight[0][0]*weight[1][0]
+                            if j.find('WP90PlusIso_BCD.json') != -1:
+                                weight_SF_LooseMVAID_BCD[0] = weight[0][0]*weight[1][0]
+                            elif j.find('WP90PlusIso_BCDEF.json') != -1:
+                                weight_SF_LooseMVAID_BCDEF[0] = weight[0][0]*weight[1][0]
                             elif j.find('egammaEffi_tracker') != -1:
                                 weight_trk_electron[0] = weight[0][0]*weight[1][0]
-
-                            elif j.find('WP90_BCD.json') != -1:
+                            elif j.find('WP90_BCD_withRelIso') != -1:
                                 eff1 = weight[0][0]
                                 eff2 = weight[1][0]
                                 weight_Eff_eletriglooseBCD[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-                            elif j.find('WP90_BCDEF.json') != -1:
+                            elif j.find('WP90_BCDEF_withRelIso') != -1:
                                 eff1 = weight[0][0]
                                 eff2 = weight[1][0]
                                 weight_Eff_eletriglooseBCDEF[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
@@ -1437,8 +1446,6 @@ for job in info:
                                 eff1 = weight[0][0]
                                 eff2 = weight[1][0]
                                 weight_Eff_eletrigloosept23[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-
-
                         else:
                             sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
 
@@ -1459,7 +1466,7 @@ for job in info:
                         weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
 
                     muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
-                    eleweight[0] = weight_SF_LooseMVAID[0]*weight_trk_electron[0]
+                    eleweight[0] = weight_SF_LooseMVAID_BCD[0]*weight_trk_electron[0]
 
                     if not job.specialweight:
                         DY_specialWeight[0] = 1
