@@ -833,6 +833,21 @@ double LOtoNLOWeightEtabb(double etabb){
 
 }
 
+//int FirstGenJet(Float_t GenJet_eta[], Float_t GenJet_phi[], Float_t Jet_eta, Float_t Jet_phi, int gensize = 15){
+//
+//    double dR = 999;
+//    int ind = -1;
+//
+//    for (int k = 0; k < gensize; ++k){
+//        if (deltaR(GenJet_eta[k], GenJet_phi[k], Jet_eta, Jet_phi) < dR){
+//           dR = deltaR(GenJet_eta[k], GenJet_phi[k], Jet_eta[l], Jet_phi[l]);
+//           ind = k;
+//        }
+//    }
+//    if dR <
+//
+//}
+
 float puWeight_ichep(int i){
 
 if (i < 0) return 1.;

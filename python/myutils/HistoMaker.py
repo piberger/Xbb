@@ -108,6 +108,7 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
+            print 'options is', options
             #if First_iter: print 'The name of the job is', job.name
             name=job.name
             if self.GroupDict is None:
@@ -127,8 +128,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                weightF="("+weightF+")"
-                #weightF="("+weightF+")*(" + job.specialweight +")"
+                #weightF="("+weightF+")"
+                weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
@@ -142,7 +143,7 @@ class HistoMaker:
             #else:
             #    treeCut='%s'%(options['cut'])
             treeCut='%s & %s'%(options['cut'],addCut)
-            print 'TreeCut (for the ploting) is', treeCut
+            #print 'TreeCut (for the ploting) is', treeCut
             #treeCut='%s ' %addCut
 
 #            treeCut = "("+treeCut+")&&"+job.addtreecut
@@ -177,7 +178,7 @@ class HistoMaker:
                 else: 
                     drawoption = '(%s)*(%s)'%(weightF,treeCut)
                 #print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
-                print 'drawoptions are', drawoption
+                #print 'drawoptions are', drawoption
                 nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
                 if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
@@ -210,7 +211,7 @@ class HistoMaker:
                     else:
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
                 else:
-                    if First_iter: print 'DATA drawoptions', '%s>>%s' %(treeVar,name),'%s' %treeCut
+                    #if First_iter: print 'DATA drawoptions', '%s>>%s' %(treeVar,name),'%s' %treeCut
                     CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
                 full = True
             # if full:

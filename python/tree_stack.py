@@ -107,7 +107,6 @@ if os.path.exists("../interface/VHbbNameSpace_h.so"):
 #----------Histo from trees------------
 #Get the selections and the samples
 def doPlot():
-
     #print "Read Ploting Region information"
     #print "===============================\n"
 
