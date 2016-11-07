@@ -26,9 +26,10 @@ for b in range(0,hist_data.GetXaxis().GetNbins()):
     #print 'bin center', hist_data.GetXaxis().GetBinCenter(b)
     #print 'bin low edge', hist_data.GetXaxis().GetBinLowEdge(b)
     #if print hist_data.GetBinContent(b)/hist_mc.GetBinContent(b)
-    #print hist_data.GetBinContent(b)
-    #/intdata
-    #print hist_mc.GetBinContent(b)
+    print 'data content'
+    print hist_data.GetBinContent(b)
+    print 'mc content'
+    print hist_mc.GetBinContent(b)
     if hist_mc.GetBinContent(b) != 0:
         mc_sum += hist_mc.GetBinContent(b)
         data_sum += hist_data.GetBinContent(b)

@@ -468,16 +468,18 @@ class TreeCache:
             sys.exit(-1)
 
     @staticmethod
-    def get_scale(sample, config, lumi = None, count=1):
-#        print float(sample.lumi)
-        try: sample.xsec = sample.xsec[0]
-        except: pass
-        anaTag=config.get('Analysis','tag')
-        theScale = 1.
-        lumi = float(sample.lumi)
-        theScale = lumi*sample.xsec*sample.sf/(count)
-        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
-        return theScale
+    #def get_scale(sample, config, lumi = None, count=1):
+#   #     print float(sample.lumi)
+    #    try: sample.xsec = sample.xsec[0]
+    #    except: pass
+    #    anaTag=config.get('Analysis','tag')
+    #    theScale = 1.
+    #    lumi = float(sample.lumi)
+    #    print ('SCALE')
+    #    print ('count is', count)
+    #    theScale = lumi*sample.xsec*sample.sf/(count)
+    #    print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+    #    return theScale
 
     def get_scale_training(self, sample, config, lumi = None, count=1):
 #        print float(sample.lumi)
@@ -486,22 +488,45 @@ class TreeCache:
         # get the weights from the file,. not the tree
         #input = ROOT.TFile('%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]),'read')
         #print ('the root file is', '%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
-
+        #print('again, name of the class is', self.__class__.__name__)
+        self.__cachedPath
         tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
         input = ROOT.TFile.Open(tmpCache,'read')
-        print ('the root file is', tmpCache)
+        #print ('the root file is', tmpCache)
         #print ('list the content of the root file')
         input.GetListOfKeys().Print()
         posWeight = input.Get('CountPosWeight')
         negWeight = input.Get('CountNegWeight')
+        #countPos =getattr(self.tc,"CountPosWeight")[0]
+        #countNeg =getattr(self.tc,"CountNegWeight")[0]
         anaTag=config.get('Analysis','tag')
         theScale = 1.
         count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
-        print ('count is', (posWeight.GetBinContent(1) - negWeight.GetBinContent(1)))
+        #count = 1
+        #print ('SCALE')
+        #print ('count is', (posWeight.GetBinContent(1) - negWeight.GetBinContent(1)))
+        #print ('pos is',posWeight.GetBinContent(1))
+        #print ('neg is',negWeight.GetBinContent(1))
+        #print ('count is' , count)
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
+
+    def get_scale(self, sample, config, lumi = None, count=1):
+
+        #print('name of the class is', self.__class__.__name__)
+        return self.get_scale_training(self, sample, config, lumi, count)
+
+    #Jdef get_cache(self, sample, config):
+    ##retrives the cahe __cachedPath and __hashDict
+    #self.__cachedPath = config.get('Directories','tmpSamples')
+    #source = '%s/%s' %(self.path,sample.get_path)
+    #checksum = self.get_checksum(source)
+    #theHash = hashlib.sha224('%s_s%s_%s' %(sample,checksum,self.minCut)).hexdigest()
+    #self.__hashDict[sample.name] = theHash
+
+
 
     @staticmethod
     def get_checksum(file):

@@ -2,6 +2,7 @@
 #include "TMath.h"
 #include "TVector2.h"
 #include "TVector3.h"
+#include <iostream>
 
 
 namespace VHbb {
@@ -825,9 +826,62 @@ double LOtoNLOWeightEtabb(double etabb){
     double SF = 1.;
     if(etabb < 5){
 
-        SF = 0.895074 + 0.0621916*etabb -0.00512346*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
+        //SF = 0.895074 + 0.0621916*etabb -0.00512346*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
+//GeneralCuts wQCD
+       //SF = 0.914679 + 0.0215918*etabb +0.010957*etabb*etabb + 0.00926905*etabb*etabb*etabb -0.00154982*etabb*etabb*etabb*etabb;
+//GeneralCuts noQCD
+       //SF = 0.914641 + 0.0216597*etabb + 0.0110062*etabb*etabb + 0.00923401*etabb*etabb*etabb - 0.00154752*etabb*etabb*etabb*etabb;
+       //Z+light
+       //wQCD
+       //SF = 0.888143  + 0.0498867*etabb + 0.0139812*etabb*etabb + 0.00217246*etabb*etabb*etabb + 0.000482098*etabb*etabb*etabb*etabb;
+       //For closure test
+       //SF =   0.929881 + 0.0643316*etabb -0.0541741*etabb*etabb + 0.0306295*etabb*etabb*etabb -0.00340578*etabb*etabb*etabb*etabb;
+       //For closure test on Z+light
+       //SF =   0.936322 + 0.0482062*etabb -0.034030*etabb*etabb + 0.0215382*etabb*etabb*etabb -0.00244087*etabb*etabb*etabb*etabb;
+       //Z+light no w (to check)
+       SF =   0.895074 + 0.0621916*etabb -0.00512345*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
 
     }
+
+    return SF;
+
+}
+
+int checkgen(int Jet_mcIdx0, int Jet_mcIdx1, int length){
+
+   if (Jet_mcIdx0 == -1 || Jet_mcIdx1 == -1 || Jet_mcIdx0 >= length || Jet_mcIdx1 >= length){
+       return 0;
+   }else{
+       return Jet_mcIdx0;
+   }
+
+}
+
+double LOtoNLOWeightgenEtabb(double etabb){
+
+    double SF = 1.;
+        if(etabb < 5 && etabb > 0.000001){
+            //GeneralCuts wQCD
+            //SF = 0.889908 + 0.0185636*etabb +0.0353842*etabb*etabb + 0.00142895*etabb*etabb*etabb -0.000413957*etabb*etabb*etabb*etabb;
+            //GeneralCuts noQCD
+            //SF = 0.889875 + 0.0185131*etabb +0.0355196*etabb*etabb + 0.00138352*etabb*etabb*etabb -0.00041181*etabb*etabb*etabb*etabb;
+            //Z+light
+            //w QCD
+            SF =  0.870811+ 0.0386754*etabb + 0.0479672*etabb*etabb - 0.011603*etabb*etabb*etabb + 0.00252448*etabb*etabb*etabb*etabb;
+        }
+    return SF;
+
+}
+
+double LOtoNLOWeightgenEtabbPtJ(double etabb){
+
+    double SF = 1.;
+        if(etabb < 5 && etabb > 0.000001){
+            //SF = 0.860459 + 0.0191792*etabb + 0.0546046*etabb*etabb - 0.00623299*etabb*etabb*etabb + 0.000123637*etabb*etabb*etabb*etabb;
+            //Z+light
+            //w QCD
+            SF = 0.841774 + 0.0725955*etabb + 0.0202381*etabb*etabb + 0.0016097*etabb*etabb*etabb + 0.0000391441*etabb*etabb*etabb*etabb;
+        }
 
     return SF;
 
@@ -848,7 +902,9 @@ double LOtoNLOWeightEtabb(double etabb){
 //
 //}
 
-float puWeight_ichep(int i){
+float puWeight_ichep(float I){
+
+int i = std::nearbyint(I);
 
 if (i < 0) return 1.;
 if (i > 37) return 1.;
@@ -897,7 +953,9 @@ return puw[i];
 
 }
 
-float puWeight_ichep_up(int i){
+float puWeight_ichep_up(float I){
+
+int i = std::nearbyint(I);
 
 if (i < 0) return 1.;
 if (i > 37) return 1.;
@@ -946,7 +1004,9 @@ return puw[i];
 
 }
 
-float puWeight_ichep_down(int i){
+float puWeight_ichep_down(float I){
+
+int i = std::nearbyint(I);
 
 if (i < 0) return 1.;
 if (i > 37) return 1.;

@@ -213,28 +213,38 @@ def training(additional_):
                 repDict['additional']= additional_ +'__'+cut_
                 submit(item,repDict, False)
 
-def ploting(additional_ = None):
+def ploting(additional_ = None, splitvar = False):
     repDict['additional'] = 'dummy'
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
         section='Plot:%s'%region
         if not config.has_option(section, 'subcut'):
             print 'No subcut for the plot region', region
-            submit(region,repDict)
-            continue
-        subcut = eval(config.get(section,'subcut'))
-        print 'subcut is', subcut
-        for cutvar, CUTBIN in subcut.iteritems():
-            print 'cutvar is', cutvar
-            #cutbin_first = CUTBIN[0]
-            for cutbins in CUTBIN:
-                print 'cutbins is', cutbins
-                cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
-                print 'cut_ is', cut_
-                #Need to propagate the cutbin param
-                if additional_: repDict['additional']= additional_ +'__'+cut_
-                else: repDict['additional']= cut_
-                submit(region,repDict)
+            if splitvar:
+                vars = (config.get('Plot:%s'%region, 'vars')).split(',')
+                for var in vars:
+                    var_ = 'VAR_%s'%(var)
+                    if additional_: repDict['additional']= additional_ +'__'+var_
+                    else: repDict['additional']= var_
+                    print 'additional is', repDict['additional']
+                    #sys.exit()
+                    submit(region,repDict)
+            else: submit(region,repDict)
+        else:
+            subcut = eval(config.get(section,'subcut'))
+            print 'splitvar is', splitvar
+            print 'subcut is', subcut
+            for cutvar, CUTBIN in subcut.iteritems():
+                print 'cutvar is', cutvar
+                #cutbin_first = CUTBIN[0]
+                for cutbins in CUTBIN:
+                    print 'cutbins is', cutbins
+                    cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+                    print 'cut_ is', cut_
+                    #Need to propagate the cutbin param
+                    if additional_: repDict['additional']= additional_ +'__'+cut_
+                    else: repDict['additional']= cut_
+                    submit(region,repDict)
 
 #def splitcaching()
 #
@@ -408,7 +418,7 @@ if opts.task == 'dc':
     print DC_vars
 
 Plot_vars = ['']
-if opts.task == 'plot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+if opts.task == 'plot' or opts.task == 'splitvarplot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
     Plot_vars= (config.get('Plot_general','List')).split(',')
 
 
@@ -418,6 +428,8 @@ if not opts.task == 'prep':
 
 if opts.task == 'plot':
     ploting()
+if opts.task == 'splitvarplot':
+    ploting(None, True)
 
 #Old and working
 #if opts.task == 'plot':

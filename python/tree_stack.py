@@ -42,6 +42,7 @@ print 'mergeplot is', opts.mergeplot
 
 sample_to_merge_ = None
 subcut_ =  None
+var_to_plot_ = None
 #This will go in the name of the pdf, png etc file
 subcut_plotname = ''
 if opts.settings:
@@ -55,6 +56,9 @@ if opts.settings:
     if 'CACHING' in opts.settings:
         sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
+    if 'VAR' in opts.settings:
+        var_to_plot_ = opts.settings[opts.settings.find('VAR')+4:]
+        print '@INFO: Only the %s parameter will be ploted' %var_to_plot_
 
 #adds the file vhbbPlotDef.ini to the config list
 #print 'opts.config',opts.config
@@ -110,8 +114,11 @@ def doPlot():
     #print "Read Ploting Region information"
     #print "===============================\n"
 
-    vars = (config.get(section, 'vars')).split(',')#get the variables to be ploted in each region 
-    #print "The variables are", vars, "\n"
+    if var_to_plot_:
+        vars = [var_to_plot_]
+    else:
+        vars = (config.get(section, 'vars')).split(',')#get the variables to be ploted in each region
+    print "The variables are", vars, "\n"
     data = eval(config.get(section,'Datas'))# read the data corresponding to each CR (section)
     mc = eval(config.get('Plot_general','samples'))# read the list of mc samples
     total_lumi = eval(config.get('Plot_general','lumi'))

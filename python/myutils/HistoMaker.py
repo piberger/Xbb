@@ -108,7 +108,7 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
-            print 'options is', options
+            #print 'options is', options
             #if First_iter: print 'The name of the job is', job.name
             name=job.name
             if self.GroupDict is None:
@@ -128,14 +128,17 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
+            print('They options keys are',options.keys())
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
+                print('yeah')
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
             else:
+                print('ahein')
                 count=getattr(self.tc,"CountWeighted")[0]
 
             #if cutOverWrite:
@@ -179,7 +182,8 @@ class HistoMaker:
                     drawoption = '(%s)*(%s)'%(weightF,treeCut)
                 #print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
                 #print 'drawoptions are', drawoption
-                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
+                #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
+                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), drawoption, "goff,e")
                 if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True
