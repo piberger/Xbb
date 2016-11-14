@@ -128,8 +128,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                weightF="("+weightF+")"
-                #weightF="("+weightF+")*(" + job.specialweight +")"
+                #weightF="("+weightF+")"
+                weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
@@ -180,10 +180,14 @@ class HistoMaker:
                     #print drawoption
                 else: 
                     drawoption = '(%s)*(%s)'%(weightF,treeCut)
-                #print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
-                #print 'drawoptions are', drawoption
+                print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
+                #print 'Are the drawoptions a string ?', isinstance(drawoption, basestring)
+                #import pdb
+                #if len(drawoption) > 650:
+                #    pdb.set_trace()
                 #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
-                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), drawoption, "goff,e")
+                #treeVar = '1'
+                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
                 if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True

@@ -527,8 +527,10 @@ class StackMaker:
         CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
-        c.SaveAs(rootName)
-        c.SaveAs(CName)
+        c.Print(rootName)
+        c.Print(CName)
+        #c.SaveAs(rootName)
+        #c.SaveAs(CName)
 
         #print "DATA INTEGRAL: %s" %d1.Integral(d1.GetNbinsX()-2,d1.GetNbinsX()) 
         #fOut = ROOT.TFile.Open(name.replace('.pdf','.root'),'RECREATE')
@@ -784,6 +786,8 @@ class StackMaker:
         CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
-        c.SaveAs(rootName)
-        c.SaveAs(CName)
+        c.Print(rootName)
+        c.Print(CName)
+        #c.SaveAs(rootName)
+        #c.SaveAs(CName)
 
