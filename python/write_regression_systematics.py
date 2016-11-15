@@ -1416,10 +1416,8 @@ for job in info:
                         if tree.Vtype == 0:
                             if j.find('EfficienciesAndSF_ISO') != -1:
                                 computeSF(weight_SF_LooseISO)
-
                             elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
                                 muTrigEffBfr = weight
-
                             elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
                                 muTrigEffAftr = weight
                         elif tree.Vtype == 1:
@@ -1450,9 +1448,16 @@ for job in info:
                            #for full 22/fb dataset
                         weight = computeWeight(0.02772, 0.97227)
                         computeEff(weight_Eff_mutrigloose)
-
-                    muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
-                    eleweight[0] = weight_SF_LooseMVAID_BCD[0]*weight_trk_electron[0]
+                    #comput total weight
+                    if tree.Vtype == 0:
+                        muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
+                        muweight[1] = (tree.vLeptons_SF_IdCutLoose[0]-tree.vLeptons_SFerr_IdCutLoose[0])*(tree.vLeptons_SF_IdCutLoose[1]-tree.vLeptons_SFerr_IdCutLoose[1])*weight_SF_LooseISO[1]*(tree.vLeptons_SF_trk_eta[0]-tree.vLeptons_SFerr_trk_eta[0])*(tree.vLeptons_SF_trk_eta[1]-tree.vLeptons_SFerr_trk_eta[1])
+                        muweight[2] = (tree.vLeptons_SF_IdCutLoose[0]+tree.vLeptons_SFerr_IdCutLoose[0])*(tree.vLeptons_SF_IdCutLoose[1]+tree.vLeptons_SFerr_IdCutLoose[1])*weight_SF_LooseISO[2]*(tree.vLeptons_SF_trk_eta[0]+tree.vLeptons_SFerr_trk_eta[0])*(tree.vLeptons_SF_trk_eta[1]+tree.vLeptons_SFerr_trk_eta[1])
+                        #muweight[2] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
+                    elif tree.Vtype == 1:
+                        eleweight[0] = weight_SF_LooseMVAID_BCD[0]*weight_trk_electron[0]
+                        eleweight[1] = weight_SF_LooseMVAID_BCD[1]*weight_trk_electron[1]
+                        eleweight[2] = weight_SF_LooseMVAID_BCD[2]*weight_trk_electron[2]
 
                     if not job.specialweight:
                         DY_specialWeight[0] = 1
