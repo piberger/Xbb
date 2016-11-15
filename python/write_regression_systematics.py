@@ -678,48 +678,87 @@ for job in info:
 
           # Add new JER/JEC SYS branches for high/low and central/forward regions
 
-            #for the mass
-            HCSV_reg_corrJERUp_mass_low  = array('f',[0]*1)
-            HCSV_reg_corrJERUp_mass_high = array('f',[0]*1)
+            #Do loop here to define all the variables
+            VarList = ['HCSV_reg_corrSYSUD_mass_CAT','HCSV_reg_corrSYSUD_pt_CAT', 'HCSV_reg_corrSYSUD_phi_CAT', 'HCSV_reg_corrSYSUD_eta_CAT']
+            SysList = ['JER','JEC']
+            UDList = ['Up','Down']
+            CatList = ['low','high','central','forward']
+            SysDicList = []
 
-            HCSV_reg_corrJERDown_mass_low  = array('f',[0]*1)
-            HCSV_reg_corrJERDown_mass_high = array('f',[0]*1)
+            ConditionDic = {'low':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100.)',\
+                            'high':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100.)',\
+                            'central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>1.4)',\
+                            'forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4)'
+                    }
+            HiggsRecDic = {'JER':'Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECRown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])',\
+                    'JEC':'Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'
+                    }
+            #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta'}
+            SYSVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass*(HJet_sys.M()/HJet.M())','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())'}
 
-            HCSV_reg_corrJECUp_mass_low  = array('f',[0]*1)
-            HCSV_reg_corrJECUp_mass_high = array('f',[0]*1)
+            #Make a dic corresponding to each sys and create the variables
+            for var in VarList:
+                for syst in SysList:
+                    for cat in CatList:
+                        for ud in UDList:
+                            #fill Dic
+                            SysDic = {}
+                            SysDic['var'] = var
+                            SysDic['sys'] = syst
+                            SysDic['UD'] = ud
+                            SysDic['cat'] = cat
+                            SysDic['varname'] = var.replace('SYS',syst).replace('UD',ud).replace('CAT',cat)
+                            #Define var
+                            SysDic['varptr'] = array('f',[0])
+                            SysDicList.append(SysDic)
+                            newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'/F')
 
-            HCSV_reg_corrJECDown_mass_low  = array('f',[0]*1)
-            HCSV_reg_corrJECDown_mass_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERUp_mass_central = array('f',[0]*1)
-            HCSV_reg_corrJERUp_mass_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_mass_central = array('f',[0]*1)
-            HCSV_reg_corrJERDown_mass_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_mass_central = array('f',[0]*1)
-            HCSV_reg_corrJECUp_mass_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_mass_central = array('f',[0]*1)
-            HCSV_reg_corrJECDown_mass_forward = array('f',[0]*1)
+            ##for the mass
+            #HCSV_reg_corrJERUp_mass_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_mass_high = array('f',[0]*1)
 
-            newtree.Branch('HCSV_reg_corrJERUp_mass_low', HCSV_reg_corrJERUp_mass_low, 'HCSV_reg_corrJERUp_mass_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_mass_high', HCSV_reg_corrJERUp_mass_high, 'HCSV_reg_corrJERUp_mass_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_mass_low', HCSV_reg_corrJERDown_mass_low, 'HCSV_reg_corrJERDown_mass_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_mass_high', HCSV_reg_corrJERDown_mass_high, 'HCSV_reg_corrJERDown_mass_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_mass_central', HCSV_reg_corrJERUp_mass_central, 'HCSV_reg_corrJERUp_mass_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_mass_forward', HCSV_reg_corrJERUp_mass_forward, 'HCSV_reg_corrJERUp_mass_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_mass_central', HCSV_reg_corrJERDown_mass_central, 'HCSV_reg_corrJERDown_mass_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_mass_forward', HCSV_reg_corrJERDown_mass_forward, 'HCSV_reg_corrJERDown_mass_forward[1]/F')
+            #HCSV_reg_corrJERDown_mass_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_mass_high = array('f',[0]*1)
 
-            newtree.Branch('HCSV_reg_corrJECUp_mass_low', HCSV_reg_corrJECUp_mass_low, 'HCSV_reg_corrJECUp_mass_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_mass_high', HCSV_reg_corrJECUp_mass_high, 'HCSV_reg_corrJECUp_mass_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_mass_low', HCSV_reg_corrJECDown_mass_low, 'HCSV_reg_corrJECDown_mass_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_mass_high', HCSV_reg_corrJECDown_mass_high, 'HCSV_reg_corrJECDown_mass_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_mass_central', HCSV_reg_corrJECUp_mass_central, 'HCSV_reg_corrJECUp_mass_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_mass_forward', HCSV_reg_corrJECUp_mass_forward, 'HCSV_reg_corrJECUp_mass_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_mass_central', HCSV_reg_corrJECDown_mass_central, 'HCSV_reg_corrJECDown_mass_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_mass_forward', HCSV_reg_corrJECDown_mass_forward, 'HCSV_reg_corrJECDown_mass_forward[1]/F')
+            #HCSV_reg_corrJECUp_mass_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_mass_high = array('f',[0]*1)
+
+            #HCSV_reg_corrJECDown_mass_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_mass_high = array('f',[0]*1)
+
+            #HCSV_reg_corrJERUp_mass_central = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_mass_forward = array('f',[0]*1)
+
+            #HCSV_reg_corrJERDown_mass_central = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_mass_forward = array('f',[0]*1)
+
+            #HCSV_reg_corrJECUp_mass_central = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_mass_forward = array('f',[0]*1)
+
+            #HCSV_reg_corrJECDown_mass_central = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_mass_forward = array('f',[0]*1)
+
+            #newtree.Branch('HCSV_reg_corrJERUp_mass_low', HCSV_reg_corrJERUp_mass_low, 'HCSV_reg_corrJERUp_mass_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_mass_high', HCSV_reg_corrJERUp_mass_high, 'HCSV_reg_corrJERUp_mass_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_mass_low', HCSV_reg_corrJERDown_mass_low, 'HCSV_reg_corrJERDown_mass_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_mass_high', HCSV_reg_corrJERDown_mass_high, 'HCSV_reg_corrJERDown_mass_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_mass_central', HCSV_reg_corrJERUp_mass_central, 'HCSV_reg_corrJERUp_mass_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_mass_forward', HCSV_reg_corrJERUp_mass_forward, 'HCSV_reg_corrJERUp_mass_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_mass_central', HCSV_reg_corrJERDown_mass_central, 'HCSV_reg_corrJERDown_mass_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_mass_forward', HCSV_reg_corrJERDown_mass_forward, 'HCSV_reg_corrJERDown_mass_forward[1]/F')
+
+            #newtree.Branch('HCSV_reg_corrJECUp_mass_low', HCSV_reg_corrJECUp_mass_low, 'HCSV_reg_corrJECUp_mass_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_mass_high', HCSV_reg_corrJECUp_mass_high, 'HCSV_reg_corrJECUp_mass_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_mass_low', HCSV_reg_corrJECDown_mass_low, 'HCSV_reg_corrJECDown_mass_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_mass_high', HCSV_reg_corrJECDown_mass_high, 'HCSV_reg_corrJECDown_mass_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_mass_central', HCSV_reg_corrJECUp_mass_central, 'HCSV_reg_corrJECUp_mass_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_mass_forward', HCSV_reg_corrJECUp_mass_forward, 'HCSV_reg_corrJECUp_mass_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_mass_central', HCSV_reg_corrJECDown_mass_central, 'HCSV_reg_corrJECDown_mass_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_mass_forward', HCSV_reg_corrJECDown_mass_forward, 'HCSV_reg_corrJECDown_mass_forward[1]/F')
 
             # Jet flag for low/high central/forward region
             hJet_low     = array('f',[0]*2)
@@ -736,135 +775,135 @@ for job in info:
 
             #dijet pt
 
-            HCSV_reg_corrJERUp_pt_low  = array('f',[0]*1)
-            HCSV_reg_corrJERUp_pt_high = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_pt_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_pt_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_pt_low  = array('f',[0]*1)
-            HCSV_reg_corrJERDown_pt_high = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_pt_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_pt_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_pt_low  = array('f',[0]*1)
-            HCSV_reg_corrJECUp_pt_high = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_pt_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_pt_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_pt_low  = array('f',[0]*1)
-            HCSV_reg_corrJECDown_pt_high = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_pt_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_pt_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERUp_pt_central = array('f',[0]*1)
-            HCSV_reg_corrJERUp_pt_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_pt_central = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_pt_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_pt_central = array('f',[0]*1)
-            HCSV_reg_corrJERDown_pt_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_pt_central = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_pt_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_pt_central = array('f',[0]*1)
-            HCSV_reg_corrJECUp_pt_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_pt_central = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_pt_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_pt_central = array('f',[0]*1)
-            HCSV_reg_corrJECDown_pt_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_pt_central = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_pt_forward = array('f',[0]*1)
 
-            newtree.Branch('HCSV_reg_corrJERUp_pt_low', HCSV_reg_corrJERUp_pt_low, 'HCSV_reg_corrJERUp_pt_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_pt_high', HCSV_reg_corrJERUp_pt_high, 'HCSV_reg_corrJERUp_pt_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_pt_low', HCSV_reg_corrJERDown_pt_low, 'HCSV_reg_corrJERDown_pt_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_pt_high', HCSV_reg_corrJERDown_pt_high, 'HCSV_reg_corrJERDown_pt_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_pt_low', HCSV_reg_corrJECUp_pt_low, 'HCSV_reg_corrJECUp_pt_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_pt_high', HCSV_reg_corrJECUp_pt_high, 'HCSV_reg_corrJECUp_pt_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_pt_low', HCSV_reg_corrJECDown_pt_low, 'HCSV_reg_corrJECDown_pt_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_pt_high', HCSV_reg_corrJECDown_pt_high, 'HCSV_reg_corrJECDown_pt_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_pt_low', HCSV_reg_corrJERUp_pt_low, 'HCSV_reg_corrJERUp_pt_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_pt_high', HCSV_reg_corrJERUp_pt_high, 'HCSV_reg_corrJERUp_pt_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_pt_low', HCSV_reg_corrJERDown_pt_low, 'HCSV_reg_corrJERDown_pt_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_pt_high', HCSV_reg_corrJERDown_pt_high, 'HCSV_reg_corrJERDown_pt_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_pt_low', HCSV_reg_corrJECUp_pt_low, 'HCSV_reg_corrJECUp_pt_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_pt_high', HCSV_reg_corrJECUp_pt_high, 'HCSV_reg_corrJECUp_pt_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_pt_low', HCSV_reg_corrJECDown_pt_low, 'HCSV_reg_corrJECDown_pt_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_pt_high', HCSV_reg_corrJECDown_pt_high, 'HCSV_reg_corrJECDown_pt_high[1]/F')
 
-            newtree.Branch('HCSV_reg_corrJERUp_pt_central', HCSV_reg_corrJERUp_pt_central, 'HCSV_reg_corrJERUp_pt_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_pt_forward', HCSV_reg_corrJERUp_pt_forward, 'HCSV_reg_corrJERUp_pt_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_pt_central', HCSV_reg_corrJERDown_pt_central, 'HCSV_reg_corrJERDown_pt_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_pt_forward', HCSV_reg_corrJERDown_pt_forward, 'HCSV_reg_corrJERDown_pt_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_pt_central', HCSV_reg_corrJECUp_pt_central, 'HCSV_reg_corrJECUp_pt_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_pt_forward', HCSV_reg_corrJECUp_pt_forward, 'HCSV_reg_corrJECUp_pt_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_pt_central', HCSV_reg_corrJECDown_pt_central, 'HCSV_reg_corrJECDown_pt_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_pt_forward', HCSV_reg_corrJECDown_pt_forward, 'HCSV_reg_corrJECDown_pt_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_pt_central', HCSV_reg_corrJERUp_pt_central, 'HCSV_reg_corrJERUp_pt_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_pt_forward', HCSV_reg_corrJERUp_pt_forward, 'HCSV_reg_corrJERUp_pt_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_pt_central', HCSV_reg_corrJERDown_pt_central, 'HCSV_reg_corrJERDown_pt_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_pt_forward', HCSV_reg_corrJERDown_pt_forward, 'HCSV_reg_corrJERDown_pt_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_pt_central', HCSV_reg_corrJECUp_pt_central, 'HCSV_reg_corrJECUp_pt_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_pt_forward', HCSV_reg_corrJECUp_pt_forward, 'HCSV_reg_corrJECUp_pt_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_pt_central', HCSV_reg_corrJECDown_pt_central, 'HCSV_reg_corrJECDown_pt_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_pt_forward', HCSV_reg_corrJECDown_pt_forward, 'HCSV_reg_corrJECDown_pt_forward[1]/F')
 
-            #dijet phi
+            ##dijet phi
 
-            HCSV_reg_corrJERUp_phi_low  = array('f',[0]*1)
-            HCSV_reg_corrJERUp_phi_high = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_phi_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_phi_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_phi_low  = array('f',[0]*1)
-            HCSV_reg_corrJERDown_phi_high = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_phi_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_phi_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_phi_low  = array('f',[0]*1)
-            HCSV_reg_corrJECUp_phi_high = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_phi_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_phi_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_phi_low  = array('f',[0]*1)
-            HCSV_reg_corrJECDown_phi_high = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_phi_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_phi_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERUp_phi_central = array('f',[0]*1)
-            HCSV_reg_corrJERUp_phi_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_phi_central = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_phi_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_phi_central = array('f',[0]*1)
-            HCSV_reg_corrJERDown_phi_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_phi_central = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_phi_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_phi_central = array('f',[0]*1)
-            HCSV_reg_corrJECUp_phi_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_phi_central = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_phi_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_phi_central = array('f',[0]*1)
-            HCSV_reg_corrJECDown_phi_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_phi_central = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_phi_forward = array('f',[0]*1)
 
-            newtree.Branch('HCSV_reg_corrJERUp_phi_low', HCSV_reg_corrJERUp_phi_low, 'HCSV_reg_corrJERUp_phi_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_phi_high', HCSV_reg_corrJERUp_phi_high, 'HCSV_reg_corrJERUp_phi_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_phi_low', HCSV_reg_corrJERDown_phi_low, 'HCSV_reg_corrJERDown_phi_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_phi_high', HCSV_reg_corrJERDown_phi_high, 'HCSV_reg_corrJERDown_phi_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_phi_low', HCSV_reg_corrJECUp_phi_low, 'HCSV_reg_corrJECUp_phi_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_phi_high', HCSV_reg_corrJECUp_phi_high, 'HCSV_reg_corrJECUp_phi_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_phi_low', HCSV_reg_corrJECDown_phi_low, 'HCSV_reg_corrJECDown_phi_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_phi_high', HCSV_reg_corrJECDown_phi_high, 'HCSV_reg_corrJECDown_phi_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_phi_low', HCSV_reg_corrJERUp_phi_low, 'HCSV_reg_corrJERUp_phi_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_phi_high', HCSV_reg_corrJERUp_phi_high, 'HCSV_reg_corrJERUp_phi_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_phi_low', HCSV_reg_corrJERDown_phi_low, 'HCSV_reg_corrJERDown_phi_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_phi_high', HCSV_reg_corrJERDown_phi_high, 'HCSV_reg_corrJERDown_phi_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_phi_low', HCSV_reg_corrJECUp_phi_low, 'HCSV_reg_corrJECUp_phi_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_phi_high', HCSV_reg_corrJECUp_phi_high, 'HCSV_reg_corrJECUp_phi_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_phi_low', HCSV_reg_corrJECDown_phi_low, 'HCSV_reg_corrJECDown_phi_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_phi_high', HCSV_reg_corrJECDown_phi_high, 'HCSV_reg_corrJECDown_phi_high[1]/F')
 
-            newtree.Branch('HCSV_reg_corrJERUp_phi_central', HCSV_reg_corrJERUp_phi_central, 'HCSV_reg_corrJERUp_phi_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_phi_forward', HCSV_reg_corrJERUp_phi_forward, 'HCSV_reg_corrJERUp_phi_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_phi_central', HCSV_reg_corrJERDown_phi_central, 'HCSV_reg_corrJERDown_phi_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_phi_forward', HCSV_reg_corrJERDown_phi_forward, 'HCSV_reg_corrJERDown_phi_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_phi_central', HCSV_reg_corrJECUp_phi_central, 'HCSV_reg_corrJECUp_phi_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_phi_forward', HCSV_reg_corrJECUp_phi_forward, 'HCSV_reg_corrJECUp_phi_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_phi_central', HCSV_reg_corrJECDown_phi_central, 'HCSV_reg_corrJECDown_phi_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_phi_forward', HCSV_reg_corrJECDown_phi_forward, 'HCSV_reg_corrJECDown_phi_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_phi_central', HCSV_reg_corrJERUp_phi_central, 'HCSV_reg_corrJERUp_phi_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_phi_forward', HCSV_reg_corrJERUp_phi_forward, 'HCSV_reg_corrJERUp_phi_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_phi_central', HCSV_reg_corrJERDown_phi_central, 'HCSV_reg_corrJERDown_phi_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_phi_forward', HCSV_reg_corrJERDown_phi_forward, 'HCSV_reg_corrJERDown_phi_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_phi_central', HCSV_reg_corrJECUp_phi_central, 'HCSV_reg_corrJECUp_phi_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_phi_forward', HCSV_reg_corrJECUp_phi_forward, 'HCSV_reg_corrJECUp_phi_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_phi_central', HCSV_reg_corrJECDown_phi_central, 'HCSV_reg_corrJECDown_phi_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_phi_forward', HCSV_reg_corrJECDown_phi_forward, 'HCSV_reg_corrJECDown_phi_forward[1]/F')
 
             #dijet eta
 
-            HCSV_reg_corrJERUp_eta_low  = array('f',[0]*1)
-            HCSV_reg_corrJERUp_eta_high = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_eta_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_eta_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_eta_low  = array('f',[0]*1)
-            HCSV_reg_corrJERDown_eta_high = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_eta_low  = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_eta_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_eta_low  = array('f',[0]*1)
-            HCSV_reg_corrJECUp_eta_high = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_eta_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_eta_high = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_eta_low  = array('f',[0]*1)
-            HCSV_reg_corrJECDown_eta_high = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_eta_low  = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_eta_high = array('f',[0]*1)
 
-            HCSV_reg_corrJERUp_eta_central = array('f',[0]*1)
-            HCSV_reg_corrJERUp_eta_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_eta_central = array('f',[0]*1)
+            #HCSV_reg_corrJERUp_eta_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJERDown_eta_central = array('f',[0]*1)
-            HCSV_reg_corrJERDown_eta_forward = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_eta_central = array('f',[0]*1)
+            #HCSV_reg_corrJERDown_eta_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECUp_eta_central = array('f',[0]*1)
-            HCSV_reg_corrJECUp_eta_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_eta_central = array('f',[0]*1)
+            #HCSV_reg_corrJECUp_eta_forward = array('f',[0]*1)
 
-            HCSV_reg_corrJECDown_eta_central = array('f',[0]*1)
-            HCSV_reg_corrJECDown_eta_forward = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_eta_central = array('f',[0]*1)
+            #HCSV_reg_corrJECDown_eta_forward = array('f',[0]*1)
 
-            newtree.Branch('HCSV_reg_corrJERUp_eta_low', HCSV_reg_corrJERUp_eta_low, 'HCSV_reg_corrJERUp_eta_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_eta_high', HCSV_reg_corrJERUp_eta_high, 'HCSV_reg_corrJERUp_eta_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_eta_low', HCSV_reg_corrJERDown_eta_low, 'HCSV_reg_corrJERDown_eta_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_eta_high', HCSV_reg_corrJERDown_eta_high, 'HCSV_reg_corrJERDown_eta_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_eta_low', HCSV_reg_corrJECUp_eta_low, 'HCSV_reg_corrJECUp_eta_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_eta_high', HCSV_reg_corrJECUp_eta_high, 'HCSV_reg_corrJECUp_eta_high[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_eta_low', HCSV_reg_corrJECDown_eta_low, 'HCSV_reg_corrJECDown_eta_low[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_eta_high', HCSV_reg_corrJECDown_eta_high, 'HCSV_reg_corrJECDown_eta_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_eta_low', HCSV_reg_corrJERUp_eta_low, 'HCSV_reg_corrJERUp_eta_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_eta_high', HCSV_reg_corrJERUp_eta_high, 'HCSV_reg_corrJERUp_eta_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_eta_low', HCSV_reg_corrJERDown_eta_low, 'HCSV_reg_corrJERDown_eta_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_eta_high', HCSV_reg_corrJERDown_eta_high, 'HCSV_reg_corrJERDown_eta_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_eta_low', HCSV_reg_corrJECUp_eta_low, 'HCSV_reg_corrJECUp_eta_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_eta_high', HCSV_reg_corrJECUp_eta_high, 'HCSV_reg_corrJECUp_eta_high[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_eta_low', HCSV_reg_corrJECDown_eta_low, 'HCSV_reg_corrJECDown_eta_low[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_eta_high', HCSV_reg_corrJECDown_eta_high, 'HCSV_reg_corrJECDown_eta_high[1]/F')
 
-            newtree.Branch('HCSV_reg_corrJERUp_eta_central', HCSV_reg_corrJERUp_eta_central, 'HCSV_reg_corrJERUp_eta_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERUp_eta_forward', HCSV_reg_corrJERUp_eta_forward, 'HCSV_reg_corrJERUp_eta_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_eta_central', HCSV_reg_corrJERDown_eta_central, 'HCSV_reg_corrJERDown_eta_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJERDown_eta_forward', HCSV_reg_corrJERDown_eta_forward, 'HCSV_reg_corrJERDown_eta_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_eta_central', HCSV_reg_corrJECUp_eta_central, 'HCSV_reg_corrJECUp_eta_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECUp_eta_forward', HCSV_reg_corrJECUp_eta_forward, 'HCSV_reg_corrJECUp_eta_forward[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_eta_central', HCSV_reg_corrJECDown_eta_central, 'HCSV_reg_corrJECDown_eta_central[1]/F')
-            newtree.Branch('HCSV_reg_corrJECDown_eta_forward', HCSV_reg_corrJECDown_eta_forward, 'HCSV_reg_corrJECDown_eta_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_eta_central', HCSV_reg_corrJERUp_eta_central, 'HCSV_reg_corrJERUp_eta_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERUp_eta_forward', HCSV_reg_corrJERUp_eta_forward, 'HCSV_reg_corrJERUp_eta_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_eta_central', HCSV_reg_corrJERDown_eta_central, 'HCSV_reg_corrJERDown_eta_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJERDown_eta_forward', HCSV_reg_corrJERDown_eta_forward, 'HCSV_reg_corrJERDown_eta_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_eta_central', HCSV_reg_corrJECUp_eta_central, 'HCSV_reg_corrJECUp_eta_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECUp_eta_forward', HCSV_reg_corrJECUp_eta_forward, 'HCSV_reg_corrJECUp_eta_forward[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_eta_central', HCSV_reg_corrJECDown_eta_central, 'HCSV_reg_corrJECDown_eta_central[1]/F')
+            #newtree.Branch('HCSV_reg_corrJECDown_eta_forward', HCSV_reg_corrJECDown_eta_forward, 'HCSV_reg_corrJECDown_eta_forward[1]/F')
 
         if channel == "Zmm":
         #Special weights
@@ -1149,7 +1188,7 @@ for job in info:
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
-                    sys.stdout.flush()
+                    #sys.stdout.flush()
 
                 tree.GetEntry(entry)
 
@@ -1731,358 +1770,375 @@ for job in info:
 
                     #Initialize two higgs jet
 
-                    Jet1 = ROOT.TLorentzVector()
-                    Jet2 = ROOT.TLorentzVector()
-                    Jet1_sys = ROOT.TLorentzVector()
-                    Jet2_sys = ROOT.TLorentzVector()
+
+                    def fillvar():
+                        DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
+                        for SysDic in SysDicList:
+                            if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
+                                SysDic['varptr'][0] =  DefaultVar[SysDic['var']]
+                            else:
+                                Jet1 = ROOT.TLorentzVector()
+                                Jet2 = ROOT.TLorentzVector()
+                                Jet1_sys = ROOT.TLorentzVector()
+                                Jet2_sys = ROOT.TLorentzVector()
+
+
+                                #HiggsRecDic[SysDic['sys']].replace('SYS')
+                                Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                                Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                                eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                                eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                                HJet = Jet1+Jet2
+                                HJet_sys = Jet1_sys+Jet2_sys
+                                SysDic['varptr'][0] = eval(SYSVar[SysDic['var']])
+                    fillvar()
 
                    ### JEC UP ###
 
                    # high pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]]>100.):
-                        HCSV_reg_corrJECUp_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECUp_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECUp_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECUp_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-
-
-                    else:
-                        HCSV_reg_corrJECUp_mass_high[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECUp_pt_high[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECUp_eta_high[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECUp_phi_high[0] = tree.HCSV_reg_phi
-
-                    # low pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]]<100.):
-                        HCSV_reg_corrJECUp_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECUp_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECUp_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECUp_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECUp_mass_low[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECUp_pt_low[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECUp_eta_low[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECUp_phi_low[0] = tree.HCSV_reg_phi
-
-                    # central
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
-                        HCSV_reg_corrJECUp_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECUp_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECUp_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECUp_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECUp_mass_central[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECUp_pt_central[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECUp_eta_central[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECUp_phi_central[0] = tree.HCSV_reg_phi
-
-                    # forward
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
-                        HCSV_reg_corrJECUp_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECUp_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECUp_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECUp_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECUp_mass_forward[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECUp_pt_forward[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECUp_eta_forward[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECUp_phi_forward[0] = tree.HCSV_reg_phi
-
-                    ### JEC Down ###
-
-                    # high pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]]>100.):
-                        HCSV_reg_corrJECDown_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECDown_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECDown_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECDown_phi_high[0] = tree.HCSV_reg_pt*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECDown_mass_high[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECDown_pt_high[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECDown_eta_high[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECDown_phi_high[0] = tree.HCSV_reg_pt
-
-                    # low pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]]<100.):
-                        HCSV_reg_corrJECDown_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECDown_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECDown_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECDown_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECDown_mass_low[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECDown_pt_low[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECDown_eta_low[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECDown_phi_low[0] = tree.HCSV_reg_phi
-
-                    # central
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
-                        HCSV_reg_corrJECDown_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECDown_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECDown_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECDown_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECDown_mass_central[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECDown_pt_central[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECDown_eta_central[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECDown_phi_central[0] = tree.HCSV_reg_phi
-
-                    # forward
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
-                        HCSV_reg_corrJECDown_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJECDown_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJECDown_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJECDown_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJECDown_mass_forward[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJECDown_pt_forward[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJECDown_eta_forward[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJECDown_phi_forward[0] = tree.HCSV_reg_phi
-
-
-                    ### JER UP ###
-
-                    # high pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]]>100.):
-                        HCSV_reg_corrJERUp_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERUp_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERUp_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERUp_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-
-                    else:
-                        HCSV_reg_corrJERUp_mass_high[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERUp_pt_high[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERUp_eta_high[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERUp_phi_high[0] = tree.HCSV_reg_phi
-
-                    # low pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]]<100.):
-                        HCSV_reg_corrJERUp_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERUp_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERUp_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERUp_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERUp_mass_low[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERUp_pt_low[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERUp_eta_low[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERUp_phi_low[0] = tree.HCSV_reg_phi
-
-                    # central
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
-                        HCSV_reg_corrJERUp_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERUp_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERUp_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERUp_phi_central[0] = tree.HCSV_reg_pt*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERUp_mass_central[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERUp_pt_central[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERUp_eta_central[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERUp_phi_central[0] = tree.HCSV_reg_pt
-
-                    # forward
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
-                        HCSV_reg_corrJERUp_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERUp_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERUp_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERUp_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERUp_mass_forward[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERUp_pt_forward[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERUp_eta_forward[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERUp_phi_forward[0] = tree.HCSV_reg_phi
-
-                    ### JER Down ###
-
-                    # high pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]]>100.):
-                        HCSV_reg_corrJERDown_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERDown_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERDown_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERDown_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERDown_mass_high[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERDown_pt_high[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERDown_eta_high[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERDown_phi_high[0] = tree.HCSV_reg_phi
-
-                    # low pt
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]]<100.):
-                        HCSV_reg_corrJERDown_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERDown_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERDown_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERDown_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERDown_mass_low[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERDown_pt_low[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERDown_eta_low[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERDown_phi_low[0] = tree.HCSV_reg_phi
-
-                    # central
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
-                        HCSV_reg_corrJERDown_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERDown_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERDown_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERDown_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERDown_mass_central[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERDown_pt_central[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERDown_eta_central[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERDown_phi_central[0] = tree.HCSV_reg_phi
-
-                    # forward
-                    if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
-                        HCSV_reg_corrJERDown_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
-
-                        Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-                        Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        HJet = Jet1+Jet2
-                        HJet_sys = Jet1_sys+Jet2_sys
-
-                        HCSV_reg_corrJERDown_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
-                        HCSV_reg_corrJERDown_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
-                        HCSV_reg_corrJERDown_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
-                    else:
-                        HCSV_reg_corrJERDown_mass_forward[0] = tree.HCSV_reg_mass
-                        HCSV_reg_corrJERDown_pt_forward[0] = tree.HCSV_reg_pt
-                        HCSV_reg_corrJERDown_eta_forward[0] = tree.HCSV_reg_eta
-                        HCSV_reg_corrJERDown_phi_forward[0] = tree.HCSV_reg_phi
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]]>100.):
+                    #    HCSV_reg_corrJECUp_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECUp_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECUp_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECUp_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+
+                    #else:
+                    #    HCSV_reg_corrJECUp_mass_high[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECUp_pt_high[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECUp_eta_high[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECUp_phi_high[0] = tree.HCSV_reg_phi
+
+                    ## low pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]]<100.):
+                    #    HCSV_reg_corrJECUp_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECUp_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECUp_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECUp_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECUp_mass_low[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECUp_pt_low[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECUp_eta_low[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECUp_phi_low[0] = tree.HCSV_reg_phi
+
+                    ## central
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
+                    #    HCSV_reg_corrJECUp_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECUp_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECUp_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECUp_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECUp_mass_central[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECUp_pt_central[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECUp_eta_central[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECUp_phi_central[0] = tree.HCSV_reg_phi
+
+                    ## forward
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JECUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
+                    #    HCSV_reg_corrJECUp_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECUp[tree.hJCidx[0]]*tree.Jet_corr_JECUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECUp_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECUp_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECUp_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECUp_mass_forward[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECUp_pt_forward[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECUp_eta_forward[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECUp_phi_forward[0] = tree.HCSV_reg_phi
+
+                    #### JEC Down ###
+
+                    ## high pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]]>100.):
+                    #    HCSV_reg_corrJECDown_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECDown_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECDown_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECDown_phi_high[0] = tree.HCSV_reg_pt*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECDown_mass_high[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECDown_pt_high[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECDown_eta_high[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECDown_phi_high[0] = tree.HCSV_reg_pt
+
+                    ## low pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]]<100.):
+                    #    HCSV_reg_corrJECDown_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECDown_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECDown_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECDown_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECDown_mass_low[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECDown_pt_low[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECDown_eta_low[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECDown_phi_low[0] = tree.HCSV_reg_phi
+
+                    ## central
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
+                    #    HCSV_reg_corrJECDown_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECDown_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECDown_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECDown_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECDown_mass_central[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECDown_pt_central[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECDown_eta_central[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECDown_phi_central[0] = tree.HCSV_reg_phi
+
+                    ## forward
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JECDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JECDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
+                    #    HCSV_reg_corrJECDown_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JECDown[tree.hJCidx[0]]*tree.Jet_corr_JECDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJECDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJECDown_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJECDown_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJECDown_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJECDown_mass_forward[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJECDown_pt_forward[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJECDown_eta_forward[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJECDown_phi_forward[0] = tree.HCSV_reg_phi
+
+
+                    #### JER UP ###
+
+                    ## high pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]]>100.):
+                    #    HCSV_reg_corrJERUp_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERUp_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERUp_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERUp_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+
+                    #else:
+                    #    HCSV_reg_corrJERUp_mass_high[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERUp_pt_high[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERUp_eta_high[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERUp_phi_high[0] = tree.HCSV_reg_phi
+
+                    ## low pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]]<100.):
+                    #    HCSV_reg_corrJERUp_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERUp_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERUp_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERUp_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERUp_mass_low[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERUp_pt_low[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERUp_eta_low[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERUp_phi_low[0] = tree.HCSV_reg_phi
+
+                    ## central
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
+                    #    HCSV_reg_corrJERUp_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERUp_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERUp_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERUp_phi_central[0] = tree.HCSV_reg_pt*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERUp_mass_central[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERUp_pt_central[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERUp_eta_central[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERUp_phi_central[0] = tree.HCSV_reg_pt
+
+                    ## forward
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERUp[tree.hJCidx[0]]>0. and tree.Jet_corr_JERUp[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
+                    #    HCSV_reg_corrJERUp_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERUp[tree.hJCidx[0]]*tree.Jet_corr_JERUp[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERUp[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERUp_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERUp_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERUp_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERUp_mass_forward[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERUp_pt_forward[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERUp_eta_forward[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERUp_phi_forward[0] = tree.HCSV_reg_phi
+
+                    #### JER Down ###
+
+                    ## high pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]]>100.):
+                    #    HCSV_reg_corrJERDown_mass_high[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERDown_pt_high[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERDown_eta_high[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERDown_phi_high[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERDown_mass_high[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERDown_pt_high[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERDown_eta_high[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERDown_phi_high[0] = tree.HCSV_reg_phi
+
+                    ## low pt
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]]<100.):
+                    #    HCSV_reg_corrJERDown_mass_low[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERDown_pt_low[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERDown_eta_low[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERDown_phi_low[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERDown_mass_low[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERDown_pt_low[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERDown_eta_low[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERDown_phi_low[0] = tree.HCSV_reg_phi
+
+                    ## central
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4):
+                    #    HCSV_reg_corrJERDown_mass_central[0] = tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERDown_pt_central[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERDown_eta_central[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERDown_phi_central[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERDown_mass_central[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERDown_pt_central[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERDown_eta_central[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERDown_phi_central[0] = tree.HCSV_reg_phi
+
+                    ## forward
+                    #if len(tree.hJCidx)==2 and tree.Jet_corr_JERDown[tree.hJCidx[0]]>0. and tree.Jet_corr_JERDown[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>=1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>=1.4):
+                    #    HCSV_reg_corrJERDown_mass_forward[0]= tree.HCSV_reg_mass * math.sqrt(tree.Jet_corr_JERDown[tree.hJCidx[0]]*tree.Jet_corr_JERDown[tree.hJCidx[1]]/tree.Jet_corr[tree.hJCidx[0]]/tree.Jet_corr[tree.hJCidx[1]])
+
+                    #    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #    Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #    Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrJERDown[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+
+                    #    HJet = Jet1+Jet2
+                    #    HJet_sys = Jet1_sys+Jet2_sys
+
+                    #    HCSV_reg_corrJERDown_pt_forward[0] = tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())
+                    #    HCSV_reg_corrJERDown_eta_forward[0] = tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())
+                    #    HCSV_reg_corrJERDown_phi_forward[0] = tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())
+                    #else:
+                    #    HCSV_reg_corrJERDown_mass_forward[0] = tree.HCSV_reg_mass
+                    #    HCSV_reg_corrJERDown_pt_forward[0] = tree.HCSV_reg_pt
+                    #    HCSV_reg_corrJERDown_eta_forward[0] = tree.HCSV_reg_eta
+                    #    HCSV_reg_corrJERDown_phi_forward[0] = tree.HCSV_reg_phi
 
 
                     ####  Btag Weights for high/low and eta regions ####
