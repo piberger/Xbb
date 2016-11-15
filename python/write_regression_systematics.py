@@ -1415,67 +1415,25 @@ for job in info:
 
                         if tree.Vtype == 0:
                             if j.find('EfficienciesAndSF_ISO') != -1:
-                                #weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
-                                #weight_SF_LooseISO[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
-                                #weight_SF_LooseISO[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
-                                #weight_SF_LooseISO = computeSF()
                                 computeSF(weight_SF_LooseISO)
 
                             elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                                #muTrigEffBfr.append(weight[0][0])
-                                #muTrigEffBfr.append(weight[1][0])
                                 muTrigEffBfr = weight
 
                             elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                                #muTrigEffAftr.append(weight[0][0])
-                                #muTrigEffAftr.append(weight[1][0])
                                 muTrigEffAftr = weight
                         elif tree.Vtype == 1:
-                            #if j.find('ScaleFactor_egammaEff_WP80') != -1:
-                            #    weight_SF_TightMVAID[0] = weight[0][0]*weight[1][0]
                             if j.find('WP90PlusIso_BCD.json') != -1:
-                                #weight_SF_LooseMVAID_BCD[0] = weight[0][0]*weight[1][0]
-                                #weight_SF_LooseMVAID_BCD[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
-                                #weight_SF_LooseMVAID_BCD[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
-                                #weight_SF_LooseMVAID_BCD = computeSF()
                                 computeSF(weight_SF_LooseMVAID_BCD)
                             elif j.find('WP90PlusIso_BCDEF.json') != -1:
-                                #weight_SF_LooseMVAID_BCDEF[0] = weight[0][0]*weight[1][0]
-                                #weight_SF_LooseMVAID_BCDEF[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
-                                #weight_SF_LooseMVAID_BCDEF[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
-                                #weight_SF_LooseMVAID_BCDEF = computeSF()
                                 computeSF(weight_SF_LooseMVAID_BCDEF)
                             elif j.find('egammaEffi_tracker') != -1:
-                                #weight_trk_electron[0] = weight[0][0]*weight[1][0]
-                                #weight_trk_electron[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
-                                #weight_trk_electron[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
-                                #weight_trk_electron = computeSF()
                                 computeSF(weight_trk_electron)
                             elif j.find('WP90_BCD_withRelIso') != -1:
-                                #eff1 = []
-                                #eff2 = []
-                                #eff1[0] = weight[0][0]
-                                #eff1[1] = (weight[0][0]-weight[0][1])
-                                #eff1[2] = (weight[0][0]+weight[0][1])
-                                #eff2[0] = weight[1][0]
-                                #eff2[1] = (weight[1][0]-weight[1][1])
-                                #eff2[2] = (weight[1][0]+weight[1][1])
-                                #weight_Eff_eletriglooseBCD[0] = eff1[0]*(1-eff2[0])*eff1[0] + eff2[0]*(1-eff1[0])*eff2[0] + eff1[0]*eff1[0]*eff2[0]*eff2[0]
-                                #weight_Eff_eletriglooseBCD[1] = eff1[1]*(1-eff2[1])*eff1[1] + eff2[1]*(1-eff1[1])*eff2[1] + eff1[1]*eff1[1]*eff2[1]*eff2[1]
-                                #weight_Eff_eletriglooseBCD[2] = eff1[2]*(1-eff2[2])*eff1[2] + eff2[2]*(1-eff1[2])*eff2[2] + eff1[2]*eff1[2]*eff2[2]*eff2[2]
-                                #weight_Eff_eletriglooseBCD = computeEff()
                                 computeEff(weight_Eff_eletriglooseBCD)
                             elif j.find('WP90_BCDEF_withRelIso') != -1:
-                                #eff1 = weight[0][0]
-                                #eff2 = weight[1][0]
-                                #weight_Eff_eletriglooseBCDEF[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-                                #weight_Eff_eletriglooseBCDEF = computeEff()
                                 computeEff(weight_Eff_eletriglooseBCDEF)
                             elif j.find('HLT_Ele23_WPLoose') != -1:
-                                #eff1 = weight[0][0]
-                                #eff2 = weight[1][0]
-                                #weight_Eff_eletrigloosept23[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
-                                #weight_Eff_eletrigloosept23 = computeEff()
                                 computeEff(weight_Eff_eletrigloosept23)
                         else:
                             sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
@@ -1485,21 +1443,12 @@ for job in info:
                     #Fill muon triggers
 
                     if tree.Vtype == 0:
-
                            #for ICHEP dataset
-                        #eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
-                        #eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
-                        #weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
                         weight = computeWeight(0.04854, 0.95145)
-                        #weight_Eff_mutriglooseICHEP = computeEff()
                         computeEff(weight_Eff_mutriglooseICHEP)
 
                            #for full 22/fb dataset
-                        #eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
-                        #eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
-                        #weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
                         weight = computeWeight(0.02772, 0.97227)
-                        #weight_Eff_mutrigloose = computeEff()
                         computeEff(weight_Eff_mutrigloose)
 
                     muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
