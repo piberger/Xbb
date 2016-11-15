@@ -134,6 +134,38 @@ def corrCSV(btag,  csv, flav):
 def csvReshape(sh, pt, eta, csv, flav):
     return sh.reshape(float(eta), float(pt), float(csv), int(flav))
 
+def computeSF(weight_SF):
+    weight_SF[0] = (weight[0][0]*weight[1][0])
+    weight_SF[1] = ( (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1]) )
+    weight_SF[2] = ( (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1]) )
+
+def computeEff(weight_Eff):
+    eff1 = []
+    eff2 = []
+    eff1.append(weight[0][0])
+    eff1.append(weight[0][0]-weight[0][1])
+    eff1.append(weight[0][0]+weight[0][1])
+    eff2.append(weight[1][0])
+    eff2.append(weight[1][0]-weight[1][1])
+    eff2.append(weight[1][0]+weight[1][1])
+    weight_Eff[0] = (eff1[0]*(1-eff2[0])*eff1[0] + eff2[0]*(1-eff1[0])*eff2[0] + eff1[0]*eff1[0]*eff2[0]*eff2[0])
+    weight_Eff[1] = (eff1[1]*(1-eff2[1])*eff1[1] + eff2[1]*(1-eff1[1])*eff2[1] + eff1[1]*eff1[1]*eff2[1]*eff2[1])
+    weight_Eff[2] = (eff1[2]*(1-eff2[2])*eff1[2] + eff2[2]*(1-eff1[2])*eff2[2] + eff1[2]*eff1[2]*eff2[2]*eff2[2])
+    return weight_Eff
+
+def computeWeight(a, b):
+    weight = []
+    weight.append([])
+    weight.append([])
+    for i in range(2):
+        weight[i].append(a*muTrigEffBfr[i][0] + b*muTrigEffAftr[i][0])
+        weight[i].append(math.sqrt((a*muTrigEffBfr[i][1])**2 + (b*muTrigEffAftr[i][1])**2))
+    return weight
+
+#    muTrigEffBfr
+#    muTrigEffAftr
+
+
 
 if channel == "Znn":
     filt = ROOT.TFile("plot.root")
@@ -853,73 +885,53 @@ for job in info:
             bTagWeight_ichep[0] = 1
             newtree.Branch('bTagWeight_ichep',bTagWeight_ichep,'bTagWeight_ichep/F')
 
-        # Add muon SF
+        # Add  Lepton SF
             #Loose ISO+ID SF 
                #muon iso (wrong in the nutples)
-            weight_SF_LooseISO = array('f',[0])
-            weight_SF_LooseISO[0] = 1
-            newtree.Branch('weight_SF_LooseISO',weight_SF_LooseISO,'weight_SF_LooseISO/F')
+            weight_SF_LooseISO = array('f',[0]*3)
+            weight_SF_LooseISO[0], weight_SF_LooseISO[1], weight_SF_LooseISO[2] = 1,1,1
+            newtree.Branch('weight_SF_LooseISO',weight_SF_LooseISO,'weight_SF_LooseISO[3]/F')
                #electron MVAID (wrong in the ntuples)
-            weight_SF_LooseMVAID_BCD = array('f',[0])
-            weight_SF_LooseMVAID_BCD[0] = 1
-            newtree.Branch('weight_SF_LooseMVAID_BCD',weight_SF_LooseMVAID_BCD,'weight_SF_LooseMVAID_BCD/F')
+            weight_SF_LooseMVAID_BCD = array('f',[0]*3)
+            weight_SF_LooseMVAID_BCD[0], weight_SF_LooseMVAID_BCD[1], weight_SF_LooseMVAID_BCD[2] = 1,1,1
+            newtree.Branch('weight_SF_LooseMVAID_BCD',weight_SF_LooseMVAID_BCD,'weight_SF_LooseMVAID_BCD[3]/F')
                #
-            weight_SF_LooseMVAID_BCDEF = array('f',[0])
-            weight_SF_LooseMVAID_BCDEF[0] = 1
-            newtree.Branch('weight_SF_LooseMVAID_BCDEF',weight_SF_LooseMVAID_BCDEF,'weight_SF_LooseMVAID_BCDEF/F')
-               #electron tight MVAID (wrong in the ntuples)
-            #weight_SF_TightMVAID = array('f',[0])
-            #weight_SF_TightMVAID[0] = 1
-            #newtree.Branch('weight_SF_TightMVAID',weight_SF_TightMVAID,'weight_SF_TightMVAID/F')
+            weight_SF_LooseMVAID_BCDEF = array('f',[0]*3)
+            weight_SF_LooseMVAID_BCDEF[0], weight_SF_LooseMVAID_BCDEF[1], weight_SF_LooseMVAID_BCDEF[2] = 1,1,1
+            newtree.Branch('weight_SF_LooseMVAID_BCDEF',weight_SF_LooseMVAID_BCDEF,'weight_SF_LooseMVAID_BCDEF[3]/F')
             #Lepton trigger
                #electron
-            weight_Eff_eletriglooseBCD = array('f',[0])
-            weight_Eff_eletriglooseBCD[0] = 1
-            newtree.Branch('weight_Eff_eletriglooseBCD',weight_Eff_eletriglooseBCD,'weight_Eff_eletriglooseBCD/F')
-            weight_Eff_eletriglooseBCDEF = array('f',[0])
-            weight_Eff_eletriglooseBCDEF[0] = 1
-            newtree.Branch('weight_Eff_eletriglooseBCDEF',weight_Eff_eletriglooseBCDEF,'weight_Eff_eletriglooseBCDEF/F')
+            weight_Eff_eletriglooseBCD = array('f',[0]*3)
+            weight_Eff_eletriglooseBCD[0], weight_Eff_eletriglooseBCD[1], weight_Eff_eletriglooseBCD[2] = 1,1,1
+            newtree.Branch('weight_Eff_eletriglooseBCD',weight_Eff_eletriglooseBCD,'weight_Eff_eletriglooseBCD[3]/F')
+            weight_Eff_eletriglooseBCDEF = array('f',[0]*3)
+            weight_Eff_eletriglooseBCDEF[0], weight_Eff_eletriglooseBCDEF[1], weight_Eff_eletriglooseBCDEF[2] = 1,1,1
+            newtree.Branch('weight_Eff_eletriglooseBCDEF',weight_Eff_eletriglooseBCDEF,'weight_Eff_eletriglooseBCDEF[3]/F')
                #pt23
-            weight_Eff_eletrigloosept23 = array('f',[0])
-            weight_Eff_eletrigloosept23[0] = 1
-            newtree.Branch('weight_Eff_eletrigloosept23',weight_Eff_eletrigloosept23,'weight_Eff_eletrigloosept23/F')
+            weight_Eff_eletrigloosept23 = array('f',[0]*3)
+            weight_Eff_eletrigloosept23[0], weight_Eff_eletrigloosept23[1], weight_Eff_eletrigloosept23[2] = 1,1,1
+            newtree.Branch('weight_Eff_eletrigloosept23',weight_Eff_eletrigloosept23,'weight_Eff_eletrigloosept23[3]/F')
                #muon
                #for ICHEP dataset
-            weight_Eff_mutriglooseICHEP = array('f',[0])
-            weight_Eff_mutriglooseICHEP[0] = 1
-            newtree.Branch('weight_Eff_mutriglooseICHEP',weight_Eff_mutriglooseICHEP,'weight_Eff_mutriglooseICHEP/F')
+            weight_Eff_mutriglooseICHEP = array('f',[0]*3)
+            weight_Eff_mutriglooseICHEP[0], weight_Eff_mutriglooseICHEP[1], weight_Eff_mutriglooseICHEP[2]= 1,1,1
+            newtree.Branch('weight_Eff_mutriglooseICHEP',weight_Eff_mutriglooseICHEP,'weight_Eff_mutriglooseICHEP[3]/F')
                #for full 22/fb dataset
-            weight_Eff_mutrigloose = array('f',[0])
-            weight_Eff_mutrigloose[0] = 1
-            newtree.Branch('weight_Eff_mutrigloose',weight_Eff_mutrigloose,'weight_Eff_mutrigloose/F')
+            weight_Eff_mutrigloose = array('f',[0]*3)
+            weight_Eff_mutrigloose[0], weight_Eff_mutrigloose[1], weight_Eff_mutrigloose[2] = 1,1,1
+            newtree.Branch('weight_Eff_mutrigloose',weight_Eff_mutrigloose,'weight_Eff_mutrigloose[3]/F')
                #Trk:
                   #electron
-            weight_trk_electron = array('f',[0])
-            weight_trk_electron[0] = 1
-            newtree.Branch('weight_trk_electron',weight_trk_electron,'weight_trk_electron/F')
+            weight_trk_electron = array('f',[0]*3)
+            weight_trk_electron[0], weight_trk_electron[1], weight_trk_electron[2] = 1,1,1
+            newtree.Branch('weight_trk_electron',weight_trk_electron,'weight_trk_electron[3]/F')
                #final weight (without triggers):
-
-            muweight = array('f',[0])
-            muweight[0] = 1
-            newtree.Branch('muweight',muweight,'muweight/F')
-            eleweight= array('f',[0])
-            eleweight[0] = 1
-            newtree.Branch('eleweight',eleweight,'eleweight/F')
-
-
-
-            #vLeptons_SFweight_HLT = array('f',[0])
-            #lepton_EvtWeight = array('f',[0])
-
-            # vLeptons_SFweight_IdLoose[0] = 1
-            # vLeptons_SFweight_IsoLoose[0] = 1
-            #vLeptons_SFweight_HLT[0] = 1
-            #lepton_EvtWeight[0] = 1
-
-            # newtree.Branch('vLeptons_SFweight_IdLoose',vLeptons_SFweight_IdLoose,'vLeptons_SFweight_IdLoose/F')
-            # newtree.Branch('vLeptons_SFweight_IsoLoose',vLeptons_SFweight_IsoLoose,'vLeptons_SFweight_IsoLoose/F')
-            #newtree.Branch('vLeptons_SFweight_HLT',vLeptons_SFweight_HLT,'vLeptons_SFweight_HLT/F')
-            #newtree.Branch('lepton_EvtWeight',lepton_EvtWeight,'lepton_EvtWeight/F')
+            muweight = array('f',[0]*3)
+            muweight[0], muweight[1], muweight[2] = 1,1,1
+            newtree.Branch('muweight',muweight,'muweight[3]/F')
+            eleweight= array('f',[0]*3)
+            eleweight[0], eleweight[1], eleweight[2] = 1,1,1
+            newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
         # Angular Likelihood
         if channel == "Znn" or channel == "Zmm":
@@ -950,18 +962,6 @@ for job in info:
             newtree.Branch('HVMass_Reg',HVMass_Reg,'HVMass_Reg/F')
 
             SigBH = []; BkgBH = []; SigLZ = []; BkgLZ = []; SigZZS = []; BkgZZS = []; SigMassZS = []; BkgMassZS = [];
-            # for angLikeBkg in AngLikeBkgs:
-                # f = ROOT.TFile("../data/angleFitFunctions-%s.root"%(angLikeBkg),"READ")
-                # SigBH.append(f.Get("sigFuncBH"))
-                # BkgBH.append(f.Get("bkgFuncBH"))
-                # SigLZ.append(f.Get("sigFuncLZ"))
-                # BkgLZ.append(f.Get("bkgFuncLZ"))
-                # SigZZS.append(f.Get("sigFuncZZS"))
-                # BkgZZS.append(f.Get("bkgFuncZZS"))
-                # SigMassZS.append(f.Get("sigFuncMassZS"))
-                # BkgMassZS.append(f.Get("bkgFuncMassZS"))
-                # f.Close()
-
 
         # if job.type != 'DATA': ##FIXME###
         if channel == "Znn" or channel == "Zmm":
@@ -1145,7 +1145,7 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
-                #if entry>1000: break
+                if entry>1000: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1368,18 +1368,17 @@ for job in info:
                     #Reinitialize all the variables
 
                 DY_specialWeight[0] = 1.
-                weight_SF_LooseISO[0] = 1.
-                weight_SF_LooseMVAID_BCD[0] = 1.
-                weight_SF_LooseMVAID_BCDEF[0] = 1.
-                #weight_SF_TightMVAID[0] = 1.
-                weight_Eff_eletriglooseBCD[0] = 1.
-                weight_Eff_eletriglooseBCDEF[0] = 1.
-                weight_Eff_eletrigloosept23[0] = 1.
-                weight_Eff_mutriglooseICHEP[0] = 1.
-                weight_Eff_mutrigloose[0] = 1.
-                weight_trk_electron[0] = 1.
-                eleweight[0] = 1.
-                muweight[0] = 1.
+                weight_SF_LooseISO[0], weight_SF_LooseISO[1],  weight_SF_LooseISO[2] = 1.,1.,1.
+                weight_SF_LooseMVAID_BCD[0], weight_SF_LooseMVAID_BCD[1], weight_SF_LooseMVAID_BCD[2]  = 1.,1.,1.
+                weight_SF_LooseMVAID_BCDEF[0], weight_SF_LooseMVAID_BCDEF[1], weight_SF_LooseMVAID_BCDEF[2] = 1.,1.,1.
+                weight_Eff_eletriglooseBCD[0], weight_Eff_eletriglooseBCD[1], weight_Eff_eletriglooseBCD[2] = 1.,1.,1.
+                weight_Eff_eletriglooseBCDEF[0], weight_Eff_eletriglooseBCDEF[1], weight_Eff_eletriglooseBCDEF[2] = 1.,1.,1.
+                weight_Eff_eletrigloosept23[0], weight_Eff_eletrigloosept23[1], weight_Eff_eletrigloosept23[2]= 1.,1.,1.
+                weight_Eff_mutriglooseICHEP[0], weight_Eff_mutriglooseICHEP[1], weight_Eff_mutriglooseICHEP[2] = 1.,1.,1.
+                weight_Eff_mutrigloose[0], weight_Eff_mutrigloose[1], weight_Eff_mutrigloose[2] = 1.,1.,1.
+                weight_trk_electron[0], weight_trk_electron[1], weight_trk_electron[2] = 1.,1.,1.
+                eleweight[0], eleweight[1], eleweight[2] = 1.,1.,1.
+                muweight[0], muweight[1], muweight[2] = 1.,1.,1.
 
                 if not job.type == 'DATA':
 
@@ -1416,36 +1415,68 @@ for job in info:
 
                         if tree.Vtype == 0:
                             if j.find('EfficienciesAndSF_ISO') != -1:
-                                weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseISO[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseISO[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
+                                #weight_SF_LooseISO[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
+                                #weight_SF_LooseISO = computeSF()
+                                computeSF(weight_SF_LooseISO)
 
                             elif j.find('SingleMuonTrigger_LooseMuons_beforeL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                                muTrigEffBfr.append(weight[0][0])
-                                muTrigEffBfr.append(weight[1][0])
+                                #muTrigEffBfr.append(weight[0][0])
+                                #muTrigEffBfr.append(weight[1][0])
+                                muTrigEffBfr = weight
 
                             elif j.find('SingleMuonTrigger_LooseMuons_afterL2fix_Z_RunBCD_prompt80X_7p65') != -1:
-                                muTrigEffAftr.append(weight[0][0])
-                                muTrigEffAftr.append(weight[1][0])
+                                #muTrigEffAftr.append(weight[0][0])
+                                #muTrigEffAftr.append(weight[1][0])
+                                muTrigEffAftr = weight
                         elif tree.Vtype == 1:
                             #if j.find('ScaleFactor_egammaEff_WP80') != -1:
                             #    weight_SF_TightMVAID[0] = weight[0][0]*weight[1][0]
                             if j.find('WP90PlusIso_BCD.json') != -1:
-                                weight_SF_LooseMVAID_BCD[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseMVAID_BCD[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseMVAID_BCD[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
+                                #weight_SF_LooseMVAID_BCD[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
+                                #weight_SF_LooseMVAID_BCD = computeSF()
+                                computeSF(weight_SF_LooseMVAID_BCD)
                             elif j.find('WP90PlusIso_BCDEF.json') != -1:
-                                weight_SF_LooseMVAID_BCDEF[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseMVAID_BCDEF[0] = weight[0][0]*weight[1][0]
+                                #weight_SF_LooseMVAID_BCDEF[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
+                                #weight_SF_LooseMVAID_BCDEF[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
+                                #weight_SF_LooseMVAID_BCDEF = computeSF()
+                                computeSF(weight_SF_LooseMVAID_BCDEF)
                             elif j.find('egammaEffi_tracker') != -1:
-                                weight_trk_electron[0] = weight[0][0]*weight[1][0]
+                                #weight_trk_electron[0] = weight[0][0]*weight[1][0]
+                                #weight_trk_electron[1] = (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])
+                                #weight_trk_electron[2] = (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])
+                                #weight_trk_electron = computeSF()
+                                computeSF(weight_trk_electron)
                             elif j.find('WP90_BCD_withRelIso') != -1:
-                                eff1 = weight[0][0]
-                                eff2 = weight[1][0]
-                                weight_Eff_eletriglooseBCD[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                                #eff1 = []
+                                #eff2 = []
+                                #eff1[0] = weight[0][0]
+                                #eff1[1] = (weight[0][0]-weight[0][1])
+                                #eff1[2] = (weight[0][0]+weight[0][1])
+                                #eff2[0] = weight[1][0]
+                                #eff2[1] = (weight[1][0]-weight[1][1])
+                                #eff2[2] = (weight[1][0]+weight[1][1])
+                                #weight_Eff_eletriglooseBCD[0] = eff1[0]*(1-eff2[0])*eff1[0] + eff2[0]*(1-eff1[0])*eff2[0] + eff1[0]*eff1[0]*eff2[0]*eff2[0]
+                                #weight_Eff_eletriglooseBCD[1] = eff1[1]*(1-eff2[1])*eff1[1] + eff2[1]*(1-eff1[1])*eff2[1] + eff1[1]*eff1[1]*eff2[1]*eff2[1]
+                                #weight_Eff_eletriglooseBCD[2] = eff1[2]*(1-eff2[2])*eff1[2] + eff2[2]*(1-eff1[2])*eff2[2] + eff1[2]*eff1[2]*eff2[2]*eff2[2]
+                                #weight_Eff_eletriglooseBCD = computeEff()
+                                computeEff(weight_Eff_eletriglooseBCD)
                             elif j.find('WP90_BCDEF_withRelIso') != -1:
-                                eff1 = weight[0][0]
-                                eff2 = weight[1][0]
-                                weight_Eff_eletriglooseBCDEF[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                                #eff1 = weight[0][0]
+                                #eff2 = weight[1][0]
+                                #weight_Eff_eletriglooseBCDEF[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                                #weight_Eff_eletriglooseBCDEF = computeEff()
+                                computeEff(weight_Eff_eletriglooseBCDEF)
                             elif j.find('HLT_Ele23_WPLoose') != -1:
-                                eff1 = weight[0][0]
-                                eff2 = weight[1][0]
-                                weight_Eff_eletrigloosept23[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                                #eff1 = weight[0][0]
+                                #eff2 = weight[1][0]
+                                #weight_Eff_eletrigloosept23[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                                #weight_Eff_eletrigloosept23 = computeEff()
+                                computeEff(weight_Eff_eletrigloosept23)
                         else:
                             sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
 
@@ -1456,14 +1487,20 @@ for job in info:
                     if tree.Vtype == 0:
 
                            #for ICHEP dataset
-                        eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
-                        eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
-                        weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                        #eff1 = 0.04854*muTrigEffBfr[0] + 0.95145*muTrigEffAftr[0]
+                        #eff2 = 0.04854*muTrigEffBfr[1] + 0.95145*muTrigEffAftr[1]
+                        #weight_Eff_mutriglooseICHEP[0] =  eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                        weight = computeWeight(0.04854, 0.95145)
+                        #weight_Eff_mutriglooseICHEP = computeEff()
+                        computeEff(weight_Eff_mutriglooseICHEP)
 
                            #for full 22/fb dataset
-                        eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
-                        eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
-                        weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                        #eff1 = 0.02772*muTrigEffBfr[0] + 0.97227*muTrigEffAftr[0]
+                        #eff2 = 0.02772*muTrigEffBfr[1] + 0.97227*muTrigEffAftr[1]
+                        #weight_Eff_mutrigloose[0] = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+                        weight = computeWeight(0.02772, 0.97227)
+                        #weight_Eff_mutrigloose = computeEff()
+                        computeEff(weight_Eff_mutrigloose)
 
                     muweight[0] = tree.vLeptons_SF_IdCutLoose[0]*tree.vLeptons_SF_IdCutLoose[1]*weight_SF_LooseISO[0]*tree.vLeptons_SF_trk_eta[0]*tree.vLeptons_SF_trk_eta[1]
                     eleweight[0] = weight_SF_LooseMVAID_BCD[0]*weight_trk_electron[0]
