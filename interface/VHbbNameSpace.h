@@ -957,9 +957,6 @@ float puWeight_ichep(float I){
 
 int i = std::nearbyint(I);
 
-if (i < 0) return 1.;
-if (i > 37) return 1.;
-
 double puw[38]={0.00026954692859,
                 0.00834201570744,
                 0.0146551644559,
@@ -1000,6 +997,9 @@ double puw[38]={0.00026954692859,
                 0.0941178579122,
                };
 
+if (i < 0) return 1.;
+if (i > 37) return pu[37];
+
 return puw[i];
 
 }
@@ -1007,9 +1007,6 @@ return puw[i];
 float puWeight_ichep_up(float I){
 
 int i = std::nearbyint(I);
-
-if (i < 0) return 1.;
-if (i > 37) return 1.;
 
 double puw[38]={0.000168728884,
                 0.006518139648,
@@ -1051,6 +1048,9 @@ double puw[38]={0.000168728884,
                 0.491832630157,
                };
 
+if (i < 0) return 1.;
+if (i > 37) return puw[37];
+
 return puw[i];
 
 }
@@ -1058,9 +1058,6 @@ return puw[i];
 float puWeight_ichep_down(float I){
 
 int i = std::nearbyint(I);
-
-if (i < 0) return 1.;
-if (i > 37) return 1.;
 
 double puw[38]={0.000394948025924,
                 0.010589291412,
@@ -1101,6 +1098,9 @@ double puw[38]={0.000394948025924,
                 0.0158597867448,
                 0.0210296659761,
                };
+
+if (i < 0) return 1.;
+if (i > 37) return puw[37];
 
 return puw[i];
 
