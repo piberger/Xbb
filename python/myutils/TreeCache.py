@@ -293,7 +293,11 @@ class TreeCache:
                 theCut += '& (%s)' %(sample.subcut)
             print ("the cut is", theCut)
             #Problem here: not working when empty tree
+            ROOT.TFormula.SetMaxima(100000,1000,1000000)
+            #theCutForm = ROOT.TFormula('theCut',theCut)
+            #theCutForm.SetMaxima(100000,1000,1000000)
             cuttedTree=tree.CopyTree(theCut)
+            #cuttedTree=tree.CopyTree(theCutForm)
             cuttedTree.Write()
             output.Write()
             input.Close()
@@ -485,29 +489,15 @@ class TreeCache:
 #        print float(sample.lumi)
         try: sample.xsec = sample.xsec[0]
         except: pass
-        # get the weights from the file,. not the tree
-        #input = ROOT.TFile('%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]),'read')
-        #print ('the root file is', '%stmp_%s.root'%(self.__tmpPath,self.__hashDict[sample.name]))
-        #print('again, name of the class is', self.__class__.__name__)
         self.__cachedPath
         tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
         input = ROOT.TFile.Open(tmpCache,'read')
-        #print ('the root file is', tmpCache)
-        #print ('list the content of the root file')
         input.GetListOfKeys().Print()
         posWeight = input.Get('CountPosWeight')
         negWeight = input.Get('CountNegWeight')
-        #countPos =getattr(self.tc,"CountPosWeight")[0]
-        #countNeg =getattr(self.tc,"CountNegWeight")[0]
         anaTag=config.get('Analysis','tag')
         theScale = 1.
         count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
-        #count = 1
-        #print ('SCALE')
-        #print ('count is', (posWeight.GetBinContent(1) - negWeight.GetBinContent(1)))
-        #print ('pos is',posWeight.GetBinContent(1))
-        #print ('neg is',negWeight.GetBinContent(1))
-        #print ('count is' , count)
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
         print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
@@ -517,6 +507,35 @@ class TreeCache:
 
         #print('name of the class is', self.__class__.__name__)
         return self.get_scale_training(self, sample, config, lumi, count)
+
+    def get_scale_LHE(self, sample, config, lhe_scale, lumi = None, count=1):
+        self.__cachedPath
+        tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
+        input = ROOT.TFile.Open(tmpCache,'read')
+        input.GetListOfKeys().Print()
+        posWeight = input.Get('CountPosWeight')
+        negWeight = input.Get('CountNegWeight')
+        Weight = input.Get('CountWeighted')
+        countWeightedLHEWeightScale = input.Get('CountWeightedLHEWeightScale')
+
+        scaled_count = 0
+        if lhe_scale == 0:
+            scaled_count = countWeightedLHEWeightScale.GetBinContent(0+1)
+        elif lhe_scale == 1:
+            scaled_count = countWeightedLHEWeightScale.GetBinContent(1+1)
+        elif lhe_scale == 2:
+            scaled_count = countWeightedLHEWeightScale.GetBinContent(2+1)
+        elif lhe_scale == 3:
+            scaled_count = countWeightedLHEWeightScale.GetBinContent(3+1)
+
+        count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        countWeightNoPU = (posWeight.GetBinContent(1) + negWeight.GetBinContent(1))
+        countWeightPU = Weight.GetBinContent(1)
+
+
+        print('the sample is', sample.name)
+        return self.get_scale_training(self, sample, config, lumi, count)*count/(scaled_count*(countWeightNoPU/countWeightPU))
+
 
     #Jdef get_cache(self, sample, config):
     ##retrives the cahe __cachedPath and __hashDict
