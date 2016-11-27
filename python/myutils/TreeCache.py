@@ -533,8 +533,10 @@ class TreeCache:
         countWeightPU = Weight.GetBinContent(1)
 
 
-        print('the sample is', sample.name)
-        return self.get_scale_training(self, sample, config, lumi, count)*count/(scaled_count*(countWeightNoPU/countWeightPU))
+        if scaled_count == 0:
+            return 0.
+        else:
+            return (countWeightNoPU/count)*self.get_scale_training(self, sample, config, lumi, count)*count/(scaled_count*(countWeightNoPU/countWeightPU))
 
 
     #Jdef get_cache(self, sample, config):
