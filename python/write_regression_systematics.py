@@ -723,16 +723,16 @@ for job in info:
                                 SysDicList.append(SysDic)
 
 
-            # Jet flag for low/high central/forward region
-            hJet_low     = array('f',[0]*2)
-            hJet_high    = array('f',[0]*2)
-            hJet_central = array('f',[0]*2)
-            hJet_forward = array('f',[0]*2)
+           # # Jet flag for low/high central/forward region
+           # hJet_low     = array('f',[0]*2)
+           # hJet_high    = array('f',[0]*2)
+           # hJet_central = array('f',[0]*2)
+           # hJet_forward = array('f',[0]*2)
 
-            newtree.Branch('hJet_low', hJet_low, 'hJet_low[2]/F')
-            newtree.Branch('hJet_high',hJet_high, 'hJet_high[2]/F')
-            newtree.Branch('hJet_central', hJet_central, 'hJet_central[2]/F')
-            newtree.Branch('hJet_forward', hJet_forward, 'hJet_forward[2]/F')
+           # newtree.Branch('hJet_low', hJet_low, 'hJet_low[2]/F')
+           # newtree.Branch('hJet_high',hJet_high, 'hJet_high[2]/F')
+           # newtree.Branch('hJet_central', hJet_central, 'hJet_central[2]/F')
+           # newtree.Branch('hJet_forward', hJet_forward, 'hJet_forward[2]/F')
 
             #other variables:
 
@@ -1015,7 +1015,7 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
-                if entry>10000: break
+                #if entry>10000: break
                 #if entry>1000: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
@@ -1576,25 +1576,25 @@ for job in info:
 
                 if job.type != 'DATA':
 
-                   # hJet flags
+                  # # hJet flags
 
-                    hJet_high[0], hJet_high[1] = 0,0
-                    hJet_low[0],hJet_low[0]  = 0,0
-                    hJet_central[0],hJet_central[0]  = 0,0
-                    hJet_forward[0],hJet_forward[0]  = 0,0
+                  #  hJet_high[0], hJet_high[1] = 0,0
+                  #  hJet_low[0],hJet_low[0]  = 0,0
+                  #  hJet_central[0],hJet_central[0]  = 0,0
+                  #  hJet_forward[0],hJet_forward[0]  = 0,0
 
-                   # hJet flags
-                    if tree.Jet_pt_reg[tree.hJCidx[0]] > 100.: hJet_high[0] == 1
-                    if tree.Jet_pt_reg[tree.hJCidx[1]] > 100.: hJet_high[1] == 1
+                  # # hJet flags
+                  #  if tree.Jet_pt_reg[tree.hJCidx[0]] > 100.: hJet_high[0] == 1
+                  #  if tree.Jet_pt_reg[tree.hJCidx[1]] > 100.: hJet_high[1] == 1
 
-                    if tree.Jet_pt_reg[tree.hJCidx[0]] < 100.: hJet_low[0] == 1
-                    if tree.Jet_pt_reg[tree.hJCidx[1]] < 100.: hJet_low[1] == 1
+                  #  if tree.Jet_pt_reg[tree.hJCidx[0]] < 100.: hJet_low[0] == 1
+                  #  if tree.Jet_pt_reg[tree.hJCidx[1]] < 100.: hJet_low[1] == 1
 
-                    if tree.Jet_eta[tree.hJCidx[0]] > 1.4: hJet_forward[0] == 1
-                    if tree.Jet_eta[tree.hJCidx[1]] > 1.4: hJet_forward[1] == 1
+                  #  if tree.Jet_eta[tree.hJCidx[0]] > 1.4: hJet_forward[0] == 1
+                  #  if tree.Jet_eta[tree.hJCidx[1]] > 1.4: hJet_forward[1] == 1
 
-                    if tree.Jet_eta[tree.hJCidx[0]] < 1.4: hJet_central[0] == 1
-                    if tree.Jet_eta[tree.hJCidx[1]] < 1.4: hJet_central[1] == 1
+                  #  if tree.Jet_eta[tree.hJCidx[0]] < 1.4: hJet_central[0] == 1
+                  #  if tree.Jet_eta[tree.hJCidx[1]] < 1.4: hJet_central[1] == 1
 
                     ####################
                     #Dijet mass
