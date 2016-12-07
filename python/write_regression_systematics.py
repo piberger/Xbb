@@ -682,22 +682,32 @@ for job in info:
             VarList = ['HCSV_reg_corrSYSUD_mass_CAT','HCSV_reg_corrSYSUD_pt_CAT', 'HCSV_reg_corrSYSUD_phi_CAT', 'HCSV_reg_corrSYSUD_eta_CAT','Jet_pt_reg_corrSYSUD_CAT']
             SysList = ['JER','JEC']
             UDList = ['Up','Down']
-            CatList = ['low','high','central','forward']
+            #CatList = ['low','high','central','forward']
+            CatList = ['low_central','low_forward','high_central','high_forward']
             SysDicList = []
 
-            ConditionDic = {'low':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100.)',\
-                            'high':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100.)',\
-                            'central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4)',\
-                            'forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>1.4)'
+            #ConditionDic = {'low':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100.)',\
+            #                'high':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100.)',\
+            #                'central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4)',\
+            #                'forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>1.4)'
+            #        }
+            ConditionDic = {'low_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
+                            'low_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))',\
+                            'high_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
+                            'high_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))'
                     }
-            JetConditionDic = {'low':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100.',\
-                               'high':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100.',\
-                               'central':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
-                               'forward':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
+            #JetConditionDic = {'low':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100.',\
+            #                   'high':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100.',\
+            #                   'central':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+            #                   'forward':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
+            #        }
+            JetConditionDic = {'low_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+                               'low_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4',\
+                               'high_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+                               'high_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
                     }
-            #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta'}
-            DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg[tree.hJCidx[INDEX]]'}
-            SYSVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass*(HJet_sys.M()/HJet.M())','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]'}
+            DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg[INDEX]'}
+            SYSVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass*(HJet_sys.M()/HJet.M())','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg_corrSYSUD[INDEX]'}
 
             #Make a dic corresponding to each sys and create the variables
             for var in VarList:
@@ -713,9 +723,8 @@ for job in info:
                             SysDic['varname'] = var.replace('SYS',syst).replace('UD',ud).replace('CAT',cat)
                             #Define var
                             if var == 'Jet_pt_reg_corrSYSUD_CAT':
-                                print 'yeah man'
-                                SysDic['varptr'] = array('f',2*[0])
-                                newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'[2]/F')
+                                SysDic['varptr'] = array('f',21*[0])
+                                newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'[21]/F')
                                 SysDicList.append(SysDic)
                             else:
                                 SysDic['varptr'] = array('f',[0])
@@ -1017,6 +1026,7 @@ for job in info:
         for entry in range(0,nEntries):
                 #if entry>10000: break
                 #if entry>1000: break
+                if entry>10000: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1608,26 +1618,32 @@ for job in info:
                         for SysDic in SysDicList:
                             if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
                                 if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                                    print 'yeah man2'
                                     SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
                                     SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
                                 else:
                                     SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']])
                             else:
                                 if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                                    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                    if booljet1 and not booljet2:
-                                        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                    elif not booljet1 and booljet2:
-                                        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                    elif booljet1 and booljet1:
-                                        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                    else:
-                                        print '@ERROR: jet category could not be indentified. Aborting'
+                                    for jetindex in range(len(tree.Jet_eta)):
+                                        booljet = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('tree.hJCidx[INDEX]',str(jetindex)))
+                                        if booljet:
+                                            #print 'jetindex is', jetindex
+                                            #print 'sysdic is', SysDic['varptr']
+                                            SysDic['varptr'][jetindex] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX',str(jetindex)))
+
+                                #    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                                #    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                                #    if booljet1 and not booljet2:
+                                #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                                #        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                                #    elif not booljet1 and booljet2:
+                                #        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                                #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                                #    elif booljet1 and booljet1:
+                                #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                                #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                                #    else:
+                                #        print '@ERROR: jet category could not be indentified. Aborting'
                                 else:
                                     Jet1 = ROOT.TLorentzVector()
                                     Jet2 = ROOT.TLorentzVector()
