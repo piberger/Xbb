@@ -3,7 +3,9 @@ import sys,hashlib
 import os,subprocess
 import ROOT 
 import math
+import itertools
 import shutil
+import numpy as np
 from array import array
 import warnings
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
@@ -217,7 +219,7 @@ for job in info:
         inputfiles.append(pathIN+'/'+job.prefix+job.identifier+'.root')
         print('opening '+pathIN+'/'+job.prefix+job.identifier+'.root')
         tmpfiles.append(tmpDir+'/'+job.prefix+job.identifier+'.root')
-        outputfiles.append("%s/%s/%s" %(pathOUT,job.prefix,job.identifier+'.root'))
+        outputfiles.append("%s/%s%s" %(pathOUT,job.prefix,job.identifier+'.root'))
     else:
         for inputFile in filelist:
             subfolder = inputFile.split('/')[-4]
@@ -258,6 +260,7 @@ for job in info:
     for inputfile,tmpfile,outputFile in zip(inputfiles,tmpfiles,outputfiles):
         input = ROOT.TFile.Open(inputfile,'read')
         output = ROOT.TFile.Open(tmpfile,'recreate')
+        print 'tmp is', tmpfile
         print ''
         print 'inputfile',inputfile
         print "Writing: ",tmpfile
@@ -676,60 +679,95 @@ for job in info:
             newtree.Branch('btag_weight_cferr2Down_central', btag_weight_cferr2Down_central, 'btag_weight_cferr2Down_central[1]/F')
             newtree.Branch('btag_weight_cferr2Down_forward', btag_weight_cferr2Down_forward, 'btag_weight_cferr2Down_forward[1]/F')
 
-          # Add new JER/JEC SYS branches for high/low and central/forward regions
+            #Sean
+            systematic_name_templates = [
+                'HCSV_reg_corr{systematic}{variation}_mass_{category}',
+                'HCSV_reg_corr{systematic}{variation}_pt_{category}',
+                'HCSV_reg_corr{systematic}{variation}_eta_{category}',
+                'HCSV_reg_corr{systematic}{variation}_phi_{category}',
+                'Jet_pt_reg_corr{systematic}{variation}_{category}',
+            ]
 
-            #Do loop here to define all the variables
-            VarList = ['HCSV_reg_corrSYSUD_mass_CAT','HCSV_reg_corrSYSUD_pt_CAT', 'HCSV_reg_corrSYSUD_phi_CAT', 'HCSV_reg_corrSYSUD_eta_CAT','Jet_pt_reg_corrSYSUD_CAT']
-            SysList = ['JER','JEC']
-            UDList = ['Up','Down']
-            #CatList = ['low','high','central','forward']
-            CatList = ['low_central','low_forward','high_central','high_forward']
-            SysDicList = []
+            category_definitions = {
+                'HighCentral': lambda pt, eta: pt > 100 and abs(eta) < 1.4,
+                'LowCentral': lambda pt, eta: pt < 100 and abs(eta) < 1.4,
+                'HighForward': lambda pt, eta: pt > 100 and abs(eta) > 1.4,
+                'LowForward': lambda pt, eta: pt < 100 and abs(eta) > 1.4,
+            }
 
-            #ConditionDic = {'low':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100.)',\
-            #                'high':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100.)',\
-            #                'central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4)',\
-            #                'forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>1.4)'
-            #        }
-            ConditionDic = {'low_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
-                            'low_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))',\
-                            'high_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
-                            'high_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))'
-                    }
-            #JetConditionDic = {'low':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100.',\
-            #                   'high':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100.',\
-            #                   'central':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
-            #                   'forward':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
-            #        }
-            JetConditionDic = {'low_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
-                               'low_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4',\
-                               'high_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
-                               'high_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
-                    }
-            DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg[INDEX]'}
-            SYSVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass*(HJet_sys.M()/HJet.M())','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg_corrSYSUD[INDEX]'}
+            modifiers = list(itertools.product(['JEC', 'JER'], ['Up', 'Down'], ['HighCentral', 'LowCentral', 'HighForward', 'LowForward']))
 
-            #Make a dic corresponding to each sys and create the variables
-            for var in VarList:
-                for syst in SysList:
-                    for cat in CatList:
-                        for ud in UDList:
-                            #fill Dic
-                            SysDic = {}
-                            SysDic['var'] = var
-                            SysDic['sys'] = syst
-                            SysDic['UD'] = ud
-                            SysDic['cat'] = cat
-                            SysDic['varname'] = var.replace('SYS',syst).replace('UD',ud).replace('CAT',cat)
-                            #Define var
-                            if var == 'Jet_pt_reg_corrSYSUD_CAT':
-                                SysDic['varptr'] = array('f',21*[0])
-                                newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'[21]/F')
-                                SysDicList.append(SysDic)
-                            else:
-                                SysDic['varptr'] = array('f',[0])
-                                newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'/F')
-                                SysDicList.append(SysDic)
+            # Create the new branches, setting their branch addresses to numpy arrays
+            branch_addresses = {}
+            for template in systematic_name_templates:
+                for systematic, variation, category in iter(modifiers):
+                    name = template.format(**locals())
+                    if 'Jet' in template:
+                        branch_addresses[name] = np.zeros(21, dtype=np.float32)
+                        newtree.Branch(name, branch_addresses[name], '{}[nJet]/F'.format(name))
+                    else:
+                        branch_addresses[name] = np.zeros(1, dtype=np.float32)
+                        newtree.Branch(name, branch_addresses[name], '{}/F'.format(name))
+            print 'branch_addresses is', branch_addresses
+
+            ####
+            #OLD
+            ####
+
+          ## Add new JER/JEC SYS branches for high/low and central/forward regions
+
+          #  #Do loop here to define all the variables
+          #  VarList = ['HCSV_reg_corrSYSUD_mass_CAT','HCSV_reg_corrSYSUD_pt_CAT', 'HCSV_reg_corrSYSUD_phi_CAT', 'HCSV_reg_corrSYSUD_eta_CAT','Jet_pt_reg_corrSYSUD_CAT']
+          #  SysList = ['JER','JEC']
+          #  UDList = ['Up','Down']
+          #  #CatList = ['low','high','central','forward']
+          #  CatList = ['low_central','low_forward','high_central','high_forward']
+          #  SysDicList = []
+
+          #  #ConditionDic = {'low':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100.)',\
+          #  #                'high':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. or tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100.)',\
+          #  #                'central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])<1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])<1.4)',\
+          #  #                'forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and (abs(tree.Jet_eta[tree.hJCidx[0]])>1.4 or abs(tree.Jet_eta[tree.hJCidx[1]])>1.4)'
+          #  #        }
+          #  ConditionDic = {'low_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
+          #                  'low_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]<100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]<100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))',\
+          #                  'high_central':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])<1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])<1.4))',\
+          #                  'high_forward':'len(tree.hJCidx)==2 and tree.Jet_corr_SYSUD[tree.hJCidx[0]]>0. and tree.Jet_corr_SYSUD[tree.hJCidx[1]]>0. and ((tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]]>100. and abs(tree.Jet_eta[tree.hJCidx[0]])>1.4) or (tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]]>100. and abs(tree.Jet_eta[tree.hJCidx[1]])>1.4))'
+          #          }
+          #  #JetConditionDic = {'low':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100.',\
+          #  #                   'high':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100.',\
+          #  #                   'central':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+          #  #                   'forward':'abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
+          #  #        }
+          #  JetConditionDic = {'low_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+          #                     'low_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]<100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4',\
+          #                     'high_central':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])<1.4',\
+          #                     'high_forward':'tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[INDEX]]>100. and abs(tree.Jet_eta[tree.hJCidx[INDEX]])>1.4'
+          #          }
+          #  DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg[INDEX]'}
+          #  SYSVar = {'HCSV_reg_corrSYSUD_mass_CAT':'tree.HCSV_reg_mass*(HJet_sys.M()/HJet.M())','HCSV_reg_corrSYSUD_pt_CAT':'tree.HCSV_reg_pt*(HJet_sys.Pt()/HJet.Pt())','HCSV_reg_corrSYSUD_phi_CAT':'tree.HCSV_reg_phi*(HJet_sys.Phi()/HJet.Phi())','HCSV_reg_corrSYSUD_eta_CAT':'tree.HCSV_reg_eta*(HJet_sys.Eta()/HJet.Eta())','Jet_pt_reg_corrSYSUD_CAT':'tree.Jet_pt_reg_corrSYSUD[INDEX]'}
+
+          #  #Make a dic corresponding to each sys and create the variables
+          #  for var in VarList:
+          #      for syst in SysList:
+          #          for cat in CatList:
+          #              for ud in UDList:
+          #                  #fill Dic
+          #                  SysDic = {}
+          #                  SysDic['var'] = var
+          #                  SysDic['sys'] = syst
+          #                  SysDic['UD'] = ud
+          #                  SysDic['cat'] = cat
+          #                  SysDic['varname'] = var.replace('SYS',syst).replace('UD',ud).replace('CAT',cat)
+          #                  #Define var
+          #                  if var == 'Jet_pt_reg_corrSYSUD_CAT':
+          #                      SysDic['varptr'] = array('f',21*[0])
+          #                      newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'[21]/F')
+          #                      SysDicList.append(SysDic)
+          #                  else:
+          #                      SysDic['varptr'] = array('f',[0])
+          #                      newtree.Branch(SysDic['varname'],SysDic['varptr'],SysDic['varname']+'/F')
+          #                      SysDicList.append(SysDic)
 
 
            # # Jet flag for low/high central/forward region
@@ -1024,9 +1062,10 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
+                if entry>200000: break
                 #if entry>10000: break
                 #if entry>1000: break
-                if entry>10000: break
+                #if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1610,241 +1649,304 @@ for job in info:
                     #Dijet mass
                     ####################
 
-                    #Initialize two higgs jet
+                    # Set up four vectors for the nominal Higgs and its jets
+                    higgs_jet_1 = ROOT.TLorentzVector()
+                    higgs_jet_1.SetPtEtaPhiM(
+                        tree.Jet_pt_reg[tree.hJCidx[0]],
+                        tree.Jet_eta[tree.hJCidx[0]],
+                        tree.Jet_phi[tree.hJCidx[0]],
+                        tree.Jet_mass[tree.hJCidx[0]]
+                    )
 
+                    higgs_jet_2 = ROOT.TLorentzVector()
+                    higgs_jet_2.SetPtEtaPhiM(
+                        tree.Jet_pt_reg[tree.hJCidx[1]],
+                        tree.Jet_eta[tree.hJCidx[1]],
+                        tree.Jet_phi[tree.hJCidx[1]],
+                        tree.Jet_mass[tree.hJCidx[1]]
+                    )
 
-                    def fillvar():
-                        #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
-                        for SysDic in SysDicList:
-                            if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
-                                if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                                    SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                    SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                else:
-                                    SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']])
+                    higgs = higgs_jet_1 + higgs_jet_2
+
+                    for systematic, variation, category in iter(modifiers):
+
+                        # Set up the four vectors for the systematically varied Higgs and its jets
+                        higgs_jet_syst_1 = ROOT.TLorentzVector()
+                        higgs_jet_syst_2 = ROOT.TLorentzVector()
+
+                        if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[0]], tree.Jet_eta[tree.hJCidx[0]]):
+                            higgs_jet_syst_1.SetPtEtaPhiM(
+                                getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[0]],
+                                tree.Jet_eta[tree.hJCidx[0]],
+                                tree.Jet_phi[tree.hJCidx[0]],
+                                tree.Jet_mass[tree.hJCidx[0]]
+                            )
+                        else:
+                            higgs_jet_syst_1 = higgs_jet_1
+
+                        if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[1]], tree.Jet_eta[tree.hJCidx[1]]):
+                            higgs_jet_syst_2.SetPtEtaPhiM(
+                                getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[1]],
+                                tree.Jet_eta[tree.hJCidx[1]],
+                                tree.Jet_phi[tree.hJCidx[1]],
+                                tree.Jet_mass[tree.hJCidx[1]]
+                            )
+                        else:
+                            higgs_jet_syst_2 = higgs_jet_2
+
+                        higgs_syst = higgs_jet_syst_1 + higgs_jet_syst_2
+
+                        # Assign newly calculated values to branch addresses
+                        branch_addresses['HCSV_reg_corr{systematic}{variation}_mass_{category}'.format(**locals())][0] = tree.HCSV_reg_mass * (higgs_syst.M()/higgs.M())
+                        branch_addresses['HCSV_reg_corr{systematic}{variation}_pt_{category}'.format(**locals())][0] = tree.HCSV_reg_pt * (higgs_syst.Pt()/higgs.Pt())
+                        branch_addresses['HCSV_reg_corr{systematic}{variation}_eta_{category}'.format(**locals())][0] = tree.HCSV_reg_eta * (higgs_syst.Eta()/higgs.Eta())
+                        branch_addresses['HCSV_reg_corr{systematic}{variation}_phi_{category}'.format(**locals())][0] = tree.HCSV_reg_phi * (higgs_syst.Phi()/higgs.Phi())
+
+                        jet_branch_new = 'Jet_pt_reg_corr{systematic}{variation}_{category}'.format(**locals())
+                        jet_branch_old = 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals())
+                        for j in xrange(tree.nJet):
+                            print 'suprice mtf'
+                            if category_definitions[category](tree.Jet_pt_reg[j], tree.Jet_eta[j]):
+                                print 'yeah, I am assigning the systematics !'
+                                branch_addresses[jet_branch_new][j] = getattr(tree, jet_branch_old)[j]
+                                print 'the value is', getattr(tree, jet_branch_old)[j]
                             else:
-                                if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                                    for jetindex in range(len(tree.Jet_eta)):
-                                        booljet = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('tree.hJCidx[INDEX]',str(jetindex)))
-                                        if booljet:
-                                            #print 'jetindex is', jetindex
-                                            #print 'sysdic is', SysDic['varptr']
-                                            SysDic['varptr'][jetindex] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX',str(jetindex)))
+                                branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
+                                print 'yeah baby yeah !'
+                                print 'the value is', tree.Jet_pt_reg[j]
 
-                                #    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                #    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                #    if booljet1 and not booljet2:
-                                #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                #        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                #    elif not booljet1 and booljet2:
-                                #        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                #    elif booljet1 and booljet1:
-                                #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                                #    else:
-                                #        print '@ERROR: jet category could not be indentified. Aborting'
-                                else:
-                                    Jet1 = ROOT.TLorentzVector()
-                                    Jet2 = ROOT.TLorentzVector()
-                                    Jet1_sys = ROOT.TLorentzVector()
-                                    Jet2_sys = ROOT.TLorentzVector()
-                                    Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                                    Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
+                    #def fillvar():
+                    #    #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
+                    #    for SysDic in SysDicList:
+                    #        if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
+                    #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
+                    #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #                SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            else:
+                    #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']])
+                    #        else:
+                    #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
+                    #                for jetindex in range(len(tree.Jet_eta)):
+                    #                    booljet = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('tree.hJCidx[INDEX]',str(jetindex)))
+                    #                    if booljet:
+                    #                        #print 'jetindex is', jetindex
+                    #                        #print 'sysdic is', SysDic['varptr']
+                    #                        SysDic['varptr'][jetindex] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX',str(jetindex)))
 
-                                    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                                    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            #    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #            #    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            #    if booljet1 and not booljet2:
+                    #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #            #        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            #    elif not booljet1 and booljet2:
+                    #            #        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            #    elif booljet1 and booljet1:
+                    #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
+                    #            #    else:
+                    #            #        print '@ERROR: jet category could not be indentified. Aborting'
+                    #            else:
+                    #                Jet1 = ROOT.TLorentzVector()
+                    #                Jet2 = ROOT.TLorentzVector()
+                    #                Jet1_sys = ROOT.TLorentzVector()
+                    #                Jet2_sys = ROOT.TLorentzVector()
+                    #                Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
+                    #                Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
 
-                                    if booljet1 and not booljet2:
-                                        eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                                        Jet2_sys = Jet2
-                                    elif not booljet1 and booljet2:
-                                        eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                                        Jet1_sys = Jet1
-                                    elif booljet1 and booljet1:
-                                        eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                                        eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                                    else:
-                                        print '@ERROR: jet category could not be indentified. Aborting'
-                                        print 'cat is', SysDic['cat']
-                                        print 'condition is', ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])
-                                        print 'jet cond is', JetConditionDic[SysDic['cat']].replace('INDEX','1')
-                                        sys.exit()
+                    #                booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
+                    #                booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
 
-                                    HJet = Jet1+Jet2
-                                    HJet_sys = Jet1_sys+Jet2_sys
-                                    SysDic['varptr'][0] = eval(SYSVar[SysDic['var']])
+                    #                if booljet1 and not booljet2:
+                    #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                    #                    Jet2_sys = Jet2
+                    #                elif not booljet1 and booljet2:
+                    #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                    #                    Jet1_sys = Jet1
+                    #                elif booljet1 and booljet1:
+                    #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                    #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
+                    #                else:
+                    #                    print '@ERROR: jet category could not be indentified. Aborting'
+                    #                    print 'cat is', SysDic['cat']
+                    #                    print 'condition is', ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])
+                    #                    print 'jet cond is', JetConditionDic[SysDic['cat']].replace('INDEX','1')
+                    #                    sys.exit()
 
-                    fillvar()
+                    #                HJet = Jet1+Jet2
+                    #                HJet_sys = Jet1_sys+Jet2_sys
+                    #                SysDic['varptr'][0] = eval(SYSVar[SysDic['var']])
+
+                    #fillvar()
 
 
 
                     ####  Btag Weights for high/low and eta regions ####
-                    if tree.Jet_pt_reg[tree.hJCidx[0]]>100. or tree.Jet_pt_reg[tree.hJCidx[1]]>100.:
-                        btag_weight_JECUp_high[0] = tree.btagWeightCSV_up_jes
-                        btag_weight_JECDown_high[0] = tree.btagWeightCSV_down_jes
-                        btag_weight_lfUp_high[0] = tree. btagWeightCSV_up_lf
-                        btag_weight_lfDown_high[0] = tree. btagWeightCSV_down_lf
-                        btag_weight_hfUp_high[0] = tree.btagWeightCSV_up_hf
-                        btag_weight_hfDown_high[0] = tree.btagWeightCSV_down_hf
-                        btag_weight_lfstats1Up_high[0] = tree. btagWeightCSV_up_lfstats1
-                        btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV_down_lfstats1
-                        btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV_up_lfstats2
-                        btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV_down_lfstats2
-                        btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV_up_hfstats1
-                        btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV_up_hfstats2
-                        btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV_down_hfstats1
-                        btag_weight_hfstats2Down_high[0] = tree. btagWeightCSV_down_hfstats2
-                        btag_weight_cferr1Up_high[0] = tree.btagWeightCSV_up_cferr1
-                        btag_weight_cferr2Up_high[0] = tree.btagWeightCSV_up_cferr2
-                        btag_weight_cferr1Down_high[0] = tree.btagWeightCSV_down_cferr1
-                        btag_weight_cferr2Down_high[0] = tree.btagWeightCSV_down_cferr2
+                    #if tree.Jet_pt_reg[tree.hJCidx[0]]>100. or tree.Jet_pt_reg[tree.hJCidx[1]]>100.:
+                    #    btag_weight_JECUp_high[0] = tree.btagWeightCSV_up_jes
+                    #    btag_weight_JECDown_high[0] = tree.btagWeightCSV_down_jes
+                    #    btag_weight_lfUp_high[0] = tree. btagWeightCSV_up_lf
+                    #    btag_weight_lfDown_high[0] = tree. btagWeightCSV_down_lf
+                    #    btag_weight_hfUp_high[0] = tree.btagWeightCSV_up_hf
+                    #    btag_weight_hfDown_high[0] = tree.btagWeightCSV_down_hf
+                    #    btag_weight_lfstats1Up_high[0] = tree. btagWeightCSV_up_lfstats1
+                    #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV_down_lfstats1
+                    #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV_up_lfstats2
+                    #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV_down_lfstats2
+                    #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV_up_hfstats1
+                    #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV_up_hfstats2
+                    #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV_down_hfstats1
+                    #    btag_weight_hfstats2Down_high[0] = tree. btagWeightCSV_down_hfstats2
+                    #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV_up_cferr1
+                    #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV_up_cferr2
+                    #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV_down_cferr1
+                    #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV_down_cferr2
 
-                    else:
-                        btag_weight_JECUp_high[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        btag_weight_lfUp_high[0] = tree.btagWeightCSV
-                        btag_weight_lfDown_high[0] = tree.btagWeightCSV
-                        btag_weight_hfUp_high[0] = tree.btagWeightCSV
-                        btag_weight_hfDown_high[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Up_high[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Down_high[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Up_high[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Up_high[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Down_high[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Down_high[0] = tree.btagWeightCSV
-
-
-                    if tree.Jet_pt_reg[tree.hJCidx[0]]<100. or tree.Jet_pt_reg[tree.hJCidx[1]]<100.:
-                        btag_weight_JECUp_low[0] = tree.btagWeightCSV_up_jes
-                        btag_weight_JECDown_low[0] = tree.btagWeightCSV_down_jes
-                        btag_weight_lfUp_low[0] = tree. btagWeightCSV_up_lf
-                        btag_weight_lfDown_low[0] = tree. btagWeightCSV_down_lf
-                        btag_weight_hfUp_low[0] = tree.btagWeightCSV_up_hf
-                        btag_weight_hfDown_low[0] = tree.btagWeightCSV_down_hf
-                        btag_weight_lfstats1Up_low[0] = tree. btagWeightCSV_up_lfstats1
-                        btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV_down_lfstats1
-                        btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV_up_lfstats2
-                        btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV_down_lfstats2
-                        btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV_up_hfstats1
-                        btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV_up_hfstats2
-                        btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV_down_hfstats1
-                        btag_weight_hfstats2Down_low[0] = tree. btagWeightCSV_down_hfstats2
-                        btag_weight_cferr1Up_low[0] = tree.btagWeightCSV_up_cferr1
-                        btag_weight_cferr2Up_low[0] = tree.btagWeightCSV_up_cferr2
-                        btag_weight_cferr1Down_low[0] = tree.btagWeightCSV_down_cferr1
-                        btag_weight_cferr2Down_low[0] = tree.btagWeightCSV_down_cferr2
-
-                    else:
-                        btag_weight_JECUp_low[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        btag_weight_lfUp_low[0] = tree.btagWeightCSV
-                        btag_weight_lfDown_low[0] = tree.btagWeightCSV
-                        btag_weight_hfUp_low[0] = tree.btagWeightCSV
-                        btag_weight_hfDown_low[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Up_low[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Down_low[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Up_low[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Up_low[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Down_low[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Down_low[0] = tree.btagWeightCSV
-
-                    if tree.Jet_eta[tree.hJCidx[0]]>1.4 or tree.Jet_eta[tree.hJCidx[1]]>1.4:
-                        btag_weight_JECUp_central[0] = tree.btagWeightCSV_up_jes
-                        btag_weight_JECDown_central[0] = tree.btagWeightCSV_down_jes
-                        btag_weight_lfUp_central[0] = tree. btagWeightCSV_up_lf
-                        btag_weight_lfDown_central[0] = tree. btagWeightCSV_down_lf
-                        btag_weight_hfUp_central[0] = tree.btagWeightCSV_up_hf
-                        btag_weight_hfDown_central[0] = tree.btagWeightCSV_down_hf
-                        btag_weight_lfstats1Up_central[0] = tree. btagWeightCSV_up_lfstats1
-                        btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV_down_lfstats1
-                        btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV_up_lfstats2
-                        btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV_down_lfstats2
-                        btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV_up_hfstats1
-                        btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV_up_hfstats2
-                        btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV_down_hfstats1
-                        btag_weight_hfstats2Down_central[0] = tree. btagWeightCSV_down_hfstats2
-                        btag_weight_cferr1Up_central[0] = tree.btagWeightCSV_up_cferr1
-                        btag_weight_cferr2Up_central[0] = tree.btagWeightCSV_up_cferr2
-                        btag_weight_cferr1Down_central[0] = tree.btagWeightCSV_down_cferr1
-                        btag_weight_cferr2Down_central[0] = tree.btagWeightCSV_down_cferr2
-
-                    else:
-                        btag_weight_JECUp_central[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        btag_weight_lfUp_central[0] = tree.btagWeightCSV
-                        btag_weight_lfDown_central[0] = tree.btagWeightCSV
-                        btag_weight_hfUp_central[0] = tree.btagWeightCSV
-                        btag_weight_hfDown_central[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Up_central[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Down_central[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Up_central[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Up_central[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Down_central[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Down_central[0] = tree.btagWeightCSV
+                    #else:
+                    #    btag_weight_JECUp_high[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfUp_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfDown_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfUp_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfDown_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Down_high[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV
 
 
-                    if tree.Jet_eta[tree.hJCidx[0]]<1.4 or tree.Jet_eta[tree.hJCidx[1]]<1.4:
-                        btag_weight_JECUp_forward[0] = tree.btagWeightCSV_up_jes
-                        btag_weight_JECDown_forward[0] = tree.btagWeightCSV_down_jes
-                        btag_weight_lfUp_forward[0] = tree. btagWeightCSV_up_lf
-                        btag_weight_lfDown_forward[0] = tree. btagWeightCSV_down_lf
-                        btag_weight_hfUp_forward[0] = tree.btagWeightCSV_up_hf
-                        btag_weight_hfDown_forward[0] = tree.btagWeightCSV_down_hf
-                        btag_weight_lfstats1Up_forward[0] = tree. btagWeightCSV_up_lfstats1
-                        btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV_down_lfstats1
-                        btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV_up_lfstats2
-                        btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV_down_lfstats2
-                        btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV_up_hfstats1
-                        btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV_up_hfstats2
-                        btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV_down_hfstats1
-                        btag_weight_hfstats2Down_forward[0] = tree. btagWeightCSV_down_hfstats2
-                        btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV_up_cferr1
-                        btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV_up_cferr2
-                        btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV_down_cferr1
-                        btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV_down_cferr2
+                    #if tree.Jet_pt_reg[tree.hJCidx[0]]<100. or tree.Jet_pt_reg[tree.hJCidx[1]]<100.:
+                    #    btag_weight_JECUp_low[0] = tree.btagWeightCSV_up_jes
+                    #    btag_weight_JECDown_low[0] = tree.btagWeightCSV_down_jes
+                    #    btag_weight_lfUp_low[0] = tree. btagWeightCSV_up_lf
+                    #    btag_weight_lfDown_low[0] = tree. btagWeightCSV_down_lf
+                    #    btag_weight_hfUp_low[0] = tree.btagWeightCSV_up_hf
+                    #    btag_weight_hfDown_low[0] = tree.btagWeightCSV_down_hf
+                    #    btag_weight_lfstats1Up_low[0] = tree. btagWeightCSV_up_lfstats1
+                    #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV_down_lfstats1
+                    #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV_up_lfstats2
+                    #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV_down_lfstats2
+                    #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV_up_hfstats1
+                    #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV_up_hfstats2
+                    #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV_down_hfstats1
+                    #    btag_weight_hfstats2Down_low[0] = tree. btagWeightCSV_down_hfstats2
+                    #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV_up_cferr1
+                    #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV_up_cferr2
+                    #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV_down_cferr1
+                    #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV_down_cferr2
 
-                    else:
-                        btag_weight_JECUp_forward[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfUp_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfDown_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfUp_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfDown_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV
-                        btag_weight_hfstats2Down_forward[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV
-                        btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV
-                        btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV
+                    #else:
+                    #    btag_weight_JECUp_low[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfUp_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfDown_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfUp_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfDown_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Down_low[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV
+
+                    #if tree.Jet_eta[tree.hJCidx[0]]>1.4 or tree.Jet_eta[tree.hJCidx[1]]>1.4:
+                    #    btag_weight_JECUp_central[0] = tree.btagWeightCSV_up_jes
+                    #    btag_weight_JECDown_central[0] = tree.btagWeightCSV_down_jes
+                    #    btag_weight_lfUp_central[0] = tree. btagWeightCSV_up_lf
+                    #    btag_weight_lfDown_central[0] = tree. btagWeightCSV_down_lf
+                    #    btag_weight_hfUp_central[0] = tree.btagWeightCSV_up_hf
+                    #    btag_weight_hfDown_central[0] = tree.btagWeightCSV_down_hf
+                    #    btag_weight_lfstats1Up_central[0] = tree. btagWeightCSV_up_lfstats1
+                    #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV_down_lfstats1
+                    #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV_up_lfstats2
+                    #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV_down_lfstats2
+                    #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV_up_hfstats1
+                    #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV_up_hfstats2
+                    #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV_down_hfstats1
+                    #    btag_weight_hfstats2Down_central[0] = tree. btagWeightCSV_down_hfstats2
+                    #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV_up_cferr1
+                    #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV_up_cferr2
+                    #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV_down_cferr1
+                    #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV_down_cferr2
+
+                    #else:
+                    #    btag_weight_JECUp_central[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfUp_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfDown_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfUp_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfDown_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Down_central[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV
+
+
+                    #if tree.Jet_eta[tree.hJCidx[0]]<1.4 or tree.Jet_eta[tree.hJCidx[1]]<1.4:
+                    #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV_up_jes
+                    #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV_down_jes
+                    #    btag_weight_lfUp_forward[0] = tree. btagWeightCSV_up_lf
+                    #    btag_weight_lfDown_forward[0] = tree. btagWeightCSV_down_lf
+                    #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV_up_hf
+                    #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV_down_hf
+                    #    btag_weight_lfstats1Up_forward[0] = tree. btagWeightCSV_up_lfstats1
+                    #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV_down_lfstats1
+                    #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV_up_lfstats2
+                    #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV_down_lfstats2
+                    #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV_up_hfstats1
+                    #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV_up_hfstats2
+                    #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV_down_hfstats1
+                    #    btag_weight_hfstats2Down_forward[0] = tree. btagWeightCSV_down_hfstats2
+                    #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV_up_cferr1
+                    #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV_up_cferr2
+                    #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV_down_cferr1
+                    #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV_down_cferr2
+
+                    #else:
+                    #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfUp_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfDown_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_hfstats2Down_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV
+                    #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV
 
 
                 if applyRegression:
@@ -1946,7 +2048,8 @@ for job in info:
                 command = 'srmrm %s' %(targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/'))
                 print(command)
                 os.system(command)
-                command = 'env -i X509_USER_PROXY=/shome/$USER/.x509up_u`id -u` gfal-copy file:////%s %s' %(tmpDir.replace('/mnt/t3nfs01/data01','')+'/'+job.prefix+job.identifier+'.root',targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/'))
+                #command = 'env -i X509_USER_PROXY=/shome/$USER/.x509up_u`id -u` gfal-copy file:////%s %s' %(tmpDir.replace('/mnt/t3nfs01/data01','')+'/'+job.prefix+job.identifier+'.root',targetStorage.replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch/'))
+                command = 'xrdcp -d 1 '+tmpfile+' '+outputFile
                 print(command)
                 os.system(command)
             else:
