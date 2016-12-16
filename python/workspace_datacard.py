@@ -39,9 +39,7 @@ def useSpacesInDC(fileName):
         for i in range(len(words)): #use the new format!
             newLine += words[i].ljust(maxColumnWidth[i]+1)
         file_.write(newLine+'\n')
-    print 'debug6'
     file_.close()
-    print 'debug7'
     return
 
 print '_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_'
@@ -125,6 +123,9 @@ title = name
 nBins = int(config.get('dc:%s'%var,'range').split(',')[0])
 xMin = float(config.get('dc:%s'%var,'range').split(',')[1])
 xMax = float(config.get('dc:%s'%var,'range').split(',')[2])
+print 'nBins is', nBins
+print 'xMin is', xMin
+print 'xMax is', xMax
 ROOToutname = config.get('dc:%s'%var,'dcName')
 RCut = config.get('dc:%s'%var,'cut')
 signals = config.get('dc:%s'%var,'signal').split(' ')
@@ -209,6 +210,7 @@ else:
 
 sys_cut_suffix=eval(config.get('LimitGeneral','sys_cut_suffix'))
 sys_weight_corr=eval(config.get('LimitGeneral','sys_weight_corr'))
+exclude_sys_weight = eval(config.get('LimitGeneral','exclude_sys_weight'))
 sys_cut_include=[]
 if config.has_option('LimitGeneral','sys_cut_include'):
     sys_cut_include=eval(config.get('LimitGeneral','sys_cut_include'))
@@ -294,9 +296,15 @@ else:
     #sys.exit("Unknown Pt region")
 
 print 'pt_region is', pt_region
-systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_%s'%pt_region))
+systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
+#systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_%s'%pt_region))
 print 'systematicsnaming is', systematicsnaming
-weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
+weightF_systematics = eval(config.get('LimitGeneral','weightF_sys'))
+if 'Zee' in ROOToutname :
+    if 'CMS_vhbb_eff_m_13TeV' in weightF_systematics: weightF_systematics.remove('CMS_vhbb_eff_m_13TeV')
+if 'Zuu' in ROOToutname :
+    if 'CMS_vhbb_eff_e_13TeV' in weightF_systematics: weightF_systematics.remove('CMS_vhbb_eff_e_13TeV')
+
 #if str(anType) == 'cr': 
 #    if pt_region == 'NoSysRegion':
 #        weightF_systematics = eval(config.get('LimitGeneral','weightF_sys_CR'))
@@ -339,6 +347,7 @@ background_samples = info.get_samples(backgrounds)
 data_sample_names = config.get('dc:%s'%var,'data').split(' ')
 print 'data_sample_names are', data_sample_names
 data_samples = info.get_samples(data_sample_names)
+print 'data_samples are', data_samples
 
 print 'The signal sample list is\n'
 for samp in signal_samples:
@@ -377,20 +386,41 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
     print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
     ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")
 
-#the 4 sys
+#shape systematics
 for syst in systematics:
     for Q in UD:
+        print 'Q is', Q
         #default:
         _cut = treecut
         _name = title
         _weight = weightF
         #replace cut string
-        new_cut=sys_cut_suffix[syst]
-        if not new_cut == 'nominal':
-            old_str,new_str=new_cut.split('>')
-            _cut = treecut.replace(old_str,new_str.replace('?',Q))
+        #print 'old tree cut is', treecut
+        if not 'UD' in syst:
+            new_cut=sys_cut_suffix[syst]
+            if not new_cut == 'nominal':
+                old_str,new_str=new_cut.split('>')
+                _cut = treecut.replace(old_str,new_str.replace('?',Q))
+                _name = title
+                _weight = weightF
+        else:
+            new_cut_list=sys_cut_suffix[syst]
+            for new_cut in new_cut_list:
+                old_str,new_str=new_cut.split('>')
+                SYS = syst.split('_UD_')[0]
+                CAT = syst.split('_UD_')[1]
+                #print 'SYS is', SYS
+                #print 'CAT is', CAT
+                #print 'UD is', CAT
+                #print 'new string to be replaced is', old_str
+                #print 'it will be replaced by', new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q)
+                #_cut = treecut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
+                _cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
             _name = title
             _weight = weightF
+        #print 'the replaced _cut is', _cut
+        print ''
+
         if syst in sys_weight_corr:
             print 'sys_weight is',sys_weight_corr[syst]+'_%s' %(Q.upper())
             _weight = config.get('Weights',sys_weight_corr[syst]+'_%s' %(Q.upper()))
@@ -398,9 +428,15 @@ for syst in systematics:
         #replace tree variable
         if bdt == True:
             #ff[1]='%s_%s'%(sys,Q.lower())
-            _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q.lower()))
-            _treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
-            print _treevar
+            #print 'old treevar', _treevar
+            if not 'UD' in syst:
+                _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q.lower()))
+                #_treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
+            else:
+                _treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
+                #_treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD',Q)))
+                print '.nominal by','.%s'%(syst.replace('UD',Q))
+            #print 'treevar after replacement', _treevar
         elif mjj == True:
             if syst == 'JER':
                 _treevar = treevar.replace('_reg_mass','_reg_corrJER%s_mass'%Q)
@@ -412,10 +448,14 @@ for syst in systematics:
             _treevar = treevar
         #append
         appendList()
+        #print 'new tree cut is', _cut
+
 
 #UEPS
 #Appends options for each weight 
 for weightF_sys in weightF_systematics:
+    #if '_eff_e' in weightF_sys and 'Zuu' in ROOToutname : continue
+    #if '_eff_m' in weightF_sys and 'Zee' in ROOToutname : continue
     for _weight in [config.get('Weights','%s_UP' %(weightF_sys)),config.get('Weights','%s_DOWN' %(weightF_sys))]:
         _cut = treecut
         _treevar = treevar
@@ -536,6 +576,7 @@ for i,job in enumerate(all_samples):
     all_histos[job.name] = outputs[i]
 
 
+print 'data_samples are', data_samples
 for job in data_samples:
     print '\t- %s'%job
     data_histos[job.name] = data_hMaker.get_histos_from_tree(job)[0]['DATA']
@@ -577,6 +618,7 @@ if signal_inject:
 print 'Get the data histo'
 print '==================\n'
 nData = 0
+print 'datahistos is', data_histos
 for job in data_histos:
     if nData == 0:
         theData = data_histos[job]
@@ -847,7 +889,10 @@ for DCtype in ['WS','TH']:
     f.write('\n')
     f.write('process\t')
     #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
-    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
+    #VH
+    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
+    #VV
+    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
     #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+2))
     f.write('\n')
     # datacard yields
@@ -900,17 +945,21 @@ for DCtype in ['WS','TH']:
                         f.write('\t-')
                 f.write('\n')
     # UEPS systematics
-    print 'debug4'
     for weightF_sys in weightF_systematics:
-        print 'debug4.1'
-        print 'the sys is', systematicsnaming[weightF_sys]
         f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
-        for it in range(0,columns): f.write('\t1.0')
-        print 'debug 4.2'
+        for it in range(0,columns):
+            for c in setup:
+                if not it == setup.index(c): continue
+                if  setup[it] in exclude_sys_weight and weightF_sys in exclude_sys_weight[setup[it]]: f.write('\t-')
+                else: f.write('\t1.0')
         f.write('\n')
-        print 'debug 4.3'
+    #OLD
+    #for weightF_sys in weightF_systematics:
+    #    print 'the sys is', systematicsnaming[weightF_sys]
+    #    f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
+    #    for it in range(0,columns): f.write('\t1.0')
+    #    f.write('\n')
     # LHE systematics
-    print 'debug5'
     if len(lhe_muF)==2:
         for group in sys_lhe_affecting.keys():
             f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
@@ -948,7 +997,6 @@ for DCtype in ['WS','TH']:
                 f.write('\n')
                 alreadyAdded.append(Dict[c])
     # regular systematics
-    print 'debug8'
     for sys in systematics:
         sys_factor=sys_factor_dict[sys]
         f.write('%s\tshape'%systematicsnaming[sys])
@@ -983,4 +1031,3 @@ for DCtype in ['WS','TH']:
 outfile.Write()
 outfile.Close()
 print 'closed outputfile'
-sys.exit(0)

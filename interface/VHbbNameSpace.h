@@ -955,7 +955,8 @@ double LOtoNLOWeightgenEtabbPtJ(double etabb){
 
 float puWeight_ichep(float I){
 
-int i = std::nearbyint(I);
+//int i = std::nearbyint(I);
+int i = (int) I;
 
 double puw[38]={0.00026954692859,
                 0.00834201570744,
@@ -998,7 +999,7 @@ double puw[38]={0.00026954692859,
                };
 
 if (i < 0) return 1.;
-if (i > 37) return pu[37];
+if (i > 37) return puw[37];
 
 return puw[i];
 
@@ -1006,7 +1007,8 @@ return puw[i];
 
 float puWeight_ichep_up(float I){
 
-int i = std::nearbyint(I);
+int i = (int) I;
+//int i = std::nearbyint(I);
 
 double puw[38]={0.000168728884,
                 0.006518139648,
@@ -1057,7 +1059,8 @@ return puw[i];
 
 float puWeight_ichep_down(float I){
 
-int i = std::nearbyint(I);
+int i = (int) I;
+//int i = std::nearbyint(I);
 
 double puw[38]={0.000394948025924,
                 0.010589291412,

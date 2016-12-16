@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+#old
 import ROOT,sys,os,subprocess,random,string,hashlib
 ROOT.gROOT.SetBatch(True)
 from printcolor import printc
@@ -110,6 +111,8 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
     #n=100
     #n=50
     n=20
+    #n=10
+    #n=2
     allFiles_chunks = [allFiles[i:i+n] for i in range(0, len(allFiles), n)]
     print 'len(allFiles_chunks)',len(allFiles_chunks),'allFiles_chunks[0]',allFiles_chunks[0]
     tmpfile_chunk = __tmpPath+'/'+newprefix+folderName+'_tmpfile_chunk_'

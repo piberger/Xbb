@@ -710,6 +710,11 @@ for job in info:
                         newtree.Branch(name, branch_addresses[name], '{}/F'.format(name))
             print 'branch_addresses is', branch_addresses
 
+            #Add name of the sample
+
+            sample_name = array('c','')
+            newtree.Branch('sample_name', sample_name, 'sample_name[1]/C')
+
             ####
             #OLD
             ####
@@ -1062,10 +1067,10 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
-                if entry>200000: break
+                #if entry>200000: break
                 #if entry>10000: break
                 #if entry>1000: break
-                #if entry>100: break
+                if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1705,15 +1710,12 @@ for job in info:
                         jet_branch_new = 'Jet_pt_reg_corr{systematic}{variation}_{category}'.format(**locals())
                         jet_branch_old = 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals())
                         for j in xrange(tree.nJet):
-                            print 'suprice mtf'
                             if category_definitions[category](tree.Jet_pt_reg[j], tree.Jet_eta[j]):
-                                print 'yeah, I am assigning the systematics !'
                                 branch_addresses[jet_branch_new][j] = getattr(tree, jet_branch_old)[j]
-                                print 'the value is', getattr(tree, jet_branch_old)[j]
                             else:
                                 branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
-                                print 'yeah baby yeah !'
-                                print 'the value is', tree.Jet_pt_reg[j]
+
+                    sample_name = 'I love cats :3'
 
                     #def fillvar():
                     #    #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}

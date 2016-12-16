@@ -117,6 +117,7 @@ class StackMaker:
         self.histos = None
         self.typs = None
         self.AddErrors = None
+        self.ratio_band= None
         self.jobnames = None
         self.addFlag2 = ''
         self.prefit_overlay = None
@@ -489,6 +490,18 @@ class StackMaker:
 
             l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
 
+        r_err = {}
+        if not self.ratio_band== None:
+            for key in self.ratio_band:
+                print 'key is', key
+                r_err[key] = allMC.Clone()
+                r_err[key].Divide(self.ratio_band[key])
+                r_err[key].Draw('SAME2')
+                r_err[key].SetLineStyle(self.ratio_band[key].GetLineStyle())
+                r_err[key].SetLineWidth(self.ratio_band[key].GetLineWidth())
+                #r_err[key].SetLineWidth(1)
+                r_err[key].SetLineColor(self.ratio_band[key].GetLineColor())
+                #r_err[key].SetLineColor(4)
 
         l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
 
