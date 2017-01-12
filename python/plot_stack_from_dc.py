@@ -10,11 +10,16 @@ parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
 parser.add_option("-D", "--datacard", dest="dc_folder", default="",
                       help="Path to the datacards to be ploted")
+parser.add_option("-P", "--postfit", dest="postfit", default=True,
+                  help="bool. Do you want to plot postfit or not (prefit) ?")
+parser.add_option("-L", "--log", dest="log", default=True,
+                  help="bool. Do you want to plot in log scale ?")
 
 (opts, args) = parser.parse_args(sys.argv)
 
 print 'Config suffix is', opts.tag
 print 'Datacards folder is', opts.dc_folder
+opts.tag = opts.tag+'config'
 
 DC = os.listdir(opts.dc_folder)
 
@@ -61,6 +66,7 @@ if not mlfit_:
 
 #Launching all the commands
 for command_dic in command_dics:
+    #suffix = ' -C %s/general.ini -C %s/configPlot_vars  -C %s/datacard.ini -C %s/plots.ini -C %s/paths.ini -C %s/datacards.ini  -C %s/vhbbPlotDef.ini -P %s -L %s' %(opts.tag, opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.postfit, opts.log)
     suffix = ' -C %s/general.ini -C %s/configPlot_vars  -C %s/datacard.ini -C %s/plots.ini -C %s/paths.ini -C %s/datacards.ini  -C %s/vhbbPlotDef.ini' %(opts.tag, opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.tag)
 
     ##prefit
@@ -69,7 +75,8 @@ for command_dic in command_dics:
     ##print 'Prefit command is', command
     #subprocess.call([command], shell=True)
     #postfit
-    command = 'python stack_from_dcv2.py -D %s -B %s -M %s -F b -V %s -A %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'])
+    #command = 'python stack_from_dcv2.py -D %s -B %s -M %s -F b -V %s -A %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'])
+    command = 'python stack_from_dc_improved.py -D %s -B %s -M %s -F b -V %s -A %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'])
     command += suffix
     print 'command is', command
     subprocess.call([command], shell=True)
