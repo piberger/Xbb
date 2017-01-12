@@ -272,6 +272,7 @@ class StackMaker:
         k=len(self.histos)
     
         for j in range(0,k):
+            print 'j is',j
             #print histos[j].GetBinContent(1)
             i=k-j-1
             self.histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
@@ -319,8 +320,10 @@ class StackMaker:
 
         if self.overlay and not isinstance(self.overlay,list):
             self.overlay = [self.overlay]
+        print 'self.overlay is', self.overlay
         if self.overlay:
             for _overlay in self.overlay:
+                print 'overlay title is', _overlay.GetTitle()
                 _overlay.SetLineColor(99)
                 _overlay.SetLineColor(int(self.colorDict[_overlay.GetTitle()]))
                 _overlay.SetLineWidth(3)
@@ -328,14 +331,15 @@ class StackMaker:
                 _overlay.SetFillStyle(4000)
 
                 # PREfit overlay
-                if self.prefit_overlay:
-                    print '\n\n\t\t========PREFIT OVERLAY==========',self.prefit_overlay
-                    for _prefit_overlay in self.prefit_overlay:
-                        _prefit_overlay.SetLineColor(ROOT.kRed)
-                        _prefit_overlay.SetLineWidth(2)
-                        _prefit_overlay.SetFillColor(0)
-                        _prefit_overlay.SetFillStyle(4000)
-                        l_2.AddEntry(_prefit_overlay,'PreFit','L')
+        if self.prefit_overlay:
+            print '\n\n\t\t========PREFIT OVERLAY==========',self.prefit_overlay
+            for _prefit_overlay in self.prefit_overlay:
+                _prefit_overlay.SetLineColor(ROOT.kRed)
+                #_prefit_overlay.SetLineColor(ROOT.kBlue)
+                _prefit_overlay.SetLineWidth(2)
+                _prefit_overlay.SetFillColor(0)
+                _prefit_overlay.SetFillStyle(4000)
+                l_2.AddEntry(_prefit_overlay,'PreFit','L')
 
         numLegend = 2+k
         if self.overlay:
@@ -413,7 +417,10 @@ class StackMaker:
         theErrorGraph.SetFillColor(ROOT.kGray+3)
         theErrorGraph.SetFillStyle(3013)
         theErrorGraph.Draw('SAME2')
-        l_2.AddEntry(theErrorGraph,"MC uncert. (stat.)","fl")
+        if not self.AddErrors:
+            l_2.AddEntry(theErrorGraph,"MC uncert. (stat.)","fl")
+        else:
+            l_2.AddEntry(theErrorGraph,"MC uncert. (stat.+ syst.)","fl")
         Ymax = max(allStack.GetMaximum(),d1.GetMaximum())*1.7
         if self.log:
             allStack.SetMinimum(0.1)
@@ -432,6 +439,10 @@ class StackMaker:
             for _overlay in self.overlay:
                 print("Drawing overlay")
                 _overlay.Draw('hist,same')
+        if self.prefit_overlay:
+            for _prefit_overlay in self.prefit_overlay:
+                print("Drawing overlay")
+                _prefit_overlay.Draw('hist,same')
         d1.Draw("E,same")
         l.Draw()
         l_2.Draw()
@@ -482,13 +493,13 @@ class StackMaker:
             allMC.Fit(fitMC,"R")
 
 
-        if not self.AddErrors == None:
-            self.AddErrors.SetLineColor(1)
-            self.AddErrors.SetFillColor(5)
-            self.AddErrors.SetFillStyle(3001)
-            self.AddErrors.Draw('SAME2')
+        #if not self.AddErrors == None:
+        #    self.AddErrors.SetLineColor(1)
+        #    self.AddErrors.SetFillColor(5)
+        #    self.AddErrors.SetFillStyle(3001)
+        #    self.AddErrors.Draw('SAME2')
 
-            l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
+        #    l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
 
         r_err = {}
         if not self.ratio_band== None:
@@ -499,11 +510,12 @@ class StackMaker:
                 r_err[key].Draw('SAME2')
                 r_err[key].SetLineStyle(self.ratio_band[key].GetLineStyle())
                 r_err[key].SetLineWidth(self.ratio_band[key].GetLineWidth())
-                #r_err[key].SetLineWidth(1)
                 r_err[key].SetLineColor(self.ratio_band[key].GetLineColor())
-                #r_err[key].SetLineColor(4)
 
-        l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+        if not self.AddErrors:
+            l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+        else:
+            l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
 
         l2.Draw()
 
@@ -780,12 +792,12 @@ class StackMaker:
 
 
 
-        if not self.AddErrors == None:
-            self.AddErrors.SetFillColor(5)
-            self.AddErrors.SetFillStyle(1001)
-            self.AddErrors.Draw('SAME2')
+        #if not self.AddErrors == None:
+        #    self.AddErrors.SetFillColor(5)
+        #    self.AddErrors.SetFillStyle(1001)
+        #    self.AddErrors.Draw('SAME2')
 
-            l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
+        #    l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
 
 
         if not os.path.exists(self.plotDir):
