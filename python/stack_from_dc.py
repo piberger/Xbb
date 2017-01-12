@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import pickle
+impor pickle
 import sys, os
 from optparse import OptionParser
 from copy import copy,deepcopy
