@@ -202,7 +202,7 @@ def doPlot():
 #        cutOverWrite = None
 #        if addBlindingCut:
 #            cutOverWrite = config.get('Cuts',region)+' & ' + addBlindingCut
-        inputs.append((Plotter,"get_histos_from_tree",(job,True, subcut_)))
+        inputs.append((Plotter,"get_histos_from_tree",(job,True, subcut_, '1')))
 
     #print 'inputs are', inputs
     
@@ -298,10 +298,10 @@ def doPlot():
     for job in datasamples:
         if addBlindingCut:
             if subcut_: dDictList = Plotter.get_histos_from_tree(job,True, config.get('Cuts',region)+' & ' + addBlindingCut +' & ' + subcut_)
-            else: dDictList = Plotter.get_histos_from_tree(job, True, config.get('Cuts',region)+' & ' + addBlindingCut)
+            else: dDictList = Plotter.get_histos_from_tree(job, True, config.get('Cuts',region)+' & ' + addBlindingCut, '1')
         else:
             if subcut_: dDictList = Plotter.get_histos_from_tree(job, True, config.get('Cuts',region)+' & ' + subcut_)
-            else: dDictList = Plotter.get_histos_from_tree(job)
+            else: dDictList = Plotter.get_histos_from_tree(job, True, None, '1')
         #! add the variables list for each job (Samples)
         for v in range(0,len(vars)):
             Ldatas[v].append(dDictList[v].values()[0])

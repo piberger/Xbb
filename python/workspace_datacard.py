@@ -386,6 +386,12 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
     print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
     ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")
 
+#all the cuts except the one modified by the shape variation
+shapecut= ''
+cutlist =  _cut.split('&')
+rmv_sys = _cut.split('&')
+print 'cutlist is ', cutlist
+
 #shape systematics
 for syst in systematics:
     for Q in UD:
@@ -403,6 +409,24 @@ for syst in systematics:
                 _cut = treecut.replace(old_str,new_str.replace('?',Q))
                 _name = title
                 _weight = weightF
+                for c_ in cutlist:
+                    if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
+                    #if not old_str in c_ and not (c_ in rmv_sys): rmv_sys.append(c_)
+
+                #for c_ in cutlist:
+                #    if (old_str in c_):
+                #        nbra = c_.count('(')
+                #        nket = c_.count(')')
+                #        if nbra > nket:
+                #            newc_ = abs(nbra-nket)*'('+'1'
+                #            cutlist[cutlist.index(c_)] = newc_
+                #        elif nket > nbra:
+                #            newc_ = '1'+ abs(nbra-nket)*')'
+                #            cutlist[cutlist.index(c_)] = newc_
+                #        elif nket ==  nbra:
+                #            cutlist.remove(c_)
+
+                #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
         else:
             new_cut_list=sys_cut_suffix[syst]
             for new_cut in new_cut_list:
@@ -416,10 +440,52 @@ for syst in systematics:
                 #print 'it will be replaced by', new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q)
                 #_cut = treecut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
                 _cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
+                #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
+                for c_ in cutlist:
+                    if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
+                    #if (not old_str in c_) and (not c_ in rmv_sys): rmv_sys.append(c_)
+                    #if old_str in c_ and not (c_ in rmv_sys): rmv_sys.append(c_)
+                    #if not (old_str in c_):
+                    #    nbra = c_.count('(')
+                    #    nket = c_.count(')')
+                    #    if nbra > nket:
+                    #        newc_ = abs(nbra-nket)*'('+'1'
+                    #        cutlist[cutlist.index(c_)] = newc_
+                    #    elif nket > nbra:
+                    #        newc_ = '1'+ abs(nbra-nket)*')'
+                    #        cutlist[cutlist.index(c_)] = newc_
+                    #    elif nket ==  nbra:
+                    #        cutlist.remove(c_)
             _name = title
             _weight = weightF
         #print 'the replaced _cut is', _cut
         print ''
+
+        print 'rmv_sys is', rmv_sys
+        print 'again, cutlist is', cutlist
+        for rsys in rmv_sys:
+            print 'rsys is', rsys
+            for c_ in cutlist:
+                if (rsys == c_):
+                    print 'rsys will be removes'
+                    nbra = c_.count('(')
+                    nket = c_.count(')')
+                    if nbra > nket:
+                        newc_ = abs(nbra-nket)*'('+'1'
+                        cutlist[cutlist.index(c_)] = newc_
+                    elif nket > nbra:
+                        newc_ = '1'+ abs(nbra-nket)*')'
+                        cutlist[cutlist.index(c_)] = newc_
+                    elif nket ==  nbra:
+                        cutlist.remove(c_)
+
+        shapecut = '&'.join(cutlist)
+
+        print 'after removing shape sys'
+        print 'cutlist', cutlist
+        print 'basiccut', shapecut
+
+        #sys.exit()
 
         if syst in sys_weight_corr:
             print 'sys_weight is',sys_weight_corr[syst]+'_%s' %(Q.upper())
@@ -553,7 +619,7 @@ print '\n\t...fetching histos...\n'
 
 inputs=[]
 for job in all_samples:
-    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True)))
+    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecut)))
 
 
 # multiprocess=0

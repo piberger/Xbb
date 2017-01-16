@@ -47,12 +47,16 @@ class HistoMaker:
         print "Done Creating HistoMaker"
         print "========================\n"
 
-    def get_histos_from_tree(self,job,quick=True, subcut_ = None):
+    def get_histos_from_tree(self,job,quick=True, subcut_ = None, replacement_cut = None):
         start_time = time.time()
 
         print "=============================================================\n"
         print "THE SAMPLE IS ",job.name
         print "=============================================================\n"
+
+        print 'quick is', quick
+        print 'subcut_ is', subcut_
+        print 'replacement_cut is', replacement_cut
 
         '''Function that produce the trees from a HistoMaker'''
          
@@ -100,8 +104,9 @@ class HistoMaker:
             addCut = subcut_
         print 'addCut is', addCut
         input = ROOT.TFile.Open(self.tc.get_tree(job, addCut),'read')
-        if job.subsample:
-            addCut += '& (%s)' %(job.subcut)
+        #Not: no subcut is needed since  done in caching
+        #if job.subsample:
+        #    addCut += '& (%s)' %(job.subcut)
         CuttedTree = input.Get(job.tree)
         CuttedTree.SetCacheSize(0)
         print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
@@ -135,7 +140,6 @@ class HistoMaker:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
-                #print('yeah')
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
             else:
                 count=getattr(self.tc,"CountWeighted")[0]
@@ -145,6 +149,8 @@ class HistoMaker:
             #else:
             #    treeCut='%s'%(options['cut'])
             treeCut='%s & %s'%(options['cut'],addCut)
+            if replacement_cut:
+                treeCut='%s & %s'%(replacement_cut,addCut)
             #print 'TreeCut (for the ploting) is', treeCut
             #treeCut='%s ' %addCut
 
