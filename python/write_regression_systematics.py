@@ -13,6 +13,7 @@ ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from btag_reweight import *
 from time import gmtime, strftime
+#import pdb
 
 argv = sys.argv
 parser = OptionParser()
@@ -710,10 +711,16 @@ for job in info:
                         newtree.Branch(name, branch_addresses[name], '{}/F'.format(name))
             print 'branch_addresses is', branch_addresses
 
-            #Add name of the sample
+            isDY = array('i',[-1])
+            newtree.Branch('isDY', isDY, 'isDY/I')
 
-            sample_name = array('c','')
-            newtree.Branch('sample_name', sample_name, 'sample_name[1]/C')
+            #add EWK weights
+
+
+            #Add name of the sample
+            #Doesn't work (string too long ?)
+            #sample_name = array('c','ab')
+            #newtree.Branch('sample_name', sample_name, 'sample_name/C',128)
 
             ####
             #OLD
@@ -795,6 +802,22 @@ for job in info:
             DY_specialWeight[0] = 1
             newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
 
+        #EWK weights
+
+            EWKw = array('f',[0])
+            EWKw[0] = 1
+            newtree.Branch('EWKw',EWKw,'EWKw/F')
+
+        #NLO weights
+
+            NLOw = array('f',[0])
+            NLOw[0] = 1
+            newtree.Branch('NLOw',NLOw,'NLOw/F')
+
+        #DY_weight. Are the product of the three weights declared above
+            DYw= array('f',[0])
+            DYw[0] = 1
+            newtree.Branch('DYw',DYw,'DYw/F')
 
         #Add reg VHDphi
             HVdPhi_reg = array('f',[0])
@@ -1070,7 +1093,7 @@ for job in info:
                 #if entry>200000: break
                 #if entry>10000: break
                 #if entry>1000: break
-                if entry>100: break
+                #if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1715,7 +1738,40 @@ for job in info:
                             else:
                                 branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
 
-                    sample_name = 'I love cats :3'
+                    if 'DY' in job.name:
+                        if '5to50' in job.name:
+                            isDY[0] = 3
+                        elif 'amcatnloFXFX' in job.name:
+                            isDY[0] = 2
+                        else:
+                            isDY[0] = 1
+                    else:
+                        isDY[0] = 0
+
+                    EWKw[0] = 1
+                    if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
+                        #print 'GebVboson is', tree.GenVbosons_pt[0]
+                        if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
+                            EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
+
+                    NLOw[0] = 1
+                    if isDY[0] == 1:
+                        etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
+                        if etabb < 5: NLOw[0] = 0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb
+
+                    #pdb.set_trace()
+                    DYw[0] = EWKw[0]*NLOw[0]*DY_specialWeight[0]
+
+
+
+                    #sample_name_ = 'Ilove10cats'
+                    #print 'sample_name is', sample_name
+                    #j = 0
+                    #for i in range(0,len(sample_name)):
+                    #    sample_name.pop(i-j)
+                    #    j = j + 1
+                    #for s in sample_name_:
+                    #    sample_name.append(s)
 
                     #def fillvar():
                     #    #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
