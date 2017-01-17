@@ -47,12 +47,16 @@ class HistoMaker:
         print "Done Creating HistoMaker"
         print "========================\n"
 
-    def get_histos_from_tree(self,job,quick=True, subcut_ = None):
+    def get_histos_from_tree(self,job,quick=True, subcut_ = None, replacement_cut = None):
         start_time = time.time()
 
         print "=============================================================\n"
         print "THE SAMPLE IS ",job.name
         print "=============================================================\n"
+
+        print 'quick is', quick
+        print 'subcut_ is', subcut_
+        print 'replacement_cut is', replacement_cut
 
         '''Function that produce the trees from a HistoMaker'''
          
@@ -100,9 +104,11 @@ class HistoMaker:
             addCut = subcut_
         print 'addCut is', addCut
         input = ROOT.TFile.Open(self.tc.get_tree(job, addCut),'read')
-        if job.subsample:
-            addCut += '& (%s)' %(job.subcut)
+        #Not: no subcut is needed since  done in caching
+        #if job.subsample:
+        #    addCut += '& (%s)' %(job.subcut)
         CuttedTree = input.Get(job.tree)
+        CuttedTree.SetCacheSize(0)
         print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
 
         #! start the loop over variables (descriebed in options) 
@@ -133,12 +139,9 @@ class HistoMaker:
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
-            print('They options keys are',options.keys())
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
-                print('yeah')
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
             else:
-                print('ahein')
                 count=getattr(self.tc,"CountWeighted")[0]
 
             #if cutOverWrite:
@@ -146,6 +149,8 @@ class HistoMaker:
             #else:
             #    treeCut='%s'%(options['cut'])
             treeCut='%s & %s'%(options['cut'],addCut)
+            if replacement_cut:
+                treeCut='%s & %s'%(replacement_cut,addCut)
             #print 'TreeCut (for the ploting) is', treeCut
             #treeCut='%s ' %addCut
 
@@ -187,8 +192,12 @@ class HistoMaker:
                 #    pdb.set_trace()
                 #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
                 #treeVar = '1'
-                nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
-                if First_iter: print 'Number of events are', nevents
+                ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
+                #from ROOT import TreeDraw
+                TD = ROOT.treedraw()
+                hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
+                #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
+                #if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True
             elif job.type == 'DATA':
@@ -243,9 +252,27 @@ class HistoMaker:
                             MC_rescale_factor=2. ##FIXME## only dataset used for training must be rescaled!!
                     else: 
                         MC_rescale_factor = 1.
-                    ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)*MC_rescale_factor
+                    if 'LHE_weights_scale_wgt[0+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,0,self.lumi, count)*MC_rescale_factor
+                    elif 'LHE_weights_scale_wgt[1+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,1,self.lumi, count)*MC_rescale_factor
+                    elif 'LHE_weights_scale_wgt[2+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,2,self.lumi, count)*MC_rescale_factor
+                    elif 'LHE_weights_scale_wgt[3+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,3,self.lumi, count)*MC_rescale_factor
+                    else:
+                        ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)*MC_rescale_factor
                 else: 
-                    ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)
+                    if 'LHE_weights_scale_wgt[0+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,0,self.lumi, count)
+                    elif 'LHE_weights_scale_wgt[1+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,1,self.lumi, count)
+                    elif 'LHE_weights_scale_wgt[2+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,2,self.lumi, count)
+                    elif 'LHE_weights_scale_wgt[3+2]' in weightF:
+                        ScaleFactor = self.tc.get_scale_LHE(job,self.config,3,self.lumi, count)
+                    else:
+                        ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)
                 if ScaleFactor != 0:
                     hTree.Scale(ScaleFactor)
                 integral = hTree.Integral()
@@ -312,7 +339,7 @@ class HistoMaker:
         elif not self._rebin and not self.value:
             return False
 
-    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.5):
+    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.35):
         #print "START calc_rebin"
         self.calc_rebin_flag = True
         self.norebin_nBins = copy(self.nBins)

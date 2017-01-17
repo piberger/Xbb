@@ -492,7 +492,7 @@ class TreeCache:
         self.__cachedPath
         tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
         input = ROOT.TFile.Open(tmpCache,'read')
-        input.GetListOfKeys().Print()
+        #input.GetListOfKeys().Print()
         posWeight = input.Get('CountPosWeight')
         negWeight = input.Get('CountNegWeight')
         anaTag=config.get('Analysis','tag')
@@ -512,7 +512,7 @@ class TreeCache:
         self.__cachedPath
         tmpCache = '%s/tmp_%s.root'%(self.__cachedPath,self.__hashDict[sample.name])
         input = ROOT.TFile.Open(tmpCache,'read')
-        input.GetListOfKeys().Print()
+        #input.GetListOfKeys().Print()
         posWeight = input.Get('CountPosWeight')
         negWeight = input.Get('CountNegWeight')
         Weight = input.Get('CountWeighted')
