@@ -290,7 +290,7 @@ class TreeCache:
             output.cd()
             theCut = self.minCut
             if sample.subsample:
-                theCut += '& (%s)' %(sample.subcut)
+                theCut = '((%s)&(%s))' %(theCut,sample.subcut)
             print ("the cut is", theCut)
             #Problem here: not working when empty tree
             ROOT.TFormula.SetMaxima(100000,1000,1000000)
@@ -500,7 +500,7 @@ class TreeCache:
         count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
     def get_scale(self, sample, config, lumi = None, count=1):

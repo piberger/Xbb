@@ -150,7 +150,13 @@ class HistoMaker:
             #    treeCut='%s'%(options['cut'])
             treeCut='%s & %s'%(options['cut'],addCut)
             if replacement_cut:
-                treeCut='%s & %s'%(replacement_cut,addCut)
+                if type(replacement_cut) is str:
+                    treeCut='%s & %s'%(replacement_cut,addCut)
+                elif type(replacement_cut) is list:
+                    treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
+                else:
+                    print '@ERROR: replacement_cut is neither list or string. Aborting'
+                    sys.exit()
             #print 'TreeCut (for the ploting) is', treeCut
             #treeCut='%s ' %addCut
 
@@ -185,7 +191,7 @@ class HistoMaker:
                     #print drawoption
                 else: 
                     drawoption = '(%s)*(%s)'%(weightF,treeCut)
-                print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
+                #print ('Draw: %s>>%s' %(treeVar,name), drawoption, "goff,e")
                 #print 'Are the drawoptions a string ?', isinstance(drawoption, basestring)
                 #import pdb
                 #if len(drawoption) > 650:

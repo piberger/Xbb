@@ -364,8 +364,10 @@ for samp in data_samples:
 #-------------------------------------------------------------------------------------------------
 
 optionsList=[]
+shapecutList=[]
 
 def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind})
+def appendSCList(): shapecutList.append(shapecut)
 
 #nominal
 _cut = treecut
@@ -374,8 +376,10 @@ _name = title
 _weight = weightF
 _countHisto = "CountWeighted"
 _countbin = 0
+#shapecut = _cut
 #ie. take count from 'CountWeighted->GetBinContent(1)'
 appendList()
+#appendSCList()
 
 print "Using weightF:",weightF
 print 'Assign the systematics'
@@ -390,18 +394,16 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
 shapecut= ''
 cutlist =  _cut.split('&')
 rmv_sys = _cut.split('&')
+sysnomcut = ''
 print 'cutlist is ', cutlist
 
 #shape systematics
 for syst in systematics:
     for Q in UD:
         print 'Q is', Q
-        #default:
         _cut = treecut
         _name = title
         _weight = weightF
-        #replace cut string
-        #print 'old tree cut is', treecut
         if not 'UD' in syst:
             new_cut=sys_cut_suffix[syst]
             if not new_cut == 'nominal':
@@ -411,79 +413,44 @@ for syst in systematics:
                 _weight = weightF
                 for c_ in cutlist:
                     if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
-                    #if not old_str in c_ and not (c_ in rmv_sys): rmv_sys.append(c_)
-
-                #for c_ in cutlist:
-                #    if (old_str in c_):
-                #        nbra = c_.count('(')
-                #        nket = c_.count(')')
-                #        if nbra > nket:
-                #            newc_ = abs(nbra-nket)*'('+'1'
-                #            cutlist[cutlist.index(c_)] = newc_
-                #        elif nket > nbra:
-                #            newc_ = '1'+ abs(nbra-nket)*')'
-                #            cutlist[cutlist.index(c_)] = newc_
-                #        elif nket ==  nbra:
-                #            cutlist.remove(c_)
-
-                #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
         else:
             new_cut_list=sys_cut_suffix[syst]
             for new_cut in new_cut_list:
                 old_str,new_str=new_cut.split('>')
                 SYS = syst.split('_UD_')[0]
                 CAT = syst.split('_UD_')[1]
-                #print 'SYS is', SYS
-                #print 'CAT is', CAT
-                #print 'UD is', CAT
-                #print 'new string to be replaced is', old_str
-                #print 'it will be replaced by', new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q)
-                #_cut = treecut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
                 _cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
                 #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
                 for c_ in cutlist:
                     if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
-                    #if (not old_str in c_) and (not c_ in rmv_sys): rmv_sys.append(c_)
-                    #if old_str in c_ and not (c_ in rmv_sys): rmv_sys.append(c_)
-                    #if not (old_str in c_):
-                    #    nbra = c_.count('(')
-                    #    nket = c_.count(')')
-                    #    if nbra > nket:
-                    #        newc_ = abs(nbra-nket)*'('+'1'
-                    #        cutlist[cutlist.index(c_)] = newc_
-                    #    elif nket > nbra:
-                    #        newc_ = '1'+ abs(nbra-nket)*')'
-                    #        cutlist[cutlist.index(c_)] = newc_
-                    #    elif nket ==  nbra:
-                    #        cutlist.remove(c_)
             _name = title
             _weight = weightF
         #print 'the replaced _cut is', _cut
         print ''
 
-        print 'rmv_sys is', rmv_sys
-        print 'again, cutlist is', cutlist
-        for rsys in rmv_sys:
-            print 'rsys is', rsys
-            for c_ in cutlist:
-                if (rsys == c_):
-                    print 'rsys will be removes'
-                    nbra = c_.count('(')
-                    nket = c_.count(')')
-                    if nbra > nket:
-                        newc_ = abs(nbra-nket)*'('+'1'
-                        cutlist[cutlist.index(c_)] = newc_
-                    elif nket > nbra:
-                        newc_ = '1'+ abs(nbra-nket)*')'
-                        cutlist[cutlist.index(c_)] = newc_
-                    elif nket ==  nbra:
-                        cutlist.remove(c_)
+        #print 'rmv_sys is', rmv_sys
+        #print 'again, cutlist is', cutlist
+        #for rsys in rmv_sys:
+        #    print 'rsys is', rsys
+        #    for c_ in cutlist:
+        #        if (rsys == c_):
+        #            print 'rsys will be removes'
+        #            nbra = c_.count('(')
+        #            nket = c_.count(')')
+        #            if nbra > nket:
+        #                newc_ = abs(nbra-nket)*'('+'1'
+        #                cutlist[cutlist.index(c_)] = newc_
+        #            elif nket > nbra:
+        #                newc_ = '1'+ abs(nbra-nket)*')'
+        #                cutlist[cutlist.index(c_)] = newc_
+        #            elif nket ==  nbra:
+        #                cutlist.remove(c_)
 
-        shapecut = '&'.join(cutlist)
+        #shapecut = '&'.join(cutlist)
 
-        print 'after removing shape sys'
-        print 'cutlist', cutlist
-        print 'basiccut', shapecut
+        #print 'after removing shape sys'
+        #print 'cutlist', cutlist
+        #print 'basiccut', shapecut
 
         #sys.exit()
 
@@ -514,7 +481,38 @@ for syst in systematics:
             _treevar = treevar
         #append
         appendList()
+        #appendSCList()
         #print 'new tree cut is', _cut
+
+for opt in optionsList:
+    cutlist =  opt['cut'].split('&')
+    print 'rmv_sys is', rmv_sys
+    print 'again, cutlist is', cutlist
+    for rsys in rmv_sys:
+        print 'rsys is', rsys
+        for c_ in cutlist:
+            if (rsys == c_):
+                print 'rsys will be removes'
+                nbra = c_.count('(')
+                nket = c_.count(')')
+                if nbra > nket:
+                    newc_ = abs(nbra-nket)*'('+'1'
+                    cutlist[cutlist.index(c_)] = newc_
+                elif nket > nbra:
+                    newc_ = '1'+ abs(nbra-nket)*')'
+                    cutlist[cutlist.index(c_)] = newc_
+                elif nket ==  nbra:
+                    cutlist.remove(c_)
+
+    shapecut = '&'.join(cutlist)
+    if opt == optionsList[0]:
+        sysnomcut = shapecut
+    appendSCList()
+
+print 'after removing shape sys'
+print 'cutlist', cutlist
+print 'basiccut', shapecut
+#appendSCList()
 
 
 #UEPS
@@ -524,9 +522,11 @@ for weightF_sys in weightF_systematics:
     #if '_eff_m' in weightF_sys and 'Zee' in ROOToutname : continue
     for _weight in [config.get('Weights','%s_UP' %(weightF_sys)),config.get('Weights','%s_DOWN' %(weightF_sys))]:
         _cut = treecut
+        shapecut = sysnomcut
         _treevar = treevar
         _name = title
         appendList()
+        appendSCList()
 
 #lhe_muF
 #Appends options for each weight (up/down -> len =2 )
@@ -534,27 +534,39 @@ if len(lhe_muF)==2:
     for lhe_muF_num in lhe_muF:
         _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muF_num
         _cut = treecut
+        shapecut = sysnomcut
         _treevar = treevar
         _name = title
         _countHisto = "CountWeightedLHEWeightScale"
         _countbin = lhe_muF_num
         appendList()
+        appendSCList()
 
 if len(lhe_muR)==2:
     for lhe_muR_num in lhe_muR:
         _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muR_num
         _cut = treecut
+        shapecut = sysnomcut
         _treevar = treevar
         _name = title
         _countHisto = "CountWeightedLHEWeightScale"
         _countbin = lhe_muR_num
         appendList()
+        appendSCList()
+
+if len(optionsList) != len(shapecutList):
+    print '@ERROR: optionsList and shapecutList don\'t have equal size. Aborting'
+    sys.exit()
 
 _countHisto = "CountWeighted"
 _countbin = 0
 
-#print '===================\n'
-#print 'The option list is', optionsList
+print '===================\n'
+#print 'comparing cut strings'
+#for optold, optnew in zip(optionsList,shapecutList):
+#    print 'old option is', optold['cut']
+#    print 'new option is', optnew
+#sys.exit()
 
 
 print 'Preparations for Histograms (HistoMakeri)'
@@ -619,7 +631,8 @@ print '\n\t...fetching histos...\n'
 
 inputs=[]
 for job in all_samples:
-    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecut)))
+    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
+#    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
 
 
 # multiprocess=0
