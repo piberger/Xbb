@@ -58,7 +58,7 @@ class CorrectionFromFile:
 EWK = CorrectionFromFile()
 
 ewkCorrections = [
-    {'name': 'V_pt', 'inputTreeBranch': 'V_pt', 'outputTreeBranch': 'EWKandQCD_corrWeight', 'file': 'Zll/distributions/dat.ptv'},
+    {'name': 'V_pt', 'inputTreeBranch': 'V_pt', 'outputTreeBranch': 'EWKandQCD_corrWeight', 'file': '../weights/Zll/distributions/dat.ptv'},
 ]
 
 for ewkCorrection in ewkCorrections:
