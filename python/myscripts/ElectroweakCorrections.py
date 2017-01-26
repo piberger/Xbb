@@ -29,14 +29,18 @@ class CorrectionType:
     MC_AVERAGE_QCD, MC_ERROR_QCD, MC_AVERAGE_INC_PHOTON, MC_ERROR_INC_PHOTON, MC_AVERAGE_INC_GLU, MC_ERROR_INC_GLU = range(13)
 
 # **********************************************************************************************************************
-#  apply corrections text file
+#  Class to apply corrections text file
 # **********************************************************************************************************************
-class CorrectionFromFile:
+class TreeCopierWithCorrectionFromFile:
     def __init__(self):
         self.corrections = {}
+        self.delimiter = '  '
+        self.commentsMarker = '#'
 
-    def loadCSV(self, name, csvFileName):
-        self.corrections[name] = np.genfromtxt(open(csvFileName, "rb"), delimiter="  ", comments='#')
+    def loadCorrections(self, corrections):
+        for correction in corrections:
+            with open(correction['file'], 'rb') as correctionFile:
+                self.corrections[correction['name']] = np.genfromtxt(correctionFile, delimiter=self.delimiter, comments=self.commentsMarker)
 
     def getCorrection(self, name, v):
         index = self.corrections[name][:, CorrectionType.KINEMATIC].searchsorted(v)
@@ -51,79 +55,88 @@ class CorrectionFromFile:
 
         return corr
 
+    # ----------------------------------------------------------------------------------------------------------------------
+    # copy the tree and add new branch with weight from text file
+    # ----------------------------------------------------------------------------------------------------------------------
+    def copy(self, inputFileName, outputFileName):
+
+        ifile = ROOT.TFile.Open(inputFileName, "READ")
+        ofile = ROOT.TFile.Open(outputFileName, "RECREATE")
+
+        # copy other file objects
+        ifile.cd()
+        obj = ROOT.TObject
+        for key in ROOT.gDirectory.GetListOfKeys():
+            ifile.cd()
+            obj = key.ReadObj()
+            if obj.GetName() == 'tree':
+                continue
+            ofile.cd()
+            obj.Write(key.GetName())
+
+        ifile.cd()
+        tree = ifile.Get('tree')
+        ofile.cd()
+
+        # clone TTree
+        otree = tree.CloneTree(0)
+
+        # ----------------------------------------------------------------------------------------------------------------------
+        # set branches
+        # ----------------------------------------------------------------------------------------------------------------------
+
+        # set branch addresses for input variables
+        inputTreeBranches = {}
+        for correction in corrections:
+            inputTreeBranches[correction['inputBranch']] = np.array([0], dtype='f')
+            tree.SetBranchAddress(correction['inputBranch'], inputTreeBranches[correction['inputBranch']])
+
+        # define additional output branches
+        outputBranches = {}
+        for correction in corrections:
+            outputBranches[correction['outputBranch']] = np.array([0], dtype=float)
+            obranch = otree.Branch(correction['outputBranch'], outputBranches[correction['outputBranch']],
+                                   correction['outputBranch'] + '/D')
+
+        # ----------------------------------------------------------------------------------------------------------------------
+        # apply corrections
+        # ----------------------------------------------------------------------------------------------------------------------
+        nEntries = tree.GetEntries()
+        print "nEntries = ", nEntries
+        for entry in range(nEntries):
+            if entry % 10000 == 0:
+                print "processing entry: %d"%entry
+
+            tree.GetEntry(entry)
+            for correction in corrections:
+                branchName = correction['inputBranch']
+                outputBranches[correction['outputBranch']][0] = self.getCorrection(branchName, inputTreeBranches[branchName][0])
+            otree.Fill()
+
+        # ----------------------------------------------------------------------------------------------------------------------
+        # write and close files
+        # ----------------------------------------------------------------------------------------------------------------------
+        print "writing to file..."
+        ofile.cd()
+        otree.Write()
+
+        ofile.Close()
+        ifile.Close()
+
+        print "done."
 
 # **********************************************************************************************************************
-#  load correction text files
+#  main
 # **********************************************************************************************************************
-EWK = CorrectionFromFile()
+theTreeCopier = TreeCopierWithCorrectionFromFile()
 
-ewkCorrections = [
-    {'name': 'V_pt', 'inputTreeBranch': 'V_pt', 'outputTreeBranch': 'EWKandQCD_corrWeight', 'file': '../weights/Zll/distributions/dat.ptv'},
+corrections = [
+    {'name': 'V_pt', 'inputBranch': 'V_pt', 'outputBranch': 'EWKandQCD_corrWeight', 'file': '../weights/Zll/distributions/dat.ptv'},
 ]
 
-for ewkCorrection in ewkCorrections:
-    EWK.loadCSV(ewkCorrection['name'], ewkCorrection['file'])
+theTreeCopier.loadCorrections(corrections)
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# load input/output ROOT files
-# ----------------------------------------------------------------------------------------------------------------------
-ifile = ROOT.TFile.Open(sys.argv[1], "READ")
-ofile = ROOT.TFile(sys.argv[2], "RECREATE")
-
-# copy other file objects
-ifile.cd()
-obj = ROOT.TObject
-for key in ROOT.gDirectory.GetListOfKeys():
-    ifile.cd()
-    obj = key.ReadObj()
-    if obj.GetName() == 'tree':
-        continue
-    ofile.cd()
-    obj.Write(key.GetName())
-
-ifile.cd()
-tree = ifile.Get('tree')
-ofile.cd()
-
-# clone TTree
-otree = tree.CloneTree(0)
-
-# ----------------------------------------------------------------------------------------------------------------------
-# set branches
-# ----------------------------------------------------------------------------------------------------------------------
-
-# set branch addresses for input variables
-inputTreeVariables = {}
-for ewkCorrection in ewkCorrections:
-    inputTreeVariables[ewkCorrection['inputTreeBranch']] = np.array([0], dtype='f')
-    tree.SetBranchAddress(ewkCorrection['inputTreeBranch'], inputTreeVariables[ewkCorrection['inputTreeBranch']])
-
-# define additional output branches
-ewkCorrectionBranches = {}
-for ewkCorrection in ewkCorrections:
-    ewkCorrectionBranches[ewkCorrection['outputTreeBranch']] = np.array([0], dtype=float)
-    obranch = otree.Branch(ewkCorrection['outputTreeBranch'], ewkCorrectionBranches[ewkCorrection['outputTreeBranch']], ewkCorrection['outputTreeBranch'] + '/D')
-
-# ----------------------------------------------------------------------------------------------------------------------
-# apply corrections
-# ----------------------------------------------------------------------------------------------------------------------
-nEntries = tree.GetEntries()
-print "nEntries = ", nEntries
-for entry in range(nEntries):
-    tree.GetEntry(entry)
-    for ewkCorrection in ewkCorrections:
-        ewkCorrectionBranches[ewkCorrection['outputTreeBranch']][0] = EWK.getCorrection(ewkCorrection['inputTreeBranch'], inputTreeVariables[ewkCorrection['inputTreeBranch']][0])
-    otree.Fill()
-
-# ----------------------------------------------------------------------------------------------------------------------
-# write and close files
-# ----------------------------------------------------------------------------------------------------------------------
-print "writing to file..."
-ofile.cd()
-otree.Write()
-
-ofile.Close()
-ifile.Close()
-
-print "done."
+if len(sys.argv) == 3:
+    theTreeCopier.copy(sys.argv[1], sys.argv[2])
+else:
+    print "syntax: {file} input.root output.root".format(file=sys.argv[0] if len(sys.argv) > 0 else './file.py')
