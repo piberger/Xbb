@@ -58,7 +58,7 @@ class TreeCopierWithCorrectionFromFile:
     # ----------------------------------------------------------------------------------------------------------------------
     # copy the tree and add new branch with weight from text file
     # ----------------------------------------------------------------------------------------------------------------------
-    def copy(self, inputFileName, outputFileName):
+    def copy(self, inputFileName, outputFileName, applyNNLO):
 
         ifile = ROOT.TFile.Open(inputFileName, "READ")
         ofile = ROOT.TFile.Open(outputFileName, "RECREATE")
@@ -104,13 +104,18 @@ class TreeCopierWithCorrectionFromFile:
         nEntries = tree.GetEntries()
         print "nEntries = ", nEntries
         for entry in range(nEntries):
+            #if entry > 100:
+            #    break
             if entry % 10000 == 0:
                 print "processing entry: %d"%entry
 
             tree.GetEntry(entry)
             for correction in corrections:
                 branchName = correction['inputBranch']
-                outputBranches[correction['outputBranch']][0] = self.getCorrection(branchName, inputTreeBranches[branchName][0])
+                if eval(applyNNLO):
+                    outputBranches[correction['outputBranch']][0] = self.getCorrection(branchName, inputTreeBranches[branchName][0])
+                else:
+                    outputBranches[correction['outputBranch']][0] = 1
             otree.Fill()
 
         # ----------------------------------------------------------------------------------------------------------------------
@@ -136,7 +141,7 @@ corrections = [
 
 theTreeCopier.loadCorrections(corrections)
 
-if len(sys.argv) == 3:
-    theTreeCopier.copy(sys.argv[1], sys.argv[2])
+if len(sys.argv) == 4:
+    theTreeCopier.copy(sys.argv[1], sys.argv[2], sys.argv[3])#sys.argv[3] should be the string "True" or "False"
 else:
-    print "syntax: {file} input.root output.root".format(file=sys.argv[0] if len(sys.argv) > 0 else './file.py')
+    print "syntax: {file} input.root output.root useNNLO".format(file=sys.argv[0] if len(sys.argv) > 0 else './file.py')
