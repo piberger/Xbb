@@ -54,10 +54,6 @@ class HistoMaker:
         print "THE SAMPLE IS ",job.name
         print "=============================================================\n"
 
-        print 'quick is', quick
-        print 'subcut_ is', subcut_
-        print 'replacement_cut is', replacement_cut
-
         '''Function that produce the trees from a HistoMaker'''
          
         #print "Begin to extract the histos from trees (get_histos_from_tree)"
