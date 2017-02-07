@@ -784,6 +784,15 @@ namespace VHbb {
     return (SF > 0) ? SF : 0;
   }
 
+// weights correction for EWK NLO correction (for ZllHbb only !!!)
+double ptWeightEWK_Zllv2(int isDY ,double GenVbosons_pt){
+    double SF = 1.;
+    //for Z options
+    if (isDY > 0){
+        if (GenVbosons_pt > 100. && GenVbosons_pt < 3000) SF = -0.1808051+6.04146*(TMath::Power((GenVbosons_pt+759.098),-0.242556));
+    }
+    return SF>0?SF:0;
+}
 
 // weights correction for EWK NLO correction (for ZllHbb only !!!)
 double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nGenTop, int nGenHiggsBoson){

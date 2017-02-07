@@ -210,7 +210,8 @@ else:
 
 sys_cut_suffix=eval(config.get('LimitGeneral','sys_cut_suffix'))
 sys_weight_corr=eval(config.get('LimitGeneral','sys_weight_corr'))
-exclude_sys_weight = eval(config.get('LimitGeneral','exclude_sys_weight'))
+#exclude_sys_weight = eval(config.get('LimitGeneral','exclude_sys_weight'))
+decorrelate_sys_weight = eval(config.get('LimitGeneral','decorrelate_sys_weight'))
 sys_cut_include=[]
 if config.has_option('LimitGeneral','sys_cut_include'):
     sys_cut_include=eval(config.get('LimitGeneral','sys_cut_include'))
@@ -486,13 +487,13 @@ for syst in systematics:
 
 for opt in optionsList:
     cutlist =  opt['cut'].split('&')
-    print 'rmv_sys is', rmv_sys
-    print 'again, cutlist is', cutlist
+    #print 'rmv_sys is', rmv_sys
+    #print 'again, cutlist is', cutlist
     for rsys in rmv_sys:
-        print 'rsys is', rsys
+        #print 'rsys is', rsys
         for c_ in cutlist:
             if (rsys == c_):
-                print 'rsys will be removes'
+                #print 'rsys will be removes'
                 nbra = c_.count('(')
                 nket = c_.count(')')
                 if nbra > nket:
@@ -969,10 +970,9 @@ for DCtype in ['WS','TH']:
     f.write('process\t')
     #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
     #VH
-    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
+    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
     #VV
-    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
-    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+2))
+    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
     f.write('\n')
     # datacard yields
     f.write('rate\t')
@@ -981,7 +981,6 @@ for DCtype in ['WS','TH']:
     for c in setup: 
         f.write('\t%s'%final_histos['nominal'][c].Integral())
     f.write('\n')
-    print 'debug1'
     # get list of systematics in use
     InUse=eval(config.get('Datacard','InUse_%s_%s'%(str(anType), pt_region)))
     # write non-shape systematics
@@ -1000,7 +999,6 @@ for DCtype in ['WS','TH']:
             else:
                 f.write('\t-')
         f.write('\n')
-    print 'debug3'
     if not ignore_stats:
     # Write statistical shape variations
         if binstat:
@@ -1029,8 +1027,13 @@ for DCtype in ['WS','TH']:
         for it in range(0,columns):
             for c in setup:
                 if not it == setup.index(c): continue
-                if  setup[it] in exclude_sys_weight and weightF_sys in exclude_sys_weight[setup[it]]: f.write('\t-')
+                #if  setup[it] in exclude_sys_weight and weightF_sys in exclude_sys_weight[setup[it]]: f.write('\t-')
+                #else: f.write('\t1.0')
+                if  weightF_sys in decorrelate_sys_weight:
+                    if setup[it] in decorrelate_sys_weight[weightF_sys]: f.write('\t1.0')
+                    else: f.write('\t-')
                 else: f.write('\t1.0')
+                #if  setup[it] in decorrelate_sys_weight and weightF_sys in decorrelate_sys_weight[setup[it]]: f.write('\t1.0')
         f.write('\n')
     #OLD
     #for weightF_sys in weightF_systematics:
@@ -1096,12 +1099,10 @@ for DCtype in ['WS','TH']:
     for rateParam in rateParams:
         dictProcs=eval(config.get('Datacard',rateParam))
         for proc in dictProcs.keys():
-            #f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
-            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
+            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
+            #f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
 
-    print 'debug10'
     f.close()
-    print 'debug11'
     useSpacesInDC(fileName)
     print 'end useSpacesInDC'
 
