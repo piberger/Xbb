@@ -66,9 +66,10 @@ def MakeSubFolders(_input, RegioList):
 def MoveSubFolders(_input, _output):
     _plotfolder = _input.split('/')[-2]
     print 'gonna lunch the command'
-    print 'scp -r ' + _plotfolder + ' gaperrin@lxplus.cern.ch:' + _output
-    subprocess.call('scp -r ' + _plotfolder + ' gaperrin@lxplus.cern.ch:' + _output, shell = True)
-
+    copyCommand = 'scp -r ' + _plotfolder + ' piberger@lxplus.cern.ch:' + _output
+    print copyCommand 
+    subprocess.call(copyCommand, shell = True)
+    print 'that was delicious!'
 
 RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lowpt'),('Zll_CRZb_incl_highpt__','Zhf_Zll_highpt'),\
               ('Zll_CRZlight__','Zlf_Zll'),('Zll_CRZlight_lowpt__','Zlf_Zll_lowpt'),('Zll_CRZlight_highpt__','Zlf_Zll_highpt'),\
