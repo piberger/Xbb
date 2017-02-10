@@ -105,7 +105,7 @@ class TreeCopierWithCorrectionFromFile:
         # ----------------------------------------------------------------------------------------------------------------------
 
         #include the Vytpe reco here
-        zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 2
+        zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
         zMuSelection = lambda x : tree.selLeptons_pt[x] > 15 and  tree.selLeptons_looseIdPOG[x] and tree.selLeptons_relIso04[x] < 0.25
 
         # ----------------------------------------------------------------------------------------------------------------------
@@ -114,10 +114,10 @@ class TreeCopierWithCorrectionFromFile:
         nEntries = tree.GetEntries()
         print "nEntries = ", nEntries
         for entry in range(nEntries):
-            if entry > 100:
-                break
-            if entry % 10000 == 0:
-                print "processing entry: %d"%entry
+            #if entry > 100:
+            #    break
+            #if entry % 10000 == 0:
+            #    print "processing entry: %d"%entry
 
             tree.GetEntry(entry)
 
@@ -141,34 +141,45 @@ class TreeCopierWithCorrectionFromFile:
                 if tree.selLeptons_pt[zMuons[0]] > 20:
                     for i in zMuons[1:]:
                         if  tree.selLeptons_charge[zMuons[0]]*tree.selLeptons_charge[i] < 0:
-                            if tree.Vtype == 1:
-                                print 'problem 1'
+                            #if tree.Vtype == 1:
                             Vtype_new_ = 0
-
                             for var in vLeptonsvar:
-                                vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
-                                vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]
+                                vLeptonsBranches[var][0] = getattr(tree,'selLeptons_%s'%var)[0]
+                                vLeptonsBranches[var][1] = getattr(tree,'selLeptons_%s'%var)[i]
                             break
             elif len(zElectrons) >=  2 :
                 if tree.selLeptons_pt[zElectrons[0]] > 20:
                     for i in zElectrons[1:]:
                         if  tree.selLeptons_charge[zElectrons[0]]*tree.selLeptons_charge[i] < 0:
-                            if tree.Vtype == 0:
-                                print 'problem 2'
                             Vtype_new_ = 1
+                            #if tree.Vtype == 0:
                             for var in vLeptonsvar:
-                                vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
-                                vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]
+                                vLeptonsBranches[var][0] = getattr(tree,'selLeptons_%s'%var)[0]
+                                vLeptonsBranches[var][1] = getattr(tree,'selLeptons_%s'%var)[i]
                             break
             else:
-                #to handle missasigned Vtype 4 because of addtional electron cut
-                if tree.Vtype == 4 and len(zElectrons) + len(zMuons) > 0:
-                    Vtype_new_ = 5
-                else:
+                if tree.Vtype == 0 or tree.Vtype == 1:
+                    print '@ERROR: This is impossible, the new ele cut should be losser...'
+                    sys.exit(1)
+                #add lepton if Vtype 2 or 3
+                if tree.Vtype == 2 or tree.Vtype == 3:
                     Vtype_new_ = tree.Vtype
-                if Vtype_new_ == 2 or Vtype_new_ == 3:
                     for var in vLeptonsvar:
                         vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
+                #to handle missasigned Vtype 4 or -1 because of addtional electron cut
+                elif (tree.Vtype == 4 or tree.Vtype == -1) and len(zElectrons) + len(zMuons) > 0:
+                    Vtype_new_ = 5
+                #to handle missasigned Vtype 5 because of addtional electron cut
+                elif tree.Vtype == 5 and len(zElectrons) + len(zMuons) == 0:
+                    if tree.met_pt < 80:
+                        Vtype_new_ = -1
+                    else:
+                        Vtype_new_ = 4
+                #if none of the exception above happen, it is save to copy the Vtype
+                else:
+                    Vtype_new_ = tree.Vtype
+
+
 
             V = ROOT.TLorentzVector()
 
