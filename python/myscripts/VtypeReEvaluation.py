@@ -84,33 +84,21 @@ class TreeCopierWithCorrectionFromFile:
         otree.Branch('Vtype_new',Vtype_new,'Vtype_new/F')
 
         vLeptonsBranches={}
+        VBranches={}
         ##define Vleptons branch
-        vLeptonsvar = ['pt', 'eta', 'phi', 'relIso03', 'relIso04']
+        vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
         for var in vLeptonsvar:
             #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
             vLeptonsBranches[var] = np.zeros(21, dtype=np.float32)
             obranch = otree.Branch('vLeptons_new_%s'%var, vLeptonsBranches[var], 'vLeptons_new_%s[2]/F'%var)
 
-        #vLeptons_new_pt = array('f',[0]*2)
-        #otree.Branch('vLeptons_new_pt',vLeptons_new_pt,'vLeptons_new_pt[2]/F')
-
-        #vLeptons_new_eta = array('f',[0]*2)
-        #otree.Branch('vLeptons_new_eta',vLeptons_new_eta,'vLeptons_new_eta[2]/F')
-
-        #vLeptons_new_phi = array('f',[0]*2)
-        #otree.Branch('vLeptons_new_phi',vLeptons_new_phi,'vLeptons_new_phi[2]/F')
-
-        #vLeptons_new_relIso03 = array('f',[0]*2)
-        #otree.Branch('vLeptons_new_relIso03',vLeptons_new_relIso03,'vLeptons_new_relIso03[2]/F')
-
-        #vLeptons_new_relIso04 = array('f',[0]*2)
-        #otree.Branch('vLeptons_new_relIso04',vLeptons_new_relIso04,'vLeptons_new_relIso04[2]/F')
-
-
-        #do not have enough variable to do this
-        #def ele_mvaEleID_Trig_preselection(x) :
-            #return (tree.selLeptons_pt[x] >15 and abs(tree.selLeptons_etaSc[x]) < 1.4442 and tree.selLeptons_eleSieie[x] < 0.012 and tree.selLeptons_eleHoE[x] < 0.09 and (tree.selLeptons_eleEcalClusterIso[x]/tree.selLeptons_pt[x]) < 0.37 and (tree.selLeptons_eleHcalClusterIso[x]/tree.selLeptons_pt[x]) < 0.25 and (tree.selLeptons_dr03TkSumPt[x]/tree.selLeptons_pt[x]) < 0.18 and abs(tree.selLeptons_etaSc-tree.selLeptons_eta) < 0.0095 and abs(tree.selLeptons_phiSc-tree.selLeptons_phi) < 0.065 ) or (abs(tree.selLeptons_etaSc[x]) > 1.5660 and tree.selLeptons_eleSieie[x] < 0.033 and tree.selLeptons_eleHoE[x] <0.09 and (tree.selLeptons_eleEcalClusterIso[x]/tree.selLeptons_pt[x]) < 0.45 and (tree.selLeptons_eleHcalClusterIso[x]/tree.selLeptons_pt[x]) < 0.28 and (tree.selLeptons_dr03TkSumPt[x]/tree.selLeptons_pt[x]) < 0.18)
-
+        ##define Vleptons branch
+        Vvar = ['pt', 'eta', 'phi', 'mass']
+        LorentzDic = {'pt':'Pt','eta':'Eta','phi':'Phi','mass':'M'}
+        for var in Vvar:
+            #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
+            VBranches[var] = np.zeros(21, dtype=np.float32)
+            obranch = otree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
 
         # ----------------------------------------------------------------------------------------------------------------------
         # define all the lambda function
@@ -137,13 +125,6 @@ class TreeCopierWithCorrectionFromFile:
             Vtype_new_ = -1
             V_mass_new = -1
 
-            #lep_pt = []
-            #lep_eta = []
-            #lep_phi = []
-            #lep_iso3 = []
-            #lep_iso4 = []
-
-
             vLeptons_new = []
             #get all the lepton index
             lep_index = range(len(tree.selLeptons_pt))
@@ -167,12 +148,6 @@ class TreeCopierWithCorrectionFromFile:
                             for var in vLeptonsvar:
                                 vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
                                 vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]
-
-                            #lep_pt = [tree.selLeptons_pt[zMuons[0]],tree.selLeptons_pt[i]]
-                            #lep_eta = [tree.selLeptons_eta[zMuons[0]],tree.selLeptons_eta[i]]
-                            #lep_phi = [tree.selLeptons_phi[zMuons[0]],tree.selLeptons_phi[i]]
-                            #lep_iso3 = [tree.selLeptons_relIso03[zMuons[0]],tree.selLeptons_relIso03[i]]
-                            #lep_iso4 = [tree.selLeptons_relIso04[zMuons[0]],tree.selLeptons_relIso04[i]]
                             break
             elif len(zElectrons) >=  2 :
                 if tree.selLeptons_pt[zElectrons[0]] > 20:
@@ -184,39 +159,32 @@ class TreeCopierWithCorrectionFromFile:
                             for var in vLeptonsvar:
                                 vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
                                 vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]
-                            #lep_pt = [tree.selLeptons_pt[zElectrons[0]],tree.selLeptons_pt[i]]
-                            #lep_eta = [tree.selLeptons_eta[zElectrons[0]],tree.selLeptons_eta[i]]
-                            #lep_phi = [tree.selLeptons_phi[zElectrons[0]],tree.selLeptons_phi[i]]
-                            #lep_iso3 = [tree.selLeptons_relIso03[zElectrons[0]],tree.selLeptons_relIso03[i]]
-                            #lep_iso4 = [tree.selLeptons_relIso04[zElectrons[0]],tree.selLeptons_relIso04[i]]
                             break
             else:
-                Vtype_new_ = tree.Vtype
-                for var in vLeptonsvar:
-                    vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
-                    vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]
-                #lep_pt = [tree.vLeptons_pt[0],tree.vLeptons_pt[1]]
-                #lep_eta = [tree.selLeptons_eta[0],tree.selLeptons_eta[1]]
-                #lep_phi = [tree.selLeptons_phi[0],tree.selLeptons_phi[1]]
-                #lep_iso3 = [tree.selLeptons_relIso03[0],tree.selLeptons_relIso03[1]]
-                #lep_iso4 = [tree.selLeptons_relIso04[0],tree.selLeptons_relIso04[1]]
-                #V_mass_new_ = tree.V_mass
+                #to handle missasigned Vtype 4 because of addtional electron cut
+                if tree.Vtype == 4 and len(zElectrons) + len(zMuons) > 0:
+                    Vtype_new_ = 5
+                else:
+                    Vtype_new_ = tree.Vtype
+                if Vtype_new_ == 2 or Vtype_new_ == 3:
+                    for var in vLeptonsvar:
+                        vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
 
-	        #event.V=sum(map(lambda x:x.p4(), event.vLeptons),ROOT.reco.Particle.LorentzVector(0.,0.,0.,0.))
-	        #if event.Vtype > 1 :
-            #    event.V+=ROOT.reco.Particle.LorentzVector(event.met.p4().x(),event.met.p4().y(),0,event.met.p4().pt())
-            #if event.V.Et() > event.V.pt() :
-            #    event.V.goodMt = sqrt(event.V.Et()**2-event.V.pt()**2)
-            #else :
-            #    event.V.goodMt = -sqrt(-event.V.Et()**2+event.V.pt()**2)
+            V = ROOT.TLorentzVector()
+
+            if Vtype_new_ == 0 or Vtype_new_ == 1:
+                lep1 = ROOT.TLorentzVector()
+                lep2 = ROOT.TLorentzVector()
+                lep1.SetPtEtaPhiM(vLeptonsBranches['pt'][0], vLeptonsBranches['eta'][0], vLeptonsBranches['phi'][0], vLeptonsBranches['mass'][0])
+                lep2.SetPtEtaPhiM(vLeptonsBranches['pt'][1], vLeptonsBranches['eta'][1], vLeptonsBranches['phi'][1], vLeptonsBranches['mass'][1])
+                V = lep1+lep2
+                for var in Vvar:
+                    VBranches[var][0] = getattr(V,LorentzDic[var])()
+            else:
+                for var in Vvar:
+                    VBranches[var][0] = getattr(tree,'V_%s'%var)
 
             Vtype_new[0] = Vtype_new_
-
-            #print 'debug loop'
-            #for var in vLeptonsvar:
-            #    print 'var is', var
-            #    print vLeptonsBranches[var][0]
-            #    print vLeptonsBranches[var][1]
 
             otree.Fill()
 
