@@ -223,19 +223,14 @@ def doPlot():
     #print 'get_histos_from_tree DONE'
     Overlaylist = []
     for i,job in enumerate(mcsamples):
-        #print 'job.name',job.name,"mass==",mass
-        #hTempList, typList = Plotter.get_histos_from_tree(job)
         hDictList = outputs[i]
         if job.name in mass:
-            #print 'job.name == mass'
             histoList = []
             for v in range(0,len(vars)):
                 histoCopy = deepcopy(hDictList[v].values()[0])
                 histoCopy.SetTitle(job.name)
                 histoList.append(histoCopy)
             Overlaylist.append(histoList)
-#            Overlaylist.append(deepcopy([hDictList[v].values()[0] for v in range(0,len(vars))]))
-# >>>>>>> silviodonato/master
         for v in range(0,len(vars)):
             Lhistos[v].append(hDictList[v].values()[0])
             Ltyps[v].append(hDictList[v].keys()[0])
@@ -324,8 +319,8 @@ def doPlot():
         Stacks[v].datas = Ldatas[v]
         Stacks[v].datatyps = Ldatatyps[v]
         Stacks[v].datanames= Ldatanames[v]
-        #if SignalRegion:
-        #    Stacks[v].overlay = Overlaylist[v] ## from 
+        if SignalRegion:
+            Stacks[v].overlay = Overlaylist[v] ## from
         Stacks[v].lumi = lumi
         Stacks[v].jobnames= Ljobnames[v]
         Stacks[v].normalize = eval(config.get(section,'Normalize'))

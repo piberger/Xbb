@@ -45,15 +45,12 @@ def MakeSubFolders(_input, RegioList):
             if not name in file: continue
             folder2 = os.path.join(_plotfolder,folder)
             if not os.path.isdir(folder2):
-                print 'I will make the dir'
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
             shutil.copy(file,folder2)
-            print 'yeah man'
             if os.path.isfile('pdf/'+file.replace('png','pdf')):
-                print 'pdf is here'
                 shutil.copy('pdf/'+file.replace('png','pdf'), folder2)
             else:
                 print 'pdf/'+file.replace('png','pdf'), 'doesn\'t exist'
@@ -82,7 +79,8 @@ RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lo
               ('Zuu_CRttbar__','ttbar_Zuu'),('Zuu_CRttbar_lowpt__','ttbar_Zuu_lowpt'),('Zuu_CRttbar_highpt__','ttbar_Zuu_highpt'),\
               ('Zee_CRZb_incl_new','Zhf_Zee_new'),('Zuu_CRZb_incl_new','Zhf_Zuu_new'),('Zll_CRZb_inclPhi2p3','Zhf_Zll_Phi2p3'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZlightPhi2p3','Zlf_Zll_Phi2p3'),('Zll_CRZlightPhi2p5','Zlf_Zll_Phi2p5'),('BasicCuts_low','BasicCuts_low'),('BasicCuts_high','BasicCuts_high'),
               ('Zll_BasicCuts','ZBasicCuts_Zll'),\
-              ('ZeeBDT_lowpt','ZSR_Zee_lowpt'),('ZeeBDT_highpt','ZSR_Zee_highpt'),('ZuuBDT_lowpt','ZSR_Zuu_lowpt'),('ZuuBDT_highpt','ZSR_Zuu_highpt')\
+              ('ZeeBDT_lowpt','ZSR_Zee_lowpt'),('ZeeBDT_highpt','ZSR_Zee_highpt'),('ZuuBDT_lowpt','ZSR_Zuu_lowpt'),('ZuuBDT_highpt','ZSR_Zuu_highpt'),\
+              ('ZllBDT__','ZSR_Zll'),('ZllBDT_lowpt__','ZSR_Zll_lowpt'),('ZllBDT_highpt__','ZSR_Zll_highpt')
               ]
 
 MakeSubFolders(_input, RegionList)
