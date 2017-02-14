@@ -166,7 +166,7 @@ COLUMN_QCD_NNLO = 2
 
 # see https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHXSWGVHYR4
 theTreeCopier.addOutputBranch(
-    branchName='SignalCorr_nloEWK_nnloQCD',
+    branchName='SignalCS_nloEWK_nnloQCD',
     branchFormula=lambda x: sigmaTotal * x['nnloQCD'][COLUMN_QCD_NNLO] * (1.0 + x['deltaEWK'][COLUMN_EWK_NLO] / x['deltaEWK'][COLUMN_EWK_BORN])
 )
 
