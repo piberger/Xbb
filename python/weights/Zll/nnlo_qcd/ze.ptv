@@ -1,5 +1,7 @@
 # extracted from https://twiki.cern.ch/twiki/pub/LHCPhysics/LHCHXSWGVHYR4/QCDdist.tgz
 # ze/ze_inc_dyn_s2g0.top
+# sig-tot  index 0
+# 0.50000000D+00 0.15000000D+01 0.10155859D+02 0.81004374D-02
 # ptW-0-0  index 3
 0.00000000E+00 0.10000000E+02 0.14240260E-01 0.11705810E-03
 0.10000000E+02 0.20000000E+02 0.40551870E-01 0.20243730E-03
