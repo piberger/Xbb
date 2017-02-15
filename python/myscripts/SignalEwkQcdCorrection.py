@@ -173,7 +173,7 @@ class TreeCopierWithCorrectionFromFile:
             ifile = ROOT.TFile.Open(inputFileName, "READ")
             VptHistogramSignal = ROOT.TH1D("Vpt", "Vpt", 100, 0.0, 500.0)
             VptHistogramSignal.SetDirectory(0)
-            print VptHistogramSignal
+
             tree = ifile.Get('tree')
             inputBranchValue = np.array([0], dtype='f')
             tree.SetBranchAddress("V_pt", inputBranchValue)
@@ -186,13 +186,12 @@ class TreeCopierWithCorrectionFromFile:
                 VptHistogramSignal.Fill(inputBranchValue[0])
             ifile.Close()
 
-            print VptHistogramSignal
             # or fill it from tree if it is not found
             if not VptHistogram:
                 print "Vpt distribution for normalization is taken from TREE:", inputFileName
                 VptHistogram = VptHistogramSignal.Clone("Vpt_SIGNAL")
 
-            # compute relative corrections by dividing "nnloQCD * (1 + delta_EWK)" over uncorrected histogram
+            # compute relative corrections by dividing "nnloQCD * (1 + delta_EWK)" over "powheg"
             ratioHistograms = {}
             for outputBranch in self.outputBranches:
                 print "add ratio:", outputBranch['name']
@@ -200,7 +199,6 @@ class TreeCopierWithCorrectionFromFile:
                 ratioHistograms[outputBranch['name']].Divide(VptHistogram)
                 ratioHistograms[outputBranch['name']].SetDirectory(rootFile)
 
-            print VptHistogramSignal
             # apply relative corrections (normalization is still wrong)
             ifile = ROOT.TFile.Open(inputFileName, "READ")
             tree = ifile.Get('tree')
@@ -216,7 +214,6 @@ class TreeCopierWithCorrectionFromFile:
                 for outputBranch in self.outputBranches:
                     histogramsCorr[outputBranch['name']].Fill(inputBranchValue[0], ratioHistograms[outputBranch['name']].GetBinContent(ratioHistograms[outputBranch['name']].GetXaxis().FindBin(inputBranchValue[0])))
 
-            print VptHistogramSignal
             # compute normalization and apply it to histograms
             #  take Vpt histogram from SIGNAL here
             ifile.Close()
@@ -253,7 +250,7 @@ except:
     sys.exit(9)
 
 theTreeCopier = TreeCopierWithCorrectionFromFile()
-theTreeCopier.setInputBranch('GenVboson_pt')
+theTreeCopier.setInputBranch('V_pt')
 
 # --------------------------------------------------------------------------------------------------------------
 # prepare: reads the (N)NLO cross sections from the files and computes the normalization factors.
