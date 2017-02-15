@@ -123,16 +123,17 @@ class TreeCopierWithCorrectionFromFile:
         print "done."
 
     # prepare the file with multiplicative weights
-    def prepare(self, silent=False, inputFileName = None):
+    def prepare(self, silent=False, inputFileName = None, vptHistogramFileName = None):
         outputTable = []
         histograms = {}
         histogramsCorr = {}
+        ifileVpt = None
 
         xbbPath = '/'.join(os.path.realpath(__file__).split('/')[:-3]) + '/'
         tempHistogramName = xbbPath + 'python/weights/Zll_temp_histograms.root'
         print "creating temporary .root file:", tempHistogramName
         rootFile = ROOT.TFile(tempHistogramName, 'RECREATE')
-        VptHistogram = ROOT.TH1D("Vpt","Vpt", 100, 0.0, 500.0)
+
 
         for outputBranch in self.outputBranches:
             histograms[outputBranch['name']] = ROOT.TH1D(outputBranch['name'], outputBranch['name'], 100, 0.0, 500.0)
@@ -156,8 +157,23 @@ class TreeCopierWithCorrectionFromFile:
 
         if inputFileName:
 
-            # fill uncorrected histogram
+            VptHistogram = None
+
+            # read Vpt distribution as a histogram from .root file
+            if vptHistogramFileName:
+                ifileVpt = ROOT.TFile.Open(vptHistogramFileName, "READ")
+
+                # read Vpt distribution as a histogram
+                VptHistogram = ifileVpt.Get('VptIncl_AjetIncl__V_pT')
+                if VptHistogram:
+                    VptHistogram.SetDirectory(0)
+                    print "Vpt distribution for normalization is taken from HISTO:", vptHistogramFileName
+
+            # signal sample Vpt histogram
             ifile = ROOT.TFile.Open(inputFileName, "READ")
+            VptHistogramSignal = ROOT.TH1D("Vpt", "Vpt", 100, 0.0, 500.0)
+            VptHistogramSignal.SetDirectory(0)
+            print VptHistogramSignal
             tree = ifile.Get('tree')
             inputBranchValue = np.array([0], dtype='f')
             tree.SetBranchAddress("V_pt", inputBranchValue)
@@ -167,8 +183,14 @@ class TreeCopierWithCorrectionFromFile:
                 if entry % 10000 == 0:
                     print "processing entry: %d" % entry
                 tree.GetEntry(entry)
-                VptHistogram.Fill(inputBranchValue[0])
+                VptHistogramSignal.Fill(inputBranchValue[0])
             ifile.Close()
+
+            print VptHistogramSignal
+            # or fill it from tree if it is not found
+            if not VptHistogram:
+                print "Vpt distribution for normalization is taken from TREE:", inputFileName
+                VptHistogram = VptHistogramSignal.Clone("Vpt_SIGNAL")
 
             # compute relative corrections by dividing "nnloQCD * (1 + delta_EWK)" over uncorrected histogram
             ratioHistograms = {}
@@ -178,6 +200,7 @@ class TreeCopierWithCorrectionFromFile:
                 ratioHistograms[outputBranch['name']].Divide(VptHistogram)
                 ratioHistograms[outputBranch['name']].SetDirectory(rootFile)
 
+            print VptHistogramSignal
             # apply relative corrections (normalization is still wrong)
             ifile = ROOT.TFile.Open(inputFileName, "READ")
             tree = ifile.Get('tree')
@@ -193,10 +216,12 @@ class TreeCopierWithCorrectionFromFile:
                 for outputBranch in self.outputBranches:
                     histogramsCorr[outputBranch['name']].Fill(inputBranchValue[0], ratioHistograms[outputBranch['name']].GetBinContent(ratioHistograms[outputBranch['name']].GetXaxis().FindBin(inputBranchValue[0])))
 
+            print VptHistogramSignal
             # compute normalization and apply it to histograms
+            #  take Vpt histogram from SIGNAL here
             ifile.Close()
             for outputBranch in self.outputBranches:
-                scaleFactor = 1.0 * VptHistogram.Integral() / histogramsCorr[outputBranch['name']].Integral()
+                scaleFactor = 1.0 * VptHistogramSignal.Integral() / histogramsCorr[outputBranch['name']].Integral()
                 print "normalization factor:", scaleFactor
                 histogramsCorr[outputBranch['name']].Scale(scaleFactor)
                 ratioHistograms[outputBranch['name']].Scale(scaleFactor)
@@ -214,6 +239,8 @@ class TreeCopierWithCorrectionFromFile:
 
         rootFile.Write()
         rootFile.Close()
+        if ifileVpt:
+            ifileVpt.Close()
 
 # **********************************************************************************************************************
 #  main
@@ -226,13 +253,13 @@ except:
     sys.exit(9)
 
 theTreeCopier = TreeCopierWithCorrectionFromFile()
-theTreeCopier.setInputBranch('V_pt')
+theTreeCopier.setInputBranch('GenVboson_pt')
 
 # --------------------------------------------------------------------------------------------------------------
 # prepare: reads the (N)NLO cross sections from the files and computes the normalization factors.
 # It writes a file of multiplicative weights in the end.
 # --------------------------------------------------------------------------------------------------------------
-if len(sys.argv) == 3 and sys.argv[1] == 'prepare':
+if len(sys.argv) >= 3 and sys.argv[1] == 'prepare':
     print "running prepare:"
 
     # define text files which include the corrections
@@ -263,7 +290,7 @@ if len(sys.argv) == 3 and sys.argv[1] == 'prepare':
             1.0 + x['deltaEWK'][COLUMN_EWK_NLO] / x['deltaEWK'][COLUMN_EWK_BORN])
     )
 
-    theTreeCopier.prepare(silent=False, inputFileName=sys.argv[2])
+    theTreeCopier.prepare(silent=False, inputFileName=sys.argv[2], vptHistogramFileName=sys.argv[3] if len(sys.argv) > 3 else None)
 
 # --------------------------------------------------------------------------------------------------------------
 # add a branch containing the multiplicative weights calculated above
