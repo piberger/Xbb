@@ -47,6 +47,7 @@ config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
 TrainFlag = eval(config.get('Analysis','TrainFlag'))
+ApplyCutDuringSys = eval(config.get('Analysis','ApplyCutDuringSys'))
 btagLibrary = config.get('BTagReshaping','library')
 samplesinfo=config.get('Directories','samplesinfo')
 channel=config.get('Configuration','channel')
@@ -1008,6 +1009,14 @@ for job in info:
 
                 tree.GetEntry(entry)
 
+                if channel == "Zmm" and ApplyCutDuringSys:
+                    if tree.vLeptons_new_pt[0] < 20 or tree.vLeptons_new_pt[1] < 20 or tree.V_new_pt < 50:
+                        continue
+                    if job.type == 'DATA' and 'DoubleMuon' in job.name and tree.Vtype_new != 0:
+                        continue
+                    if job.type == 'DATA' and 'DoubleEG' in job.name and tree.Vtype_new != 1:
+                        continue
+
                 ### Vtype correction for V25 samples
                 if channel == "Zmm" and recomputeVtype:
 
@@ -1141,9 +1150,10 @@ for job in info:
                                 bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
 
                                 bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, sysMap[syst+sdir], "CSV", btag_calibrators)
-                    if Stop_after_BTagweights:
-                        newtree.Fill()
-                        continue
+
+                if channel == "Zmm" and applyBTagweights and Stop_after_BTagweights:
+                    newtree.Fill()
+                    continue
 
                 ### Fill new variable from configuration ###
                 for variableName in newVariableNames:
