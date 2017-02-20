@@ -1009,13 +1009,13 @@ for job in info:
 
                 tree.GetEntry(entry)
 
-                if channel == "Zmm" and ApplyCutDuringSys:
-                    if tree.vLeptons_new_pt[0] < 20 or tree.vLeptons_new_pt[1] < 20 or tree.V_new_pt < 50:
-                        continue
-                    if job.type == 'DATA' and 'DoubleMuon' in job.name and tree.Vtype_new != 0:
-                        continue
-                    if job.type == 'DATA' and 'DoubleEG' in job.name and tree.Vtype_new != 1:
-                        continue
+                #if channel == "Zmm" and ApplyCutDuringSys:
+                #    if tree.vLeptons_new_pt[0] < 20 or tree.vLeptons_new_pt[1] < 20 or tree.V_new_pt < 50:
+                #        continue
+                #    if job.type == 'DATA' and 'DoubleMuon' in job.name and tree.Vtype_new != 0:
+                #        continue
+                #    if job.type == 'DATA' and 'DoubleEG' in job.name and tree.Vtype_new != 1:
+                #        continue
 
                 ### Vtype correction for V25 samples
                 if channel == "Zmm" and recomputeVtype:
@@ -1101,6 +1101,15 @@ for job in info:
                             VBranches[var][0] = getattr(tree,'V_%s'%var)
 
                     Vtype_new[0] = Vtype_new_
+
+                    #skip event not satisfying kinematic lepton cut
+                    if  vLeptonsBranches['pt'][0] < 20 or vLeptonsBranches['pt'][1] < 20 or VBranches['pt'] < 50:
+                        continue
+                    if job.type == 'DATA' and 'DoubleMuon' in job.name and  Vtype_new_ != 0:
+                        continue
+                    if job.type == 'DATA' and 'DoubleEG' in job.name and  Vtype_new_ != 1:
+                        continue
+
 
                     if stopAfterVtypeCorrection:
                         newtree.Fill()
