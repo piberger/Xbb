@@ -62,7 +62,7 @@ class StackMaker:
         if '<mass>' in self.name:
             self.name = self.name.replace('<mass>',self.mass)
             #print self.name
-        if conftg.has_option('Cuts',region):
+        if config.has_option('Cuts',region):
             cut = config.get('Cuts',region)
         else:
             cut = None

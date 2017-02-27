@@ -319,8 +319,8 @@ def doPlot():
         Stacks[v].datas = Ldatas[v]
         Stacks[v].datatyps = Ldatatyps[v]
         Stacks[v].datanames= Ldatanames[v]
-        if SignalRegion:
-            Stacks[v].overlay = Overlaylist[v] ## from
+        #if SignalRegion:
+        #    Stacks[v].overlay = Overlaylist[v] ## from
         Stacks[v].lumi = lumi
         Stacks[v].jobnames= Ljobnames[v]
         Stacks[v].normalize = eval(config.get(section,'Normalize'))
