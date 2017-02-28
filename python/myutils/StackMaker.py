@@ -213,7 +213,7 @@ class StackMaker:
         for key in self.setup:
           print "The sample in setup are", key
 
-        self.histos=[histo_dict[key] for key in self.setup]
+        self.histos=[histo_dict[key] for key in self.setup if key in histo_dict]
         print "again, self.histos is",self.histos
         self.typs=self.setup
 

@@ -206,10 +206,10 @@ class HistoMaker:
                 if options['blind']:
                     lowLimitBlindingMass    = 90
                     highLimitBlindingMass   = 140
-                    lowLimitBlindingBDT     = 0.9
+                    lowLimitBlindingBDT     = 0.4
                     lowLimitBlindingDR      = 0.8
                     highLimitBlindingDR     = 1.6
-                    if 'H' in treeVar and 'mass' in treeVar:
+                    if 'mass' in treeVar:
                         lowLimitBlindingMass =hTree.GetBinLowEdge(hTree.FindBin(lowLimitBlindingMass))
                         highLimitBlindingMass =hTree.GetBinLowEdge(hTree.FindBin(highLimitBlindingMass))+ hTree.GetBinWidth(hTree.GetBin(highLimitBlindingMass))
                         veto = ("(%s <%s || %s > %s)" %(treeVar,lowLimitBlindingMass,treeVar,highLimitBlindingMass))
