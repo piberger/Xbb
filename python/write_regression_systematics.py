@@ -1103,17 +1103,17 @@ for job in info:
                     Vtype_new[0] = Vtype_new_
 
                     #skip event not satisfying kinematic lepton cut
-                    if  vLeptonsBranches['pt'][0] < 20 or vLeptonsBranches['pt'][1] < 20 or VBranches['pt'] < 50:
+                    if  vLeptonsBranches['pt'][0] < 20 or vLeptonsBranches['pt'][1] < 20 or VBranches['pt'][0] < 50:
                         continue
                     if job.type == 'DATA' and 'DoubleMuon' in job.name and  Vtype_new_ != 0:
                         continue
                     if job.type == 'DATA' and 'DoubleEG' in job.name and  Vtype_new_ != 1:
                         continue
 
-
                     if stopAfterVtypeCorrection:
                         newtree.Fill()
                         continue
+
                 if channel == "Zmm" and applyBTagweights and job.type != 'DATA':
 
                     MakeSysRefMap()
