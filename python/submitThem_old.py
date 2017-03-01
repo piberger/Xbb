@@ -189,7 +189,7 @@ def compile_macro(config,macro):
 
 def training(additional_):
 
-    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     print train_list
     for item in train_list:
         #No subcut declared. Just perform classical training
@@ -221,7 +221,7 @@ def ploting(additional_ = None, splitvar = False):
         if not config.has_option(section, 'subcut'):
             print 'No subcut for the plot region', region
             if splitvar:
-                vars = (config.get('Plot:%s'%region, 'vars')).split(',')
+                vars = [x.strip() for x in (config.get('Plot:%s'%region, 'vars')).split(',')]
                 for var in vars:
                     var_ = 'VAR_%s'%(var)
                     if additional_: repDict['additional']= additional_ +'__'+var_
@@ -397,7 +397,7 @@ def getfilelist(job):
 if opts.task == 'train': training('')
 
 elif opts.task == 'splitsubcaching':
-    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     for region in train_list:
          print 'region is', region
          path = config.get("Directories","samplepath")
@@ -414,12 +414,12 @@ elif opts.task == 'splitsubcaching':
              training(additional_)
 
 if opts.task == 'dc':
-    DC_vars= (config.get('LimitGeneral','List')).split(',')
+    DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars
 
 Plot_vars = ['']
 if opts.task == 'plot' or opts.task == 'splitvarplot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
-    Plot_vars= (config.get('Plot_general','List')).split(',')
+    Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
 
 
 if not opts.task == 'prep':
@@ -458,7 +458,7 @@ if opts.task == 'splitvarplot':
 #    plitcaching()
 
 if opts.task == 'splitcaching':
-    Plot_vars= (config.get('Plot_general','List')).split(',')
+    Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
         section='Plot:%s'%region
@@ -491,7 +491,7 @@ if opts.task == 'splitcaching':
                     submit(region,repDict)
 
 if opts.task == 'splitcachingdc':
-    DC_vars= (config.get('LimitGeneral','List')).split(',')
+    DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     repDict['queue'] = 'all.q'
     #Loop over all the dcs
     for item in DC_vars:
@@ -680,12 +680,13 @@ elif( opts.task == 'split' ):
 
 # BDT optimisation
 elif opts.task == 'mva_opt':
-    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
+    train_list = [x.strip() for x in config.get('MVALists','List_for_submitscript').split(',')]
     print train_list
     for item in train_list:
         total_number_of_steps=1
         setting = ''
-        for par in (config.get('Optimisation','parameters').split(',')):
+        optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
+        for par in optimizationParameters:
             scan_par=eval(config.get('Optimisation',par))
             setting+=par+'='+str(scan_par[0])+':'
             if len(scan_par) > 1 and scan_par[2] != 0:
@@ -695,7 +696,8 @@ elif opts.task == 'mva_opt':
         submit(item,repDict,False)
         main_setting=setting
         # Scanning all the parameters found in the training config in the Optimisation sector
-        for par in (config.get('Optimisation','parameters').split(',')):
+        optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
+        for par in optimizationParameters:
             scan_par=eval(config.get('Optimisation',par))
             if len(scan_par) > 1 and scan_par[2] != 0:
                 for step in range(scan_par[2]):
@@ -720,7 +722,8 @@ elif opts.task == 'mva_opt_eval':
     #Read weights from optimisaiton config, store the in a list (copied from mva_opt)
     total_number_of_steps=1
     setting = ''
-    for par in (config.get('Optimisation','parameters').split(',')):
+    optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
+    for par in optimizationParameters:
         scan_par=eval(config.get('Optimisation',par))
         setting+=par+'='+str(scan_par[0])+':'
         if len(scan_par) > 1 and scan_par[2] != 0:
