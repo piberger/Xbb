@@ -99,7 +99,7 @@ if not opts.ftag == '':
 
     #copy config files
     for item in configs:
-        shutil.copyfile(item,'%s/%s/%s'%(tagDir,opts.ftag,item.strip(en)))
+        shutil.copyfile(item,'%s/%s/%s'%(tagDir,opts.ftag,item.replace(en, '')))
 
 if(debugPrintOUts): print configs
 config = BetterConfigParser()
