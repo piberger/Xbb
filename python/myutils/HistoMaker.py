@@ -10,7 +10,7 @@ from copy import copy
 import time
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList,GroupDict=None,filelist=None,mergeplot=False,sample_to_merge=None):
+    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
@@ -30,7 +30,8 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge)# created cached tree i.e. create new skimmed trees using the list of cuts
+        print "mergecachingpart:::", mergeCachingPart
+        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge,mergeCachingPart)# created cached tree i.e. create new skimmed trees using the list of cuts
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             return 

@@ -5,7 +5,7 @@ from samplesclass import Sample
 import time
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
@@ -34,9 +34,14 @@ class TreeCache:
         self.__find_min_cut()# store the cut list as one string in minCut, using ROOT syntax (i.e. || to separate between each cut) 
         self.__sampleList = sampleList
         self.sample_to_merge = sample_to_merge
-        print('\n\t>>> Caching FILES <<<\n')
-        self.__cache_samples(filelist,mergeplot)
-        
+        self.mergeCachingPart = mergeCachingPart
+        if self.mergeCachingPart > -1:
+            print('\n\t>>> Caching FILES, part ' + str(self.mergeCachingPart) +' <<<\n')
+            self.__merge_cache_samples(filelist, self.mergeCachingPart)
+        else:
+            print('\n\t>>> Caching FILES <<<\n')
+            self.__cache_samples(filelist,mergeplot)
+
     def putOptions(self):
         return (self.__sampleList,self.__doCache,self.__tmpPath,self._cutList,self.__hashDict,self.minCut,self.path)
     
@@ -114,7 +119,7 @@ class TreeCache:
         if '/scratch/' in  tmpfile: command = 'rm %s' %(tmpfile)
         else: command = 'gfal-rm %s' %(tmpfile)
 
-    def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False):
+    def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False, mergeCachingPart = -1):
 
         start_time = time.time()
         print("Caching the sample")
@@ -152,6 +157,27 @@ class TreeCache:
                 from mergetreePSI import mergetreePSI_def
                 mergetreePSI_def(self.path, self.__cachedPath, theHash, "tmp_",    sample.identifier, hashlib.sha224(self.minCut).hexdigest(),      "",   "")
                 return 0
+        elif filelist and mergeCachingPart > -1:
+            theHash = hashlib.sha224('%s_%s' %(sample,self.minCut)).hexdigest()
+            self.__hashDict[theName] = theHash
+
+            filelistCopied = []
+            for inputFile in filelist:
+                subfolder = inputFile.split('/')[-4]
+                filename = inputFile.split('/')[-1]
+                filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
+                hash = hashlib.sha224(filename).hexdigest()
+                inputFileNew = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
+                print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
+                filelistCopied.append(inputFileNew)
+
+            inputfiles.append(';'.join(filelistCopied))
+            tmpfile = '%s/tmp_%s_%d.root'%(self.__tmpPath,theHash,mergeCachingPart)
+            tmpfiles.append(tmpfile)
+            outputfile = '%s/tmp_%s_%d.root'%(self.__cachedPath,theHash,mergeCachingPart)
+            outputfiles.append(outputfile)
+            print (' input: %d files like %s\n tmp: %s\n output: %s'%(len(filelist), filelist[0], tmpfile, outputfile))
+
 
         else:
             outputFolder = "%s/%s" %(self.__cachedPath.replace('root://t3dcachedb03.psi.ch:1094/',''),sample.identifier)
@@ -197,6 +223,7 @@ class TreeCache:
                         #command = 'srmrm %s' %(del_protocol)
                         subprocess.call([command], shell=True)
                         print(command)
+                        # todo: WTF is happening above, what is in command when this is commented out ????
                     else: continue
                 inputfiles.append(inputFile)
                 outputfiles.append(outputFile)
@@ -204,6 +231,7 @@ class TreeCache:
         print('inputfiles',inputfiles,'tmpfiles',tmpfiles)
 
         ######################################################################
+        # todo: add files to list of list instead of separate lists and zipping
         for inputfile,tmpfile,outputFile in zip(inputfiles,tmpfiles,outputfiles):
 
             #print('the tmp source is ', tmpSource)
@@ -215,16 +243,21 @@ class TreeCache:
                 print('sample',theName,'skipped, filename=',outputFile)
                 return (theName,theHash)
             else:
+                # todo: is it ensured, that the file is OK and not just existing?????????
                 if self.__doCache and self.file_exists(tmpfile) and not forceReDo:
                     print ('File exists in TMPDIR, proceeding to the copy')
                     print('sample',theName,'skipped, filename=',tmpfile)
                     command = 'xrdcp -d 1 '+tmpfile+' '+ outputFile
                     print('the command is', command)
-                    subprocess.call([command], shell=True)
+                    returnCode = subprocess.call([command], shell=True)
+                    if returnCode != 0:
+                        print ('\x1b[31mERROR: XRDCP failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpfile, outputfile=outputFile))
                     if len(filelist) == 0: return (theName,theHash)
 
             print ('trying to create',tmpfile)
             print ('self.__tmpPath',self.__tmpPath)
+
+            # todo: below...
             if self.__tmpPath.find('root://t3dcachedb03.psi.ch:1094/') != -1:
                 mkdir_command = self.__tmpPath.replace('root://t3dcachedb03.psi.ch:1094/','')
                 print('mkdir_command',mkdir_command)
@@ -271,22 +304,60 @@ class TreeCache:
                 if len(filelist) == 0: return (theName,theHash)
                 else: print('PROBLEM WITH FILE!!',tmpfile); continue
             print ('reading inputfile',inputfile)
-            print ("I am reading")
-            input = ROOT.TFile.Open(inputfile,'read')
-            input.Print()
-            print ("I read the tree")
-            tree = input.Get(sample.tree)
-            assert type(tree) is ROOT.TTree
 
-            input.cd()
-            obj = ROOT.TObject
-            for key in ROOT.gDirectory.GetListOfKeys():
-                input.cd()
-                obj = key.ReadObj()
-                if obj.GetName() == 'tree':
-                    continue
+            if ';' in inputfile:
+                tree = ROOT.TChain(sample.tree)
+                histograms = {}
+                for rootFileName in inputfile.split(';'):
+                    chainTree = '%s/%s'%(rootFileName, sample.tree)
+                    if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','')):
+                        obj = None
+                        input = ROOT.TFile.Open(rootFileName,'read')
+                        if input:
+                            for key in input.GetListOfKeys():
+                                obj = key.ReadObj()
+                                if obj.GetName() == 'tree':
+                                    continue
+                                if obj.GetName() in histograms:
+                                    if histograms[obj.GetName()]:
+                                        histograms[obj.GetName()].Add(obj.Clone(obj.GetName()))
+                                    else:
+                                        print ("ERROR: histogram object was None!!!")
+                                else:
+                                    histograms[obj.GetName()] = obj.Clone(obj.GetName())
+                                    histograms[obj.GetName()].SetDirectory(output)
+                        print ('chaining '+chainTree)
+                        statusCode = tree.Add(chainTree)
+                        if statusCode != 1:
+                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode))
+                            raise Exception("TChain method Add failure")
+
+                assert type(tree) is ROOT.TChain
+                input = None
+
+                print ("HISTOGRAMS: %r"%histograms)
                 output.cd()
-                obj.Write(key.GetName())
+                for histogramName, histogram in histograms.iteritems():
+                    histogram.SetDirectory(output)
+                #output.Write()
+
+            else:
+                print ("I am reading")
+                input = ROOT.TFile.Open(inputfile,'read')
+                input.Print()
+                print ("I read the tree")
+                tree = input.Get(sample.tree)
+                assert type(tree) is ROOT.TTree
+                input.cd()
+
+                obj = ROOT.TObject
+                for key in ROOT.gDirectory.GetListOfKeys():
+                    input.cd()
+                    obj = key.ReadObj()
+                    if obj.GetName() == 'tree':
+                        continue
+                    output.cd()
+                    obj.Write(key.GetName())
             output.cd()
             theCut = self.minCut
             if sample.subsample:
@@ -300,8 +371,9 @@ class TreeCache:
             #cuttedTree=tree.CopyTree(theCutForm)
             cuttedTree.Write()
             output.Write()
-            input.Close()
-            del input
+            if input:
+                input.Close()
+                del input
             output.Close()
     #        tmpSourceFile = ROOT.TFile.Open(tmpSource,'read')
     #        if tmpSourceFile.IsZombie():
@@ -319,9 +391,43 @@ class TreeCache:
             if not filelist or len(filelist) == 0: return (theName,theHash)
 
 
+    def __merge_cache_samples(self, filelist=None, mergeCachingPart=-1):
+
+        print ('prepare to __merge_cache_samples: %s'%self.sample_to_merge)
+
+        # check if supplied sample same corresponds to existing sample
+        sampleDictionary = {}
+        matchedSample = None
+        for sample in self.__sampleList:
+
+            extMatch = True
+            if '_ext' in sample.identifier:
+                for file in filelist:
+                    extMatch = extMatch and sample.identifier[sample.identifier.find('_ext'):] in file
+
+                pureSampleName = sample.identifier.split('_ext')[0]
+            else:
+                pureSampleName = sample.identifier
+
+            sampleMatch = True
+            for file in filelist:
+                sampleMatch = sampleMatch and ('/%s/'%pureSampleName) in file
+
+            if extMatch and sampleMatch:
+                matchedSample = sample
+                print ('matching sample found:'+str(matchedSample))
+                break
+
+        if matchedSample:
+            self._trim_tree(sample=matchedSample, filelist=filelist, mergeplot=False, forceReDo=False, mergeCachingPart=mergeCachingPart)
+        else:
+            print (sampleDictionary)
+            print ('not in list of samples!')
+
     def __cache_samples(self,filelist=None,mergeplot=False):
         inputs=[]
         skip = True 
+        # todo: this is not a job, but a sample...
         for job in self.__sampleList:
             # test1 = [method for method in dir(job) if callable(getattr(job, method))]
             # print(test1)

@@ -196,6 +196,10 @@ elif [ $task = "splitcaching" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False"
     ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False
 
+elif [ $task = "mergecaching" ]; then
+    echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
         echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist ...(${#filelist} char)"

@@ -45,6 +45,10 @@ subcut_ =  None
 var_to_plot_ = None
 #This will go in the name of the pdf, png etc file
 subcut_plotname = ''
+
+# reads n files, writes single file. disabled if set to -1 
+mergeCachingPart = -1
+
 if opts.settings:
     print 'settings is', opts.settings
     if 'CUTBIN' in opts.settings:
@@ -56,6 +60,9 @@ if opts.settings:
     if 'CACHING' in opts.settings:
         sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
+    if 'MERGECACHING' in opts.settings:
+        mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
+        print '@INFO: Partially merged caching: this is part', mergeCachingPart
     if 'VAR' in opts.settings:
         var_to_plot_ = opts.settings[opts.settings.find('VAR')+4:]
         print '@INFO: Only the %s parameter will be ploted' %var_to_plot_
@@ -160,7 +167,9 @@ def doPlot():
     #print "================================================================\n"
 
     #Prepare cached files in the temporary (tmpSamples) folder.
-    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot,sample_to_merge_)
+    #def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergecaching=False):
+
+    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)

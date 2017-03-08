@@ -363,6 +363,7 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     print "the command is ", command
     print "submitting", len(file.split(';')),'files like',file.split(';')[0]
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
+    print "the real command is:",command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
@@ -456,6 +457,56 @@ if opts.task == 'splitvarplot':
 
 #if opts.task == 'splitcaching':
 #    plitcaching()
+if opts.task == 'mergecaching':
+    Plot_vars = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    for region in Plot_vars:
+        section='Plot:%s'%region
+        print 'section is', section
+        samplesinfo=config.get('Directories','samplesinfo')
+        data = eval(config.get(section,'Datas'))
+        mc = eval(config.get('Plot_general','samples'))
+        info = ParseInfo(samplesinfo,path)
+        print info
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        samples = mcsamples+datasamples
+
+        for sample in samples:
+            print "SAMPLE",sample
+            print "id",sample.identifier
+
+            files = getfilelist(sample.identifier)
+            files_per_job = 50 # todo: change this later...
+            files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+            counter_local = 0
+            for files_sublist in files_split:
+                print "  SUBMIT:"
+                for file in files_sublist:
+                    print "    ",file
+                print "PART:", counter_local
+
+                repDict['additional'] = 'MERGECACHING'+'_'+str(counter_local)+'__'+str(sample)
+
+                if config.has_option(section,'subcut'):
+                    subcut = eval(config.get(section,'subcut'))
+                    print 'subcut is', subcut
+
+                    for cutvar, CUTBIN in subcut.iteritems():
+                        print 'cutvar is', cutvar
+                        for cutbins in CUTBIN:
+                            print 'cutbins is', cutbins
+                            cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
+                            print 'cut_ is', cut_
+                            repDict['additional'] += cut_
+
+                print "REPDICT:",repDict['additional']
+                jobName = region # todo: add sample name
+                submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
+                counter_local = counter_local + 1
+
+                #break # only first bunch of n files
+            #break # only first sample
+        #break # only first plot region
 
 if opts.task == 'splitcaching':
     Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
