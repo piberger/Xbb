@@ -476,7 +476,7 @@ if opts.task == 'mergecaching':
             print "id",sample.identifier
 
             files = getfilelist(sample.identifier)
-            files_per_job = 50 # todo: change this later...
+            files_per_job = sample.mergeCachingSize 
             files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
             counter_local = 0
             for files_sublist in files_split:

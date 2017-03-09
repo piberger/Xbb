@@ -119,7 +119,7 @@ class ParseInfo:
                 specialweight = config.get(sample, 'specialweight')
             else:
                 specialweight = "1"
-
+            mergeCachingSize = int(config.get(sample, 'mergeCachingSize')) if config.has_option(sample, 'mergeCachingSize') else -1
 
       #fill the sample
             newsample = Sample(sampleName,sampleType)
@@ -129,6 +129,8 @@ class ParseInfo:
             newsample.specialweight=specialweight
             newsample.lumi=lumi
             newsample.prefix=newprefix
+            if mergeCachingSize > 0:
+                newsample.mergeCachingSize = mergeCachingSize
             
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
