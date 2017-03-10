@@ -5,6 +5,8 @@ import time,datetime
 import os
 import shutil
 import subprocess
+import hashlib
+import signal
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -29,6 +31,8 @@ parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="stor
                       help="Override run_locally option to run in batch")
 parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
+parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False,
+                              help="Interactive mode")
 
 (opts, args) = parser.parse_args(sys.argv)
 #print 'opts.mass is', opts.mass
@@ -49,6 +53,18 @@ if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
 
+globalFilesSubmitted = 0
+globalFilesSkipped = 0
+
+def signal_handler(signal, frame):
+    if (globalFilesSubmitted > 0 or globalFilesSkipped > 0):
+        print('\n----------------------------\n')
+        print('Files submitted:'+str(globalFilesSubmitted))
+        print('Files skipped:'+str(globalFilesSkipped))
+    print('You pressed Ctrl+C!')
+    print('\n----------------------------\n')
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
 
 en = opts.tag
 
@@ -363,11 +379,13 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     print "the command is ", command
     print "submitting", len(file.split(';')),'files like',file.split(';')[0]
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
-    print "the real command is:",command
+    #print "the real command is:",command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
-
+    if opts.interactive:
+        print "(press ENTER to continue)"
+        raw_input()
 # MERGING FUNCTION FOR SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW TO BE COMPATIBLE WITH THE OLD WORKFLOW
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     global counter
@@ -387,6 +405,11 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     print "the command is ", command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     subprocess.call([command], shell=True)
+
+def tmp_file_exists(hash, part):
+    tmpDir = config.get('Directories','tmpSamples').replace('root://t3dcachedb03.psi.ch:1094/','')
+    tmpFileName = '/tmp_%s_%d.root'%(hash, part)
+    return os.path.isfile(tmpDir + tmpFileName)
 
 # RETRIEVE FILELIST FOR THE TREECOPIER PSI AND SINGLE FILE SYS STEPS
 def getfilelist(job):
@@ -480,10 +503,10 @@ if opts.task == 'mergecaching':
             files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
             counter_local = 0
             for files_sublist in files_split:
-                print "  SUBMIT:"
-                for file in files_sublist:
-                    print "    ",file
-                print "PART:", counter_local
+                print "  SUBMIT:", len(files_sublist), " files"
+                #for file in files_sublist:
+                #    print "    ",file
+                print "  PART:", counter_local
 
                 repDict['additional'] = 'MERGECACHING'+'_'+str(counter_local)+'__'+str(sample)
 
@@ -499,14 +522,37 @@ if opts.task == 'mergecaching':
                             print 'cut_ is', cut_
                             repDict['additional'] += cut_
 
-                print "REPDICT:",repDict['additional']
+                print "  REPDICT:",repDict['additional']
                 jobName = region # todo: add sample name
-                submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
+
+                if config.has_option('Cuts',region):
+                    cut = config.get('Cuts',region)
+                elif config.has_option(section, 'Datacut'):
+                    cut = config.get(section, 'Datacut')
+                else:
+                    cut = None
+
+                minCut = '(%s)'%cut.replace(' ','')
+                #if sample.subsample:
+                #    minCut = '((%s)&(%s))' %(minCut,sample.subcut)
+                hash = hashlib.sha224('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)).hexdigest()
+                print "  CUT:", minCut
+                print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
+                print "  HASH:", hash
+                if tmp_file_exists(hash, counter_local):
+                    print "  --->exists"
+                    globalFilesSkipped += 1
+                else:
+                    globalFilesSubmitted += 1
+                    print "  --->submit"
+                    submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 counter_local = counter_local + 1
 
                 #break # only first bunch of n files
             #break # only first sample
         #break # only first plot region
+    print "skipped:", globalFilesSkipped
+    print "submitted:", globalFilesSubmitted
 
 if opts.task == 'splitcaching':
     Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
