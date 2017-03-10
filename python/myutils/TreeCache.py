@@ -103,8 +103,9 @@ class TreeCache:
             output.cd()
             obj.Write(key.GetName())
         output.cd()
-        print ("the cut is", theCut)
+        print ("(subtrimtree) the cut is", theCut)
         #Problem here: not working when empty tree
+        
         cuttedTree=tree.CopyTree(theCut)
         cuttedTree.Write()
         output.Write()
@@ -158,18 +159,24 @@ class TreeCache:
                 mergetreePSI_def(self.path, self.__cachedPath, theHash, "tmp_",    sample.identifier, hashlib.sha224(self.minCut).hexdigest(),      "",   "")
                 return 0
         elif filelist and mergeCachingPart > -1:
-            theHash = hashlib.sha224('%s_%s' %(sample,self.minCut)).hexdigest()
+            # merge caching uses unmerged input files and partially merges them up to sample.mergeCachingSize files
+            print ('the hash string is: %s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize))
+            theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
             self.__hashDict[theName] = theHash
 
             filelistCopied = []
             for inputFile in filelist:
-                subfolder = inputFile.split('/')[-4]
-                filename = inputFile.split('/')[-1]
-                filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
-                hash = hashlib.sha224(filename).hexdigest()
-                inputFileNew = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-                print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
-                filelistCopied.append(inputFileNew)
+                try:
+                    subfolder = inputFile.split('/')[-4]
+                    filename = inputFile.split('/')[-1]
+                    filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
+                    hash = hashlib.sha224(filename).hexdigest()
+                    inputFileNew = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
+                    print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
+                    filelistCopied.append(inputFileNew)
+                except Exception as e:
+                    print ('Exception:'+str(e))
+                    print ('ERROR occured for "'+inputFile+'"')
 
             inputfiles.append(';'.join(filelistCopied))
             tmpfile = '%s/tmp_%s_%d.root'%(self.__tmpPath,theHash,mergeCachingPart)
@@ -196,8 +203,10 @@ class TreeCache:
                 # print('filename2',filename)
                 hash = hashlib.sha224(filename).hexdigest()
                 inputFile = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-                print('inputFile2',inputFile,'isfile',os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')))
-                if not os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/','')): continue
+                isFile = os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/',''))
+                if not sFile: 
+                    print ('file ',inputFile, ' does not exist => skip!')
+                    continue
                 hash = hashlib.sha224(self.minCut).hexdigest()
                 outputFile = "%s/%s/%s" %(self.__cachedPath,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
                 print('outputFile',outputFile)
@@ -239,7 +248,7 @@ class TreeCache:
             print("==================================================================")
             print ('The cut is ', self.minCut)
             print("==================================================================\n")
-            if self.__doCache and self.file_exists(outputFile) and not forceReDo and (not filelist or len(filelist) == 0):
+            if self.__doCache and self.file_exists(outputFile) and not forceReDo and ((not filelist or len(filelist) == 0) or mergeCachingPart > -1):
                 print('sample',theName,'skipped, filename=',outputFile)
                 return (theName,theHash)
             else:
@@ -303,8 +312,12 @@ class TreeCache:
                 ## in case there are problems go to the next dataset [probably another process is working on this dataset]
                 if len(filelist) == 0: return (theName,theHash)
                 else: print('PROBLEM WITH FILE!!',tmpfile); continue
-            print ('reading inputfile',inputfile)
+            if ';' in inputfile:
+                print ('reading inputfiles...')
+            else:
+                print ('reading inputfile',inputfile)
 
+            treeEmpty = True
             if ';' in inputfile:
                 tree = ROOT.TChain(sample.tree)
                 histograms = {}
@@ -331,8 +344,10 @@ class TreeCache:
                         if statusCode != 1:
                             print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode))
                             raise Exception("TChain method Add failure")
-
+                        else:
+                            treeEmpty = False
                 assert type(tree) is ROOT.TChain
+
                 input = None
 
                 print ("HISTOGRAMS: %r"%histograms)
@@ -348,6 +363,7 @@ class TreeCache:
                 print ("I read the tree")
                 tree = input.Get(sample.tree)
                 assert type(tree) is ROOT.TTree
+                treeEmpty = False
                 input.cd()
 
                 obj = ROOT.TObject
@@ -360,16 +376,33 @@ class TreeCache:
                     obj.Write(key.GetName())
             output.cd()
             theCut = self.minCut
-            if sample.subsample:
-                theCut = '((%s)&(%s))' %(theCut,sample.subcut)
-            print ("the cut is", theCut)
-            #Problem here: not working when empty tree
-            ROOT.TFormula.SetMaxima(100000,1000,1000000)
-            #theCutForm = ROOT.TFormula('theCut',theCut)
-            #theCutForm.SetMaxima(100000,1000,1000000)
-            cuttedTree=tree.CopyTree(theCut)
-            #cuttedTree=tree.CopyTree(theCutForm)
-            cuttedTree.Write()
+            #if sample.subsample:
+            #    theCut = '((%s)&(%s))' %(theCut,sample.subcut)
+            #print ("the cut (with subcut) is", theCut)
+            
+            if not treeEmpty:
+                #Problem here: not working when empty tree
+                ROOT.TFormula.SetMaxima(100000,1000,1000000)
+                #theCutForm = ROOT.TFormula('theCut',theCut)
+                #theCutForm.SetMaxima(100000,1000,1000000)
+                time1 = time.time() 
+                cuttedTree=tree.CopyTree(theCut)
+                time2=time.time()
+                if sample.subcut:
+                    print ('the subcut is:'+sample.subcut)
+                    subcutTree=cuttedTree.CopyTree(sample.subcut)
+                    time3 = time.time()
+                    #subcutTree.Write()
+                    subcutTree.SetDirectory(output)
+                    cuttedTree.SetDirectory(0)
+                    #cuttedTree.Delete()
+                else:
+                    time3 = time.time()
+                    #cuttedTree.Write()
+                    cuttedTree.SetDirectory(output)
+                time4 = time.time()
+                print ('Cut1:'+str(time2-time1)+' Cut2:'+str(time3-time2)+' Write:'+str(time4-time3))
+            
             output.Write()
             if input:
                 input.Close()
@@ -399,19 +432,35 @@ class TreeCache:
         sampleDictionary = {}
         matchedSample = None
         for sample in self.__sampleList:
+            #print ("check "+str(sample) + ":")
+            # compare is_extension
+            extMatch = ('_ext' in str(sample)) == ('_ext' in self.sample_to_merge)
+            if extMatch and '_ext' in str(sample):
+                
+                # compare ext number
+                extToMerge = self.sample_to_merge.split('_ext')[1].strip()
+                extCompare = str(sample).split('_ext')[1].strip()
+                extMatch = extMatch and (extToMerge==extCompare)
 
-            extMatch = True
-            if '_ext' in sample.identifier:
-                for file in filelist:
-                    extMatch = extMatch and sample.identifier[sample.identifier.find('_ext'):] in file
+                # compare ext number in files list
+                #for file in filelist:
+                #    extMatch = extMatch and sample.identifier[sample.identifier.find('_ext'):] in file
 
-                pureSampleName = sample.identifier.split('_ext')[0]
+                pureSampleName = str(sample).split('_ext')[0]
+                pureSampleLongName = sample.identifier.split('_ext')[0]
+                pureNameSampleToMerge = self.sample_to_merge.split('_ext')[0]            
             else:
-                pureSampleName = sample.identifier
-
-            sampleMatch = True
-            for file in filelist:
-                sampleMatch = sampleMatch and ('/%s/'%pureSampleName) in file
+                pureSampleName = str(sample)
+                pureSampleLongName = sample.identifier
+                pureNameSampleToMerge = self.sample_to_merge
+            
+            #print (" -> "+str(extMatch)+" "+pureNameSampleToMerge+"/"+pureSampleName)
+            # compare name
+            sampleMatch = pureNameSampleToMerge.strip() == pureSampleName.strip()
+            #print (" -> "+str(sampleMatch))
+            # compare name in files list
+            #for file in filelist:
+            #    sampleMatch = sampleMatch and ('/%s/'%pureSampleLongName) in file
 
             if extMatch and sampleMatch:
                 matchedSample = sample
@@ -421,8 +470,9 @@ class TreeCache:
         if matchedSample:
             self._trim_tree(sample=matchedSample, filelist=filelist, mergeplot=False, forceReDo=False, mergeCachingPart=mergeCachingPart)
         else:
-            print (sampleDictionary)
             print ('not in list of samples!')
+            for sample in self.__sampleList:
+                print ("--"+str(sample))
 
     def __cache_samples(self,filelist=None,mergeplot=False):
         inputs=[]

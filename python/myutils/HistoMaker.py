@@ -30,7 +30,6 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
-        print "mergecachingpart:::", mergeCachingPart
         self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge,mergeCachingPart)# created cached tree i.e. create new skimmed trees using the list of cuts
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
