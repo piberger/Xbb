@@ -229,7 +229,7 @@ def training(additional_):
                 repDict['additional']= additional_ +'__'+cut_
                 submit(item,repDict, False)
 
-def ploting(additional_ = None, splitvar = False):
+def ploting(additional_ = None, splitvar = False, splitfiles = False):
     repDict['additional'] = 'dummy'
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
@@ -379,7 +379,8 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     print "the command is ", command
     print "submitting", len(file.split(';')),'files like',file.split(';')[0]
     command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
-    #print "the real command is:",command
+    if opts.interactive:
+        print "the real command is:",command
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
@@ -539,13 +540,20 @@ if opts.task == 'mergecaching':
                 print "  CUT:", minCut
                 print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
                 print "  HASH:", hash
+
+                files_sublist_filtered = []
+                for filename in files_sublist:
+                    if filename.split('/')[-1] not in sample.skipParts:
+                        files_sublist_filtered.append(filename)
+                    else:
+                        print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
                 if tmp_file_exists(hash, counter_local):
                     print "  --->exists"
                     globalFilesSkipped += 1
                 else:
                     globalFilesSubmitted += 1
                     print "  --->submit"
-                    submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
+                    submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist_filtered), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 counter_local = counter_local + 1
 
                 #break # only first bunch of n files

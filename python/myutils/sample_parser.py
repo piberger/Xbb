@@ -131,7 +131,9 @@ class ParseInfo:
             newsample.prefix=newprefix
             if mergeCachingSize > 0:
                 newsample.mergeCachingSize = mergeCachingSize
-            
+            if config.has_option(sample, 'skipParts'):
+                newsample.skipParts = eval(config.get(sample, 'skipParts')) 
+
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
                 subnames = eval((config.get(sample, 'subnames')))
