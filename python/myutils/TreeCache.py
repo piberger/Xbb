@@ -45,6 +45,7 @@ class TreeCache:
 
         if self.plotMergeCached:
             print('\n\t>>> MERGE & PLOT <<<\n')
+            self.__merge_cache_samples(filelist, self.mergeCachingPart)
         elif self.mergeCachingPart > -1:
             print('\n\t>>> Caching FILES, part ' + str(self.mergeCachingPart) +' <<<\n')
             self.__merge_cache_samples(filelist, self.mergeCachingPart)
@@ -492,7 +493,7 @@ class TreeCache:
 
 
     def __merge_cache_samples(self, filelist=None, mergeCachingPart=-1):
-
+        print ('__merge_cache_samples')
         if self.sample_to_merge:
             print ('prepare to __merge_cache_samples: %s'%self.sample_to_merge)
 
@@ -653,6 +654,7 @@ class TreeCache:
             self.__hashDict[theName]=theHash
 
     def get_tree(self, sample, cut):
+        print (self.__hashDict)
         inputHashes = self.__hashDict[sample.name]
         print('input file %s/tmp_\x1b[32m%r\x1b[0m.root'%(self.__cachedPath, inputHashes))
 

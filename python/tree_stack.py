@@ -47,6 +47,7 @@ from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, 
 
 print 'opts.settings is', opts.settings
 print 'mergeplot is', opts.mergeplot
+print 'mergecachingplot is', opts.mergecachingplot
 
 sample_to_merge_ = None
 subcut_ =  None
