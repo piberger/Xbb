@@ -6,6 +6,8 @@ import sys, os
 from optparse import OptionParser
 from copy import copy,deepcopy
 from math import sqrt
+import zlib
+import base64
 ROOT.gROOT.SetBatch(True)
 
 argv = sys.argv
@@ -29,12 +31,18 @@ parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
 parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
                               help="option to merge")
+parser.add_option("-M", "--mergecachingplot", dest="mergecachingplot", default=False, action='store_true', help="use files from mergecaching")
 parser.add_option("-s", "--settings", dest="settings", default=False,
                               help="co ntains sample you want to merge, as well as the subcut bin")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
-        
+
+# to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
+if opts.filelist.startswith('base64:'):
+    opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
+    #print 'zlib decoded file list:', opts.filelist
+
 from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, HistoMaker
 
 print 'opts.settings is', opts.settings
@@ -169,7 +177,7 @@ def doPlot():
     #Prepare cached files in the temporary (tmpSamples) folder.
     #def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergecaching=False):
 
-    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart)
+    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)

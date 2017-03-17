@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import hashlib
 import signal
+import zlib
+import base64
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -377,16 +379,17 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     print "the command is ", command
-    print "submitting", len(file.split(';')),'files like',file.split(';')[0]
-    command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
+    nFiles = len(file.split(';'))
+    print "submitting", nFiles, 'files like',file.split(';')[0]
+    filelistString = str(file)
+    command = command + ' "' + filelistString + '"' + ' "' + str(Plot)+ '"'
     if opts.interactive:
         print "the real command is:",command
+        print "(press ENTER to run it and continue)"
+        raw_input()
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
-    if opts.interactive:
-        print "(press ENTER to continue)"
-        raw_input()
 # MERGING FUNCTION FOR SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW TO BE COMPATIBLE WITH THE OLD WORKFLOW
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     global counter
@@ -443,16 +446,16 @@ if opts.task == 'dc':
     print DC_vars
 
 Plot_vars = ['']
-if opts.task == 'plot' or opts.task == 'splitvarplot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+if opts.task in ['plot', 'splitvarplot', 'singleplot', 'mergesingleplot', 'mergecachingplot']:
     Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
-
 
 if not opts.task == 'prep':
     path = config.get("Directories","samplepath")
     info = ParseInfo(samplesinfo,path)
 
-if opts.task == 'plot':
+if opts.task in ['plot', 'mergecachingplot']:
     ploting()
+
 if opts.task == 'splitvarplot':
     ploting(None, True)
 
@@ -547,13 +550,21 @@ if opts.task == 'mergecaching':
                         files_sublist_filtered.append(filename)
                     else:
                         print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
+
                 if tmp_file_exists(hash, counter_local):
                     print "  --->exists"
                     globalFilesSkipped += 1
                 else:
                     globalFilesSubmitted += 1
                     print "  --->submit"
-                    submitsinglefile(job=jobName, repDict=repDict, file=';'.join(files_sublist_filtered), run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
+                    filelistString = ';'.join(files_sublist_filtered)
+                    # necessary due to limits on passed arguments size
+                    if sample.mergeCachingSize > 400:
+                        lenBefore = len(filelistString)
+                        filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
+                        lenAfter = len(filelistString)
+                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                    submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 counter_local = counter_local + 1
 
                 #break # only first bunch of n files

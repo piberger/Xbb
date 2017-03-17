@@ -10,11 +10,13 @@ from copy import copy
 import time
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1):
+    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
         #optionsList: Dictionnary containing information on vars, including the cuts
+        #mergeCachingPart: number of the output file in mergecaching step
+        #plotMergeCached: use partially merged files from mergecaching and merge completely before plotting
         #! Read arguments and initialise variables
 
         if filelist:
@@ -30,7 +32,7 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
-        self.tc = TreeCache(self.cuts,samples,path,config,filelist,mergeplot,sample_to_merge,mergeCachingPart)# created cached tree i.e. create new skimmed trees using the list of cuts
+        self.tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart, plotMergeCached)  # created cached tree i.e. create new skimmed trees using the list of cuts
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             return 
@@ -98,12 +100,26 @@ class HistoMaker:
         if subcut_:
             addCut = subcut_
         print 'addCut is', addCut
-        input = ROOT.TFile.Open(self.tc.get_tree(job, addCut),'read')
-        #Not: no subcut is needed since  done in caching
-        #if job.subsample:
-        #    addCut += '& (%s)' %(job.subcut)
-        CuttedTree = input.Get(job.tree)
-        CuttedTree.SetCacheSize(0)
+
+        # get the filenames for the root files to be read into the tree, and fill the count histograms
+        rootFileNames = self.tc.get_tree(job, addCut)
+
+        # in case of a list of files, read them as a TChain
+        if type(rootFileNames) is list:
+            CuttedTree = ROOT.TChain(job.tree)
+            for rootFileName in rootFileNames:
+                status = CuttedTree.Add(rootFileName + '/' + job.tree, 0)
+                if status != 1:
+                    print ('ERROR: in HistoMaker.py, cannot add file to chain:'+rootFileName)
+            input = None
+        # otherwise as a TFile for backwards compatibility
+        else:
+            input = ROOT.TFile.Open(rootFileNames,'read')
+            #Not: no subcut is needed since  done in caching
+            #if job.subsample:
+            #    addCut += '& (%s)' %(job.subcut)
+            CuttedTree = input.Get(job.tree)
+            CuttedTree.SetCacheSize(0)
         print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
 
         #! start the loop over variables (descriebed in options) 

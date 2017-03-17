@@ -188,6 +188,10 @@ elif [ $task = "plot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
 
+elif [ $task = "mergecachingplot" ]; then
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot True"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot True
+
 elif [ $task = "splitvarplot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
