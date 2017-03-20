@@ -799,7 +799,7 @@ class TreeCache:
             rootFileName = '%s/tmp_%s.root'%(self.__cachedPath, inputHash)
             rootFile = ROOT.TFile.Open(rootFileName,'read')
 
-            if not rootFile.IsZombie():
+            if rootFile and not rootFile.IsZombie():
                 if weightHistogram:
                     additionalWeightHistogram = rootFile.Get(histogramName)
                     if additionalWeightHistogram:
@@ -817,6 +817,7 @@ class TreeCache:
                 rootFile.Close()
             else:
                 print ('\x1b[31mERROR: zombie: {file}\x1b[0m'.format(file=rootFileName))
+                raise Exception("root file with weight histogram is zombie")
         return weightHistogram
 
     def get_scale_training(self, sample, config, lumi = None, count=1):
