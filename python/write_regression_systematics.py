@@ -47,7 +47,6 @@ config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
 TrainFlag = eval(config.get('Analysis','TrainFlag'))
-ApplyCutDuringSys = eval(config.get('Analysis','ApplyCutDuringSys'))
 btagLibrary = config.get('BTagReshaping','library')
 samplesinfo=config.get('Directories','samplesinfo')
 channel=config.get('Configuration','channel')
@@ -116,6 +115,11 @@ try:
 except:
     Stop_after_addBranches = False
 print "Stop after adding new variables/branches:", Stop_after_LepSF
+try:
+    AddSpecialWeight = config.get('Analysis', 'AddSpecialWeight').lower().strip() == 'true'
+except:
+    AddSpecialWeight = False
+print "I shall add the specialweight, my Lord !", AddSpecialWeight
 
 
 namelist=opts.names.split(',')
@@ -559,6 +563,10 @@ for job in info:
             weight_SF_Lepton = array('f',[0]*3)
             weight_SF_Lepton[0],  weight_SF_Lepton[1],  weight_SF_Lepton[2] = 1,0,0
             newtree.Branch('weight_SF_Lepton',weight_SF_Lepton,'weight_SF_Lepton[3]/F')
+            #double electron Trig
+            eTrigSFWeight_doubleEle80x = array('f',[0]*3)
+            eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1,0,0
+            newtree.Branch('eTrigSFWeight_doubleEle80x', eTrigSFWeight_doubleEle80x, 'eTrigSFWeight_doubleEle80x[3]/F')
 
             #V24
             ##Loose ISO+ID SF
@@ -608,27 +616,28 @@ for job in info:
             #eleweight[0], eleweight[1], eleweight[2] = 1,1,1
             #newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
-        if addBranches and job.type != 'DATA':
+        if addBranches:
 
-            #EWK weights
-            EWKw = array('f',[0])
-            EWKw[0] = 1
-            newtree.Branch('EWKw',EWKw,'EWKw/F')
+            if job.type != 'DATA':
+                #EWK weights
+                EWKw = array('f',[0])
+                EWKw[0] = 1
+                newtree.Branch('EWKw',EWKw,'EWKw/F')
 
-            #NLO weights
-            NLOw = array('f',[0])
-            NLOw[0] = 1
-            newtree.Branch('NLOw',NLOw,'NLOw/F')
+                #NLO weights
+                NLOw = array('f',[0])
+                NLOw[0] = 1
+                newtree.Branch('NLOw',NLOw,'NLOw/F')
 
-            #DY_weight. Are the product of the three weights declared above
-            DYw= array('f',[0])
-            DYw[0] = 1
-            newtree.Branch('DYw',DYw,'DYw/F')
+                #DY_weight. Are the product of the three weights declared above
+                DYw= array('f',[0])
+                DYw[0] = 1
+                newtree.Branch('DYw',DYw,'DYw/F')
 
-            #isDY: to identify what kind of DY sample it is
-            isDY = array('i',[-1])
-            DYw[0] = -1
-            newtree.Branch('isDY', isDY, 'isDY/I')
+                #isDY: to identify what kind of DY sample it is
+                isDY = array('i',[-1])
+                DYw[0] = -1
+                newtree.Branch('isDY', isDY, 'isDY/I')
 
             ### Adding new variable from configuration ###
             newVariableNames = []
@@ -656,6 +665,11 @@ for job in info:
                     print "adding variable ",variableName,", using formula",writeNewVariables[variableName]," ."
             except:
                 pass
+
+        if AddSpecialWeight and job.type != 'DATA':
+            DY_specialWeight= array('f',[0])
+            DY_specialWeight[0] = 1
+            newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
 
         if False and not (recomputeVtype and stopAfterVtypeCorrection) and not(Stop_after_BTagweights and applyBTagweights) and not(Stop_after_LepSF and applyLepSF) and not (addBranches and Stop_after_addBranches):
             
@@ -830,11 +844,6 @@ for job in info:
 
 
             if channel == "Zmm":
-           # #Special weights
-
-           #     DY_specialWeight= array('f',[0])
-           #     DY_specialWeight[0] = 1
-           #     newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
 
 
             #Add reg VHDphi
@@ -1081,13 +1090,6 @@ for job in info:
 
                 tree.GetEntry(entry)
 
-                #if channel == "Zmm" and ApplyCutDuringSys:
-                #    if tree.vLeptons_new_pt[0] < 20 or tree.vLeptons_new_pt[1] < 20 or tree.V_new_pt < 50:
-                #        continue
-                #    if job.type == 'DATA' and 'DoubleMuon' in job.name and tree.Vtype_new != 0:
-                #        continue
-                #    if job.type == 'DATA' and 'DoubleEG' in job.name and tree.Vtype_new != 1:
-                #        continue
 
                 ### Vtype correction for V25 samples
                 if channel == "Zmm" and recomputeVtype:
@@ -1248,6 +1250,7 @@ for job in info:
                     weight_SF_LooseIDnISO[0], weight_SF_LooseIDnISO[1],  weight_SF_LooseIDnISO[2] = 1.,0.,0.
                     weight_SF_TRK[0], weight_SF_TRK[1],  weight_SF_TRK[2] = 1.,0.,0.
                     weight_SF_Lepton[0], weight_SF_Lepton[1], weight_SF_Lepton[2] = 1.,0.,0.
+                    eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1.,0.,0.
 
 
                     #V24
@@ -1287,6 +1290,9 @@ for job in info:
                         #Tracker
                         wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
                         wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+                        #Trigg
+                        wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
+                        wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio'],
                         #
                         #Muon
                         #
@@ -1332,6 +1338,16 @@ for job in info:
                             #TRK
                             elif j.find('ScaleFactor_etracker_80x') != -1:
                                 computeSF(weight_SF_TRK)
+                            #TRIG
+                            elif j.find('DiEleLeg1AfterIDISO_out') != -1:
+                                eff1 = weight[0][0]
+                                eff1Up = (weight[0][0]+weight[0][1])
+                                eff1Down = (weight[0][0]-weight[0][1])
+                            elif j.find('DiEleLeg2AfterIDISO_out') != -1:
+                                eff2 = weight[1][0]
+                                eff2Up = (weight[1][0]+weight[1][1])
+                                eff2Down = (weight[1][0]-weight[1][1])
+
                         #else:
                         #    print 'json is', j
                         #    sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
@@ -1341,12 +1357,12 @@ for job in info:
                     #Fill muon triggers
 
                     if tree.Vtype_new == 0:
-                        print 'muTRK_BCDEF is', muTRK_BCDEF
-                        print 'muTRK_GH is', muTRK_GH
-                        print 'muID_BCDEF is', muID_BCDEF
-                        print 'muID_GH is', muID_GH
-                        print 'muISO_BCDEF is', muISO_BCDEF
-                        print 'muISO_GH is', muISO_GH
+                        #print 'muTRK_BCDEF is', muTRK_BCDEF
+                        #print 'muTRK_GH is', muTRK_GH
+                        #print 'muID_BCDEF is', muID_BCDEF
+                        #print 'muID_GH is', muID_GH
+                        #print 'muISO_BCDEF is', muISO_BCDEF
+                        #print 'muISO_GH is', muISO_GH
 
                         #Tracker
                         getLumiAvrgSF(muTRK_BCDEF,(20.1/36.4),muTRK_GH,(16.3/36.4),weight_SF_TRK)
@@ -1359,7 +1375,9 @@ for job in info:
                         weight_SF_LooseIDnISO[2] = weight_SF_LooseID[2]*weight_SF_LooseISO[2]
 
                     if tree.Vtype_new == 1:
-                        pass
+			            eTrigSFWeight_doubleEle80x[0]     = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+			            eTrigSFWeight_doubleEle80x[1] = eff1Down*(1-eff2Down)*eff1Down + eff2Down*(1-eff1Down)*eff2Down + eff1Down*eff1Down*eff2Down*eff2Down
+			            eTrigSFWeight_doubleEle80x[2]   = eff1Up*(1-eff2Up)*eff1Up + eff2Up*(1-eff1Up)*eff2Up + eff1Up*eff1Up*eff2Up*eff2Up
                     #
                     #comput total weight
                     #
@@ -1367,49 +1385,55 @@ for job in info:
                     weight_SF_Lepton[1] = weight_SF_TRK[1]*weight_SF_LooseIDnISO[1]
                     weight_SF_Lepton[2] = weight_SF_TRK[2]*weight_SF_LooseIDnISO[2]
 
-                    #if not job.specialweight:
-                    #    DY_specialWeight[0] = 1
-                    #else :
-                    #    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
-                    #    specialWeight_ = specialWeight.EvalInstance()
-                    #    DY_specialWeight[0] = specialWeight_
+
                 if applyLepSF and Stop_after_LepSF:
                     newtree.Fill()
                     continue
 
-                if addBranches and job.type != 'DATA':
+                if addBranches:
 
                     ### Fill new variable from configuration ###
                     for variableName in newVariableNames:
                         newVariableFormulas[variableName].GetNdata()
                         newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
-                    if 'DY' in job.FullName:
-                        if '10to50' in job.FullName:
-                            isDY[0] = 3
-                        elif 'amcatnloFXFX' in job.FullName:
-                            isDY[0] = 2
+                    if job.type != 'DATA':
+                        if 'DY' in job.FullName:
+                            if '10to50' in job.FullName:
+                                isDY[0] = 3
+                            elif 'amcatnloFXFX' in job.FullName:
+                                isDY[0] = 2
+                            else:
+                                isDY[0] = 1
                         else:
-                            isDY[0] = 1
-                    else:
-                        isDY[0] = 0
+                            isDY[0] = 0
 
-                    EWKw[0] = 1
-                    if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
-                        #print 'GebVboson is', tree.GenVbosons_pt[0]
-                        if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                            EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
+                        EWKw[0] = 1
+                        if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
+                            #print 'GebVboson is', tree.GenVbosons_pt[0]
+                            if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
+                                EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
 
-                    NLOw[0] = 1
-                    if isDY[0] == 1:
-                        etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
-                        if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
+                        NLOw[0] = 1
+                        if isDY[0] == 1:
+                            etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
+                            if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
 
-                    #pdb.set_trace()
-                    DYw[0] = EWKw[0]*NLOw[0]
+                        #pdb.set_trace()
+                        DYw[0] = EWKw[0]*NLOw[0]
                 if addBranches and Stop_after_addBranches:
                     newtree.Fill()
                     continue
+
+
+                if AddSpecialWeight and job.type != 'DATA':
+                    DY_specialWeight[0] = 1
+                    if not job.specialweight:
+                        pass
+                    else :
+                        specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
+                        specialWeight_ = specialWeight.EvalInstance()
+                        DY_specialWeight[0] = specialWeight_
 
                 #No need to do the following for the moment
                 if False:
