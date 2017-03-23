@@ -1033,25 +1033,24 @@ for job in info:
             #print 'doing Vtype correction only, no other branches added!'
 
         ### new branches for Vtype correction ###
-        if recomputeVtype:
-            Vtype_new = array('f', [0])
-            newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
+        Vtype_new = array('f', [0])
+        newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
 
-            vLeptonsBranches = {}
-            VBranches = {}
-            ##define Vleptons branch
-            vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
-            for var in vLeptonsvar:
-                vLeptonsBranches[var] = np.zeros(21, dtype=np.float32)
-                obranch = newtree.Branch('vLeptons_new_%s'%var, vLeptonsBranches[var], 'vLeptons_new_%s[2]/F'%var)
+        vLeptonsBranches = {}
+        VBranches = {}
+        ##define Vleptons branch
+        vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
+        for var in vLeptonsvar:
+            vLeptonsBranches[var] = np.zeros(21, dtype=np.float32)
+            obranch = newtree.Branch('vLeptons_new_%s'%var, vLeptonsBranches[var], 'vLeptons_new_%s[2]/F'%var)
 
-            ##define Vleptons branch
-            Vvar = ['pt', 'eta', 'phi', 'mass']
-            LorentzDic = {'pt':'Pt', 'eta':'Eta', 'phi':'Phi', 'mass':'M'}
-            for var in Vvar:
-                #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
-                VBranches[var] = np.zeros(21, dtype=np.float32)
-                obranch = newtree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
+        ##define Vleptons branch
+        Vvar = ['pt', 'eta', 'phi', 'mass']
+        LorentzDic = {'pt':'Pt', 'eta':'Eta', 'phi':'Phi', 'mass':'M'}
+        for var in Vvar:
+            #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
+            VBranches[var] = np.zeros(21, dtype=np.float32)
+            obranch = newtree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
 
         #include the Vytpe reco here
         zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
@@ -1185,6 +1184,17 @@ for job in info:
                     if stopAfterVtypeCorrection:
                         newtree.Fill()
                         continue
+                elif channel == "Zmm" and not recomputeVtype:
+                    # copy vtype to vtype new
+                    Vtype_new[0] = tree.Vtype
+
+                    for var in Vvar:
+                        VBranches[var][0] = getattr(tree,'V_%s'%var)
+                    for var in vLeptonsvar:
+                        vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
+                        vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]            
+                
+                    #print ('duplicate V lepton branches')
 
                 if channel == "Zmm" and applyBTagweights and job.type != 'DATA':
 
@@ -1208,8 +1218,8 @@ for job in info:
                     bTagWeights["bTagWeightCMVAV2_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
                     bTagWeights["bTagWeightCSV_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, "central", "CSV", btag_calibrators)
 
-                    print 'btag CMVAV2 Event Weight:', bTagWeights["bTagWeightCMVAV2_Moriond"][0]
-                    print 'btag CSV Event Weight   :', bTagWeights["bTagWeightCSV_Moriond"][0]
+                    #print 'btag CMVAV2 Event Weight:', bTagWeights["bTagWeightCMVAV2_Moriond"][0]
+                    #print 'btag CSV Event Weight   :', bTagWeights["bTagWeightCSV_Moriond"][0]
 
                     for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                         for sdir in ["Up", "Down"]:
