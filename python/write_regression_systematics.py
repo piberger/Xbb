@@ -635,26 +635,43 @@ for job in info:
 
             try:
                 writeNewVariables = eval(config.get("Regression","writeNewVariables"))
-
-                #Not needed anymore
-                ### remove MC variables in data ##
-                #if job.type == 'DATA':
-                #    for idx in dict(writeNewVariables):
-                #        formula = writeNewVariables[idx]
-                #        if 'gen' in formula or 'Gen' in formula or 'True' in formula or 'true' in formula or 'mc' in formula or 'Mc' in formula:
-                #            print "Removing: ",idx," with ",formula
-                #            del writeNewVariables[idx]
-
-                newVariableNames = writeNewVariables.keys()
+               
+                newVariableDefs = writeNewVariables.keys()
+                newVariableNames = []
                 newVariables = {}
                 newVariableFormulas = {}
-                for variableName in newVariableNames:
-                    formula = writeNewVariables[variableName]
-                    newVariables[variableName] = array('f',[0])
-                    newtree.Branch(variableName,newVariables[variableName],variableName+'/F')
+                newVariableLengths = {}
+                for variable in newVariableDefs:
+                    # parse definition
+                    variableName = variable
+                    variableType = 'F'
+                    if '/' in variable:
+                        variableName = variable.split('/')[0]
+                        variableType = variable.split('/')[-1]
+                    variableLength = 1
+                    if '[' in variableName:
+                        variableLength = int(variableName.split('[')[1].strip(']'))
+                        variableName = variableName.split('[')[0].strip()
+                    
+                    formula = writeNewVariables[variable] 
+                    print "adding variable ",variableName,", length", variableLength, " type",variableType," using formula",formula," .",
+                    newVariables[variableName] = array(variableType.lower(),[0]*variableLength)  #type: f
+                    
+                    # build variable definition for tree
+                    variableDef = variableName
+                    if variableLength > 1:
+                        variableDef += '[%d]'%variableLength
+                    variableDef += '/' + variableType
+
+                    # add variable to tree
+                    newtree.Branch(variableName,newVariables[variableName],variableDef)
                     newVariableFormulas[variableName] =ROOT.TTreeFormula(variableName,formula,tree)
-                    print "adding variable ",variableName,", using formula",writeNewVariables[variableName]," ."
-            except:
+                    print "done."
+                    newVariableNames.append(variableName)
+                    newVariableLengths[variableName] = variableLength
+            except Exception as e:
+                print "EXCEPTION:",e
+                raise
                 pass
 
         if False and not (recomputeVtype and stopAfterVtypeCorrection) and not(Stop_after_BTagweights and applyBTagweights) and not(Stop_after_LepSF and applyLepSF) and not (addBranches and Stop_after_addBranches):
@@ -1032,29 +1049,30 @@ for job in info:
             pass
             #print 'doing Vtype correction only, no other branches added!'
 
-        ### new branches for Vtype correction ###
-        Vtype_new = array('f', [0])
-        newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
+        if recomputeVtype:
+            ### new branches for Vtype correction ###
+            Vtype_new = array('f', [0])
+            newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
 
-        vLeptonsBranches = {}
-        VBranches = {}
-        ##define Vleptons branch
-        vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
-        for var in vLeptonsvar:
-            vLeptonsBranches[var] = np.zeros(21, dtype=np.float32)
-            obranch = newtree.Branch('vLeptons_new_%s'%var, vLeptonsBranches[var], 'vLeptons_new_%s[2]/F'%var)
+            vLeptonsBranches = {}
+            VBranches = {}
+            ##define Vleptons branch
+            vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
+            for var in vLeptonsvar:
+                vLeptonsBranches[var] = np.zeros(21, dtype=np.float32)
+                obranch = newtree.Branch('vLeptons_new_%s'%var, vLeptonsBranches[var], 'vLeptons_new_%s[2]/F'%var)
 
-        ##define Vleptons branch
-        Vvar = ['pt', 'eta', 'phi', 'mass']
-        LorentzDic = {'pt':'Pt', 'eta':'Eta', 'phi':'Phi', 'mass':'M'}
-        for var in Vvar:
-            #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
-            VBranches[var] = np.zeros(21, dtype=np.float32)
-            obranch = newtree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
+            ##define Vleptons branch
+            Vvar = ['pt', 'eta', 'phi', 'mass']
+            LorentzDic = {'pt':'Pt', 'eta':'Eta', 'phi':'Phi', 'mass':'M'}
+            for var in Vvar:
+                #vLeptonsBranches[var] = np.array([0]*2, dtype=float)
+                VBranches[var] = np.zeros(21, dtype=np.float32)
+                obranch = newtree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
 
-        #include the Vytpe reco here
-        zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
-        zMuSelection = lambda x : tree.selLeptons_pt[x] > 15 and  tree.selLeptons_looseIdPOG[x] and tree.selLeptons_relIso04[x] < 0.25
+            #include the Vytpe reco here
+            zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
+            zMuSelection = lambda x : tree.selLeptons_pt[x] > 15 and  tree.selLeptons_looseIdPOG[x] and tree.selLeptons_relIso04[x] < 0.25
 
         #count number of corrected events
         n_vtype_changed = 0
@@ -1069,10 +1087,6 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
-                #if entry>200000: break
-                #if entry>10000: break
-                #if entry>1000: break
-                #if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1184,17 +1198,6 @@ for job in info:
                     if stopAfterVtypeCorrection:
                         newtree.Fill()
                         continue
-                elif channel == "Zmm" and not recomputeVtype:
-                    # copy vtype to vtype new
-                    Vtype_new[0] = tree.Vtype
-
-                    for var in Vvar:
-                        VBranches[var][0] = getattr(tree,'V_%s'%var)
-                    for var in vLeptonsvar:
-                        vLeptonsBranches[var][0] = getattr(tree,'vLeptons_%s'%var)[0]
-                        vLeptonsBranches[var][1] = getattr(tree,'vLeptons_%s'%var)[1]            
-                
-                    #print ('duplicate V lepton branches')
 
                 if channel == "Zmm" and applyBTagweights and job.type != 'DATA':
 
@@ -1391,13 +1394,20 @@ for job in info:
 
                     ### Fill new variable from configuration ###
                     for variableName in newVariableNames:
-                        newVariableFormulas[variableName].GetNdata()
-                        newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
+                        nData = newVariableFormulas[variableName].GetNdata()
+                        if nData > 1:
+                            for element in range(nData):
+                                newVariables[variableName][element] = newVariableFormulas[variableName].EvalInstance(element)
+                        else:
+                            newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
-                    if 'DY' in job.FullName:
-                        if '10to50' in job.FullName:
+                    ### todo: job.FullName is not defined!
+                    jobName = str(job)
+                   
+                    if 'DY' in jobName:
+                        if '10to50' in jobName:
                             isDY[0] = 3
-                        elif 'amcatnloFXFX' in job.FullName:
+                        elif 'amcatnloFXFX' in jobName:
                             isDY[0] = 2
                         else:
                             isDY[0] = 1
