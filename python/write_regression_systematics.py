@@ -23,6 +23,7 @@ parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration defining the plots to make")
 parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
+parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files")
 
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
@@ -323,7 +324,16 @@ for job in info:
         print 'outputFile',outputFile
         print ''
 
-        input.cd()
+        try:
+            input.cd()
+        except Exception as e:
+            print '-'*40
+            print 'INPUT:',inputfile
+            print 'OUTPUT:',outputFile
+            print 'TMP:',tmpfile
+            print 'EXCEPTION:',e
+            print '-'*40
+            continue
         obj = ROOT.TObject
         for key in ROOT.gDirectory.GetListOfKeys():
             input.cd()
@@ -608,71 +618,67 @@ for job in info:
             #eleweight[0], eleweight[1], eleweight[2] = 1,1,1
             #newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
-        if addBranches and job.type != 'DATA':
+        if addBranches:
+            if job.type != 'DATA':
 
-            #EWK weights
-            EWKw = array('f',[0])
-            EWKw[0] = 1
-            newtree.Branch('EWKw',EWKw,'EWKw/F')
+                #EWK weights
+                EWKw = array('f',[0])
+                EWKw[0] = 1
+                newtree.Branch('EWKw',EWKw,'EWKw/F')
 
-            #NLO weights
-            NLOw = array('f',[0])
-            NLOw[0] = 1
-            newtree.Branch('NLOw',NLOw,'NLOw/F')
+                #NLO weights
+                NLOw = array('f',[0])
+                NLOw[0] = 1
+                newtree.Branch('NLOw',NLOw,'NLOw/F')
 
-            #DY_weight. Are the product of the three weights declared above
-            DYw= array('f',[0])
-            DYw[0] = 1
-            newtree.Branch('DYw',DYw,'DYw/F')
+                #DY_weight. Are the product of the three weights declared above
+                DYw= array('f',[0])
+                DYw[0] = 1
+                newtree.Branch('DYw',DYw,'DYw/F')
 
-            #isDY: to identify what kind of DY sample it is
-            isDY = array('i',[-1])
-            DYw[0] = -1
-            newtree.Branch('isDY', isDY, 'isDY/I')
+                #isDY: to identify what kind of DY sample it is
+                isDY = array('i',[-1])
+                DYw[0] = -1
+                newtree.Branch('isDY', isDY, 'isDY/I')
 
             ### Adding new variable from configuration ###
             newVariableNames = []
 
-            try:
-                writeNewVariables = eval(config.get("Regression","writeNewVariables"))
-               
-                newVariableDefs = writeNewVariables.keys()
-                newVariableNames = []
-                newVariables = {}
-                newVariableFormulas = {}
-                newVariableLengths = {}
-                for variable in newVariableDefs:
-                    # parse definition
-                    variableName = variable
-                    variableType = 'F'
-                    if '/' in variable:
-                        variableName = variable.split('/')[0]
-                        variableType = variable.split('/')[-1]
-                    variableLength = 1
-                    if '[' in variableName:
-                        variableLength = int(variableName.split('[')[1].strip(']'))
-                        variableName = variableName.split('[')[0].strip()
-                    
-                    formula = writeNewVariables[variable] 
-                    print "adding variable ",variableName,", length", variableLength, " type",variableType," using formula",formula," .",
-                    newVariables[variableName] = array(variableType.lower(),[0]*variableLength)  #type: f
-                    
-                    # build variable definition for tree
-                    variableDef = variableName
-                    if variableLength > 1:
-                        variableDef += '[%d]'%variableLength
-                    variableDef += '/' + variableType
+            writeNewVariables = eval(config.get("Regression","writeNewVariables"))
 
-                    # add variable to tree
-                    newtree.Branch(variableName,newVariables[variableName],variableDef)
-                    newVariableFormulas[variableName] =ROOT.TTreeFormula(variableName,formula,tree)
-                    print "done."
-                    newVariableNames.append(variableName)
-                    newVariableLengths[variableName] = variableLength
-            except Exception as e:
-                print "EXCEPTION:",e
-                raise
-                pass
+            newVariableDefs = writeNewVariables.keys()
+            newVariableNames = []
+            newVariables = {}
+            newVariableFormulas = {}
+            newVariableLengths = {}
+            for variable in newVariableDefs:
+                # parse definition
+                variableName = variable
+                variableType = 'F'
+                if '/' in variable:
+                    variableName = variable.split('/')[0]
+                    variableType = variable.split('/')[-1]
+                variableLength = 1
+                if '[' in variableName:
+                    variableLength = int(variableName.split('[')[1].strip(']'))
+                    variableName = variableName.split('[')[0].strip()
+
+                formula = writeNewVariables[variable]
+                print "adding variable ",variableName,", length", variableLength, " type",variableType," using formula",formula," .",
+                newVariables[variableName] = array(variableType.lower(),[0]*variableLength)  #type: f
+
+                # build variable definition for tree
+                variableDef = variableName
+                if variableLength > 1:
+                    variableDef += '[%d]'%variableLength
+                variableDef += '/' + variableType
+
+                # add variable to tree
+                newtree.Branch(variableName,newVariables[variableName],variableDef)
+                newVariableFormulas[variableName] =ROOT.TTreeFormula(variableName,formula,tree)
+                print "done."
+                newVariableNames.append(variableName)
+                newVariableLengths[variableName] = variableLength
 
         if False and not (recomputeVtype and stopAfterVtypeCorrection) and not(Stop_after_BTagweights and applyBTagweights) and not(Stop_after_LepSF and applyLepSF) and not (addBranches and Stop_after_addBranches):
             
@@ -1390,7 +1396,7 @@ for job in info:
                     newtree.Fill()
                     continue
 
-                if addBranches and job.type != 'DATA':
+                if addBranches:
 
                     ### Fill new variable from configuration ###
                     for variableName in newVariableNames:
@@ -1401,32 +1407,34 @@ for job in info:
                         else:
                             newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
-                    ### todo: job.FullName is not defined!
-                    jobName = str(job)
-                   
-                    if 'DY' in jobName:
-                        if '10to50' in jobName:
-                            isDY[0] = 3
-                        elif 'amcatnloFXFX' in jobName:
-                            isDY[0] = 2
+                    if job.type != 'DATA':
+                        ### todo: job.FullName is not defined!
+                        jobName = str(job)
+
+                        if 'DY' in jobName:
+                            if '10to50' in jobName:
+                                isDY[0] = 3
+                            elif 'amcatnloFXFX' in jobName:
+                                isDY[0] = 2
+                            else:
+                                isDY[0] = 1
                         else:
-                            isDY[0] = 1
-                    else:
-                        isDY[0] = 0
+                            isDY[0] = 0
 
-                    EWKw[0] = 1
-                    if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
-                        #print 'GebVboson is', tree.GenVbosons_pt[0]
-                        if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                            EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
+                        EWKw[0] = 1
+                        if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
+                            #print 'GebVboson is', tree.GenVbosons_pt[0]
+                            if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
+                                EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
 
-                    NLOw[0] = 1
-                    if isDY[0] == 1:
-                        etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
-                        if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
+                        NLOw[0] = 1
+                        if isDY[0] == 1:
+                            etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
+                            if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
 
-                    #pdb.set_trace()
-                    DYw[0] = EWKw[0]*NLOw[0]
+                        #pdb.set_trace()
+                        DYw[0] = EWKw[0]*NLOw[0]
+
                 if addBranches and Stop_after_addBranches:
                     newtree.Fill()
                     continue
