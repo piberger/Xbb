@@ -387,8 +387,8 @@ class TreeCache:
                             # add file to chain
                             print ('chaining '+chainTree)
                             statusCode = tree.Add(chainTree)
-                            if statusCode != 1:
-                                print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode))
+                            if statusCode != 1 or not tree:
+                                print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
                                 raise Exception("TChain method Add failure")
                             else:
                                 treeEmpty = False
@@ -434,7 +434,7 @@ class TreeCache:
             #print ("the cut (with subcut) is", theCut)
             
             if not treeEmpty:
-                ROOT.TFormula.SetMaxima(100000,10000,1000000)
+                #ROOT.TFormula.SetMaxima(100000,10000,1000000)
                 time1 = time.time() 
 
                 subcutExists = sample.subcut and sample.subcut.strip() != "1"
@@ -442,9 +442,10 @@ class TreeCache:
                 if subcutExists: 
                     ROOT.gROOT.cd()
 
+                print ('DEBUG: tree=',tree)
                 # first cut, without subcut 
-                cuttedTree=tree.CopyTree(theCut,"",100000000)
-                print ('cut done: '+str(cuttedTree)+' => '+str(tree.GetEntries()) + ' entries')
+                cuttedTree=tree.CopyTree(theCut,"")
+                print ('cut done: '+str(cuttedTree)+' '+str(tree.GetEntries()) + ' => ' + str(cuttedTree.GetEntries()) + ' entries')
                 time2=time.time()
 
                 # if subcut exists, apply it by further cutting the tree
