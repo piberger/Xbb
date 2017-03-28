@@ -67,7 +67,7 @@ if opts.settings:
         subcut_plotname = '%s_%s_%s'%(subcut[0],subcut[1],subcut[2])
         print 'subcut_ is', subcut_
     if 'CACHING' in opts.settings:
-        sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+        sample_to_merge_ = '__'.join(opts.settings[opts.settings.find('CACHING')+7:].split('__')[1:])
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
     if 'MERGECACHING' in opts.settings:
         mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
