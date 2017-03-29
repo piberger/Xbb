@@ -148,9 +148,17 @@ SampleCuts = {"DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8":"lheV_pt
 #ZLL
 ########
 
-print "weightZBjetsVpt0=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT0)
-print "weightZBjetsVpt100=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT100)
-print "weightZBjetsVpt200=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT200)
+#print "weightZBjetsVpt0=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT0)
+#print "weightZBjetsVpt100=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT100)
+#print "weightZBjetsVpt200=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT200)
+
+#For ext.
+
+#getExtWeight(["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])
+#getExtWeight(["DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])
+#getExtWeight(["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])
+
+getExtWeight(["ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8","ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1"])
 
 #V25
 #DYB
@@ -190,6 +198,3 @@ print "weightZBjetsVpt200=\t%.2f\n"   %getWeight(ZlljetsHTbinned, ZLLBjets, VPT2
 #getExtWeight(['ST_t-channel_4f_leptonDecays_13TeV-amcatnlo-pythia8_TuneCUETP8M1','ST_t-channel_4f_leptonDecays_13TeV-amcatnlo-pythia8_TuneCUETP8M1_ext1'])
 
 
-#getExtWeight(["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])
-#getExtWeight(["DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])
-#getExtWeight(["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"])

@@ -500,7 +500,7 @@ class TreeCache:
         count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
     def get_scale(self, sample, config, lumi = None, count=1):

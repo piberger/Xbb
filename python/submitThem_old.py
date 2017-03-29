@@ -497,10 +497,10 @@ if opts.task == 'splitcachingdc':
     for item in DC_vars:
         #get all the samples list
         print 'item is', item 
-        signals = config.get('dc:%s'%item,'signal').split(' ')
+        signals = eval('['+config.get('dc:%s'%item,'signal')+']')
         backgrounds = eval(config.get('LimitGeneral','BKG'))
         all_samples = info.get_samples(signals+backgrounds)
-        data_sample_names = config.get('dc:%s'%item,'data').split(' ')
+        data_sample_names = eval(config.get('dc:%s'%item,'data'))
         data_samples = info.get_samples(data_sample_names)
         samples = all_samples+data_samples
         for sample in samples:

@@ -120,6 +120,8 @@ class ParseInfo:
             else:
                 specialweight = "1"
 
+            fullname = config.get(sample,'sampleName')
+
 
       #fill the sample
             newsample = Sample(sampleName,sampleType)
@@ -129,6 +131,7 @@ class ParseInfo:
             newsample.specialweight=specialweight
             newsample.lumi=lumi
             newsample.prefix=newprefix
+            newsample.FullName = fullname
             
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
