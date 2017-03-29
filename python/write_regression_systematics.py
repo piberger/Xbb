@@ -492,7 +492,7 @@ for job in info:
             def get_event_SF(ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV", btag_calibrators=btag_calibrators):
                 weight = 1.0
 
-                print 'gonna add the jet SF'
+                #print 'gonna add the jet SF'
                 for jet in jets:
                     #print 'ptmin', ptmin, 'ptmax', ptmax, 'etamin', etamin, 'etamax', etamax
                     #print 'jet: pt', jet.pt, 'eta', jet.eta
@@ -534,21 +534,21 @@ for job in info:
             # see "VHbb btagWeight Macro" mail from 13/02/2017
             if job.type != 'DATA':
                 bTagWeights = {}
-                bTagWeights["bTagWeightCMVAV2_Moriond"] = np.zeros(1, dtype=float)
-                newtree.Branch("bTagWeightCMVAv2_Moriond", bTagWeights["bTagWeightCMVAV2_Moriond"], "bTagWeightCMVAV2_Moriond/D")
+                bTagWeights["bTagWeightCMVAV2_Moriond_v2"] = np.zeros(1, dtype=float)
+                newtree.Branch("bTagWeightCMVAv2_Moriond", bTagWeights["bTagWeightCMVAV2_Moriond_v2"], "bTagWeightCMVAV2_Moriond_v2/D")
                 for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                     for sdir in ["Up", "Down"]:
 
-                        bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
-                        newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir], "bTagWeightCMVAV2_Moriond_"+syst+sdir+"/D")
+                        bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir] = np.zeros(1, dtype=float)
+                        newtree.Branch("bTagWeightCMVAV2_Moriond_v2_"+syst+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir], "bTagWeightCMVAV2_Moriond_v2_"+syst+sdir+"/D")
 
                         #bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
                         #newtree.Branch("bTagWeightCSV_Moriond_"+syst+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir], "bTagWeightCSV_Moriond_"+syst+sdir+"/D")
 
                         for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
 
-                            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-                            newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir+"/D")
+                            bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
+                            newtree.Branch("bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir+"/D")
 
                             #bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
                             #newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
@@ -563,183 +563,6 @@ for job in info:
     #    return self.eta
 
 
-        ####
-        ##OLD
-        ####
-        ## load the BTagCalibrationStandalone.cc macro from https://twiki.cern.ch/twiki/bin/view/CMS/BTagCalibration
-        ##
-        #if applyBTagweights:
-        #    ROOT.gSystem.Load("./BTagCalibrationStandalone.so")
-        #    # CSVv2
-        #    calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
-        #    # cMVAv2
-        #    calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
-        #    # map between algo/flavour and measurement type
-        #    sf_type_map = {
-        #        "CSV" : {
-        #            "file" : calib_csv,
-        #            "bc" : "comb",
-        #            "l" : "incl",
-        #            },
-        #        "CMVAV2" : {
-        #            "file" : calib_cmva,
-        #            "bc" : "ttbar",
-        #            "l" : "incl",
-        #            }
-        #        }
-        #    btag_calibrators = {}
-        #    for algo in ["CSV", "CMVAV2"]:
-        #        for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
-        #            print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
-        #            btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
-        #    print 'debug mtf'
-        #    sysRefMap = {}
-        #    sysMap = {}
-        #    sysMap["JESUp"] = "up_jes"
-        #    sysMap["JESDown"] = "down_jes"
-        #    sysMap["LFUp"] = "up_lf"
-        #    sysMap["LFDown"] = "down_lf"
-        #    sysMap["HFUp"] = "up_hf"
-        #    sysMap["HFDown"] = "down_hf"
-        #    sysMap["HFStats1Up"] = "up_hfstats1"
-        #    sysMap["HFStats1Down"] = "down_hfstats1"
-        #    sysMap["HFStats2Up"] = "up_hfstats2"
-        #    sysMap["HFStats2Down"] = "down_hfstats2"
-        #    sysMap["LFStats1Up"] = "up_lfstats1"
-        #    sysMap["LFStats1Down"] = "down_lfstats1"
-        #    sysMap["LFStats2Up"] = "up_lfstats2"
-        #    sysMap["LFStats2Down"] = "down_lfstats2"
-        #    sysMap["cErr1Up"] = "up_cferr1"
-        #    sysMap["cErr1Down"] = "down_cferr1"
-        #    sysMap["cErr2Up"] = "up_cferr2"
-        #    sysMap["cErr2Down"] = "down_cferr2"
-
-        #    #
-        #    #to include bTag weights
-        #    #
-        #    # depending on flavour, only a sample of systematics matter
-        #    def applies( flavour, syst ):
-        #        if flavour==5 and syst not in ["central", "up_jes", "down_jes",  "up_lf", "down_lf",  "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2"]:
-        #            return False
-        #        elif flavour==4 and syst not in ["central", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2" ]:
-        #            return False
-        #        elif flavour==0 and syst not in ["central", "up_jes", "down_jes", "up_hf", "down_hf",  "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2" ]:
-        #            return False
-
-        #        return True
-
-
-        #    # function that reads the SF
-        #    def get_SF(pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M", shape_corr=False, btag_calibrators=btag_calibrators):
-
-        #        # no SF for pT<20 GeV or pt>1000 or abs(eta)>2.4
-        #        if abs(eta)>2.4 or pt>1000. or pt<20.:
-        #            return 1.0
-
-        #        # the .csv files use the convention: b=0, c=1, l=2. Convert into hadronFlavour convention: b=5, c=4, f=0
-        #        fl_index = min(-fl+5,2)
-        #        # no fl=1 in .csv for CMVAv2 (a bug???)
-        #        if not shape_corr and "CMVAV2" in algo and fl==4:
-        #            fl_index = 0
-
-        #        if shape_corr:
-        #            if applies(fl,syst):
-        #                sf = btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-        #                #print sf
-        #                return sf
-        #            else:
-        #                sf = btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-        #                #print sf
-        #                return sf
-
-        #        # pt ranges for bc SF: needed to avoid out_of_range exceptions
-        #        pt_range_high_bc = 670.-1e-02 if "CSV" in algo else 320.-1e-02
-        #        pt_range_low_bc = 30.+1e-02
-
-        #        # b or c jets
-        #        if fl>=4:
-        #            # use end_of_range values for pt in [20,30] or pt in [670,1000], with double error
-        #            out_of_range = False
-        #            if pt>pt_range_high_bc or pt<pt_range_low_bc:
-        #                out_of_range = True
-        #            pt = min(pt, pt_range_high_bc)
-        #            pt = max(pt, pt_range_low_bc)
-        #            sf = btag_calibrators[algo+wp+"_"+syst+"_bc"].eval(fl_index ,eta, pt)
-        #            # double the error for pt out-of-range
-        #            if out_of_range and syst in ["up","down"]:
-        #                sf = max(2*sf - btag_calibrators[algo+wp+"_central_bc"].eval(fl_index ,eta, pt), 0.)
-        #            #print sf
-        #            return sf
-        #        # light jets
-        #        else:
-        #            sf = btag_calibrators[algo+wp+"_"+syst+"_l"].eval( fl_index ,eta, pt)
-        #            #print sf
-        #            return  sf
-
-        #    def get_event_SF(ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV", btag_calibrators=btag_calibrators):
-        #        weight = 1.0
-
-        #        for jet in jets:
-        #            if (jet.pt > ptmin and jet.pt < ptmax and abs(jet.eta) > etamin and abs(jet.eta) < etamax):
-        #                weight *= get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="", shape_corr=True, btag_calibrators=btag_calibrators)
-        #            else:
-        #                weight *= get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True, btag_calibrators=btag_calibrators)
-        #        return weight
-
-        #    class Jet :
-        #        def __init__(self, pt, eta, fl, csv) :
-        #            self.pt = pt
-        #            self.eta = eta
-        #            self.hadronFlavour = fl
-        #            self.csv = csv
-        #    def MakeSysRefMap():
-        #        sysRefMap["JESUp"] = tree.btagWeightCSV_up_jes
-        #        sysRefMap["JESDown"] = tree.btagWeightCSV_down_jes
-        #        sysRefMap["LFUp"] = tree.btagWeightCSV_up_lf
-        #        sysRefMap["LFDown"] = tree.btagWeightCSV_down_lf
-        #        sysRefMap["HFUp"] = tree.btagWeightCSV_up_hf
-        #        sysRefMap["HFDown"] = tree.btagWeightCSV_down_hf
-        #        sysRefMap["HFStats1Up"] = tree.btagWeightCSV_up_hfstats1
-        #        sysRefMap["HFStats1Down"] = tree.btagWeightCSV_down_hfstats1
-        #        sysRefMap["HFStats2Up"] = tree.btagWeightCSV_up_hfstats2
-        #        sysRefMap["HFStats2Down"] = tree.btagWeightCSV_down_hfstats2
-        #        sysRefMap["LFStats1Up"] = tree.btagWeightCSV_up_lfstats1
-        #        sysRefMap["LFStats1Down"] = tree.btagWeightCSV_down_lfstats1
-        #        sysRefMap["LFStats2Up"] = tree.btagWeightCSV_up_lfstats2
-        #        sysRefMap["LFStats2Down"] = tree.btagWeightCSV_down_lfstats2
-        #        sysRefMap["cErr1Up"] = tree.btagWeightCSV_up_cferr1
-        #        sysRefMap["cErr1Down"] = tree.btagWeightCSV_down_cferr1
-        #        sysRefMap["cErr2Up"] = tree.btagWeightCSV_up_cferr2
-        #        sysRefMap["cErr2Down"] = tree.btagWeightCSV_down_cferr2
-
-        #    # Add bTag weights. Stole code from David
-        #    # https://github.com/dcurry09/v25Heppy/blob/master/python/bTagSF.py
-        #    # see "VHbb btagWeight Macro" mail from 13/02/2017
-        #    if job.type != 'DATA':
-        #        bTagWeights = {}
-        #        bTagWeights["bTagWeightCMVAV2_Moriond"] = np.zeros(1, dtype=float)
-        #        newtree.Branch("bTagWeightCMVAv2_Moriond", bTagWeights["bTagWeightCMVAV2_Moriond"], "bTagWeightCMVAV2_Moriond/D")
-
-        #        bTagWeights["bTagWeightCSV_Moriond"] = np.zeros(1, dtype=float)
-        #        newtree.Branch("bTagWeightCSV_Moriond", bTagWeights["bTagWeightCSV_Moriond"], "bTagWeightCSV_Moriond/D")
-
-
-        #        for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
-        #            for sdir in ["Up", "Down"]:
-
-        #                bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
-        #                newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir], "bTagWeightCMVAV2_Moriond_"+syst+sdir+"/D")
-
-        #                bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
-        #                newtree.Branch("bTagWeightCSV_Moriond_"+syst+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir], "bTagWeightCSV_Moriond_"+syst+sdir+"/D")
-
-        #                for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
-
-        #                    bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-        #                    newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir+"/D")
-
-        #                    bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-        #                    newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
 
         if applyLepSF and job.type != 'DATA':
 
@@ -1289,7 +1112,7 @@ for job in info:
         for entry in range(0,nEntries):
                 #if entry>200000: break
                 #if entry>10000: break
-                if entry>1000: break
+                #if entry>1000: break
                 #if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
@@ -1412,15 +1235,20 @@ for job in info:
                     etamin = 0.
                     etamax = 2.4
 
-                    bTagWeights["bTagWeightCMVAV2_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
+                    central_SF = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
+                    bTagWeights["bTagWeightCMVAV2_Moriond_v2"][0] = central_SF
+                    #print "central bTagWeightCMVAV2_Moriond_v2  is ", central_SF
+                    #print ""
 
 
                     for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
+                        if not syst == 'JES': continue
                         for sdir in ["Up", "Down"]:
 
-                            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                            bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
 
                             for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+                                if not systcat == 'HighCentral': continue
 
                                 ptmin = 20.
                                 ptmax = 1000.
@@ -1436,58 +1264,9 @@ for job in info:
                                     etamin = 1.4
 
                                 event_SF_ = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                                #bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                                bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = event_SF_
-                                #print "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, ' is', event_SF_#get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-
-
-                    ###
-                    #OLD
-                    ###
-                    #MakeSysRefMap()
-
-                    #jets_csv = []
-                    #jets_cmva = []
-
-                    #for i in range(tree.nJet):
-                    #    if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
-                    #        jet_csv = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCSV[i])
-                    #        jets_csv.append(jet_csv)
-                    #        jet_cmva = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVAV2[i])
-                    #        jets_cmva.append(jet_cmva)
-
-                    #ptmin = 20.
-                    #ptmax = 1000.
-                    #etamin = 0.
-                    #etamax = 2.4
-
-                    #bTagWeights["bTagWeightCMVAV2_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
-                    #bTagWeights["bTagWeightCSV_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, "central", "CSV", btag_calibrators)
-
-                    #print 'btag CMVAV2 Event Weight:', bTagWeights["bTagWeightCMVAV2_Moriond"][0]
-                    #print 'btag CSV Event Weight   :', bTagWeights["bTagWeightCSV_Moriond"][0]
-
-                    #for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
-                    #    for sdir in ["Up", "Down"]:
-
-                    #        bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                    #        bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_csv, sysMap[syst+sdir], "CSV", btag_calibrators)
-
-
-                    #        for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
-                    #            if (systcat.find("High")!=-1):
-                    #                ptmin = 100.
-                    #            if (systcat.find("Low")!=-1):
-                    #                ptmax = 100.
-                    #            if (systcat.find("Central")!=-1):
-                    #                etamax = 1.4
-                    #            if (systcat.find("Forward")!=-1):
-                    #                etamin = 1.4
-
-                    #            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-
-                    #            bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, sysMap[syst+sdir], "CSV", btag_calibrators)
-
+                                bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir][0] = event_SF_
+                                #print "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, ' is', event_SF_#get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                                #print ""
                 if channel == "Zmm" and applyBTagweights and Stop_after_BTagweights:
                     newtree.Fill()
                     continue
@@ -2135,252 +1914,6 @@ for job in info:
                                     branch_addresses[jet_branch_new][j] = getattr(tree, jet_branch_old)[j]
                                 else:
                                     branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
-
-
-
-
-                        #sample_name_ = 'Ilove10cats'
-                        #print 'sample_name is', sample_name
-                        #j = 0
-                        #for i in range(0,len(sample_name)):
-                        #    sample_name.pop(i-j)
-                        #    j = j + 1
-                        #for s in sample_name_:
-                        #    sample_name.append(s)
-
-                        #def fillvar():
-                        #    #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
-                        #    for SysDic in SysDicList:
-                        #        if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
-                        #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                        #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #                SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            else:
-                        #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']])
-                        #        else:
-                        #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                        #                for jetindex in range(len(tree.Jet_eta)):
-                        #                    booljet = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('tree.hJCidx[INDEX]',str(jetindex)))
-                        #                    if booljet:
-                        #                        #print 'jetindex is', jetindex
-                        #                        #print 'sysdic is', SysDic['varptr']
-                        #                        SysDic['varptr'][jetindex] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX',str(jetindex)))
-
-                        #            #    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    if booljet1 and not booljet2:
-                        #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    elif not booljet1 and booljet2:
-                        #            #        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    elif booljet1 and booljet1:
-                        #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    else:
-                        #            #        print '@ERROR: jet category could not be indentified. Aborting'
-                        #            else:
-                        #                Jet1 = ROOT.TLorentzVector()
-                        #                Jet2 = ROOT.TLorentzVector()
-                        #                Jet1_sys = ROOT.TLorentzVector()
-                        #                Jet2_sys = ROOT.TLorentzVector()
-                        #                Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        #                Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        #                booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #                booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-
-                        #                if booljet1 and not booljet2:
-                        #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    Jet2_sys = Jet2
-                        #                elif not booljet1 and booljet2:
-                        #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    Jet1_sys = Jet1
-                        #                elif booljet1 and booljet1:
-                        #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                else:
-                        #                    print '@ERROR: jet category could not be indentified. Aborting'
-                        #                    print 'cat is', SysDic['cat']
-                        #                    print 'condition is', ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])
-                        #                    print 'jet cond is', JetConditionDic[SysDic['cat']].replace('INDEX','1')
-                        #                    sys.exit()
-
-                        #                HJet = Jet1+Jet2
-                        #                HJet_sys = Jet1_sys+Jet2_sys
-                        #                SysDic['varptr'][0] = eval(SYSVar[SysDic['var']])
-
-                        #fillvar()
-
-
-
-                        ####  Btag Weights for high/low and eta regions ####
-                        #if tree.Jet_pt_reg[tree.hJCidx[0]]>100. or tree.Jet_pt_reg[tree.hJCidx[1]]>100.:
-                        #    btag_weight_JECUp_high[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_high[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_high[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_high[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_high[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_high[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_high[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV
-
-
-                        #if tree.Jet_pt_reg[tree.hJCidx[0]]<100. or tree.Jet_pt_reg[tree.hJCidx[1]]<100.:
-                        #    btag_weight_JECUp_low[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_low[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_low[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_low[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_low[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_low[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_low[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV
-
-                        #if tree.Jet_eta[tree.hJCidx[0]]>1.4 or tree.Jet_eta[tree.hJCidx[1]]>1.4:
-                        #    btag_weight_JECUp_central[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_central[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_central[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_central[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_central[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_central[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_central[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV
-
-
-                        #if tree.Jet_eta[tree.hJCidx[0]]<1.4 or tree.Jet_eta[tree.hJCidx[1]]<1.4:
-                        #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_forward[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_forward[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_forward[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_forward[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV
-
 
                     if applyRegression:
                         if job.type != 'DATA':
