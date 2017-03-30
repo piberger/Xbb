@@ -23,7 +23,6 @@ parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration defining the plots to make")
 parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
-parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files")
 
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
@@ -328,16 +327,7 @@ for job in info:
         print 'outputFile',outputFile
         print ''
 
-        try:
-            input.cd()
-        except Exception as e:
-            print '-'*40
-            print 'INPUT:',inputfile
-            print 'OUTPUT:',outputFile
-            print 'TMP:',tmpfile
-            print 'EXCEPTION:',e
-            print '-'*40
-            continue
+        input.cd()
         obj = ROOT.TObject
         for key in ROOT.gDirectory.GetListOfKeys():
             input.cd()
@@ -658,8 +648,8 @@ for job in info:
             #newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
         if addBranches:
-            if job.type != 'DATA':
 
+            if job.type != 'DATA':
                 #EWK weights
                 EWKw = array('f',[0])
                 EWKw[0] = 1
@@ -683,41 +673,29 @@ for job in info:
             ### Adding new variable from configuration ###
             newVariableNames = []
 
-            writeNewVariables = eval(config.get("Regression","writeNewVariables"))
+            try:
+                writeNewVariables = eval(config.get("Regression","writeNewVariables"))
 
-            newVariableDefs = writeNewVariables.keys()
-            newVariableNames = []
-            newVariables = {}
-            newVariableFormulas = {}
-            newVariableLengths = {}
-            for variable in newVariableDefs:
-                # parse definition
-                variableName = variable
-                variableType = 'F'
-                if '/' in variable:
-                    variableName = variable.split('/')[0]
-                    variableType = variable.split('/')[-1]
-                variableLength = 1
-                if '[' in variableName:
-                    variableLength = int(variableName.split('[')[1].strip(']'))
-                    variableName = variableName.split('[')[0].strip()
+                #Not needed anymore
+                ### remove MC variables in data ##
+                #if job.type == 'DATA':
+                #    for idx in dict(writeNewVariables):
+                #        formula = writeNewVariables[idx]
+                #        if 'gen' in formula or 'Gen' in formula or 'True' in formula or 'true' in formula or 'mc' in formula or 'Mc' in formula:
+                #            print "Removing: ",idx," with ",formula
+                #            del writeNewVariables[idx]
 
-                formula = writeNewVariables[variable]
-                print "adding variable ",variableName,", length", variableLength, " type",variableType," using formula",formula," .",
-                newVariables[variableName] = array(variableType.lower(),[0]*variableLength)  #type: f
-
-                # build variable definition for tree
-                variableDef = variableName
-                if variableLength > 1:
-                    variableDef += '[%d]'%variableLength
-                variableDef += '/' + variableType
-
-                # add variable to tree
-                newtree.Branch(variableName,newVariables[variableName],variableDef)
-                newVariableFormulas[variableName] =ROOT.TTreeFormula(variableName,formula,tree)
-                print "done."
-                newVariableNames.append(variableName)
-                newVariableLengths[variableName] = variableLength
+                newVariableNames = writeNewVariables.keys()
+                newVariables = {}
+                newVariableFormulas = {}
+                for variableName in newVariableNames:
+                    formula = writeNewVariables[variableName]
+                    newVariables[variableName] = array('f',[0])
+                    newtree.Branch(variableName,newVariables[variableName],variableName+'/F')
+                    newVariableFormulas[variableName] =ROOT.TTreeFormula(variableName,formula,tree)
+                    print "adding variable ",variableName,", using formula",writeNewVariables[variableName]," ."
+            except:
+                pass
 
         if AddSpecialWeight and job.type != 'DATA':
             DY_specialWeight= array('f',[0])
@@ -1094,8 +1072,8 @@ for job in info:
             pass
             #print 'doing Vtype correction only, no other branches added!'
 
+        ### new branches for Vtype correction ###
         if recomputeVtype:
-            ### new branches for Vtype correction ###
             Vtype_new = array('f', [0])
             newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
 
@@ -1115,9 +1093,9 @@ for job in info:
                 VBranches[var] = np.zeros(21, dtype=np.float32)
                 obranch = newtree.Branch('V_new_%s'%var, VBranches[var], 'V_new_%s/F'%var)
 
-            #include the Vytpe reco here
-            zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
-            zMuSelection = lambda x : tree.selLeptons_pt[x] > 15 and  tree.selLeptons_looseIdPOG[x] and tree.selLeptons_relIso04[x] < 0.25
+        #include the Vytpe reco here
+        zEleSelection = lambda x : tree.selLeptons_pt[x] > 15 and tree.selLeptons_eleMVAIdSppring16GenPurp[x] >= 1
+        zMuSelection = lambda x : tree.selLeptons_pt[x] > 15 and  tree.selLeptons_looseIdPOG[x] and tree.selLeptons_relIso04[x] < 0.25
 
         #count number of corrected events
         n_vtype_changed = 0
@@ -1132,6 +1110,10 @@ for job in info:
         #########################
 
         for entry in range(0,nEntries):
+                #if entry>200000: break
+                #if entry>10000: break
+                #if entry>1000: break
+                #if entry>100: break
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
@@ -1260,9 +1242,13 @@ for job in info:
 
 
                     for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
+                        if not syst == 'JES': continue
                         for sdir in ["Up", "Down"]:
+
                             bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+
                             for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+                                if not systcat == 'HighCentral': continue
 
                                 ptmin = 20.
                                 ptmax = 1000.
@@ -1441,21 +1427,14 @@ for job in info:
 
                     ### Fill new variable from configuration ###
                     for variableName in newVariableNames:
-                        nData = newVariableFormulas[variableName].GetNdata()
-                        if nData > 1:
-                            for element in range(nData):
-                                newVariables[variableName][element] = newVariableFormulas[variableName].EvalInstance(element)
-                        else:
-                            newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
+                        newVariableFormulas[variableName].GetNdata()
+                        newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
                     if job.type != 'DATA':
-                        ### todo: job.FullName is not defined!
-                        jobName = str(job)
-
-                        if 'DY' in jobName:
-                            if '10to50' in jobName:
+                        if 'DY' in job.FullName:
+                            if '10to50' in job.FullName:
                                 isDY[0] = 3
-                            elif 'amcatnloFXFX' in jobName:
+                            elif 'amcatnloFXFX' in job.FullName:
                                 isDY[0] = 2
                             else:
                                 isDY[0] = 1
@@ -1475,7 +1454,6 @@ for job in info:
 
                         #pdb.set_trace()
                         DYw[0] = EWKw[0]*NLOw[0]
-
                 if addBranches and Stop_after_addBranches:
                     newtree.Fill()
                     continue
