@@ -1260,13 +1260,11 @@ for job in info:
 
 
                     for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
-                        if not syst == 'JES': continue
                         for sdir in ["Up", "Down"]:
 
                             bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
 
                             for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
-                                if not systcat == 'HighCentral': continue
 
                                 ptmin = 20.
                                 ptmax = 1000.
