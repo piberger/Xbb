@@ -6,6 +6,8 @@ import sys, os
 from optparse import OptionParser
 from copy import copy,deepcopy
 from math import sqrt
+import zlib
+import base64
 ROOT.gROOT.SetBatch(True)
 
 argv = sys.argv
@@ -29,22 +31,33 @@ parser.add_option("-f", "--filelist", dest="filelist", default="",
                               help="list of files you want to run on")
 parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
                               help="option to merge")
+parser.add_option("-M", "--mergecachingplot", dest="mergecachingplot", default=False, action='store_true', help="use files from mergecaching")
 parser.add_option("-s", "--settings", dest="settings", default=False,
                               help="co ntains sample you want to merge, as well as the subcut bin")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
-        
+
+# to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
+if opts.filelist.startswith('base64:'):
+    opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
+    #print 'zlib decoded file list:', opts.filelist
+
 from myutils import BetterConfigParser, printc, ParseInfo, mvainfo, StackMaker, HistoMaker
 
 print 'opts.settings is', opts.settings
 print 'mergeplot is', opts.mergeplot
+print 'mergecachingplot is', opts.mergecachingplot
 
 sample_to_merge_ = None
 subcut_ =  None
 var_to_plot_ = None
 #This will go in the name of the pdf, png etc file
 subcut_plotname = ''
+
+# reads n files, writes single file. disabled if set to -1
+mergeCachingPart = -1
+
 if opts.settings:
     print 'settings is', opts.settings
     if 'CUTBIN' in opts.settings:
@@ -54,8 +67,11 @@ if opts.settings:
         subcut_plotname = '%s_%s_%s'%(subcut[0],subcut[1],subcut[2])
         print 'subcut_ is', subcut_
     if 'CACHING' in opts.settings:
-        sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+        sample_to_merge_ = '__'.join(opts.settings[opts.settings.find('CACHING')+7:].split('__')[1:])
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
+    if 'MERGECACHING' in opts.settings:
+        mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
+        print '@INFO: Partially merged caching: this is part', mergeCachingPart
     if 'VAR' in opts.settings:
         var_to_plot_ = opts.settings[opts.settings.find('VAR')+4:]
         print '@INFO: Only the %s parameter will be ploted' %var_to_plot_
@@ -160,7 +176,9 @@ def doPlot():
     #print "================================================================\n"
 
     #Prepare cached files in the temporary (tmpSamples) folder.
-    Plotter=HistoMaker(mcsamples+datasamples,path,config,options,GroupDict,filelist,opts.mergeplot,sample_to_merge_)
+    #def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergecaching=False):
+
+    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)
@@ -319,8 +337,12 @@ def doPlot():
         Stacks[v].datas = Ldatas[v]
         Stacks[v].datatyps = Ldatatyps[v]
         Stacks[v].datanames= Ldatanames[v]
-        #if SignalRegion:
-        #    Stacks[v].overlay = Overlaylist[v] ## from
+        try:
+          if SignalRegion:
+            Stacks[v].overlay = Overlaylist[v] ## from
+        except Exception as e:
+            print "NO OVERLAY LIST:", e
+
         Stacks[v].lumi = lumi
         Stacks[v].jobnames= Ljobnames[v]
         Stacks[v].normalize = eval(config.get(section,'Normalize'))
