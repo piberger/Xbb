@@ -25,7 +25,7 @@ class StackMaker:
             self.setup=config.get('Plot_general','setup')
             if self.log:
                 self.setup=config.get('Plot_general','setupLog')
-            self.setup=[x.strip() for x in self.setup.split(',')]
+            self.setup=self.setup.split(',')
         else:
             self.setup=setup
         if not SignalRegion: 
@@ -160,8 +160,7 @@ class StackMaker:
         for j in range(0,k):
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            if self.typs[i] in self.colorDict:
-                self.histos[i].SetLineColor(int(self.colorDict[self.typs[i]]))
+            self.histos[i].SetLineColor(int(self.colorDict[self.typs[i]]))
             self.histos[i].SetFillColor(0)
             self.histos[i].SetLineWidth(3)
             if self.histos[i].Integral() > 0.:
@@ -216,7 +215,7 @@ class StackMaker:
         for key in self.setup:
           print "The sample in setup are", key
 
-        self.histos=[histo_dict[key] for key in self.setup if key in histo_dict]
+        self.histos=[histo_dict[key] for key in self.setup]
         print "again, self.histos is",self.histos
         self.typs=self.setup
 
@@ -281,8 +280,7 @@ class StackMaker:
             print 'j is',j
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            if self.typs[i] in self.colorDict:
-                self.histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
+            self.histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
             self.histos[i].SetLineColor(1)
             allStack.Add(self.histos[i])
 
@@ -353,11 +351,10 @@ class StackMaker:
             numLegend += len(self.overlay)
         l.AddEntry(d1,datatitle,'P')
         for j in range(0,k):
-            legendEntryName = self.typLegendDict[self.typs[j]] if self.typs[j] in self.typLegendDict else self.typs[j]
             if j < numLegend/2.-1:
-                l.AddEntry(self.histos[j],legendEntryName,'F')
+                l.AddEntry(self.histos[j],self.typLegendDict[self.typs[j]],'F')
             else:
-                l_2.AddEntry(self.histos[j],legendEntryName,'F')
+                l_2.AddEntry(self.histos[j],self.typLegendDict[self.typs[j]],'F')
         if self.overlay:
             overScale = 100000
             for _overlay in self.overlay: #find minimum scale to use for all overlays
@@ -648,8 +645,7 @@ class StackMaker:
         for j in range(0,k):
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            if self.typs[i] in self.colorDict:
-                sub_histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
+            sub_histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
             sub_histos[i].SetLineColor(1)
             allStack.Add(sub_histos[i])
             print sub_histos[i].GetName()

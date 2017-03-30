@@ -188,10 +188,6 @@ elif [ $task = "plot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
 
-elif [ $task = "mergecachingplot" ]; then
-    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
-    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot
-
 elif [ $task = "splitvarplot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
@@ -199,10 +195,6 @@ elif [ $task = "splitvarplot" ]; then
 elif [ $task = "splitcaching" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False"
     ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False
-
-elif [ $task = "mergecaching" ]; then
-    echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
-    ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
 
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then

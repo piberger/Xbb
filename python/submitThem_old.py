@@ -5,10 +5,6 @@ import time,datetime
 import os
 import shutil
 import subprocess
-import hashlib
-import signal
-import zlib
-import base64
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -33,8 +29,6 @@ parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="stor
                       help="Override run_locally option to run in batch")
 parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
-parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False,
-                              help="Interactive mode")
 
 (opts, args) = parser.parse_args(sys.argv)
 #print 'opts.mass is', opts.mass
@@ -55,18 +49,6 @@ if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
 
-globalFilesSubmitted = 0
-globalFilesSkipped = 0
-
-def signal_handler(signal, frame):
-    if (globalFilesSubmitted > 0 or globalFilesSkipped > 0):
-        print('\n----------------------------\n')
-        print('Files submitted:'+str(globalFilesSubmitted))
-        print('Files skipped:'+str(globalFilesSkipped))
-    print('You pressed Ctrl+C!')
-    print('\n----------------------------\n')
-    sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)
 
 en = opts.tag
 
@@ -117,7 +99,7 @@ if not opts.ftag == '':
 
     #copy config files
     for item in configs:
-        shutil.copyfile(item,'%s/%s/%s'%(tagDir,opts.ftag,item.replace(en, '')))
+        shutil.copyfile(item,'%s/%s/%s'%(tagDir,opts.ftag,item.strip(en)))
 
 if(debugPrintOUts): print configs
 config = BetterConfigParser()
@@ -207,7 +189,7 @@ def compile_macro(config,macro):
 
 def training(additional_):
 
-    train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
     print train_list
     for item in train_list:
         #No subcut declared. Just perform classical training
@@ -231,7 +213,7 @@ def training(additional_):
                 repDict['additional']= additional_ +'__'+cut_
                 submit(item,repDict, False)
 
-def ploting(additional_ = None, splitvar = False, splitfiles = False):
+def ploting(additional_ = None, splitvar = False):
     repDict['additional'] = 'dummy'
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
@@ -239,7 +221,7 @@ def ploting(additional_ = None, splitvar = False, splitfiles = False):
         if not config.has_option(section, 'subcut'):
             print 'No subcut for the plot region', region
             if splitvar:
-                vars = [x.strip() for x in (config.get('Plot:%s'%region, 'vars')).split(',')]
+                vars = (config.get('Plot:%s'%region, 'vars')).split(',')
                 for var in vars:
                     var_ = 'VAR_%s'%(var)
                     if additional_: repDict['additional']= additional_ +'__'+var_
@@ -379,17 +361,12 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     print "the command is ", command
-    nFiles = len(file.split(';'))
-    print "submitting", nFiles, 'files like',file.split(';')[0]
-    filelistString = str(file)
-    command = command + ' "' + filelistString + '"' + ' "' + str(Plot)+ '"'
-    if opts.interactive:
-        print "the real command is:",command
-        print "(press ENTER to run it and continue)"
-        raw_input()
+    print "submitting", len(file.split(';')),'files like',file.split(';')[0]
+    command = command + ' "' + str(file)+ '"' + ' "' + str(Plot)+ '"'
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
+
 # MERGING FUNCTION FOR SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW TO BE COMPATIBLE WITH THE OLD WORKFLOW
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     global counter
@@ -410,11 +387,6 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     subprocess.call([command], shell=True)
 
-def tmp_file_exists(hash, part):
-    tmpDir = config.get('Directories','tmpSamples').replace('root://t3dcachedb03.psi.ch:1094/','')
-    tmpFileName = '/tmp_%s_%d.root'%(hash, part)
-    return os.path.isfile(tmpDir + tmpFileName)
-
 # RETRIEVE FILELIST FOR THE TREECOPIER PSI AND SINGLE FILE SYS STEPS
 def getfilelist(job):
     samplefiles = config.get('Directories','samplefiles')
@@ -425,7 +397,7 @@ def getfilelist(job):
 if opts.task == 'train': training('')
 
 elif opts.task == 'splitsubcaching':
-    train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
     for region in train_list:
          print 'region is', region
          path = config.get("Directories","samplepath")
@@ -442,20 +414,20 @@ elif opts.task == 'splitsubcaching':
              training(additional_)
 
 if opts.task == 'dc':
-    DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
+    DC_vars= (config.get('LimitGeneral','List')).split(',')
     print DC_vars
 
 Plot_vars = ['']
-if opts.task in ['plot', 'splitvarplot', 'singleplot', 'mergesingleplot', 'mergecachingplot']:
-    Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+if opts.task == 'plot' or opts.task == 'splitvarplot' or opts.task == 'singleplot' or opts.task == 'mergesingleplot':
+    Plot_vars= (config.get('Plot_general','List')).split(',')
+
 
 if not opts.task == 'prep':
     path = config.get("Directories","samplepath")
     info = ParseInfo(samplesinfo,path)
 
-if opts.task in ['plot', 'mergecachingplot']:
+if opts.task == 'plot':
     ploting()
-
 if opts.task == 'splitvarplot':
     ploting(None, True)
 
@@ -484,97 +456,9 @@ if opts.task == 'splitvarplot':
 
 #if opts.task == 'splitcaching':
 #    plitcaching()
-if opts.task == 'mergecaching':
-    Plot_vars = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
-    for region in Plot_vars:
-        section='Plot:%s'%region
-        print 'section is', section
-        samplesinfo=config.get('Directories','samplesinfo')
-        data = eval(config.get(section,'Datas'))
-        mc = eval(config.get('Plot_general','samples'))
-        info = ParseInfo(samplesinfo,path)
-        print info
-        datasamples = info.get_samples(data)
-        mcsamples = info.get_samples(mc)
-        samples = mcsamples+datasamples
-
-        for sample in samples:
-            print "SAMPLE",sample
-            print "id",sample.identifier
-
-            files = getfilelist(sample.identifier)
-            files_per_job = sample.mergeCachingSize
-            files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
-            counter_local = 0
-            for files_sublist in files_split:
-                print "  SUBMIT:", len(files_sublist), " files"
-                #for file in files_sublist:
-                #    print "    ",file
-                print "  PART:", counter_local
-
-                repDict['additional'] = 'MERGECACHING'+'_'+str(counter_local)+'__'+str(sample)
-
-                if config.has_option(section,'subcut'):
-                    subcut = eval(config.get(section,'subcut'))
-                    print 'subcut is', subcut
-
-                    for cutvar, CUTBIN in subcut.iteritems():
-                        print 'cutvar is', cutvar
-                        for cutbins in CUTBIN:
-                            print 'cutbins is', cutbins
-                            cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
-                            print 'cut_ is', cut_
-                            repDict['additional'] += cut_
-
-                print "  REPDICT:",repDict['additional']
-                jobName = region # todo: add sample name
-
-                if config.has_option('Cuts',region):
-                    cut = config.get('Cuts',region)
-                elif config.has_option(section, 'Datacut'):
-                    cut = config.get(section, 'Datacut')
-                else:
-                    cut = None
-
-                minCut = '(%s)'%cut.replace(' ','')
-                #if sample.subsample:
-                #    minCut = '((%s)&(%s))' %(minCut,sample.subcut)
-                hash = hashlib.sha224('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)).hexdigest()
-                print "  CUT:", minCut
-                print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
-                print "  HASH:", hash
-
-                files_sublist_filtered = []
-                for filename in files_sublist:
-                    if filename.split('/')[-1] not in sample.skipParts:
-                        files_sublist_filtered.append(filename)
-                    else:
-                        print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
-
-                if tmp_file_exists(hash, counter_local):
-                    print "  --->exists"
-                    globalFilesSkipped += 1
-                else:
-                    globalFilesSubmitted += 1
-                    print "  --->submit"
-                    filelistString = ';'.join(files_sublist_filtered)
-                    # necessary due to limits on passed arguments size
-                    if sample.mergeCachingSize > 400:
-                        lenBefore = len(filelistString)
-                        filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
-                        lenAfter = len(filelistString)
-                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
-                    submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
-                counter_local = counter_local + 1
-
-                #break # only first bunch of n files
-            #break # only first sample
-        #break # only first plot region
-    print "skipped:", globalFilesSkipped
-    print "submitted:", globalFilesSubmitted
 
 if opts.task == 'splitcaching':
-    Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    Plot_vars= (config.get('Plot_general','List')).split(',')
     repDict['queue'] = 'all.q'
     for region in Plot_vars:
         section='Plot:%s'%region
@@ -607,7 +491,7 @@ if opts.task == 'splitcaching':
                     submit(region,repDict)
 
 if opts.task == 'splitcachingdc':
-    DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
+    DC_vars= (config.get('LimitGeneral','List')).split(',')
     repDict['queue'] = 'all.q'
     #Loop over all the dcs
     for item in DC_vars:
@@ -796,13 +680,12 @@ elif( opts.task == 'split' ):
 
 # BDT optimisation
 elif opts.task == 'mva_opt':
-    train_list = [x.strip() for x in config.get('MVALists','List_for_submitscript').split(',')]
+    train_list = (config.get('MVALists','List_for_submitscript')).split(',')
     print train_list
     for item in train_list:
         total_number_of_steps=1
         setting = ''
-        optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
-        for par in optimizationParameters:
+        for par in (config.get('Optimisation','parameters').split(',')):
             scan_par=eval(config.get('Optimisation',par))
             setting+=par+'='+str(scan_par[0])+':'
             if len(scan_par) > 1 and scan_par[2] != 0:
@@ -812,8 +695,7 @@ elif opts.task == 'mva_opt':
         submit(item,repDict,False)
         main_setting=setting
         # Scanning all the parameters found in the training config in the Optimisation sector
-        optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
-        for par in optimizationParameters:
+        for par in (config.get('Optimisation','parameters').split(',')):
             scan_par=eval(config.get('Optimisation',par))
             if len(scan_par) > 1 and scan_par[2] != 0:
                 for step in range(scan_par[2]):
@@ -838,8 +720,7 @@ elif opts.task == 'mva_opt_eval':
     #Read weights from optimisaiton config, store the in a list (copied from mva_opt)
     total_number_of_steps=1
     setting = ''
-    optimizationParameters = [x.strip() for x in config.get('Optimisation','parameters').split(',')]
-    for par in optimizationParameters:
+    for par in (config.get('Optimisation','parameters').split(',')):
         scan_par=eval(config.get('Optimisation',par))
         setting+=par+'='+str(scan_par[0])+':'
         if len(scan_par) > 1 and scan_par[2] != 0:
