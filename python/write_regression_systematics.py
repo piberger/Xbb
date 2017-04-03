@@ -697,26 +697,6 @@ for job in info:
                     JEC_systematics[var] = np.zeros(21, dtype=float)
                     newtree.Branch(var, JEC_systematics[var], var+'[21]/D')
 
-            ## for the dijet mass/pt
-            #JEC_systematics['HCMVAV2_reg_mass'] = np.zeros(1, dtype=float)
-            #newtree.Branch('HCMVAV2_reg_mass', JEC_systematics['HCMVAV2_reg_mass'], 'HCMVAV2_reg_mass/D')
-            #
-            #JEC_systematics['HCMVAV2_reg_pt'] = np.zeros(1, dtype=float)
-            #newtree.Branch('HCMVAV2_reg_pt', JEC_systematics['HCMVAV2_reg_pt'], 'HCMVAV2_reg_pt/D')
-            #
-            #JEC_systematics['HCMVAV2_reg_eta'] = np.zeros(1, dtype=float)
-            #newtree.Branch('HCMVAV2_reg_eta', JEC_systematics['HCMVAV2_reg_eta'], 'HCMVAV2_reg_eta/D')
-
-            #JEC_systematics['HCMVAV2_reg_phi'] = np.zeros(1, dtype=float)
-            #newtree.Branch('HCMVAV2_reg_phi', JEC_systematics['HCMVAV2_reg_phi'], 'HCMVAV2_reg_phi/D')
-
-            ### For the dijet Jets
-            ##JEC_systematics['hJetCMVAV2_pt_reg'] = np.zeros(2, dtype=float)
-            ##newtree.Branch('hJetCMVAV2_pt_reg', JEC_systematics['hJetCMVAV2_pt_reg'], 'hJetCMVAV2_pt_reg[2]/D')
-
-            #JEC_systematics['hJetCMVAV2_pt_reg'] = np.zeros(21, dtype=float)
-            #newtree.Branch('hJetCMVAV2_pt_reg', JEC_systematics['hJetCMVAV2_pt_reg'], 'hJetCMVAV2_pt_reg[21]/D')
-
             if job.type != 'DATA':
                 for syst in JECsys:
                     for sdir in ["Up", "Down"]:
@@ -728,45 +708,12 @@ for job in info:
                             else:
                                 JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(21, dtype=float)
                                 newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"[21]/D")
-                        #JEC_systematics["HCMVAV2_reg_mass_corr"+syst+sdir] = np.zeros(1, dtype=float)
-                        #newtree.Branch("HCMVAV2_reg_mass_corr"+syst+sdir, JEC_systematics["HCMVAV2_reg_mass_corr"+syst+sdir], "HCMVAV2_reg_mass_corr"+syst+sdir+"/D")
-
-                        #JEC_systematics["HCMVAV2_reg_pt_corr"+syst+sdir] = np.zeros(1, dtype=float)
-                        #newtree.Branch("HCMVAV2_reg_pt_corr"+syst+sdir, JEC_systematics["HCMVAV2_reg_pt_corr"+syst+sdir], "HCMVAV2_reg_pt_corr"+syst+sdir+"/D")
-
-                        #JEC_systematics["HCMVAV2_reg_eta_corr"+syst+sdir] = np.zeros(1, dtype=float)
-                        #newtree.Branch("HCMVAV2_reg_eta_corr"+syst+sdir, JEC_systematics["HCMVAV2_reg_eta_corr"+syst+sdir], "HCMVAV2_reg_eta_corr"+syst+sdir+"/D")
-
-                        #JEC_systematics["HCMVAV2_reg_phi_corr"+syst+sdir] = np.zeros(1, dtype=float)
-                        #newtree.Branch("HCMVAV2_reg_phi_corr"+syst+sdir, JEC_systematics["HCMVAV2_reg_phi_corr"+syst+sdir], "HCMVAV2_reg_phi_corr"+syst+sdir+"/D")
-
-                        ##JEC_systematics["hJetCMVAV2_pt_reg_0"+syst+sdir] = np.zeros(1, dtype=float)
-                        ##newtree.Branch("hJetCMVAV2_pt_reg_0"+syst+sdir, JEC_systematics["hJetCMVAV2_pt_reg_0"+syst+sdir], "hJetCMVAV2_pt_reg_0"+syst+sdir+"/D")
-
-                        ##JEC_systematics["hJetCMVAV2_pt_reg_1"+syst+sdir] = np.zeros(1, dtype=float)
-                        ##newtree.Branch("hJetCMVAV2_pt_reg_1"+syst+sdir, JEC_systematics["hJetCMVAV2_pt_reg_1"+syst+sdir], "hJetCMVAV2_pt_reg_1"+syst+sdir+"/D")
-                        ##all the jets
-                        #JEC_systematics["hJetCMVAV2_pt_reg"+syst+sdir] = np.zeros(21, dtype=float)
-                        #newtree.Branch("hJetCMVAV2_pt_reg"+syst+sdir, JEC_systematics["hJetCMVAV2_pt_reg"+syst+sdir], "hJetCMVAV2_pt_reg"+syst+sdir+"[21]/D")
-
-            ## jet reg weights
-            #JetCMVAV2_regWeight = array('f',[0]*21)
-            #newtree.Branch('JetCMVAV2_regWeight',JetCMVAV2_regWeight,'JetCMVAV2_regWeight[21]/F')
 
             # define all the readers
             TMVA_reader = {}
-            #theVars1 = {}
-            #theVars0 = {}
             theVars = {}
 
             TMVA_reader['readerJet'] = ROOT.TMVA.Reader("!Color:!Silent" )
-            #TMVA_reader['readerJet0'] = ROOT.TMVA.Reader("!Color:!Silent" )
-            #TMVA_reader['readerJet1'] = ROOT.TMVA.Reader("!Color:!Silent" )
-
-            #for syst in JECsys:
-            #    for sdir in ["Up", "Down"]:
-            #        TMVA_reader['readerJet0_'+syst+sdir] = ROOT.TMVA.Reader("!Color:!Silent" )
-            #        TMVA_reader['readerJet1_'+syst+sdir] = ROOT.TMVA.Reader("!Color:!Silent" )
 
             #add a dictionary of containing array of the vars in the TMVAreader
             def addVarsToReader(reader,theVars):
@@ -781,24 +728,9 @@ for job in info:
             addVarsToReader(TMVA_reader['readerJet'],theVars)
             TMVA_reader['readerJet'].BookMVA("readerJet", regWeight)
 
-            ## Init the TMVA readers
-            #addVarsToReader(TMVA_reader['readerJet0'],theVars0)
-            #addVarsToReader(TMVA_reader['readerJet1'],theVars1)
-            #TMVA_reader['readerJet0'].BookMVA("readerJet0", regWeight)
-            #TMVA_reader['readerJet1'].BookMVA("readerJet1", regWeight)
-
-            # for syst in JECsys:
-            #     for sdir in ["Up", "Down"]:
-            #         addVarsToReader(TMVA_reader['readerJet0_'+syst+sdir], theVarsJEC0[syst+sdir])
-            #         addVarsToReader(TMVA_reader['readerJet1_'+syst+sdir], theVarsJEC1[syst+sdir])
-            #         TMVA_reader['readerJet0_'+syst+sdir].BookMVA("readerJet0_"+syst+sdir, regWeight)
-            #         TMVA_reader['readerJet1_'+syst+sdir].BookMVA("readerJet1_"+syst+sdir, regWeight)
-
-
             print '\n\t ----> Evaluating Regression on sample....'
 
-            print tree
-
+            #print tree
 
         if applyLepSF and job.type != 'DATA':
 
