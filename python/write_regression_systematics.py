@@ -687,10 +687,10 @@ for job in info:
             hJ0 = ROOT.TLorentzVector()
             hJ1 = ROOT.TLorentzVector()
 
-            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg']
+            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1','hJetCMVAV2_pt_reg']
 
             for var in VarList:
-                if not 'Jet' in var:
+                if not var == 'hJetCMVAV2_pt_reg':
                     JEC_systematics[var] = np.zeros(1, dtype=float)
                     newtree.Branch(var, JEC_systematics[var], var+'/D')
                 else:
@@ -721,7 +721,8 @@ for job in info:
                 for syst in JECsys:
                     for sdir in ["Up", "Down"]:
                         for var in VarList:
-                            if not 'hJet' in var:
+                            #if not 'hJet' in var:
+                            if not var == 'hJetCMVAV2_pt_reg':
                                 JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(1, dtype=float)
                                 newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"/D")
                             else:
@@ -1362,7 +1363,8 @@ for job in info:
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
                     #sys.stdout.flush()
 
-                if entry > 100: break
+                #if entry > 10000: break
+                #if entry > 100: break
                 tree.GetEntry(entry)
 
 
@@ -1516,10 +1518,10 @@ for job in info:
                 #Get regression variable
                 if applyJESsystematics:
                     Reg_var_list = []
-                    for j in xrange(tree.nJet):
+                    for j in xrange(min(tree.nJet,21)):
                         reg_var_dic = {}
                         reg_var_dic['Jet_pt']= tree.Jet_pt[j]
-                        print 'when filling list, pt is', reg_var_dic['Jet_pt']
+                        #print 'when filling list, pt is', reg_var_dic['Jet_pt']
                         reg_var_dic['Jet_ptRaw']= tree.Jet_rawPt[j]
                         reg_var_dic['Jet_eta'] = tree.Jet_eta[j]
                         reg_var_dic['Jet_m']= tree.Jet_mass[j]
@@ -1549,10 +1551,10 @@ for job in info:
 
                         Reg_var_list.append(reg_var_dic)
 
-                    print 'goind to loop over Reg_var_list'
-                    for j in xrange(tree.nJet):
-                        print 'j is ', j
-                        print 'Jet_pt is', Reg_var_list[j]['Jet_pt']
+                    #print 'goind to loop over Reg_var_list'
+                    #for j in xrange(min(tree.nJet,21)):
+                    #    print 'j is ', j
+                    #    print 'Jet_pt is', Reg_var_list[j]['Jet_pt']
 
                     #Jet_pt_0 = tree.Jet_pt[tree.hJCMVAV2idx[0]]
                     #Jet_pt_1 = tree.Jet_pt[tree.hJCMVAV2idx[1]]
@@ -1613,7 +1615,7 @@ for job in info:
                     # JEC factorized branches
                     Jec_sys_list = []
                     if job.type != 'DATA':
-                        for j in xrange(tree.nJet):
+                        for j in xrange(min(tree.nJet,21)):
                             jec_sys_dic = {}
                             jec_sys_dic['Jet_corr'] =  getattr(tree,'Jet_corr')[j]
                             jec_sys_dic['Jet_corr_JER'] =  getattr(tree,'Jet_corr_JER')[j]
@@ -1761,7 +1763,7 @@ for job in info:
 
                         #Fill regression vars used in TMVA
                             #now loop over all the jets
-                    for j in xrange(tree.nJet):
+                    for j in xrange(min(tree.nJet,21)):
                         for key in regVars:
                             theVars[key][0] = Reg_var_list[j][key]
 
@@ -1783,6 +1785,8 @@ for job in info:
                     JEC_systematics["HCMVAV2_reg_pt"][0]   = (hJ0+hJ1).Pt()
                     JEC_systematics["HCMVAV2_reg_eta"][0]  = (hJ0+hJ1).Eta()
                     JEC_systematics["HCMVAV2_reg_phi"][0]  = (hJ0+hJ1).Phi()
+                    JEC_systematics["hJetCMVAV2_pt_reg_0"][0]  = hJ0.Pt()
+                    JEC_systematics["hJetCMVAV2_pt_reg_1"][0]  = hJ1.Pt()
 
                     #keep like this for now
                     #if isVerbose:
@@ -1833,7 +1837,7 @@ for job in info:
                         #now loop over all the jets
                         for syst in JECsys:
                             for sdir in ["Up", "Down"]:
-                                for j in xrange(tree.nJet):
+                                for j in xrange(min(tree.nJet,21)):
                                     for key in regVars:
                                         theVars[key][0] = Reg_var_list[j][key]
                                     theVars['Jet_pt'][0] = 0
@@ -1841,7 +1845,8 @@ for job in info:
                                     if syst == "JER":
                                         theVars['Jet_pt'][0] = Reg_var_list[j]['Jet_rawPt']*Jec_sys_list[j]['Jet_corr']*Jec_sys_list[j]['JER'+sdir]
                                     else:
-                                        theVars['Jet_pt'][0] = Reg_var_list[j]['Jet_rawPt']*Jec_sys_list[j][syst+sdir]*Jec_sys_list[j]['Jet_corr_JER']
+                                        #theVars['Jet_pt'][0] = Reg_var_list[j]['Jet_rawPt']*Jec_sys_list[j][syst+sdir]*Jec_sys_list[j]['Jet_corr_JER']
+                                        theVars['Jet_pt'][0] = (Reg_var_list[j]['Jet_pt']/Jec_sys_list[j]['Jet_corr'])*Jec_sys_list[j][syst+sdir]
 
                                     pt = max(0.0001, TMVA_reader['readerJet'].EvaluateRegression("readerJet")[0])
 
@@ -1858,6 +1863,8 @@ for job in info:
                                 JEC_systematics["HCMVAV2_reg_pt_corr"+syst+sdir][0] = (hJ0+hJ1).Pt()
                                 JEC_systematics["HCMVAV2_reg_eta_corr"+syst+sdir][0] = (hJ0+hJ1).Eta()
                                 JEC_systematics["HCMVAV2_reg_phi_corr"+syst+sdir][0] = (hJ0+hJ1).Phi()
+                                JEC_systematics["hJetCMVAV2_pt_reg_0_corr"+syst+sdir][0] = hJ0.Pt()
+                                JEC_systematics["hJetCMVAV2_pt_reg_1_corr"+syst+sdir][0] = hJ1.Pt()
 
                         #for syst in JECsys:
                         #    for sdir in ["Up", "Down"]:
