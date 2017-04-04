@@ -116,7 +116,7 @@ class TreeCache:
         output.cd()
         print ("(subtrimtree) the cut is", theCut)
         #Problem here: not working when empty tree
-        
+
         cuttedTree=tree.CopyTree(theCut)
         cuttedTree.Write()
         output.Write()
@@ -196,7 +196,7 @@ class TreeCache:
                     print ('Exception:'+str(e))
                     print ('ERROR occured for "'+inputFile+'"')
 
-            # append semicolon separated list as single element to inputfiles list and just one file to tmpfiles 
+            # append semicolon separated list as single element to inputfiles list and just one file to tmpfiles
             inputfiles.append(';'.join(filelistCopied))
             tmpfile = '%s/tmp_%s_%d.root'%(self.__tmpPath,theHash,mergeCachingPart)
             tmpfiles.append(tmpfile)
@@ -222,7 +222,7 @@ class TreeCache:
                 hash = hashlib.sha224(filename).hexdigest()
                 inputFile = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
                 isFile = os.path.isfile(inputFile.replace('root://t3dcachedb03.psi.ch:1094/',''))
-                if not sFile: 
+                if not sFile:
                     print ('file ',inputFile, ' does not exist => skip!')
                     continue
                 hash = hashlib.sha224(self.minCut).hexdigest()
@@ -432,18 +432,18 @@ class TreeCache:
             #if sample.subsample:
             #    theCut = '((%s)&(%s))' %(theCut,sample.subcut)
             #print ("the cut (with subcut) is", theCut)
-            
+
             if not treeEmpty:
                 #ROOT.TFormula.SetMaxima(100000,10000,1000000)
-                time1 = time.time() 
+                time1 = time.time()
 
                 subcutExists = sample.subcut and sample.subcut.strip() != "1"
 
-                if subcutExists: 
+                if subcutExists:
                     ROOT.gROOT.cd()
 
                 print ('DEBUG: tree=',tree)
-                # first cut, without subcut 
+                # first cut, without subcut
                 cuttedTree=tree.CopyTree(theCut,"")
                 print ('cut done: '+str(cuttedTree)+' '+str(tree.GetEntries()) + ' => ' + str(cuttedTree.GetEntries()) + ' entries')
                 time2=time.time()

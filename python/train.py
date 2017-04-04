@@ -202,7 +202,7 @@ print "EvalCut:",EvalCut
 cuts = [TCut]
 
 if sample_to_cache_:
-    #Doing splitsubcaching: only one sample shous remain
+    #Doing splitsubcaching: only one sample should remain
     if sample_to_cache_ in signals:
         signals = []
         backgrounds = []
@@ -404,7 +404,7 @@ output.Close()
 ##!! here is unlocked
 #
 ##!! Close the output file to avoid memory leak
-output.Close()
+#output.Close()
 
 
 #WRITE INFOFILE

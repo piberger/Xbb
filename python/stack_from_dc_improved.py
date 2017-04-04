@@ -44,6 +44,8 @@ parser.add_option("-R", "--region", dest="region", default="",
                   help="region to be plotted")
 parser.add_option("-A", "--blind", dest="blind", default="",
                   help="if the blind cut need to be applied")
+parser.add_option("-P", "--postfit", dest="postfit", default="",
+                  help="if the blind cut need to be applied")
 
 (opts, args) = parser.parse_args(argv)
 
@@ -85,10 +87,13 @@ def drawFromDC():
     xmax = float(config.get('plotDef:%s'%var,'max'))
 
     blind = eval(opts.blind)
+    postfit = eval(opts.postfit)
 
     print 'config:', config
     print 'var: ', var
     print 'region: ', region
+    print 'blind: ', blind
+    print 'postfit: ', postfit
 
     Group_dc =  eval(config.get('Plot_general','Group_dc'))
 
@@ -110,16 +115,17 @@ def drawFromDC():
     #log = eval(config.get('Plot:%s'%region,'log'))
 
     if 'Zee' in opts.bin or 'Zuu' in opts.bin:
-        setup = ['ggZHbb', 'qqZHbb','Zbb','Zb','Z_udscg','TT','VV2b','VVlight','ST']
+        setup = ['Zbb','Zb','Z_udscg','TT','VV2b','VVlight','ST','qqZHbb','ggZHbb']
         #setup = ['ggZHbb', 'qqZHbb','Zbb','Zb','Z_udscg','TT','VV2b','VVlight','ST']
         channel = 'ZllHbb'
         if 'Zee' in opts.bin: lep_channel = 'Zee'
-        elif 'Zuu' in opts.bin: lep_channel = 'Zmm'
-        region_dic = {'BDT':'SIG','CRZlight':'Zlf','CRZb':'Zhf','CRttbar':'TT'}
+        elif 'Zuu' in opts.bin: lep_channel = 'Zuu'
+        #region_dic = {'BDT':'SIG','CRZlight':'Zlf','CRZb':'Zhf','CRttbar':'TT'}
+        region_dic = {'BDT':'BDT','CRZlight':'CRZlight','CRZb':'CRZb','CRttbar':'CRttbar'}
         region_name =  [region_dic[key] for key in region_dic if (key in opts.bin)]
         region_name = region_name[0]
         print 'region_name is', region_name
-        pt_region_dic = {'lowpt':'low','highpt':'high'}
+        pt_region_dic = {'lowpt':'lowpt','highpt':'highpt'}
         pt_region_name =  [pt_region_dic[key] for key in pt_region_dic if (key in opts.bin)]
         pt_region_name = pt_region_name[0]
 
@@ -130,7 +136,7 @@ def drawFromDC():
     Stack.setup = setup
 
     Dict = eval(config.get('LimitGeneral','Dict'))
-    lumi = eval(config.get('Plot_general','lumi'))
+    lumi = eval(config.get('General','lumi'))
 
 
     Stack.nBins = nbin
@@ -167,32 +173,65 @@ def drawFromDC():
     ####
     #Open the mlfit.root and retrieve the mc
     file = ROOT.TFile.Open(opts.mlfit)
-    if file == None: raise RuntimeError, "Cannot open file %s" % theFile
-    print '\n\n-----> Fit File: ',file
-    if not ROOT.gDirectory.cd('shapes_fit_s'):
-        print '@ERROR: didn\'t find the shapes_fit_s directory. Aborting'
-        sys.exit()
+    #if file == None: raise RuntimeError, "Cannot open file %s" % theFile
+    #print '\n\n-----> Fit File: ',file
+    if postfit:
+        if not ROOT.gDirectory.cd('shapes_fit_s'):
+            print '@ERROR: didn\'t find the shapes_fit_s directory. Aborting'
+            sys.exit()
+    else:
+        if not ROOT.gDirectory.cd('shapes_prefit'):
+            print '@ERROR: didn\'t find the shapes_prefit directory. Aborting'
+            sys.exit()
+    folder_found = False
     for dir in ROOT.gDirectory.GetListOfKeys():
         dirinfo = dir.GetName().split('_')
-        if not (dirinfo[0] == channel and dirinfo[2] == lep_channel and dirinfo[3] == region_name and dirinfo[4] == pt_region_name):
+        #print 'dir name is', dir.GetName().split('_')
+        ##if not (dirinfo[0] == channel and dirinfo[2] == lep_channel and dirinfo[3] == region_name and dirinfo[4] == pt_region_name):
+        #print 'lep_channel is', lep_channel
+        #print 'region_name is', region_name
+        #print 'pt_region_name is', pt_region_name
+        if not (dirinfo[0] == lep_channel and dirinfo[1] == region_name and dirinfo[2] ==  pt_region_name):
             continue
+        folder_found = True
         dirname = dir.GetName()
-        ROOT.gDirectory.cd(dirname)
+        #signal, use prefit
         for s in setup:
-            found = False
-            for subdir in ROOT.gDirectory.GetListOfKeys():
-                #print 'subdir name is', subdir.GetName()
-                if subdir.GetName() == Dict[s]:
-                    found = True
-                    hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax)
-                    histos.append(hist)
-                    typs.append(s)
-                    print 's is', s
-                    print 'signalList is', signalList
-                    if s in signalList:
-                        hist.SetTitle(s)
-                        Overlay.append(hist)
-                        print 'the Histogram title is', hist.GetTitle()
+            if ('ZHbb' in s and postfit):
+                ROOT.gDirectory.cd('/shapes_prefit')
+                ROOT.gDirectory.cd(dirname)
+                found = False
+                for subdir in ROOT.gDirectory.GetListOfKeys():
+                    #print 'subdir name is', subdir.GetName()
+                    if subdir.GetName() == Dict[s]:
+                        found = True
+                        hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax)
+                        histos.append(hist)
+                        typs.append(s)
+                        print 's is', s
+                        print 'signalList is', signalList
+                        if s in signalList:
+                            hist.SetTitle(s)
+                            Overlay.append(hist)
+                            print 'the Histogram title is', hist.GetTitle()
+            else:
+                ROOT.gDirectory.cd('/shapes_fit_s')
+                ROOT.gDirectory.cd(dirname)
+                found = False
+                for subdir in ROOT.gDirectory.GetListOfKeys():
+                    #print 'subdir name is', subdir.GetName()
+                    if subdir.GetName() == Dict[s]:
+                        found = True
+                        hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax)
+                        histos.append(hist)
+                        typs.append(s)
+                        print 's is', s
+                        print 'signalList is', signalList
+                        if s in signalList:
+                            hist.SetTitle(s)
+                            Overlay.append(hist)
+                            print 'the Histogram title is', hist.GetTitle()
+              #take prefit distr. for signal
 
 
             if not found:
@@ -203,7 +242,11 @@ def drawFromDC():
         total.SetTitle('prefit')
         prefit_overlay.append(total)
         break
-
+    if not folder_found:
+        print '@ERROR: Folder was not found.'
+        print 'lep_channel', lep_channel
+        print 'region_name', region_name
+        print 'pt_region_name', pt_region_name
     #retrieve the data
     options = copy(opts)
     options.dataname = "data_obs"
@@ -237,7 +280,7 @@ def drawFromDC():
         data0.SetName('data_obs')
 
     datas=[data0]
-    if blind:
+    if blind and 'BDT' in var:
         for bin in range(datas[0].GetNbinsX()-3,datas[0].GetNbinsX()+1):
             datas[0].SetBinContent(bin,0)
     datatyps = [None]
@@ -256,6 +299,8 @@ def drawFromDC():
     Stack.AddErrors= True
 
     Stack.lumi = lumi
+    if 'BDT' in var:
+        Stack.forceLog = True
     Stack.doPlot()
 
     print 'i am done!\n'

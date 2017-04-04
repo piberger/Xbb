@@ -10,13 +10,15 @@ import ROOT
 #V20
 #_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/prepv3/'
 #_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_v10/'
-_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/mva_v23_final/'
+#_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/prep_v4_dataonly_test/'
+_path1 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/sys_v5_2/'
 #V24
 #_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_23/'
 #_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_23_nolimit_v3/'
 #_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_23_final/'
 #_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/singlesys_23_final_wbTag/'
-_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V24/mva_v23_wBtagW/'
+#_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/prep_v4_dataonly_test/'
+_path2 = '/pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/sys_v5_2/'
 
 
 dummy_cut = ''
@@ -60,6 +62,8 @@ FILE2 = os.listdir(_path2)
 FAILED = []
 MISSING = []
 
+total = 0
+
 for file1 in FILE1:
     if not '.root' in file1: continue
     #if not 'TT_Tune' in file1: continue
@@ -68,6 +72,7 @@ for file1 in FILE1:
     #if 'SingleElectron' in file1 or 'SingleMuon' in file1: continue
     #if not 'SingleMuon__Run2016E-PromptReco-v2' in file1: continue
     #if 'SingleElectron' in file1: continue
+    #if not 'DoubleMuon' in file1: continue
     print '#events in sample', file1
     print 'file is', file1
     file_found = False
@@ -88,6 +93,7 @@ for file1 in FILE1:
             t = f.Get("tree")
             #print len(f)
             n2 = t.GetEntries(CUTLISTV21[k])
+            total += n2
             print ' V21', n2
             if n1 != n2:
                 FAILED.append(file1)
@@ -108,4 +114,4 @@ if len(MISSING) > 0:
 
 
 
-
+print 'total is', total

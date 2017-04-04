@@ -64,7 +64,7 @@ def MoveSubFolders(_input, _output):
     _plotfolder = _input.split('/')[-2]
     print 'gonna lunch the command'
     copyCommand = 'scp -r ' + _plotfolder + ' piberger@lxplus.cern.ch:' + _output
-    print copyCommand 
+    print copyCommand
     subprocess.call(copyCommand, shell = True)
     print 'that was delicious!'
 

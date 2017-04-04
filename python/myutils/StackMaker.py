@@ -13,6 +13,8 @@ class StackMaker:
         self.SignalRegion=SignalRegion
         self.region = region
         self.subcut = subcut
+        #make log plot even if not defined in plot.ini
+        self.forceLog = None
         #print "region:",region
         self.normalize = eval(config.get(section,'Normalize'))
         self.log = eval(config.get(section,'log'))
@@ -217,6 +219,9 @@ class StackMaker:
         self.histos=[histo_dict[key] for key in self.setup if key in histo_dict]
         print "again, self.histos is",self.histos
         self.typs=self.setup
+
+        if self.forceLog is not None and self.forceLog:
+            self.log = True
 
         c = ROOT.TCanvas(self.var,'', 600, 600)
         c.SetFillStyle(4000)

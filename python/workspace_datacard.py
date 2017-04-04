@@ -128,7 +128,7 @@ print 'xMin is', xMin
 print 'xMax is', xMax
 ROOToutname = config.get('dc:%s'%var,'dcName')
 RCut = config.get('dc:%s'%var,'cut')
-signals = config.get('dc:%s'%var,'signal').split(' ')
+signals = eval('['+config.get('dc:%s'%var,'signal')+']')
 datas = config.get('dc:%s'%var,'dcBin')
 Datacardbin=config.get('dc:%s'%var,'dcBin')
 anType = config.get('dc:%s'%var,'type')
@@ -345,7 +345,7 @@ signal_samples = info.get_samples(signals)
 print 'signal samples:',[job.name for job in signal_samples]
 
 background_samples = info.get_samples(backgrounds) 
-data_sample_names = config.get('dc:%s'%var,'data').split(' ')
+data_sample_names = eval(config.get('dc:%s'%var,'data'))
 print 'data_sample_names are', data_sample_names
 data_samples = info.get_samples(data_sample_names)
 print 'data_samples are', data_samples
@@ -946,165 +946,168 @@ for key in final_histos:
 # -------------------- write DATAcard: ----------------------------------------------------------------------
 DCprocessseparatordict = {'WS':':','TH':'/'}
 # create two datacards: for TH an WS
-for DCtype in ['WS','TH']:
-    columns=len(setup)
-    fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
-    f = open(fileName,'w')
-    f.write('imax\t1\tnumber of channels\n')
-    f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(columns-1))
-    f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
-    f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(DCtype,ROOToutname,DCprocessseparatordict[DCtype],DCprocessseparatordict[DCtype]))
-    f.write('bin\t%s\n\n'%Datacardbin)
-    if toy or signal_inject:
-        f.write('observation\t%s\n\n'%(hDummy.Integral()))
-    else:
-        f.write('observation\t%s\n\n'%(theData.Integral()))
-    # datacard bin
-    f.write('bin\t')
-    for c in range(0,columns): f.write('\t%s'%Datacardbin)
-    f.write('\n')
-    # datacard process
-    f.write('process\t')
-    for c in setup: f.write('\t%s'%Dict[c])
-    f.write('\n')
-    f.write('process\t')
-    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
-    #VH
-    for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
-    #VV
-    #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
-    f.write('\n')
-    # datacard yields
-    f.write('rate\t')
-    print "workspace_datacard-setup: ", setup
-    print "workspace_datacard-final_histos: ", final_histos
-    for c in setup: 
-        f.write('\t%s'%final_histos['nominal'][c].Integral())
-    f.write('\n')
-    # get list of systematics in use
-    InUse=eval(config.get('Datacard','InUse_%s_%s'%(str(anType), pt_region)))
-    # write non-shape systematics
-    for item in InUse:
-        f.write(item)
-        what=eval(config.get('Datacard',item))
-        f.write('\t%s'%what['type'])
-        for c in setup:
-            if c in what:
-                if '_eff_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
-                elif '_eff_m' in item and 'Zee' in ROOToutname : f.write('\t-')
-                elif '_trigger_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
-                elif '_trigger_m' in item and 'Zee' in ROOToutname : f.write('\t-')
-                else:
-                    f.write('\t%s'%what[c])
+#for DCtype in ['WS','TH']:
+
+DCtype = 'TH'
+
+columns=len(setup)
+fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
+f = open(fileName,'w')
+f.write('imax\t1\tnumber of channels\n')
+f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(columns-1))
+f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
+f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(DCtype,ROOToutname,DCprocessseparatordict[DCtype],DCprocessseparatordict[DCtype]))
+f.write('bin\t%s\n\n'%Datacardbin)
+if toy or signal_inject:
+    f.write('observation\t%s\n\n'%(hDummy.Integral()))
+else:
+    f.write('observation\t%s\n\n'%(theData.Integral()))
+# datacard bin
+f.write('bin\t')
+for c in range(0,columns): f.write('\t%s'%Datacardbin)
+f.write('\n')
+# datacard process
+f.write('process\t')
+for c in setup: f.write('\t%s'%Dict[c])
+f.write('\n')
+f.write('process\t')
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
+#VH
+for c in range(0,columns): f.write('\t%s'%(c-len(signals)+2))
+#VV
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
+f.write('\n')
+# datacard yields
+f.write('rate\t')
+print "workspace_datacard-setup: ", setup
+print "workspace_datacard-final_histos: ", final_histos
+for c in setup:
+    f.write('\t%s'%final_histos['nominal'][c].Integral())
+f.write('\n')
+# get list of systematics in use
+InUse=eval(config.get('Datacard','InUse_%s_%s'%(str(anType), pt_region)))
+# write non-shape systematics
+for item in InUse:
+    f.write(item)
+    what=eval(config.get('Datacard',item))
+    f.write('\t%s'%what['type'])
+    for c in setup:
+        if c in what:
+            if '_eff_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
+            elif '_eff_m' in item and 'Zee' in ROOToutname : f.write('\t-')
+            elif '_trigger_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
+            elif '_trigger_m' in item and 'Zee' in ROOToutname : f.write('\t-')
             else:
-                f.write('\t-')
-        f.write('\n')
-    if not ignore_stats:
-    # Write statistical shape variations
-        if binstat:
-            for c in setup:
-                for bin in range(0,nBins):
-                    if bin in binsBelowThreshold[c]:
-                        f.write('%s_bin%s_%s_%s\tshape'%(systematicsnaming['stats'],bin,Dict[c],Datacardbin))
-                        for it in range(0,columns):
-                            if it == setup.index(c):
-                                f.write('\t1.0')
-                            else:
-                                f.write('\t-')
-                        f.write('\n')
+                f.write('\t%s'%what[c])
         else:
-            for c in setup:
-                f.write('%s_%s_%s\tshape'%(systematicsnaming['stats'],Dict[c],Datacardbin))
-                for it in range(0,columns):
-                    if it == setup.index(c):
-                        f.write('\t1.0')
-                    else:
-                        f.write('\t-')
-                f.write('\n')
-    # UEPS systematics
-    for weightF_sys in weightF_systematics:
-        f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
-        for it in range(0,columns):
-            for c in setup:
-                if not it == setup.index(c): continue
-                #if  setup[it] in exclude_sys_weight and weightF_sys in exclude_sys_weight[setup[it]]: f.write('\t-')
-                #else: f.write('\t1.0')
-                if  weightF_sys in decorrelate_sys_weight:
-                    if setup[it] in decorrelate_sys_weight[weightF_sys]: f.write('\t1.0')
-                    else: f.write('\t-')
-                else: f.write('\t1.0')
-                #if  setup[it] in decorrelate_sys_weight and weightF_sys in decorrelate_sys_weight[setup[it]]: f.write('\t1.0')
-        f.write('\n')
-    #OLD
-    #for weightF_sys in weightF_systematics:
-    #    print 'the sys is', systematicsnaming[weightF_sys]
-    #    f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
-    #    for it in range(0,columns): f.write('\t1.0')
-    #    f.write('\n')
-    # LHE systematics
-    if len(lhe_muF)==2:
-        for group in sys_lhe_affecting.keys():
-            f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
-            samples = sys_lhe_affecting[group]
-            for c in setup:
-                if Dict[c] in samples:
-                    f.write('\t1.0')
-                else:
-                    f.write('\t-')
-            f.write('\n')
-    if len(lhe_muR)==2:
-        for group in sys_lhe_affecting.keys():
-            f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
-            samples = sys_lhe_affecting[group]
-            for c in setup:
-                if Dict[c] in samples:
-                    f.write('\t1.0')
-                else:
-                    f.write('\t-')
-            f.write('\n')
-    # additional sample systematics
-    if addSample_sys:
-        alreadyAdded = []
-        for newSample in addSample_sys.iterkeys():
-            for c in setup:
-                if not c == GroupDict[newSample]: continue
-                if Dict[c] in alreadyAdded: continue
-                if final_histos['nominal'][c].Integral()<0.1: continue #skip model syst for negligible samples (eg. ggZH in W+Light CR)
-                f.write('%s_%s\tshape'%(systematicsnaming['model'],Dict[c]))
-                for it in range(0,columns):
-                    if it == setup.index(c):
-                         f.write('\t1.0')
-                    else:
-                         f.write('\t-')
-                f.write('\n')
-                alreadyAdded.append(Dict[c])
-    # regular systematics
-    for sys in systematics:
-        sys_factor=sys_factor_dict[sys]
-        f.write('%s\tshape'%systematicsnaming[sys])
+            f.write('\t-')
+    f.write('\n')
+if not ignore_stats:
+# Write statistical shape variations
+    if binstat:
         for c in setup:
-            if c in sys_affecting[sys] or 'all' in sys_affecting[sys]:
-                f.write('\t%s'%sys_factor)
+            for bin in range(0,nBins):
+                if bin in binsBelowThreshold[c]:
+                    f.write('%s_bin%s_%s_%s\tshape'%(systematicsnaming['stats'],bin,Dict[c],Datacardbin))
+                    for it in range(0,columns):
+                        if it == setup.index(c):
+                            f.write('\t1.0')
+                        else:
+                            f.write('\t-')
+                    f.write('\n')
+    else:
+        for c in setup:
+            f.write('%s_%s_%s\tshape'%(systematicsnaming['stats'],Dict[c],Datacardbin))
+            for it in range(0,columns):
+                if it == setup.index(c):
+                    f.write('\t1.0')
+                else:
+                    f.write('\t-')
+            f.write('\n')
+# UEPS systematics
+for weightF_sys in weightF_systematics:
+    f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
+    for it in range(0,columns):
+        for c in setup:
+            if not it == setup.index(c): continue
+            #if  setup[it] in exclude_sys_weight and weightF_sys in exclude_sys_weight[setup[it]]: f.write('\t-')
+            #else: f.write('\t1.0')
+            if  weightF_sys in decorrelate_sys_weight:
+                if setup[it] in decorrelate_sys_weight[weightF_sys]: f.write('\t1.0')
+                else: f.write('\t-')
+            else: f.write('\t1.0')
+            #if  setup[it] in decorrelate_sys_weight and weightF_sys in decorrelate_sys_weight[setup[it]]: f.write('\t1.0')
+    f.write('\n')
+#OLD
+#for weightF_sys in weightF_systematics:
+#    print 'the sys is', systematicsnaming[weightF_sys]
+#    f.write('%s\tshape' %(systematicsnaming[weightF_sys]))
+#    for it in range(0,columns): f.write('\t1.0')
+#    f.write('\n')
+# LHE systematics
+if len(lhe_muF)==2:
+    for group in sys_lhe_affecting.keys():
+        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
+        samples = sys_lhe_affecting[group]
+        for c in setup:
+            if Dict[c] in samples:
+                f.write('\t1.0')
             else:
                 f.write('\t-')
         f.write('\n')
-    # write rateParams systematics (free parameters)
+if len(lhe_muR)==2:
+    for group in sys_lhe_affecting.keys():
+        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
+        samples = sys_lhe_affecting[group]
+        for c in setup:
+            if Dict[c] in samples:
+                f.write('\t1.0')
+            else:
+                f.write('\t-')
+        f.write('\n')
+# additional sample systematics
+if addSample_sys:
+    alreadyAdded = []
+    for newSample in addSample_sys.iterkeys():
+        for c in setup:
+            if not c == GroupDict[newSample]: continue
+            if Dict[c] in alreadyAdded: continue
+            if final_histos['nominal'][c].Integral()<0.1: continue #skip model syst for negligible samples (eg. ggZH in W+Light CR)
+            f.write('%s_%s\tshape'%(systematicsnaming['model'],Dict[c]))
+            for it in range(0,columns):
+                if it == setup.index(c):
+                     f.write('\t1.0')
+                else:
+                     f.write('\t-')
+            f.write('\n')
+            alreadyAdded.append(Dict[c])
+# regular systematics
+for sys in systematics:
+    sys_factor=sys_factor_dict[sys]
+    f.write('%s\tshape'%systematicsnaming[sys])
+    for c in setup:
+        if c in sys_affecting[sys] or 'all' in sys_affecting[sys]:
+            f.write('\t%s'%sys_factor)
+        else:
+            f.write('\t-')
+    f.write('\n')
+# write rateParams systematics (free parameters)
 
-    rateParams=eval(config.get('Datacard','rateParams_%s_%s'%(str(anType), pt_region)))
-    try:
-        rateParamRange=eval(config.get('Datacard','rateParamRange'))
-    except:
-        rateParamRange=[0,10]
-    assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:'+ len(rateParamRange)
-    for rateParam in rateParams:
-        dictProcs=eval(config.get('Datacard',rateParam))
-        for proc in dictProcs.keys():
-            f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
-            #f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
+rateParams=eval(config.get('Datacard','rateParams_%s_%s'%(str(anType), pt_region)))
+try:
+    rateParamRange=eval(config.get('Datacard','rateParamRange'))
+except:
+    rateParamRange=[0,10]
+assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:'+ len(rateParamRange)
+for rateParam in rateParams:
+    dictProcs=eval(config.get('Datacard',rateParam))
+    for proc in dictProcs.keys():
+        f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+' ['+str(rateParamRange[0])+','+str(rateParamRange[1])+']\n')
+        #f.write(rateParam+'\trateParam\t'+Datacardbin+'\t'+proc+'\t'+str(dictProcs[proc])+'\n')
 
-    f.close()
-    useSpacesInDC(fileName)
-    print 'end useSpacesInDC'
+f.close()
+useSpacesInDC(fileName)
+print 'end useSpacesInDC'
 
 # --------------------------------------------------------------------------
 

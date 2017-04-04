@@ -48,7 +48,6 @@ config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
 TrainFlag = eval(config.get('Analysis','TrainFlag'))
-ApplyCutDuringSys = eval(config.get('Analysis','ApplyCutDuringSys'))
 btagLibrary = config.get('BTagReshaping','library')
 samplesinfo=config.get('Directories','samplesinfo')
 channel=config.get('Configuration','channel')
@@ -117,6 +116,22 @@ try:
 except:
     Stop_after_addBranches = False
 print "Stop after adding new variables/branches:", Stop_after_LepSF
+try:
+    AddSpecialWeight = config.get('Analysis', 'AddSpecialWeight').lower().strip() == 'true'
+except:
+    AddSpecialWeight = False
+print "I shall add the specialweight, my Lord !", AddSpecialWeight
+
+try:
+    applyJESsystematics= config.get('Analysis', 'applyJESsystematics').lower().strip() == 'true'
+except:
+    applyJESsystematics = False
+print "I shall add the JESsystematics, milord !", AddSpecialWeight
+try:
+   addEWK = config.get('Analysis', 'addEWK').lower().strip() == 'true'
+except:
+   addEWK = False
+print "I shall add the JESsystematics, milord !", AddSpecialWeight
 
 
 namelist=opts.names.split(',')
@@ -144,6 +159,97 @@ def deltaR(phi1, eta1, phi2, eta2):
     dphi = deltaPhi(phi1, phi2)
     result = math.sqrt(deta*deta + dphi*dphi)
     return result
+
+def signal_ewk(GenVbosons_pt):
+
+	SF = 1.
+	#print 'Vpt:', GenVbosons_pt
+	EWK = [0.932072955817,
+	       0.924376254386,
+	       0.916552449249,
+	       0.909654343838,
+	       0.90479110736,
+	       0.902244634267,
+	       0.89957486928,
+	       0.902899199569,
+	       0.899314861082,
+	       0.89204902646,
+	       0.886663993587,
+	       0.878915415638,
+	       0.870241565009,
+	       0.863239359219,
+	       0.85727925851,
+	       0.849770804948,
+	       0.83762562793,
+	       0.829982098864,
+	       0.81108451152,
+	       0.821942287438,
+	       0.796485091295,
+	       0.800127513022,
+	       0.790708718585,
+	       0.779446429438,
+	       0.777869490396]
+
+	#print EWK[0]
+	#print EWK[1]
+
+	if GenVbosons_pt > 0. and GenVbosons_pt < 3000:
+
+		if GenVbosons_pt > 0 and GenVbosons_pt <= 20:
+			SF = EWK[0]
+		if GenVbosons_pt > 20 and GenVbosons_pt <= 40:
+			SF = EWK[1]
+		if GenVbosons_pt > 40 and GenVbosons_pt <= 60:
+			SF = EWK[2]
+		if GenVbosons_pt > 60 and GenVbosons_pt <= 80:
+			SF = EWK[3]
+		if GenVbosons_pt > 80 and GenVbosons_pt <= 100:
+			SF = EWK[4]
+		if GenVbosons_pt > 100 and GenVbosons_pt <= 120:
+			SF = EWK[5]
+		if GenVbosons_pt > 120 and GenVbosons_pt <= 140:
+			SF = EWK[6]
+		if GenVbosons_pt > 140 and GenVbosons_pt <= 160:
+			SF = EWK[7]
+		if GenVbosons_pt > 160 and GenVbosons_pt <= 180:
+			SF = EWK[8]
+		if GenVbosons_pt > 180 and GenVbosons_pt <= 200:
+			SF = EWK[9]
+		if GenVbosons_pt > 200 and GenVbosons_pt <= 220:
+			SF = EWK[10]
+		if GenVbosons_pt > 220 and GenVbosons_pt <= 240:
+			SF = EWK[11]
+		if GenVbosons_pt > 240 and GenVbosons_pt <= 260:
+			SF = EWK[12]
+		if GenVbosons_pt > 260 and GenVbosons_pt <= 280:
+			SF = EWK[13]
+		if GenVbosons_pt > 280 and GenVbosons_pt <= 300:
+			SF = EWK[14]
+		if GenVbosons_pt > 300 and GenVbosons_pt <= 320:
+			SF = EWK[15]
+		if GenVbosons_pt > 320 and GenVbosons_pt <= 340:
+			SF = EWK[16]
+		if GenVbosons_pt > 340 and GenVbosons_pt <= 360:
+			SF = EWK[17]
+		if GenVbosons_pt > 360 and GenVbosons_pt <= 380:
+			SF = EWK[18]
+		if GenVbosons_pt > 380 and GenVbosons_pt <= 400:
+			SF = EWK[19]
+		if GenVbosons_pt > 400 and GenVbosons_pt <= 420:
+			SF = EWK[20]
+		if GenVbosons_pt > 420 and GenVbosons_pt <= 440:
+			SF = EWK[21]
+		if GenVbosons_pt > 440 and GenVbosons_pt <= 460:
+			SF = EWK[22]
+		if GenVbosons_pt > 460 and GenVbosons_pt <= 480:
+			SF = EWK[23]
+		if GenVbosons_pt > 480:
+			SF = EWK[24]
+		if GenVbosons_pt <= 0:
+			SF = 1
+
+
+	return SF
 
 def addAdditionalJets(H, tree):
     for i in range(tree.nhjidxaddJetsdR08):
@@ -353,25 +459,38 @@ for job in info:
         HaddJetsdR08NoReg = ROOT.H()
 
         #Jet structure (to apply CSV weight)
+        # For new regresssion zerop the branches out before cloning new tree
+        tree.SetBranchStatus('HCMVAV2_reg_mass',0)
+        tree.SetBranchStatus('HCMVAV2_reg_pt',0)
+        tree.SetBranchStatus('HCMVAV2_reg_eta',0)
+        tree.SetBranchStatus('HCMVAV2_reg_phi',0)
 
         
        # tree.SetBranchStatus('H',0)
         output.cd()
         newtree = tree.CloneTree(0)
 
-        hJ0 = ROOT.TLorentzVector()
-        hJ1 = ROOT.TLorentzVector()
-        vect = ROOT.TLorentzVector()
-        # hFJ0 = ROOT.TLorentzVector()
-        # hFJ1 = ROOT.TLorentzVector()
 
-        # load the BTagCalibrationStandalone.cc macro from https://twiki.cern.ch/twiki/bin/view/CMS/BTagCalibration
+
         if applyBTagweights:
             ROOT.gSystem.Load("./BTagCalibrationStandalone.so")
+            #ROOT.gROOT.ProcessLine('.L ../interface/BTagCalibrationStandalone.cpp+')
+
+            # from within CMSSW:
+            #ROOT.gSystem.Load('libCondFormatsBTauObjects')
+
+            print '\nCompilation done...\n'
+
             # CSVv2
-            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
+            #calib_csv = ROOT.BTagCalibration("csvv2", "./ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
+            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
+
             # cMVAv2
-            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
+            #calib_cmva = ROOT.BTagCalibration("cmvav2", "./ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
+            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
+
+            print "\nCalibration Init...\n"
+
             # map between algo/flavour and measurement type
             sf_type_map = {
                 "CSV" : {
@@ -385,12 +504,20 @@ for job in info:
                     "l" : "incl",
                     }
                 }
+
+            # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
             btag_calibrators = {}
+            #for algo in ["CSV", "CMVAV2"]:
+            #    for wp in [ [0, "L"],[1, "M"], [2,"T"] ]:
+            #        for syst in ["central", "up", "down"]:
+            #            for fl in ["bc", "l"]:
+            #                print "[btagSF]: Loading calibrator for algo:", algo, ", WP:", wp[1], ", systematic:", syst, ", flavour:", fl
+            #                btag_calibrators[algo+wp[1]+"_"+syst+"_"+fl] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], wp[0], sf_type_map[algo][fl], syst)
+
             for algo in ["CSV", "CMVAV2"]:
                 for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
                     print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
                     btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
-            print 'debug mtf'
             sysRefMap = {}
             sysMap = {}
             sysMap["JESUp"] = "up_jes"
@@ -412,9 +539,10 @@ for job in info:
             sysMap["cErr2Up"] = "up_cferr2"
             sysMap["cErr2Down"] = "down_cferr2"
 
-            #
-            #to include bTag weights
-            #
+
+            print "\nCalibration Done...\n"
+
+
             # depending on flavour, only a sample of systematics matter
             def applies( flavour, syst ):
                 if flavour==5 and syst not in ["central", "up_jes", "down_jes",  "up_lf", "down_lf",  "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2"]:
@@ -437,18 +565,19 @@ for job in info:
                 # the .csv files use the convention: b=0, c=1, l=2. Convert into hadronFlavour convention: b=5, c=4, f=0
                 fl_index = min(-fl+5,2)
                 # no fl=1 in .csv for CMVAv2 (a bug???)
-                if not shape_corr and "CMVAV2" in algo and fl==4:
-                    fl_index = 0
+                #if not shape_corr and "CMVAV2" in algo and fl==4:
+                #    fl_index = 0
 
                 if shape_corr:
                     if applies(fl,syst):
                         sf = btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-                        #print sf
+                        #print 'shape_corr SF:', sf
                         return sf
                     else:
                         sf = btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-                        #print sf
+                        #print 'shape_corr for central SF:', sf
                         return sf
+
 
                 # pt ranges for bc SF: needed to avoid out_of_range exceptions
                 pt_range_high_bc = 670.-1e-02 if "CSV" in algo else 320.-1e-02
@@ -477,19 +606,24 @@ for job in info:
             def get_event_SF(ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV", btag_calibrators=btag_calibrators):
                 weight = 1.0
 
+                #print 'gonna add the jet SF'
                 for jet in jets:
+                    #print 'ptmin', ptmin, 'ptmax', ptmax, 'etamin', etamin, 'etamax', etamax
+                    #print 'jet: pt', jet.pt, 'eta', jet.eta
                     if (jet.pt > ptmin and jet.pt < ptmax and abs(jet.eta) > etamin and abs(jet.eta) < etamax):
+                        #print syst, '!'
                         weight *= get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="", shape_corr=True, btag_calibrators=btag_calibrators)
                     else:
+                        #print 'central !'
                         weight *= get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True, btag_calibrators=btag_calibrators)
+                    #print 'weight is', weight
                 return weight
-
-            class Jet :
-                def __init__(self, pt, eta, fl, csv) :
-                    self.pt = pt
-                    self.eta = eta
-                    self.hadronFlavour = fl
-                    self.csv = csv
+            #class Jet :
+            #    def __init__(self, pt, eta, fl, csv) :
+            #        self.pt = pt
+            #        self.eta = eta
+            #        self.hadronFlavour = fl
+            #        self.csv = csv
             def MakeSysRefMap():
                 sysRefMap["JESUp"] = tree.btagWeightCSV_up_jes
                 sysRefMap["JESDown"] = tree.btagWeightCSV_down_jes
@@ -509,35 +643,190 @@ for job in info:
                 sysRefMap["cErr1Down"] = tree.btagWeightCSV_down_cferr1
                 sysRefMap["cErr2Up"] = tree.btagWeightCSV_up_cferr2
                 sysRefMap["cErr2Down"] = tree.btagWeightCSV_down_cferr2
-
             # Add bTag weights. Stole code from David
             # https://github.com/dcurry09/v25Heppy/blob/master/python/bTagSF.py
             # see "VHbb btagWeight Macro" mail from 13/02/2017
             if job.type != 'DATA':
                 bTagWeights = {}
-                bTagWeights["bTagWeightCMVAV2_Moriond"] = np.zeros(1, dtype=float)
-                newtree.Branch("bTagWeightCMVAv2_Moriond", bTagWeights["bTagWeightCMVAV2_Moriond"], "bTagWeightCMVAV2_Moriond/D")
-
-                bTagWeights["bTagWeightCSV_Moriond"] = np.zeros(1, dtype=float)
-                newtree.Branch("bTagWeightCSV_Moriond", bTagWeights["bTagWeightCSV_Moriond"], "bTagWeightCSV_Moriond/D")
-
-
+                bTagWeights["bTagWeightCMVAV2_Moriond_v2"] = np.zeros(1, dtype=float)
+                newtree.Branch("bTagWeightCMVAv2_Moriond", bTagWeights["bTagWeightCMVAV2_Moriond_v2"], "bTagWeightCMVAV2_Moriond_v2/D")
                 for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                     for sdir in ["Up", "Down"]:
 
-                        bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
-                        newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir], "bTagWeightCMVAV2_Moriond_"+syst+sdir+"/D")
+                        bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir] = np.zeros(1, dtype=float)
+                        newtree.Branch("bTagWeightCMVAV2_Moriond_v2_"+syst+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir], "bTagWeightCMVAV2_Moriond_v2_"+syst+sdir+"/D")
 
-                        bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
-                        newtree.Branch("bTagWeightCSV_Moriond_"+syst+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir], "bTagWeightCSV_Moriond_"+syst+sdir+"/D")
+                        #bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
+                        #newtree.Branch("bTagWeightCSV_Moriond_"+syst+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir], "bTagWeightCSV_Moriond_"+syst+sdir+"/D")
 
                         for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
 
-                            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-                            newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir+"/D")
+                            bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
+                            newtree.Branch("bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir+"/D")
 
-                            bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-                            newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
+                            #bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
+                            #newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
+
+
+    ######################
+    #Include JES spliting#
+
+        if applyJESsystematics:
+            doGroup = False
+            isVerbose = False
+            #isVerbose = True
+
+            regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
+            regVars = ["Jet_pt",
+                       "nPVs",
+                       "Jet_eta",
+                       "Jet_mt",
+                       "Jet_leadTrackPt",
+                       "Jet_leptonPtRel",
+                       "Jet_leptonPt",
+                       "Jet_leptonDeltaR",
+                       "Jet_neHEF",
+                       "Jet_neEmEF",
+                       "Jet_vtxPt",
+                       "Jet_vtxMass",
+                       "Jet_vtx3dL",
+                       "Jet_vtxNtrk",
+                       "Jet_vtx3deL",
+                       ]
+            regDict = {"Jet_pt":"Jet_pt[hJCMVAV2idx[0]]",
+                       #"Jet_corr":"Jet_corr[hJCMVAV2idx[0]]"
+                       "nPVs":"nPVs",
+                       "Jet_eta":"Jet_eta[hJCMVAV2idx[0]]",
+                       "Jet_mt":"Jet_mt[hJCMVAV2idx[0]]",
+                       "Jet_leadTrackPt": "Jet_leadTrackPt[hJCMVAV2idx[0]]",
+                       "Jet_leptonPtRel":"Jet_leptonPtRel[hJCMVAV2idx[0]]",
+                       "Jet_leptonPt":"Jet_leptonPt[hJCMVAV2idx[0]]",
+                       "Jet_leptonDeltaR":"Jet_leptonDeltaR[hJCMVAV2idx[0]]",
+                       "Jet_neHEF":"Jet_neHEF[hJCMVAV2idx[0]]",
+                       "Jet_neEmEF":"Jet_neEmEF[hJCMVAV2idx[0]]",
+                       "Jet_vtxPt":"Jet_vtxPt[hJCMVAV2idx[0]]",
+                       "Jet_vtxMass":"Jet_vtxMass[hJCMVAV2idx[0]]",
+                       "Jet_vtx3dL":"Jet_vtx3dl[hJCMVAV2idx[0]]",
+                       "Jet_vtxNtrk":"Jet_vtxNtrk[hJCMVAV2idx[0]]",
+                       "Jet_vtx3deL":"Jet_vtx3deL[hJCMVAV2idx[0]]",
+                       #"met_pt":"met_pt[hJCMVAV2idx[0]]",
+                       #"Jet_met_proj":"Jet_met_proj[hJCMVAV2idx[0]]"
+                       }
+            if doGroup:
+                JECsys = [
+                    "JER",
+                    "PileUp",
+                    "Relative",
+                    "AbsoluteMisc"
+                    ]
+                JECsysGroupDict = {
+                    "PileUp": ["PileUpDataMC",
+                               "PileUpPtRef",
+                               "PileUpPtBB",
+                               "PileUpPtEC1",
+                               "PileUpPtEC2",
+                               "PileUpPtHF"],
+                    "Relative": ["RelativeJEREC1",
+                                 "RelativeJEREC2",
+                                 "RelativeJERHF",
+                                 "RelativeFSR",
+                                 "RelativeStatFSR",
+                                 "RelativeStatEC",
+                                 "RelativeStatHF",
+                                 "RelativePtBB",
+                                 "RelativePtEC1",
+                                 "RelativePtEC2",
+                                 "RelativePtHF"],
+                    "AbsoluteMisc": [ "AbsoluteScale",
+                                      "AbsoluteMPFBias",
+                                      "AbsoluteStat",
+                                      "SinglePionECAL",
+                                      "SinglePionHCAL",
+                                      "Fragmentation",
+                                      "TimePtEta",
+                                      "FlavorQCD"]
+                    }
+            else:
+                JECsys = [
+                    "JER",
+                    "PileUpDataMC",
+                    "PileUpPtRef",
+                    "PileUpPtBB",
+                    "PileUpPtEC1",
+                    #"PileUpPtEC2",
+                    #"PileUpPtHF",
+                    "RelativeJEREC1",
+                    #"RelativeJEREC2",
+                    #"RelativeJERHF",
+                    "RelativeFSR",
+                    "RelativeStatFSR",
+                    "RelativeStatEC",
+                    #"RelativeStatHF",
+                    "RelativePtBB",
+                    "RelativePtEC1",
+                    #"RelativePtEC2",
+                    #"RelativePtHF",
+                    "AbsoluteScale",
+                    "AbsoluteMPFBias",
+                    "AbsoluteStat",
+                    "SinglePionECAL",
+                    "SinglePionHCAL",
+                    "Fragmentation",
+                    "TimePtEta",
+                    "FlavorQCD"
+                    ]
+
+
+            JEC_systematics = {}
+
+            hJ = ROOT.TLorentzVector()
+            hJ0 = ROOT.TLorentzVector()
+            hJ1 = ROOT.TLorentzVector()
+
+            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1','hJetCMVAV2_pt_reg']
+
+            for var in VarList:
+                if not var == 'hJetCMVAV2_pt_reg':
+                    JEC_systematics[var] = np.zeros(1, dtype=float)
+                    newtree.Branch(var, JEC_systematics[var], var+'/D')
+                else:
+                    JEC_systematics[var] = np.zeros(21, dtype=float)
+                    newtree.Branch(var, JEC_systematics[var], var+'[21]/D')
+
+            if job.type != 'DATA':
+                for syst in JECsys:
+                    for sdir in ["Up", "Down"]:
+                        for var in VarList:
+                            #if not 'hJet' in var:
+                            if not var == 'hJetCMVAV2_pt_reg':
+                                JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(1, dtype=float)
+                                newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"/D")
+                            else:
+                                JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(21, dtype=float)
+                                newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"[21]/D")
+
+            # define all the readers
+            TMVA_reader = {}
+            theVars = {}
+
+            TMVA_reader['readerJet'] = ROOT.TMVA.Reader("!Color:!Silent" )
+
+            #add a dictionary of containing array of the vars in the TMVAreader
+            def addVarsToReader(reader,theVars):
+                    for key in regVars:
+                        #print key
+                        #var = regDict[key]
+                        theVars[key] = array( 'f', [ 0 ] )
+                        reader.AddVariable(key,theVars[key])
+                    return
+
+            # Init the TMVA readers
+            addVarsToReader(TMVA_reader['readerJet'],theVars)
+            TMVA_reader['readerJet'].BookMVA("readerJet", regWeight)
+
+            print '\n\t ----> Evaluating Regression on sample....'
+
+            #print tree
 
         if applyLepSF and job.type != 'DATA':
 
@@ -569,6 +858,10 @@ for job in info:
             weight_SF_Lepton = array('f',[0]*3)
             weight_SF_Lepton[0],  weight_SF_Lepton[1],  weight_SF_Lepton[2] = 1,0,0
             newtree.Branch('weight_SF_Lepton',weight_SF_Lepton,'weight_SF_Lepton[3]/F')
+            #double electron Trig
+            eTrigSFWeight_doubleEle80x = array('f',[0]*3)
+            eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1,0,0
+            newtree.Branch('eTrigSFWeight_doubleEle80x', eTrigSFWeight_doubleEle80x, 'eTrigSFWeight_doubleEle80x[3]/F')
 
             #V24
             ##Loose ISO+ID SF
@@ -618,7 +911,7 @@ for job in info:
             #eleweight[0], eleweight[1], eleweight[2] = 1,1,1
             #newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
-        if addBranches:
+        if addEWK:
             if job.type != 'DATA':
 
                 #EWK weights
@@ -640,6 +933,8 @@ for job in info:
                 isDY = array('i',[-1])
                 DYw[0] = -1
                 newtree.Branch('isDY', isDY, 'isDY/I')
+
+        if addBranches:
 
             ### Adding new variable from configuration ###
             newVariableNames = []
@@ -680,380 +975,380 @@ for job in info:
                 newVariableNames.append(variableName)
                 newVariableLengths[variableName] = variableLength
 
-        if False and not (recomputeVtype and stopAfterVtypeCorrection) and not(Stop_after_BTagweights and applyBTagweights) and not(Stop_after_LepSF and applyLepSF) and not (addBranches and Stop_after_addBranches):
-            
-            if applyRegression == True:
-                writeNewVariables = eval(config.get("Regression","writeNewVariables"))
-                regWeight = config.get("Regression","regWeight")
-                regDict = eval(config.get("Regression","regDict"))
-                regVars = eval(config.get("Regression","regVars"))
-                # regWeightFilterJets = config.get("Regression","regWeightFilterJets")
-                # regDictFilterJets = eval(config.get("Regression","regDictFilterJets"))
-                # regVarsFilterJets = eval(config.get("Regression","regVarsFilterJets"))
+        if AddSpecialWeight and job.type != 'DATA':
+            DY_specialWeight= array('f',[0])
+            DY_specialWeight[0] = 1
+            newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
 
-                # Regression branches
-                # hJet_pt = array('f',[0]*2)
-                # hJet_mass = array('f',[0]*2)
-                newtree.Branch( 'H', H , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
-                newtree.Branch( 'HNoReg', HNoReg , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
-                newtree.Branch( 'HaddJetsdR08', HaddJetsdR08 , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
-                newtree.Branch( 'HaddJetsdR08NoReg', HaddJetsdR08NoReg , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
-                # FatHReg = array('f',[0]*2)
-                # newtree.Branch('FatHReg',FatHReg,'filteredmass:filteredpt/F')
-                Event = array('f',[0])
-                METet = array('f',[0])
-                rho = array('f',[0])
-                METphi = array('f',[0])
-                frho = ROOT.TTreeFormula("rho",'rho',tree)
-                fEvent = ROOT.TTreeFormula("Event",'evt',tree)
-                fFatHFlag = ROOT.TTreeFormula("FatHFlag",'nFatjetCA15trimmed>0',tree)
-                fFatHnFilterJets = ROOT.TTreeFormula("FatHnFilterJets",'nFatjetCA15ungroomed',tree)
-                fMETet = ROOT.TTreeFormula("METet",'met_pt',tree)
-                fMETphi = ROOT.TTreeFormula("METphi",'met_phi',tree)
-                # fHVMass = ROOT.TTreeFormula("HVMass",'VHbb::HV_mass(H_pt,H_eta,H_phi,H_mass,V_pt,V_eta,V_phi,V_mass)',tree)
-                hJet_MtArray = [array('f',[0]),array('f',[0])]
-                hJet_etarray = [array('f',[0]),array('f',[0])]
-                hJet_MET_dPhi = array('f',[0]*2)
-                hJet_regWeight = array('f',[0]*2)
-                fathFilterJets_regWeight = array('f',[0]*2)
-                hJet_MET_dPhiArray = [array('f',[0]),array('f',[0])]
-                hJet_rawPtArray = [array('f',[0]),array('f',[0])]
-                newtree.Branch('hJet_MET_dPhi',hJet_MET_dPhi,'hJet_MET_dPhi[2]/F')
-                newtree.Branch('hJet_regWeight',hJet_regWeight,'hJet_regWeight[2]/F')
-                readerJet0 = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet1 = ROOT.TMVA.Reader("!Color:!Silent" )
+        #if False and not (recomputeVtype and stopAfterVtypeCorrection) and not(Stop_after_BTagweights and applyBTagweights) and not(Stop_after_LepSF and applyLepSF) and not (addBranches and Stop_after_addBranches):
+        #
+        #    if applyRegression == True:
+        #        writeNewVariables = eval(config.get("Regression","writeNewVariables"))
+        #        regWeight = config.get("Regression","regWeight")
+        #        regDict = eval(config.get("Regression","regDict"))
+        #        regVars = eval(config.get("Regression","regVars"))
+        #        # regWeightFilterJets = config.get("Regression","regWeightFilterJets")
+        #        # regDictFilterJets = eval(config.get("Regression","regDictFilterJets"))
+        #        # regVarsFilterJets = eval(config.get("Regression","regVarsFilterJets"))
 
-                readerJet0_JER_up = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet1_JER_up = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet0_JER_down = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet1_JER_down = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet0_JEC_up = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet1_JEC_up = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet0_JEC_down = ROOT.TMVA.Reader("!Color:!Silent" )
-                readerJet1_JEC_down = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        # Regression branches
+        #        # hJet_pt = array('f',[0]*2)
+        #        # hJet_mass = array('f',[0]*2)
+        #        newtree.Branch( 'H', H , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
+        #        newtree.Branch( 'HNoReg', HNoReg , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
+        #        newtree.Branch( 'HaddJetsdR08', HaddJetsdR08 , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
+        #        newtree.Branch( 'HaddJetsdR08NoReg', HaddJetsdR08NoReg , 'HiggsFlag/I:mass/F:pt/F:eta/F:phi/F:dR/F:dPhi/F:dEta/F' )
+        #        # FatHReg = array('f',[0]*2)
+        #        # newtree.Branch('FatHReg',FatHReg,'filteredmass:filteredpt/F')
+        #        Event = array('f',[0])
+        #        METet = array('f',[0])
+        #        rho = array('f',[0])
+        #        METphi = array('f',[0])
+        #        frho = ROOT.TTreeFormula("rho",'rho',tree)
+        #        fEvent = ROOT.TTreeFormula("Event",'evt',tree)
+        #        fFatHFlag = ROOT.TTreeFormula("FatHFlag",'nFatjetCA15trimmed>0',tree)
+        #        fFatHnFilterJets = ROOT.TTreeFormula("FatHnFilterJets",'nFatjetCA15ungroomed',tree)
+        #        fMETet = ROOT.TTreeFormula("METet",'met_pt',tree)
+        #        fMETphi = ROOT.TTreeFormula("METphi",'met_phi',tree)
+        #        # fHVMass = ROOT.TTreeFormula("HVMass",'VHbb::HV_mass(H_pt,H_eta,H_phi,H_mass,V_pt,V_eta,V_phi,V_mass)',tree)
+        #        hJet_MtArray = [array('f',[0]),array('f',[0])]
+        #        hJet_etarray = [array('f',[0]),array('f',[0])]
+        #        hJet_MET_dPhi = array('f',[0]*2)
+        #        hJet_regWeight = array('f',[0]*2)
+        #        fathFilterJets_regWeight = array('f',[0]*2)
+        #        hJet_MET_dPhiArray = [array('f',[0]),array('f',[0])]
+        #        hJet_rawPtArray = [array('f',[0]),array('f',[0])]
+        #        newtree.Branch('hJet_MET_dPhi',hJet_MET_dPhi,'hJet_MET_dPhi[2]/F')
+        #        newtree.Branch('hJet_regWeight',hJet_regWeight,'hJet_regWeight[2]/F')
+        #        readerJet0 = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet1 = ROOT.TMVA.Reader("!Color:!Silent" )
 
-                theForms = {}
-                theVars0 = {}
-                theVars1 = {}
-                theVars0_JER_up = {}
-                theVars1_JER_up = {}
-                theVars0_JER_down = {}
-                theVars1_JER_down = {}
-                theVars0_JEC_up = {}
-                theVars1_JEC_up = {}
-                theVars0_JEC_down = {}
-                theVars1_JEC_down = {}
+        #        readerJet0_JER_up = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet1_JER_up = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet0_JER_down = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet1_JER_down = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet0_JEC_up = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet1_JEC_up = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet0_JEC_down = ROOT.TMVA.Reader("!Color:!Silent" )
+        #        readerJet1_JEC_down = ROOT.TMVA.Reader("!Color:!Silent" )
 
-            def addVarsToReader(reader,regDict,regVars,theVars,theForms,i,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,syst=""):
-                # print "regDict: ",regDict
-                # print "regVars: ",regVars
-                for key in regVars:
-                    var = regDict[key]
-                    theVars[key+syst] = array( 'f', [ 0 ] )
-                    reader.AddVariable(key,theVars[key+syst])
-                    formulaX = var
-                    brakets = ""
-                    if formulaX.find("[hJCidx[0]]"): brakets = "[hJCidx[0]]"
-                    elif formulaX.find("[hJCidx[1]]"): brakets = "[hJCidx[1]]"
-                    elif formulaX.find("[0]"): brakets = "[0]"
-                    elif formulaX.find("[1]"): brakets = "[1]"
-                    else: pass
+        #        theForms = {}
+        #        theVars0 = {}
+        #        theVars1 = {}
+        #        theVars0_JER_up = {}
+        #        theVars1_JER_up = {}
+        #        theVars0_JER_down = {}
+        #        theVars1_JER_down = {}
+        #        theVars0_JEC_up = {}
+        #        theVars1_JEC_up = {}
+        #        theVars0_JEC_down = {}
+        #        theVars1_JEC_down = {}
 
-                    formulaX = formulaX.replace(brakets,"[X]")
+        #    def addVarsToReader(reader,regDict,regVars,theVars,theForms,i,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,syst=""):
+        #        # print "regDict: ",regDict
+        #        # print "regVars: ",regVars
+        #        for key in regVars:
+        #            var = regDict[key]
+        #            theVars[key+syst] = array( 'f', [ 0 ] )
+        #            reader.AddVariable(key,theVars[key+syst])
+        #            formulaX = var
+        #            brakets = ""
+        #            if formulaX.find("[hJCidx[0]]"): brakets = "[hJCidx[0]]"
+        #            elif formulaX.find("[hJCidx[1]]"): brakets = "[hJCidx[1]]"
+        #            elif formulaX.find("[0]"): brakets = "[0]"
+        #            elif formulaX.find("[1]"): brakets = "[1]"
+        #            else: pass
 
-                    if syst == "":
-                        pass
-                        # formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JER[X]")
-                    elif syst == "JER_up":
-                        formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JERUp[X]")
-                    elif syst == "JER_down":
-                        formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JERDown[X]")
-                    elif syst == "JEC_up":
-                        formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr_JECUp[X]*Jet_corr_JER[X]")
-                    elif syst == "JEC_down":
-                        formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr_JECDown[X]*Jet_corr_JER[X]")
-                    else:
-                        raise Exception(syst," is unknown!")
+        #            formulaX = formulaX.replace(brakets,"[X]")
 
-                    formula = formulaX.replace("[X]",brakets)
-                    formula = formula.replace("[0]","[%.0f]" %i)
-                    theForms['form_reg_%s_%.0f'%(key+syst,i)] = ROOT.TTreeFormula("form_reg_%s_%.0f"%(key+syst,i),'%s' %(formula),tree)
-                return
+        #            if syst == "":
+        #                pass
+        #                # formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JER[X]")
+        #            elif syst == "JER_up":
+        #                formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JERUp[X]")
+        #            elif syst == "JER_down":
+        #                formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr[X]*Jet_corr_JERDown[X]")
+        #            elif syst == "JEC_up":
+        #                formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr_JECUp[X]*Jet_corr_JER[X]")
+        #            elif syst == "JEC_down":
+        #                formulaX = formulaX.replace("Jet_pt[X]","Jet_rawPt[X]*Jet_corr_JECDown[X]*Jet_corr_JER[X]")
+        #            else:
+        #                raise Exception(syst," is unknown!")
 
-            if applyRegression == True:
-                addVarsToReader(readerJet0,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray)
-                addVarsToReader(readerJet1,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray)
-                if job.type != 'DATA':
-                    addVarsToReader(readerJet0_JER_up,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_up")
-                    addVarsToReader(readerJet1_JER_up,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_up")
-                    addVarsToReader(readerJet0_JER_down,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_down")
-                    addVarsToReader(readerJet1_JER_down,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_down")
-                    addVarsToReader(readerJet0_JEC_up,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_up")
-                    addVarsToReader(readerJet1_JEC_up,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_up")
-                    addVarsToReader(readerJet0_JEC_down,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_down")
-                    addVarsToReader(readerJet1_JEC_down,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_down")
+        #            formula = formulaX.replace("[X]",brakets)
+        #            formula = formula.replace("[0]","[%.0f]" %i)
+        #            theForms['form_reg_%s_%.0f'%(key+syst,i)] = ROOT.TTreeFormula("form_reg_%s_%.0f"%(key+syst,i),'%s' %(formula),tree)
+        #        return
 
-                readerJet0.BookMVA( "jet0Regression", regWeight )
-                readerJet1.BookMVA( "jet1Regression", regWeight )
+        #    if applyRegression == True:
+        #        addVarsToReader(readerJet0,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray)
+        #        addVarsToReader(readerJet1,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray)
+        #        if job.type != 'DATA':
+        #            addVarsToReader(readerJet0_JER_up,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_up")
+        #            addVarsToReader(readerJet1_JER_up,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_up")
+        #            addVarsToReader(readerJet0_JER_down,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_down")
+        #            addVarsToReader(readerJet1_JER_down,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JER_down")
+        #            addVarsToReader(readerJet0_JEC_up,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_up")
+        #            addVarsToReader(readerJet1_JEC_up,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_up")
+        #            addVarsToReader(readerJet0_JEC_down,regDict,regVars,theVars0,theForms,0,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_down")
+        #            addVarsToReader(readerJet1_JEC_down,regDict,regVars,theVars1,theForms,1,hJet_MET_dPhiArray,METet,rho,hJet_MtArray,hJet_etarray,hJet_rawPtArray,"JEC_down")
 
-                if job.type != 'DATA':
-                    readerJet0_JER_up.BookMVA( "jet0Regression", regWeight )
-                    readerJet1_JER_up.BookMVA( "jet1Regression", regWeight )
-                    readerJet0_JER_down.BookMVA( "jet0Regression", regWeight )
-                    readerJet1_JER_down.BookMVA( "jet1Regression", regWeight )
+        #        readerJet0.BookMVA( "jet0Regression", regWeight )
+        #        readerJet1.BookMVA( "jet1Regression", regWeight )
 
-                    readerJet0_JEC_up.BookMVA( "jet0Regression", regWeight )
-                    readerJet1_JEC_up.BookMVA( "jet1Regression", regWeight )
-                    readerJet0_JEC_down.BookMVA( "jet0Regression", regWeight )
-                    readerJet1_JEC_down.BookMVA( "jet1Regression", regWeight )
+        #        if job.type != 'DATA':
+        #            readerJet0_JER_up.BookMVA( "jet0Regression", regWeight )
+        #            readerJet1_JER_up.BookMVA( "jet1Regression", regWeight )
+        #            readerJet0_JER_down.BookMVA( "jet0Regression", regWeight )
+        #            readerJet1_JER_down.BookMVA( "jet1Regression", regWeight )
 
-
-            # Add training Flag
-            EventForTraining = array('i',[0])
-            newtree.Branch('EventForTraining',EventForTraining,'EventForTraining/I')
-            EventForTraining[0]=0
-
-            TFlag=ROOT.TTreeFormula("EventForTraining","evt%2",tree)
+        #            readerJet0_JEC_up.BookMVA( "jet0Regression", regWeight )
+        #            readerJet1_JEC_up.BookMVA( "jet1Regression", regWeight )
+        #            readerJet0_JEC_down.BookMVA( "jet0Regression", regWeight )
+        #            readerJet1_JEC_down.BookMVA( "jet1Regression", regWeight )
 
 
+        #    # Add training Flag
+        #    EventForTraining = array('i',[0])
+        #    newtree.Branch('EventForTraining',EventForTraining,'EventForTraining/I')
+        #    EventForTraining[0]=0
 
-            #Decorr JER/JES sys (stole code from Sean)
-            if job.type != 'DATA':
-
-                #Sean
-                systematic_name_templates = [
-                    'HCSV_reg_corr{systematic}{variation}_mass_{category}',
-                    'HCSV_reg_corr{systematic}{variation}_pt_{category}',
-                    'HCSV_reg_corr{systematic}{variation}_eta_{category}',
-                    'HCSV_reg_corr{systematic}{variation}_phi_{category}',
-                    'Jet_pt_reg_corr{systematic}{variation}_{category}',
-                ]
-
-                category_definitions = {
-                    'HighCentral': lambda pt, eta: pt > 100 and abs(eta) < 1.4,
-                    'LowCentral': lambda pt, eta: pt < 100 and abs(eta) < 1.4,
-                    'HighForward': lambda pt, eta: pt > 100 and abs(eta) > 1.4,
-                    'LowForward': lambda pt, eta: pt < 100 and abs(eta) > 1.4,
-                }
-
-                modifiers = list(itertools.product(['JEC', 'JER'], ['Up', 'Down'], ['HighCentral', 'LowCentral', 'HighForward', 'LowForward']))
-
-                # Create the new branches, setting their branch addresses to numpy arrays
-                branch_addresses = {}
-                for template in systematic_name_templates:
-                    for systematic, variation, category in iter(modifiers):
-                        name = template.format(**locals())
-                        if 'Jet' in template:
-                            branch_addresses[name] = np.zeros(21, dtype=np.float32)
-                            newtree.Branch(name, branch_addresses[name], '{}[nJet]/F'.format(name))
-                        else:
-                            branch_addresses[name] = np.zeros(1, dtype=np.float32)
-                            newtree.Branch(name, branch_addresses[name], '{}/F'.format(name))
-                print 'branch_addresses is', branch_addresses
+        #    TFlag=ROOT.TTreeFormula("EventForTraining","evt%2",tree)
 
 
-            if channel == "Zmm":
-           # #Special weights
 
-           #     DY_specialWeight= array('f',[0])
-           #     DY_specialWeight[0] = 1
-           #     newtree.Branch('DY_specialWeight',DY_specialWeight,'DY_specialWeight/F')
+        #    #Decorr JER/JES sys (stole code from Sean)
+        #    if job.type != 'DATA':
 
+        #        #Sean
+        #        systematic_name_templates = [
+        #            'HCSV_reg_corr{systematic}{variation}_mass_{category}',
+        #            'HCSV_reg_corr{systematic}{variation}_pt_{category}',
+        #            'HCSV_reg_corr{systematic}{variation}_eta_{category}',
+        #            'HCSV_reg_corr{systematic}{variation}_phi_{category}',
+        #            'Jet_pt_reg_corr{systematic}{variation}_{category}',
+        #        ]
 
-            #Add reg VHDphi
-                HVdPhi_reg = array('f',[0])
-                HVdPhi_reg[0] = 300
-                newtree.Branch('HVdPhi_reg',HVdPhi_reg,'HVdPhi_reg/F')
+        #        category_definitions = {
+        #            'HighCentral': lambda pt, eta: pt > 100 and abs(eta) < 1.4,
+        #            'LowCentral': lambda pt, eta: pt < 100 and abs(eta) < 1.4,
+        #            'HighForward': lambda pt, eta: pt > 100 and abs(eta) > 1.4,
+        #            'LowForward': lambda pt, eta: pt < 100 and abs(eta) > 1.4,
+        #        }
 
-            #Add CSV
+        #        modifiers = list(itertools.product(['JEC', 'JER'], ['Up', 'Down'], ['HighCentral', 'LowCentral', 'HighForward', 'LowForward']))
 
-                bTagWeight_ichep = array('f',[0])
-                bTagWeight_ichep[0] = 1
-                newtree.Branch('bTagWeight_ichep',bTagWeight_ichep,'bTagWeight_ichep/F')
-
-
-            # Angular Likelihood
-            if channel == "Znn" or channel == "Zmm":
-                angleHB = array('f',[0])
-                newtree.Branch('angleHB',angleHB,'angleHB/F')
-                angleLZ = array('f',[0])
-                newtree.Branch('angleLZ',angleLZ,'angleLZ/F')
-                angleZZS = array('f',[0])
-                newtree.Branch('angleZZS',angleZZS,'angleZZS/F')
-                kinLikeRatio = array('f',[0]*len(AngLikeBkgs))
-                newtree.Branch('kinLikeRatio',kinLikeRatio,'%s/F' %(':'.join(AngLikeBkgs)))
-                fAngleHB = ROOT.TTreeFormula("fAngleHB",'abs(VHbb::ANGLEHB(Jet_pt[hJCidx[0]],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],Jet_mass[hJCidx[0]],Jet_pt[hJCidx[1]],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],Jet_mass[hJCidx[1]]))',newtree)
-                fAngleLZ = ROOT.TTreeFormula("fAngleLZ",'abs(VHbb::ANGLELZ(vLeptons_new_pt[hJCidx[0]],vLeptons_new_eta[hJCidx[0]],vLeptons_phi[hJCidx[0]],vLeptons_mass[hJCidx[0]],vLeptons_new_pt[hJCidx[1]],vLeptons_new_eta[hJCidx[1]],vLeptons_phi[hJCidx[1]],vLeptons_mass[hJCidx[1]]))',newtree)
-                fAngleZZS = ROOT.TTreeFormula("fAngleZZS",'abs(VHbb::ANGLELZ(H_pt,H_eta,H_phi,H_pt,V_pt,V_eta,V_phi,V_mass))',newtree)
-                fVpt = ROOT.TTreeFormula("fVpt",'V_pt',tree)
-                fVeta = ROOT.TTreeFormula("fVeta",'V_eta',tree)
-                fVphi = ROOT.TTreeFormula("fVphi",'V_phi',tree)
-                fVmass = ROOT.TTreeFormula("fVmass",'V_mass',tree)
-                likeSBH = array('f',[0]*len(AngLikeBkgs))
-                likeBBH = array('f',[0]*len(AngLikeBkgs))
-                likeSLZ = array('f',[0]*len(AngLikeBkgs))
-                likeBLZ = array('f',[0]*len(AngLikeBkgs))
-                likeSZZS = array('f',[0]*len(AngLikeBkgs))
-                likeBZZS = array('f',[0]*len(AngLikeBkgs))
-                likeSMassZS = array('f',[0]*len(AngLikeBkgs))
-                likeBMassZS = array('f',[0]*len(AngLikeBkgs))
-                HVMass_Reg = array('f',[0])
-                newtree.Branch('HVMass_Reg',HVMass_Reg,'HVMass_Reg/F')
-
-                SigBH = []; BkgBH = []; SigLZ = []; BkgLZ = []; SigZZS = []; BkgZZS = []; SigMassZS = []; BkgMassZS = [];
-
-            # if job.type != 'DATA': ##FIXME###
-            if channel == "Znn" or channel == "Zmm":
-                #CSV branches
-                hJet_hadronFlavour = array('f',[0]*2)
-                hJet_btagCSV = array('f',[0]*2)
-                hJet_btagCSVOld = array('f',[0]*2)
-                hJet_btagCSVUp = array('f',[0]*2)
-                hJet_btagCSVDown = array('f',[0]*2)
-                hJet_btagCSVFUp = array('f',[0]*2)
-                hJet_btagCSVFDown = array('f',[0]*2)
-                newtree.Branch('hJet_btagCSV',hJet_btagCSV,'hJet_btagCSV[2]/F')
-                newtree.Branch('hJet_btagCSVOld',hJet_btagCSVOld,'hJet_btagCSVOld[2]/F')
-                newtree.Branch('hJet_btagCSVUp',hJet_btagCSVUp,'hJet_btagCSVUp[2]/F')
-                newtree.Branch('hJet_btagCSVDown',hJet_btagCSVDown,'hJet_btagCSVDown[2]/F')
-                newtree.Branch('hJet_btagCSVFUp',hJet_btagCSVFUp,'hJet_btagCSVFUp[2]/F')
-                newtree.Branch('hJet_btagCSVFDown',hJet_btagCSVFDown,'hJet_btagCSVFDown[2]/F')
-
-                # Jet in bad (eta,phi) [for fake-MET]
-                Jet_under = array('f',[0]*50)
-                newtree.Branch('Jet_under',Jet_under,'Jet_under[nJet]/F')
-                Jet_over = array('f',[0]*50)
-                newtree.Branch('Jet_over',Jet_over,'Jet_over[nJet]/F')
-                Jet_underMC = array('f',[0]*50)
-                newtree.Branch('Jet_underMC',Jet_underMC,'Jet_underMC[nJet]/F')
-                Jet_overMC = array('f',[0]*50)
-                newtree.Branch('Jet_overMC',Jet_overMC,'Jet_overMC[nJet]/F')
-                Jet_bad = array('f',[0]*50)
-                newtree.Branch('Jet_bad',Jet_bad,'Jet_bad[nJet]/F')
-
-                if channel == "Znn" or channel == "Zmm":
-                    DiscardedJet_under = array('f',[0]*50)
-                    newtree.Branch('DiscardedJet_under',DiscardedJet_under,'DiscardedJet_under[nDiscardedJet]/F')
-                    DiscardedJet_over = array('f',[0]*50)
-                    newtree.Branch('DiscardedJet_over',DiscardedJet_over,'DiscardedJet_over[nDiscardedJet]/F')
-                    DiscardedJet_underMC = array('f',[0]*50)
-                    newtree.Branch('DiscardedJet_underMC',DiscardedJet_underMC,'DiscardedJet_underMC[nDiscardedJet]/F')
-                    DiscardedJet_overMC = array('f',[0]*50)
-                    newtree.Branch('DiscardedJet_overMC',DiscardedJet_overMC,'DiscardedJet_overMC[nDiscardedJet]/F')
-                    DiscardedJet_bad = array('f',[0]*50)
-                    newtree.Branch('DiscardedJet_bad',DiscardedJet_bad,'DiscardedJet_bad[nDiscardedJet]/F')
-
-                    aLeptons_under = array('f',[0]*50)
-                    newtree.Branch('aLeptons_under',aLeptons_under,'aLeptons_under[naLeptons]/F')
-                    aLeptons_over = array('f',[0]*50)
-                    newtree.Branch('aLeptons_over',aLeptons_over,'aLeptons_over[naLeptons]/F')
-                    aLeptons_underMC = array('f',[0]*50)
-                    newtree.Branch('aLeptons_underMC',aLeptons_underMC,'aLeptons_underMC[naLeptons]/F')
-                    aLeptons_overMC = array('f',[0]*50)
-                    newtree.Branch('aLeptons_overMC',aLeptons_overMC,'aLeptons_overMC[naLeptons]/F')
-                    aLeptons_bad = array('f',[0]*50)
-                    newtree.Branch('aLeptons_bad',aLeptons_bad,'aLeptons_bad[naLeptons]/F')
-
-                    vLeptons_under = array('f',[0]*50)
-                    newtree.Branch('vLeptons_under',vLeptons_under,'vLeptons_under[nvLeptons]/F')
-                    vLeptons_over = array('f',[0]*50)
-                    newtree.Branch('vLeptons_over',vLeptons_over,'vLeptons_over[nvLeptons]/F')
-                    vLeptons_underMC = array('f',[0]*50)
-                    newtree.Branch('vLeptons_underMC',vLeptons_underMC,'vLeptons_underMC[nvLeptons]/F')
-                    vLeptons_overMC = array('f',[0]*50)
-                    newtree.Branch('vLeptons_overMC',vLeptons_overMC,'vLeptons_overMC[nvLeptons]/F')
-                    vLeptons_bad = array('f',[0]*50)
-                    newtree.Branch('vLeptons_bad',vLeptons_bad,'vLeptons_bad[nvLeptons]/F')
-
-                # JER branches
-                if applyRegression == True:
-                    hJet_pt_JER_up = array('f',[0]*2)
-                    newtree.Branch('hJet_pt_JER_up',hJet_pt_JER_up,'hJet_pt_JER_up[2]/F')
-                    hJet_pt_JER_down = array('f',[0]*2)
-                    newtree.Branch('hJet_pt_JER_down',hJet_pt_JER_down,'hJet_pt_JER_down[2]/F')
-                    hJet_mass_JER_up = array('f',[0]*2)
-                    newtree.Branch('hJet_mass_JER_up',hJet_mass_JER_up,'hJet_mass_JER_up[2]/F')
-                    hJet_mass_JER_down = array('f',[0]*2)
-                    newtree.Branch('hJet_mass_JER_down',hJet_mass_JER_down,'hJet_mass_JER_down[2]/F')
-                    H_JER = array('f',[0]*4)
-                    newtree.Branch('H_JER',H_JER,'mass_up:mass_down:pt_up:pt_down/F')
-                    HVMass_JER_up = array('f',[0])
-                    HVMass_JER_down = array('f',[0])
-                    newtree.Branch('HVMass_JER_up',HVMass_JER_up,'HVMass_JER_up/F')
-                    newtree.Branch('HVMass_JER_down',HVMass_JER_down,'HVMass_JER_down/F')
-                    angleHB_JER_up = array('f',[0])
-                    angleHB_JER_down = array('f',[0])
-                    angleZZS_JER_up = array('f',[0])
-                    angleZZS_JER_down = array('f',[0])
-                    newtree.Branch('angleHB_JER_up',angleHB_JER_up,'angleHB_JER_up/F')
-                    newtree.Branch('angleHB_JER_down',angleHB_JER_down,'angleHB_JER_down/F')
-                    newtree.Branch('angleZZS_JER_up',angleZZS_JER_up,'angleZZS_JER_up/F')
-                    newtree.Branch('angleZZS_JER_down',angleZZS_JER_down,'angleZZS_JER_down/F')
-
-                    hJet_ptOld = array('f',[0]*2)
-                    newtree.Branch('hJet_ptOld',hJet_ptOld,'hJet_ptOld[2]/F')
-
-                    hJet_pt = array('f',[0]*2)
-                    newtree.Branch('hJet_pt',hJet_pt,'hJet_pt[2]/F')
-
-                    hJet_ptMc = array('f',[0]*2)
-                    newtree.Branch('hJet_ptMc',hJet_ptMc,'hJet_ptMc[2]/F')
-
-                    hJet_mass = array('f',[0]*2)
-                    newtree.Branch('hJet_mass',hJet_mass,'hJet_mass[2]/F')
-
-                    hJet_eta = array('f',[0]*2)
-                    newtree.Branch('hJet_eta',hJet_eta,'hJet_eta[2]/F')
-
-                    hJet_phi = array('f',[0]*2)
-                    newtree.Branch('hJet_phi',hJet_phi,'hJet_phi[2]/F')
+        #        # Create the new branches, setting their branch addresses to numpy arrays
+        #        branch_addresses = {}
+        #        for template in systematic_name_templates:
+        #            for systematic, variation, category in iter(modifiers):
+        #                name = template.format(**locals())
+        #                if 'Jet' in template:
+        #                    branch_addresses[name] = np.zeros(21, dtype=np.float32)
+        #                    newtree.Branch(name, branch_addresses[name], '{}[nJet]/F'.format(name))
+        #                else:
+        #                    branch_addresses[name] = np.zeros(1, dtype=np.float32)
+        #                    newtree.Branch(name, branch_addresses[name], '{}/F'.format(name))
+        #        print 'branch_addresses is', branch_addresses
 
 
-                    # JES branches
-                    hJet_pt_JES_up = array('f',[0]*2)
-                    newtree.Branch('hJet_pt_JES_up',hJet_pt_JES_up,'hJet_pt_JES_up[2]/F')
-                    hJet_pt_JES_down = array('f',[0]*2)
-                    newtree.Branch('hJet_pt_JES_down',hJet_pt_JES_down,'hJet_pt_JES_down[2]/F')
-                    hJet_mass_JES_up = array('f',[0]*2)
-                    newtree.Branch('hJet_mass_JES_up',hJet_mass_JES_up,'hJet_mass_JES_up[2]/F')
-                    hJet_mass_JES_down = array('f',[0]*2)
-                    newtree.Branch('hJet_mass_JES_down',hJet_mass_JES_down,'hJet_mass_JES_down[2]/F')
-                    H_JES = array('f',[0]*4)
-                    newtree.Branch('H_JES',H_JES,'mass_up:mass_down:pt_up:pt_down/F')
-                    HVMass_JES_up = array('f',[0])
-                    HVMass_JES_down = array('f',[0])
-                    newtree.Branch('HVMass_JES_up',HVMass_JES_up,'HVMass_JES_up/F')
-                    newtree.Branch('HVMass_JES_down',HVMass_JES_down,'HVMass_JES_down/F')
-                    angleHB_JES_up = array('f',[0])
-                    angleHB_JES_down = array('f',[0])
-                    angleZZS_JES_up = array('f',[0])
-                    angleZZS_JES_down = array('f',[0])
-                    newtree.Branch('angleHB_JES_up',angleHB_JES_up,'angleHB_JES_up/F')
-                    newtree.Branch('angleHB_JES_down',angleHB_JES_down,'angleHB_JES_down/F')
-                    newtree.Branch('angleZZS_JES_up',angleZZS_JES_up,'angleZZS_JES_up/F')
-                    newtree.Branch('angleZZS_JES_down',angleZZS_JES_down,'angleZZS_JES_down/F')
-            
-                    #Formulas for syst in angular
-                    fAngleHB_JER_up = ROOT.TTreeFormula("fAngleHB_JER_up",'abs(VHbb::ANGLEHBWithM(hJet_pt_JER_up[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JER_up[0],hJet_pt_JER_up[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JER_up[1]))',newtree)
-                    fAngleHB_JER_down = ROOT.TTreeFormula("fAngleHB_JER_down",'abs(VHbb::ANGLEHBWithM(hJet_pt_JER_down[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JER_down[0],hJet_pt_JER_down[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JER_down[1]))',newtree)
-                    fAngleHB_JES_up = ROOT.TTreeFormula("fAngleHB_JES_up",'abs(VHbb::ANGLEHBWithM(hJet_pt_JES_up[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JES_up[0],hJet_pt_JES_up[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JES_up[1]))',newtree)
-                    fAngleHB_JES_down = ROOT.TTreeFormula("fAngleHB_JES_down",'abs(VHbb::ANGLEHBWithM(hJet_pt_JES_down[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JES_down[0],hJet_pt_JES_down[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JES_down[1]))',newtree)
-                    fAngleZZS_JER_up = ROOT.TTreeFormula("fAngleZZS_JER_Up",'abs(VHbb::ANGLELZ(H_JER.pt_up,H_eta,H_phi,H_JER.pt_up,V_pt,V_eta,V_phi,V_mass))',newtree)
-                    fAngleZZS_JER_down = ROOT.TTreeFormula("fAngleZZS_JER_Down",'abs(VHbb::ANGLELZ(H_JER.pt_down,H_eta,H_phi,H_JER.pt_down,V_pt,V_eta,V_phi,V_mass))',newtree)
-                    fAngleZZS_JES_up = ROOT.TTreeFormula("fAngleZZS_JES_Up",'abs(VHbb::ANGLELZ(H_JER.pt_up,H_eta,H_phi,H_JER.pt_up,V_pt,V_eta,V_phi,V_mass))',newtree)
-                    fAngleZZS_JES_down = ROOT.TTreeFormula("fAngleZZS_JES_Down",'abs(VHbb::ANGLELZ(H_JER.pt_down,H_eta,H_phi,H_JER.pt_down,V_pt,V_eta,V_phi,V_mass))',newtree)
-                    lheWeight = array('f',[0])
-                    newtree.Branch('lheWeight',lheWeight,'lheWeight/F')
-                    theBinForms = {}
-                    if lhe_weight_map and 'DY' in job.name:
-                        for bin in lhe_weight_map:
-                            theBinForms[bin] = ROOT.TTreeFormula("Bin_formula_%s"%(bin),bin,tree)
-                    else:
-                        lheWeight[0] = 1.
-                
-        else:
-            pass
-            #print 'doing Vtype correction only, no other branches added!'
+        #    if channel == "Zmm":
+
+
+        #    #Add reg VHDphi
+        #        HVdPhi_reg = array('f',[0])
+        #        HVdPhi_reg[0] = 300
+        #        newtree.Branch('HVdPhi_reg',HVdPhi_reg,'HVdPhi_reg/F')
+
+        #    #Add CSV
+
+        #        bTagWeight_ichep = array('f',[0])
+        #        bTagWeight_ichep[0] = 1
+        #        newtree.Branch('bTagWeight_ichep',bTagWeight_ichep,'bTagWeight_ichep/F')
+
+
+        #    # Angular Likelihood
+        #    if channel == "Znn" or channel == "Zmm":
+        #        angleHB = array('f',[0])
+        #        newtree.Branch('angleHB',angleHB,'angleHB/F')
+        #        angleLZ = array('f',[0])
+        #        newtree.Branch('angleLZ',angleLZ,'angleLZ/F')
+        #        angleZZS = array('f',[0])
+        #        newtree.Branch('angleZZS',angleZZS,'angleZZS/F')
+        #        kinLikeRatio = array('f',[0]*len(AngLikeBkgs))
+        #        newtree.Branch('kinLikeRatio',kinLikeRatio,'%s/F' %(':'.join(AngLikeBkgs)))
+        #        fAngleHB = ROOT.TTreeFormula("fAngleHB",'abs(VHbb::ANGLEHB(Jet_pt[hJCidx[0]],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],Jet_mass[hJCidx[0]],Jet_pt[hJCidx[1]],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],Jet_mass[hJCidx[1]]))',newtree)
+        #        fAngleLZ = ROOT.TTreeFormula("fAngleLZ",'abs(VHbb::ANGLELZ(vLeptons_new_pt[hJCidx[0]],vLeptons_new_eta[hJCidx[0]],vLeptons_phi[hJCidx[0]],vLeptons_mass[hJCidx[0]],vLeptons_new_pt[hJCidx[1]],vLeptons_new_eta[hJCidx[1]],vLeptons_phi[hJCidx[1]],vLeptons_mass[hJCidx[1]]))',newtree)
+        #        fAngleZZS = ROOT.TTreeFormula("fAngleZZS",'abs(VHbb::ANGLELZ(H_pt,H_eta,H_phi,H_pt,V_pt,V_eta,V_phi,V_mass))',newtree)
+        #        fVpt = ROOT.TTreeFormula("fVpt",'V_pt',tree)
+        #        fVeta = ROOT.TTreeFormula("fVeta",'V_eta',tree)
+        #        fVphi = ROOT.TTreeFormula("fVphi",'V_phi',tree)
+        #        fVmass = ROOT.TTreeFormula("fVmass",'V_mass',tree)
+        #        likeSBH = array('f',[0]*len(AngLikeBkgs))
+        #        likeBBH = array('f',[0]*len(AngLikeBkgs))
+        #        likeSLZ = array('f',[0]*len(AngLikeBkgs))
+        #        likeBLZ = array('f',[0]*len(AngLikeBkgs))
+        #        likeSZZS = array('f',[0]*len(AngLikeBkgs))
+        #        likeBZZS = array('f',[0]*len(AngLikeBkgs))
+        #        likeSMassZS = array('f',[0]*len(AngLikeBkgs))
+        #        likeBMassZS = array('f',[0]*len(AngLikeBkgs))
+        #        HVMass_Reg = array('f',[0])
+        #        newtree.Branch('HVMass_Reg',HVMass_Reg,'HVMass_Reg/F')
+
+        #        SigBH = []; BkgBH = []; SigLZ = []; BkgLZ = []; SigZZS = []; BkgZZS = []; SigMassZS = []; BkgMassZS = [];
+
+        #    # if job.type != 'DATA': ##FIXME###
+        #    if channel == "Znn" or channel == "Zmm":
+        #        #CSV branches
+        #        hJet_hadronFlavour = array('f',[0]*2)
+        #        hJet_btagCSV = array('f',[0]*2)
+        #        hJet_btagCSVOld = array('f',[0]*2)
+        #        hJet_btagCSVUp = array('f',[0]*2)
+        #        hJet_btagCSVDown = array('f',[0]*2)
+        #        hJet_btagCSVFUp = array('f',[0]*2)
+        #        hJet_btagCSVFDown = array('f',[0]*2)
+        #        newtree.Branch('hJet_btagCSV',hJet_btagCSV,'hJet_btagCSV[2]/F')
+        #        newtree.Branch('hJet_btagCSVOld',hJet_btagCSVOld,'hJet_btagCSVOld[2]/F')
+        #        newtree.Branch('hJet_btagCSVUp',hJet_btagCSVUp,'hJet_btagCSVUp[2]/F')
+        #        newtree.Branch('hJet_btagCSVDown',hJet_btagCSVDown,'hJet_btagCSVDown[2]/F')
+        #        newtree.Branch('hJet_btagCSVFUp',hJet_btagCSVFUp,'hJet_btagCSVFUp[2]/F')
+        #        newtree.Branch('hJet_btagCSVFDown',hJet_btagCSVFDown,'hJet_btagCSVFDown[2]/F')
+
+        #        # Jet in bad (eta,phi) [for fake-MET]
+        #        Jet_under = array('f',[0]*50)
+        #        newtree.Branch('Jet_under',Jet_under,'Jet_under[nJet]/F')
+        #        Jet_over = array('f',[0]*50)
+        #        newtree.Branch('Jet_over',Jet_over,'Jet_over[nJet]/F')
+        #        Jet_underMC = array('f',[0]*50)
+        #        newtree.Branch('Jet_underMC',Jet_underMC,'Jet_underMC[nJet]/F')
+        #        Jet_overMC = array('f',[0]*50)
+        #        newtree.Branch('Jet_overMC',Jet_overMC,'Jet_overMC[nJet]/F')
+        #        Jet_bad = array('f',[0]*50)
+        #        newtree.Branch('Jet_bad',Jet_bad,'Jet_bad[nJet]/F')
+
+        #        if channel == "Znn" or channel == "Zmm":
+        #            DiscardedJet_under = array('f',[0]*50)
+        #            newtree.Branch('DiscardedJet_under',DiscardedJet_under,'DiscardedJet_under[nDiscardedJet]/F')
+        #            DiscardedJet_over = array('f',[0]*50)
+        #            newtree.Branch('DiscardedJet_over',DiscardedJet_over,'DiscardedJet_over[nDiscardedJet]/F')
+        #            DiscardedJet_underMC = array('f',[0]*50)
+        #            newtree.Branch('DiscardedJet_underMC',DiscardedJet_underMC,'DiscardedJet_underMC[nDiscardedJet]/F')
+        #            DiscardedJet_overMC = array('f',[0]*50)
+        #            newtree.Branch('DiscardedJet_overMC',DiscardedJet_overMC,'DiscardedJet_overMC[nDiscardedJet]/F')
+        #            DiscardedJet_bad = array('f',[0]*50)
+        #            newtree.Branch('DiscardedJet_bad',DiscardedJet_bad,'DiscardedJet_bad[nDiscardedJet]/F')
+
+        #            aLeptons_under = array('f',[0]*50)
+        #            newtree.Branch('aLeptons_under',aLeptons_under,'aLeptons_under[naLeptons]/F')
+        #            aLeptons_over = array('f',[0]*50)
+        #            newtree.Branch('aLeptons_over',aLeptons_over,'aLeptons_over[naLeptons]/F')
+        #            aLeptons_underMC = array('f',[0]*50)
+        #            newtree.Branch('aLeptons_underMC',aLeptons_underMC,'aLeptons_underMC[naLeptons]/F')
+        #            aLeptons_overMC = array('f',[0]*50)
+        #            newtree.Branch('aLeptons_overMC',aLeptons_overMC,'aLeptons_overMC[naLeptons]/F')
+        #            aLeptons_bad = array('f',[0]*50)
+        #            newtree.Branch('aLeptons_bad',aLeptons_bad,'aLeptons_bad[naLeptons]/F')
+
+        #            vLeptons_under = array('f',[0]*50)
+        #            newtree.Branch('vLeptons_under',vLeptons_under,'vLeptons_under[nvLeptons]/F')
+        #            vLeptons_over = array('f',[0]*50)
+        #            newtree.Branch('vLeptons_over',vLeptons_over,'vLeptons_over[nvLeptons]/F')
+        #            vLeptons_underMC = array('f',[0]*50)
+        #            newtree.Branch('vLeptons_underMC',vLeptons_underMC,'vLeptons_underMC[nvLeptons]/F')
+        #            vLeptons_overMC = array('f',[0]*50)
+        #            newtree.Branch('vLeptons_overMC',vLeptons_overMC,'vLeptons_overMC[nvLeptons]/F')
+        #            vLeptons_bad = array('f',[0]*50)
+        #            newtree.Branch('vLeptons_bad',vLeptons_bad,'vLeptons_bad[nvLeptons]/F')
+
+        #        # JER branches
+        #        if applyRegression == True:
+        #            hJet_pt_JER_up = array('f',[0]*2)
+        #            newtree.Branch('hJet_pt_JER_up',hJet_pt_JER_up,'hJet_pt_JER_up[2]/F')
+        #            hJet_pt_JER_down = array('f',[0]*2)
+        #            newtree.Branch('hJet_pt_JER_down',hJet_pt_JER_down,'hJet_pt_JER_down[2]/F')
+        #            hJet_mass_JER_up = array('f',[0]*2)
+        #            newtree.Branch('hJet_mass_JER_up',hJet_mass_JER_up,'hJet_mass_JER_up[2]/F')
+        #            hJet_mass_JER_down = array('f',[0]*2)
+        #            newtree.Branch('hJet_mass_JER_down',hJet_mass_JER_down,'hJet_mass_JER_down[2]/F')
+        #            H_JER = array('f',[0]*4)
+        #            newtree.Branch('H_JER',H_JER,'mass_up:mass_down:pt_up:pt_down/F')
+        #            HVMass_JER_up = array('f',[0])
+        #            HVMass_JER_down = array('f',[0])
+        #            newtree.Branch('HVMass_JER_up',HVMass_JER_up,'HVMass_JER_up/F')
+        #            newtree.Branch('HVMass_JER_down',HVMass_JER_down,'HVMass_JER_down/F')
+        #            angleHB_JER_up = array('f',[0])
+        #            angleHB_JER_down = array('f',[0])
+        #            angleZZS_JER_up = array('f',[0])
+        #            angleZZS_JER_down = array('f',[0])
+        #            newtree.Branch('angleHB_JER_up',angleHB_JER_up,'angleHB_JER_up/F')
+        #            newtree.Branch('angleHB_JER_down',angleHB_JER_down,'angleHB_JER_down/F')
+        #            newtree.Branch('angleZZS_JER_up',angleZZS_JER_up,'angleZZS_JER_up/F')
+        #            newtree.Branch('angleZZS_JER_down',angleZZS_JER_down,'angleZZS_JER_down/F')
+
+        #            hJet_ptOld = array('f',[0]*2)
+        #            newtree.Branch('hJet_ptOld',hJet_ptOld,'hJet_ptOld[2]/F')
+
+        #            hJet_pt = array('f',[0]*2)
+        #            newtree.Branch('hJet_pt',hJet_pt,'hJet_pt[2]/F')
+
+        #            hJet_ptMc = array('f',[0]*2)
+        #            newtree.Branch('hJet_ptMc',hJet_ptMc,'hJet_ptMc[2]/F')
+
+        #            hJet_mass = array('f',[0]*2)
+        #            newtree.Branch('hJet_mass',hJet_mass,'hJet_mass[2]/F')
+
+        #            hJet_eta = array('f',[0]*2)
+        #            newtree.Branch('hJet_eta',hJet_eta,'hJet_eta[2]/F')
+
+        #            hJet_phi = array('f',[0]*2)
+        #            newtree.Branch('hJet_phi',hJet_phi,'hJet_phi[2]/F')
+
+
+        #            # JES branches
+        #            hJet_pt_JES_up = array('f',[0]*2)
+        #            newtree.Branch('hJet_pt_JES_up',hJet_pt_JES_up,'hJet_pt_JES_up[2]/F')
+        #            hJet_pt_JES_down = array('f',[0]*2)
+        #            newtree.Branch('hJet_pt_JES_down',hJet_pt_JES_down,'hJet_pt_JES_down[2]/F')
+        #            hJet_mass_JES_up = array('f',[0]*2)
+        #            newtree.Branch('hJet_mass_JES_up',hJet_mass_JES_up,'hJet_mass_JES_up[2]/F')
+        #            hJet_mass_JES_down = array('f',[0]*2)
+        #            newtree.Branch('hJet_mass_JES_down',hJet_mass_JES_down,'hJet_mass_JES_down[2]/F')
+        #            H_JES = array('f',[0]*4)
+        #            newtree.Branch('H_JES',H_JES,'mass_up:mass_down:pt_up:pt_down/F')
+        #            HVMass_JES_up = array('f',[0])
+        #            HVMass_JES_down = array('f',[0])
+        #            newtree.Branch('HVMass_JES_up',HVMass_JES_up,'HVMass_JES_up/F')
+        #            newtree.Branch('HVMass_JES_down',HVMass_JES_down,'HVMass_JES_down/F')
+        #            angleHB_JES_up = array('f',[0])
+        #            angleHB_JES_down = array('f',[0])
+        #            angleZZS_JES_up = array('f',[0])
+        #            angleZZS_JES_down = array('f',[0])
+        #            newtree.Branch('angleHB_JES_up',angleHB_JES_up,'angleHB_JES_up/F')
+        #            newtree.Branch('angleHB_JES_down',angleHB_JES_down,'angleHB_JES_down/F')
+        #            newtree.Branch('angleZZS_JES_up',angleZZS_JES_up,'angleZZS_JES_up/F')
+        #            newtree.Branch('angleZZS_JES_down',angleZZS_JES_down,'angleZZS_JES_down/F')
+        #
+        #            #Formulas for syst in angular
+        #            fAngleHB_JER_up = ROOT.TTreeFormula("fAngleHB_JER_up",'abs(VHbb::ANGLEHBWithM(hJet_pt_JER_up[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JER_up[0],hJet_pt_JER_up[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JER_up[1]))',newtree)
+        #            fAngleHB_JER_down = ROOT.TTreeFormula("fAngleHB_JER_down",'abs(VHbb::ANGLEHBWithM(hJet_pt_JER_down[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JER_down[0],hJet_pt_JER_down[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JER_down[1]))',newtree)
+        #            fAngleHB_JES_up = ROOT.TTreeFormula("fAngleHB_JES_up",'abs(VHbb::ANGLEHBWithM(hJet_pt_JES_up[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JES_up[0],hJet_pt_JES_up[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JES_up[1]))',newtree)
+        #            fAngleHB_JES_down = ROOT.TTreeFormula("fAngleHB_JES_down",'abs(VHbb::ANGLEHBWithM(hJet_pt_JES_down[0],Jet_eta[hJCidx[0]],Jet_phi[hJCidx[0]],hJet_mass_JES_down[0],hJet_pt_JES_down[1],Jet_eta[hJCidx[1]],Jet_phi[hJCidx[1]],hJet_mass_JES_down[1]))',newtree)
+        #            fAngleZZS_JER_up = ROOT.TTreeFormula("fAngleZZS_JER_Up",'abs(VHbb::ANGLELZ(H_JER.pt_up,H_eta,H_phi,H_JER.pt_up,V_pt,V_eta,V_phi,V_mass))',newtree)
+        #            fAngleZZS_JER_down = ROOT.TTreeFormula("fAngleZZS_JER_Down",'abs(VHbb::ANGLELZ(H_JER.pt_down,H_eta,H_phi,H_JER.pt_down,V_pt,V_eta,V_phi,V_mass))',newtree)
+        #            fAngleZZS_JES_up = ROOT.TTreeFormula("fAngleZZS_JES_Up",'abs(VHbb::ANGLELZ(H_JER.pt_up,H_eta,H_phi,H_JER.pt_up,V_pt,V_eta,V_phi,V_mass))',newtree)
+        #            fAngleZZS_JES_down = ROOT.TTreeFormula("fAngleZZS_JES_Down",'abs(VHbb::ANGLELZ(H_JER.pt_down,H_eta,H_phi,H_JER.pt_down,V_pt,V_eta,V_phi,V_mass))',newtree)
+        #            lheWeight = array('f',[0])
+        #            newtree.Branch('lheWeight',lheWeight,'lheWeight/F')
+        #            theBinForms = {}
+        #            if lhe_weight_map and 'DY' in job.name:
+        #                for bin in lhe_weight_map:
+        #                    theBinForms[bin] = ROOT.TTreeFormula("Bin_formula_%s"%(bin),bin,tree)
+        #            else:
+        #                lheWeight[0] = 1.
+        #
+        #else:
+        #    pass
+        #    #print 'doing Vtype correction only, no other branches added!'
 
         if recomputeVtype:
             ### new branches for Vtype correction ###
@@ -1098,15 +1393,11 @@ for job in info:
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
                     #sys.stdout.flush()
 
+                #if entry > 10000: break
+                #if entry > 100: break
+                if entry > 1000: break
                 tree.GetEntry(entry)
 
-                #if channel == "Zmm" and ApplyCutDuringSys:
-                #    if tree.vLeptons_new_pt[0] < 20 or tree.vLeptons_new_pt[1] < 20 or tree.V_new_pt < 50:
-                #        continue
-                #    if job.type == 'DATA' and 'DoubleMuon' in job.name and tree.Vtype_new != 0:
-                #        continue
-                #    if job.type == 'DATA' and 'DoubleEG' in job.name and tree.Vtype_new != 1:
-                #        continue
 
                 ### Vtype correction for V25 samples
                 if channel == "Zmm" and recomputeVtype:
@@ -1206,7 +1497,6 @@ for job in info:
                         continue
 
                 if channel == "Zmm" and applyBTagweights and job.type != 'DATA':
-
                     MakeSysRefMap()
 
                     jets_csv = []
@@ -1214,8 +1504,6 @@ for job in info:
 
                     for i in range(tree.nJet):
                         if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
-                            jet_csv = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCSV[i])
-                            jets_csv.append(jet_csv)
                             jet_cmva = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVAV2[i])
                             jets_cmva.append(jet_cmva)
 
@@ -1224,20 +1512,23 @@ for job in info:
                     etamin = 0.
                     etamax = 2.4
 
-                    bTagWeights["bTagWeightCMVAV2_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
-                    bTagWeights["bTagWeightCSV_Moriond"][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, "central", "CSV", btag_calibrators)
+                    central_SF = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2", btag_calibrators)
+                    bTagWeights["bTagWeightCMVAV2_Moriond_v2"][0] = central_SF
+                    #print "central bTagWeightCMVAV2_Moriond_v2  is ", central_SF
+                    #print ""
 
-                    #print 'btag CMVAV2 Event Weight:', bTagWeights["bTagWeightCMVAV2_Moriond"][0]
-                    #print 'btag CSV Event Weight   :', bTagWeights["bTagWeightCSV_Moriond"][0]
 
                     for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                         for sdir in ["Up", "Down"]:
 
-                            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                            bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_csv, sysMap[syst+sdir], "CSV", btag_calibrators)
-
+                            bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
 
                             for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+
+                                ptmin = 20.
+                                ptmax = 1000.
+                                etamin = 0.
+                                etamax = 2.4
                                 if (systcat.find("High")!=-1):
                                     ptmin = 100.
                                 if (systcat.find("Low")!=-1):
@@ -1247,14 +1538,124 @@ for job in info:
                                 if (systcat.find("Forward")!=-1):
                                     etamin = 1.4
 
-                                bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-
-                                bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_csv, sysMap[syst+sdir], "CSV", btag_calibrators)
-
+                                event_SF_ = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                                bTagWeights["bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir][0] = event_SF_
+                                #print "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, ' is', event_SF_#get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                                #print ""
                 if channel == "Zmm" and applyBTagweights and Stop_after_BTagweights:
                     newtree.Fill()
                     continue
 
+                #Get regression variable
+                if applyJESsystematics:
+                    Reg_var_list = []
+                    for j in xrange(min(tree.nJet,21)):
+                        reg_var_dic = {}
+                        reg_var_dic['Jet_pt']= tree.Jet_pt[j]
+                        #print 'when filling list, pt is', reg_var_dic['Jet_pt']
+                        reg_var_dic['Jet_ptRaw']= tree.Jet_rawPt[j]
+                        reg_var_dic['Jet_eta'] = tree.Jet_eta[j]
+                        reg_var_dic['Jet_m']= tree.Jet_mass[j]
+                        reg_var_dic['Jet_phi']= tree.Jet_phi[j]
+                        reg_var_dic['hJ'] = hJ.SetPtEtaPhiM(reg_var_dic['Jet_pt'], reg_var_dic['Jet_eta'], reg_var_dic['Jet_phi'], reg_var_dic['Jet_m'])
+                        reg_var_dic['Jet_e']= hJ.E()
+                        reg_var_dic['Jet_chEmEF']=tree.Jet_chEmEF[j]
+                        reg_var_dic['Jet_chHEF']=tree.Jet_chHEF[j]
+                        reg_var_dic['Jet_rawPt']= tree.Jet_rawPt[j]
+                        reg_var_dic['Jet_chMult']= tree.Jet_chMult[j]
+
+                        #regVars are here
+                        reg_var_dic['Jet_vtx3deL']= max(0.,tree.Jet_vtx3DSig[j])
+                        reg_var_dic['Jet_vtxNtrk']= max(0.,tree.Jet_vtxNtracks[j])
+                        reg_var_dic['Jet_vtx3dL']= max(0.,tree.Jet_vtx3DVal[j])
+                        reg_var_dic['Jet_vtxMass']= max(0.,tree.Jet_vtxMass[j])
+                        reg_var_dic['Jet_vtxPt']= max(0.,tree.Jet_vtxPt[j])
+                        reg_var_dic['Jet_neEmEF']=tree.Jet_neEmEF[j]
+                        reg_var_dic['Jet_neHEF']=tree.Jet_neHEF[j]
+                        reg_var_dic['Jet_leptonDeltaR']= max(0.,tree.Jet_leptonDeltaR[j])
+                        reg_var_dic['Jet_leptonPt']= max(0.,tree.Jet_leptonPt[j])
+                        reg_var_dic['Jet_leptonPtRel']= max(0.,tree.Jet_leptonPtRel[j])
+                        reg_var_dic['Jet_leadTrackPt']= max(0.,tree.Jet_leadTrackPt[j])
+                        reg_var_dic['Jet_mt']= hJ.Mt()
+                        reg_var_dic['Jet_eta']= tree.Jet_eta[j]
+                        reg_var_dic['nPVs']=tree.nPVs
+
+                        Reg_var_list.append(reg_var_dic)
+
+
+                    # JEC factorized branches
+                    Jec_sys_list = []
+                    if job.type != 'DATA':
+                        for j in xrange(min(tree.nJet,21)):
+                            jec_sys_dic = {}
+                            jec_sys_dic['Jet_corr'] =  getattr(tree,'Jet_corr')[j]
+                            jec_sys_dic['Jet_corr_JER'] =  getattr(tree,'Jet_corr_JER')[j]
+                            for jecsys in JECsys:
+                                for ud in ['Up', 'Down']:
+                                    jec_sys_dic[jecsys+ud] =  getattr(tree,'Jet_corr_'+jecsys+ud)[j]
+                            Jec_sys_list.append(jec_sys_dic)
+
+
+
+                        #Fill regression vars used in TMVA
+                            #now loop over all the jets
+                    for j in xrange(min(tree.nJet,21)):
+                        for key in regVars:
+                            theVars[key][0] = Reg_var_list[j][key]
+
+                        Pt = max(0.0001, TMVA_reader['readerJet'].EvaluateRegression("readerJet")[0])
+                        rPt = Reg_var_list[j]['Jet_pt']*Pt
+                        JEC_systematics["hJetCMVAV2_pt_reg"][j] = Pt
+                        JetCMVAV2_regWeight = Pt/Reg_var_list[j]['Jet_pt']
+                        #print 'pt is', Reg_var_list[j]['Jet_pt']
+                        #print 'reg pt is', Pt
+
+                        #Fill the Higgs jet
+                        if j == tree.hJCMVAV2idx[0]:
+                            hJ0.SetPtEtaPhiM(Pt, Reg_var_list[j]['Jet_eta'], Reg_var_list[j]['Jet_phi'], Reg_var_list[j]['Jet_m']*JetCMVAV2_regWeight)
+                        elif j == tree.hJCMVAV2idx[1]:
+                            hJ1.SetPtEtaPhiM(Pt, Reg_var_list[j]['Jet_eta'], Reg_var_list[j]['Jet_phi'], Reg_var_list[j]['Jet_m']*JetCMVAV2_regWeight)
+
+                    #print 'mass is', (hJ0+hJ1).M()
+                    JEC_systematics["HCMVAV2_reg_mass"][0] = (hJ0+hJ1).M()
+                    JEC_systematics["HCMVAV2_reg_pt"][0]   = (hJ0+hJ1).Pt()
+                    JEC_systematics["HCMVAV2_reg_eta"][0]  = (hJ0+hJ1).Eta()
+                    JEC_systematics["HCMVAV2_reg_phi"][0]  = (hJ0+hJ1).Phi()
+                    JEC_systematics["hJetCMVAV2_pt_reg_0"][0]  = hJ0.Pt()
+                    JEC_systematics["hJetCMVAV2_pt_reg_1"][0]  = hJ1.Pt()
+
+                    if job.type != 'DATA':
+                        #now loop over all the jets
+                        for syst in JECsys:
+                            for sdir in ["Up", "Down"]:
+                                for j in xrange(min(tree.nJet,21)):
+                                    for key in regVars:
+                                        theVars[key][0] = Reg_var_list[j][key]
+                                    theVars['Jet_pt'][0] = 0
+
+                                    if syst == "JER":
+                                        theVars['Jet_pt'][0] = Reg_var_list[j]['Jet_rawPt']*Jec_sys_list[j]['Jet_corr']*Jec_sys_list[j]['JER'+sdir]
+                                    else:
+                                        #theVars['Jet_pt'][0] = Reg_var_list[j]['Jet_rawPt']*Jec_sys_list[j][syst+sdir]*Jec_sys_list[j]['Jet_corr_JER']
+                                        theVars['Jet_pt'][0] = (Reg_var_list[j]['Jet_pt']/Jec_sys_list[j]['Jet_corr'])*Jec_sys_list[j][syst+sdir]
+
+                                    pt = max(0.0001, TMVA_reader['readerJet'].EvaluateRegression("readerJet")[0])
+
+                                    rPt = Reg_var_list[j]['Jet_pt']*pt
+                                    JEC_systematics["hJetCMVAV2_pt_reg_corr"+syst+sdir][j] = pt
+                                    Jet_regWeight= pt/Reg_var_list[j]['Jet_pt']
+
+                                    if j == tree.hJCMVAV2idx[0]:
+                                        hJ0.SetPtEtaPhiM(pt, Reg_var_list[j]['Jet_eta'], Reg_var_list[j]['Jet_phi'], Reg_var_list[j]['Jet_m']*Jet_regWeight)
+                                    elif j == tree.hJCMVAV2idx[1]:
+                                        hJ1.SetPtEtaPhiM(pt, Reg_var_list[j]['Jet_eta'], Reg_var_list[j]['Jet_phi'], Reg_var_list[j]['Jet_m']*Jet_regWeight)
+
+                                JEC_systematics["HCMVAV2_reg_mass_corr"+syst+sdir][0] = (hJ0+hJ1).M()
+                                JEC_systematics["HCMVAV2_reg_pt_corr"+syst+sdir][0] = (hJ0+hJ1).Pt()
+                                JEC_systematics["HCMVAV2_reg_eta_corr"+syst+sdir][0] = (hJ0+hJ1).Eta()
+                                JEC_systematics["HCMVAV2_reg_phi_corr"+syst+sdir][0] = (hJ0+hJ1).Phi()
+                                JEC_systematics["hJetCMVAV2_pt_reg_0_corr"+syst+sdir][0] = hJ0.Pt()
+                                JEC_systematics["hJetCMVAV2_pt_reg_1_corr"+syst+sdir][0] = hJ1.Pt()
 
                 if applyLepSF and job.type != 'DATA':
             # ================ Lepton Scale Factors =================
@@ -1267,6 +1668,7 @@ for job in info:
                     weight_SF_LooseIDnISO[0], weight_SF_LooseIDnISO[1],  weight_SF_LooseIDnISO[2] = 1.,0.,0.
                     weight_SF_TRK[0], weight_SF_TRK[1],  weight_SF_TRK[2] = 1.,0.,0.
                     weight_SF_Lepton[0], weight_SF_Lepton[1], weight_SF_Lepton[2] = 1.,0.,0.
+                    eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1.,0.,0.
 
 
                     #V24
@@ -1306,6 +1708,9 @@ for job in info:
                         #Tracker
                         wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
                         wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+                        #Trigg
+                        wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
+                        wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio'],
                         #
                         #Muon
                         #
@@ -1351,6 +1756,16 @@ for job in info:
                             #TRK
                             elif j.find('ScaleFactor_etracker_80x') != -1:
                                 computeSF(weight_SF_TRK)
+                            #TRIG
+                            elif j.find('DiEleLeg1AfterIDISO_out') != -1:
+                                eff1 = weight[0][0]
+                                eff1Up = (weight[0][0]+weight[0][1])
+                                eff1Down = (weight[0][0]-weight[0][1])
+                            elif j.find('DiEleLeg2AfterIDISO_out') != -1:
+                                eff2 = weight[1][0]
+                                eff2Up = (weight[1][0]+weight[1][1])
+                                eff2Down = (weight[1][0]-weight[1][1])
+
                         #else:
                         #    print 'json is', j
                         #    sys.exit('@ERROR: SF list doesn\'t match json files. Abort')
@@ -1360,12 +1775,12 @@ for job in info:
                     #Fill muon triggers
 
                     if tree.Vtype_new == 0:
-                        print 'muTRK_BCDEF is', muTRK_BCDEF
-                        print 'muTRK_GH is', muTRK_GH
-                        print 'muID_BCDEF is', muID_BCDEF
-                        print 'muID_GH is', muID_GH
-                        print 'muISO_BCDEF is', muISO_BCDEF
-                        print 'muISO_GH is', muISO_GH
+                        #print 'muTRK_BCDEF is', muTRK_BCDEF
+                        #print 'muTRK_GH is', muTRK_GH
+                        #print 'muID_BCDEF is', muID_BCDEF
+                        #print 'muID_GH is', muID_GH
+                        #print 'muISO_BCDEF is', muISO_BCDEF
+                        #print 'muISO_GH is', muISO_GH
 
                         #Tracker
                         getLumiAvrgSF(muTRK_BCDEF,(20.1/36.4),muTRK_GH,(16.3/36.4),weight_SF_TRK)
@@ -1378,7 +1793,9 @@ for job in info:
                         weight_SF_LooseIDnISO[2] = weight_SF_LooseID[2]*weight_SF_LooseISO[2]
 
                     if tree.Vtype_new == 1:
-                        pass
+			            eTrigSFWeight_doubleEle80x[0]     = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
+			            eTrigSFWeight_doubleEle80x[1] = eff1Down*(1-eff2Down)*eff1Down + eff2Down*(1-eff1Down)*eff2Down + eff1Down*eff1Down*eff2Down*eff2Down
+			            eTrigSFWeight_doubleEle80x[2]   = eff1Up*(1-eff2Up)*eff1Up + eff2Up*(1-eff1Up)*eff2Up + eff1Up*eff1Up*eff2Up*eff2Up
                     #
                     #comput total weight
                     #
@@ -1386,12 +1803,7 @@ for job in info:
                     weight_SF_Lepton[1] = weight_SF_TRK[1]*weight_SF_LooseIDnISO[1]
                     weight_SF_Lepton[2] = weight_SF_TRK[2]*weight_SF_LooseIDnISO[2]
 
-                    #if not job.specialweight:
-                    #    DY_specialWeight[0] = 1
-                    #else :
-                    #    specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
-                    #    specialWeight_ = specialWeight.EvalInstance()
-                    #    DY_specialWeight[0] = specialWeight_
+
                 if applyLepSF and Stop_after_LepSF:
                     newtree.Fill()
                     continue
@@ -1407,9 +1819,14 @@ for job in info:
                         else:
                             newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
+                if addBranches and Stop_after_addBranches:
+                    newtree.Fill()
+                    continue
+
+                if addEWK:
                     if job.type != 'DATA':
                         ### todo: job.FullName is not defined!
-                        jobName = str(job)
+                        jobName = str(job.FullName)
 
                         if 'DY' in jobName:
                             if '10to50' in jobName:
@@ -1432,135 +1849,21 @@ for job in info:
                             etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
                             if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
 
-                        #pdb.set_trace()
-                        DYw[0] = EWKw[0]*NLOw[0]
+                        elif 'ZH_HToBB' in job.name and not 'ggZH' in job.name:
+                            if tree.nGenVbosons > 0:
+                                EWKw[0] = signal_ewk(tree.GenVbosons_pt[0])
 
-                if addBranches and Stop_after_addBranches:
-                    newtree.Fill()
-                    continue
-
-                #No need to do the following for the moment
-                if False:
-                    # Has fat higgs
-                    # fatHiggsFlag=fFatHFlag.EvalInstance()*fFatHnFilterJets.EvalInstance()
-                    if channel == "Znn":
-                        vect.SetPtEtaPhiM(fVpt.EvalInstance(),fVeta.EvalInstance(),fVphi.EvalInstance(),fVmass.EvalInstance())
-                        # print tree.Jet_pt
-                        # print tree.hJCidx
-                        # hJet_pt = tree.Jet_pt[tree.hJCidx]
-                        # hJet_mass = tree.Jet_mass[tree.hJCidx]
-
-                        ##FIXME##
-                        try:
-                            hJet_pt0 = tree.Jet_pt[tree.hJCidx[0]]
-                            hJet_pt1 = tree.Jet_pt[tree.hJCidx[1]]
-                        except:
-                            print "tree.nhJCidx",tree.nhJCidx
-                            print "tree.nJet",tree.nJet
-                            print "tree.hJCidx[0]",tree.hJCidx[0]
-                            print "tree.hJCidx[1]",tree.hJCidx[1]
-                            if tree.hJCidx[1] >=tree.nJet : tree.hJCidx[1] =1
-                            if tree.hJCidx[0] >=tree.nJet : tree.hJCidx[0] =0
+                    DYw[0] = EWKw[0]*NLOw[0]
 
 
-                        hJet_pt[0] = hJet_pt0
-                        hJet_pt[1] = hJet_pt1
-                        hJet_mass0 = tree.Jet_mass[tree.hJCidx[0]]
-                        hJet_mass1 = tree.Jet_mass[tree.hJCidx[1]]
-                        if job.type != 'DATA': hJet_mcPt0 = tree.Jet_mcPt[tree.hJCidx[0]]
-                        if job.type != 'DATA': hJet_mcPt1 = tree.Jet_mcPt[tree.hJCidx[1]]
-                        hJet_rawPt0 = tree.Jet_rawPt[tree.hJCidx[0]]
-                        hJet_rawPt1 = tree.Jet_rawPt[tree.hJCidx[1]]
-                        hJet_phi0 = tree.Jet_phi[tree.hJCidx[0]]
-                        hJet_phi1 = tree.Jet_phi[tree.hJCidx[1]]
-                        hJet_eta0 = tree.Jet_eta[tree.hJCidx[0]]
-                        hJet_eta1 = tree.Jet_eta[tree.hJCidx[1]]
-
-                        # NB. Jet_corr_JECUp - Jet_corr = Jet_corr - Jet_corr_JECDown
-                        # hJet_JECUnc0 = tree.Jet_corr_JECUp[tree.hJCidx[0]] - tree.Jet_corr[tree.hJCidx[0]]
-                        # hJet_JECUnc1 = tree.Jet_corr_JECUp[tree.hJCidx[1]] - tree.Jet_corr[tree.hJCidx[1]]
-
-                        hJet_ptOld[0] = tree.Jet_pt[tree.hJCidx[0]]
-                        hJet_ptOld[1] = tree.Jet_pt[tree.hJCidx[1]]
-                        if job.type != 'DATA': hJet_ptMc[0] = tree.Jet_mcPt[tree.hJCidx[0]]
-                        if job.type != 'DATA': hJet_ptMc[1] = tree.Jet_mcPt[tree.hJCidx[1]]
-                        hJet_phi[0] = tree.Jet_phi[tree.hJCidx[0]]
-                        hJet_phi[1] = tree.Jet_phi[tree.hJCidx[1]]
-                        hJet_eta[0] = tree.Jet_eta[tree.hJCidx[0]]
-                        hJet_eta[1] = tree.Jet_eta[tree.hJCidx[1]]
-                        hJet_mass[0] = tree.Jet_mass[tree.hJCidx[0]]
-                        hJet_mass[1] = tree.Jet_mass[tree.hJCidx[1]]
-
-
-                        # Filterjets
-                        # if fatHiggsFlag:
-                           # fathFilterJets_pt0 = tree.fathFilterJets_pt[tree.hJCidx[0]]
-                           # fathFilterJets_pt1 = tree.fathFilterJets_pt[tree.hJCidx[1]]
-                           # fathFilterJets_eta0 = tree.fathFilterJets_eta[tree.hJCidx[0]]
-                           # fathFilterJets_eta1 = tree.fathFilterJets_eta[tree.hJCidx[1]]
-                           # fathFilterJets_phi0 = tree.fathFilterJets_phi[tree.hJCidx[0]]
-                           # fathFilterJets_phi1 = tree.fathFilterJets_phi[tree.hJCidx[1]]
-                           # fathFilterJets_e0 = tree.fathFilterJets_e[tree.hJCidx[0]]
-                           # fathFilterJets_e1 = tree.fathFilterJets_e[tree.hJCidx[1]]
-                        Event[0]=fEvent.EvalInstance()
-                        METet[0]=fMETet.EvalInstance()
-                        rho[0]=frho.EvalInstance()
-                        METphi[0]=fMETphi.EvalInstance()
-                        for key, value in regDict.items():
-                            # if not (value == 'hJet_MET_dPhi' or value == 'METet' or value == "rho" or value == "hJet_et" or value == 'hJet_mt' or value == 'hJet_rawPt'):
-                            for syst in ["","JER_up","JER_down","JEC_up","JEC_down"]:
-                                if job.type == 'DATA' and not syst is "": continue
-                                theForms["form_reg_%s_0" %(key+syst)].GetNdata();
-                                theForms["form_reg_%s_1" %(key+syst)].GetNdata();
-                                theVars0[key+syst][0] = theForms["form_reg_%s_0" %(key+syst)].EvalInstance()
-                                theVars1[key+syst][0] = theForms["form_reg_%s_1" %(key+syst)].EvalInstance()
-                        # for key, value in regDictFilterJets.items():
-                           # if not (value == 'hJet_MET_dPhi' or value == 'METet' or value == "rho" or value == "hJet_et" or value == 'hJet_mt' or value == 'hJet_rawPt'):
-                               # theVars0FJ[key][0] = theFormsFJ["form_reg_%s_0" %(key)].EvalInstance()
-                               # theVars1FJ[key][0] = theFormsFJ["form_reg_%s_1" %(key)].EvalInstance()
-                        hJet_MET_dPhi[0] = deltaPhi(METphi[0],hJet_phi0)
-                        hJet_MET_dPhi[1] = deltaPhi(METphi[0],hJet_phi1)
-                        hJet_MET_dPhiArray[0][0] = deltaPhi(METphi[0],hJet_phi0)
-                        hJet_MET_dPhiArray[1][0] = deltaPhi(METphi[0],hJet_phi1)
-                        if not job.type == 'DATA':
-                            corrRes0 = corrPt(hJet_pt0,hJet_eta0,hJet_mcPt0)
-                            corrRes1 = corrPt(hJet_pt1,hJet_eta1,hJet_mcPt1)
-                            hJet_rawPt0 *= corrRes0
-                            hJet_rawPt1 *= corrRes1
-                        hJet_rawPtArray[0][0] = hJet_rawPt0
-                        hJet_rawPtArray[1][0] = hJet_rawPt1
-                        hJ0.SetPtEtaPhiM(hJet_pt0,hJet_eta0,hJet_phi0,hJet_mass0)
-                        hJ1.SetPtEtaPhiM(hJet_pt1,hJet_eta1,hJet_phi1,hJet_mass1)
-                        jetEt0 = hJ0.Et()
-                        jetEt1 = hJ1.Et()
-                        hJet_mt0 = hJ0.Mt()
-                        hJet_mt1 = hJ1.Mt()
-
-                    if channel == "Znn":
-                        for i in range(tree.nJet):
-                            Jet_under[i]    = isInside(NewUnder   ,tree.Jet_eta[i],tree.Jet_phi[i])
-                            Jet_over[i]     = isInside(NewOver    ,tree.Jet_eta[i],tree.Jet_phi[i])
-                            Jet_underMC[i]  = isInside(NewUnderQCD,tree.Jet_eta[i],tree.Jet_phi[i])
-                            Jet_overMC[i]   = isInside(NewOverQCD ,tree.Jet_eta[i],tree.Jet_phi[i])
-                            Jet_bad[i]      = Jet_under[i] or Jet_over[i] or Jet_underMC[i] or Jet_overMC[i]
-                        # for i in range(tree.nDiscardedJet):
-                            # DiscardedJet_under[i]    = isInside(NewUnder   ,tree.DiscardedJet_eta[i],tree.DiscardedJet_phi[i])
-                            # DiscardedJet_over[i]     = isInside(NewOver    ,tree.DiscardedJet_eta[i],tree.DiscardedJet_phi[i])
-                            # DiscardedJet_underMC[i]  = isInside(NewUnderQCD,tree.DiscardedJet_eta[i],tree.DiscardedJet_phi[i])
-                            # DiscardedJet_overMC[i]   = isInside(NewOverQCD ,tree.DiscardedJet_eta[i],tree.DiscardedJet_phi[i])
-                            # DiscardedJet_bad[i]      = DiscardedJet_under[i] or DiscardedJet_over[i] or DiscardedJet_underMC[i] or DiscardedJet_overMC[i]
-                        for i in range(tree.naLeptons):
-                            aLeptons_under[i]    = isInside(NewUnder   ,tree.aLeptons_eta[i],tree.aLeptons_phi[i])
-                            aLeptons_over[i]     = isInside(NewOver    ,tree.aLeptons_eta[i],tree.aLeptons_phi[i])
-                            aLeptons_underMC[i]  = isInside(NewUnderQCD,tree.aLeptons_eta[i],tree.aLeptons_phi[i])
-                            aLeptons_overMC[i]   = isInside(NewOverQCD ,tree.aLeptons_eta[i],tree.aLeptons_phi[i])
-                            aLeptons_bad[i]      = aLeptons_under[i] or aLeptons_over[i] or aLeptons_underMC[i] or aLeptons_overMC[i]
-                        for i in range(tree.nvLeptons):
-                            vLeptons_under[i]    = isInside(NewUnder   ,tree.vLeptons_new_eta[i],tree.vLeptons_phi[i])
-                            vLeptons_over[i]     = isInside(NewOver    ,tree.vLeptons_new_eta[i],tree.vLeptons_phi[i])
-                            vLeptons_underMC[i]  = isInside(NewUnderQCD,tree.vLeptons_new_eta[i],tree.vLeptons_phi[i])
-                            vLeptons_overMC[i]   = isInside(NewOverQCD ,tree.vLeptons_new_eta[i],tree.vLeptons_phi[i])
-                            vLeptons_bad[i]      = vLeptons_under[i] or vLeptons_over[i] or vLeptons_underMC[i] or vLeptons_overMC[i]
+                if AddSpecialWeight and job.type != 'DATA':
+                    DY_specialWeight[0] = 1
+                    if not job.specialweight:
+                        pass
+                    else :
+                        specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
+                        specialWeight_ = specialWeight.EvalInstance()
+                        DY_specialWeight[0] = specialWeight_
 
                     ###########################
                     ## Adding mu SFs
@@ -1630,586 +1933,176 @@ for job in info:
                     ##setcalibCSV('ttH_BTV_CSVv2_13TeV_2016BC_7p6_2016_08_13.csv')
 
 
-                    if applyRegression:
-                        HNoReg.HiggsFlag = 1
-                        HNoReg.mass = (hJ0+hJ1).M()
-                        HNoReg.pt = (hJ0+hJ1).Pt()
-                        HNoReg.eta = (hJ0+hJ1).Eta()
-                        HNoReg.phi = (hJ0+hJ1).Phi()
-                        HNoReg.dR = hJ0.DeltaR(hJ1)
-                        HNoReg.dPhi = hJ0.DeltaPhi(hJ1)
-                        HNoReg.dEta = abs(hJ0.Eta()-hJ1.Eta())
-
-                        HNoRegwithFSR = ROOT.TLorentzVector()
-                        HNoRegwithFSR.SetPtEtaPhiM(HNoReg.pt,HNoReg.eta,HNoReg.phi,HNoReg.mass)
-
-                        HNoRegwithFSR = addAdditionalJets(HNoRegwithFSR,tree)
-
-                        HaddJetsdR08NoReg.HiggsFlag = 1
-                        HaddJetsdR08NoReg.mass = HNoRegwithFSR.M()
-                        HaddJetsdR08NoReg.pt = HNoRegwithFSR.Pt()
-                        HaddJetsdR08NoReg.eta = HNoRegwithFSR.Eta()
-                        HaddJetsdR08NoReg.phi = HNoRegwithFSR.Phi()
-                        HaddJetsdR08NoReg.dR = 0
-                        HaddJetsdR08NoReg.dPhi = 0
-                        HaddJetsdR08NoReg.dEta = 0
-
-                        hJet_MtArray[0][0] = hJ0.Mt()
-                        hJet_MtArray[1][0] = hJ1.Mt()
-                        hJet_etarray[0][0] = hJ0.Et()
-                        hJet_etarray[1][0] = hJ1.Et()
-
-                        rPt0 = max(0.0001,readerJet0.EvaluateRegression( "jet0Regression" )[0])
-                        rPt1 = max(0.0001,readerJet1.EvaluateRegression( "jet1Regression" )[0])
-
-                        hJet_pt[0] = rPt0
-                        hJet_pt[1] = rPt1
-
-                        hJet_regWeight[0] = rPt0/hJet_pt0
-                        hJet_regWeight[1] = rPt1/hJet_pt1
-
-                        hJ0.SetPtEtaPhiM(rPt0,hJ0.Eta(),hJ0.Phi(),hJ0.M())
-                        hJ1.SetPtEtaPhiM(rPt1,hJ1.Eta(),hJ1.Phi(),hJ1.M())
-                        rMass0 = hJ0.M()
-                        rMass1 = hJ1.M()
-
-                        H.HiggsFlag = 1
-                        H.mass = (hJ0+hJ1).M()
-                        H.pt = (hJ0+hJ1).Pt()
-                        H.eta = (hJ0+hJ1).Eta()
-                        H.phi = (hJ0+hJ1).Phi()
-                        H.dR = hJ0.DeltaR(hJ1)
-                        H.dPhi = hJ0.DeltaPhi(hJ1)
-                        H.dEta = abs(hJ0.Eta()-hJ1.Eta())
-                        HVMass_Reg[0] = (hJ0+hJ1+vect).M()
-
-                        HwithFSR = ROOT.TLorentzVector()
-                        HwithFSR.SetPtEtaPhiM(H.pt,H.eta,H.phi,H.mass)
-
-                        HwithFSR = addAdditionalJets(HwithFSR,tree)
-
-                        HaddJetsdR08.HiggsFlag = 1
-                        HaddJetsdR08.mass = HwithFSR.M()
-                        HaddJetsdR08.pt = HwithFSR.Pt()
-                        HaddJetsdR08.eta = HwithFSR.Eta()
-                        HaddJetsdR08.phi = HwithFSR.Phi()
-                        HaddJetsdR08.dR = 0
-                        HaddJetsdR08.dPhi = 0
-                        HaddJetsdR08.dEta = 0
-
-                        debug_flag = False
-                        if debug_flag and (hJet_regWeight[0] > 3. or hJet_regWeight[1] > 3. or hJet_regWeight[0] < 0.3 or hJet_regWeight[1] < 0.3):
-                            print '### Debug event with ptReg/ptNoReg>0.3 or ptReg/ptNoReg<3 ###'
-                            print 'Event %.0f' %(Event[0])
-                            print 'MET %.2f' %(METet[0])
-                            print 'rho %.2f' %(rho[0])
-                            for key, value in regDict.items():
-                                if not (value == 'hJet_MET_dPhi' or value == 'METet' or value == "rho"):
-                                    print '%s 0: %.2f'%(key, theVars0[key][0])
-                                    print '%s 1: %.2f'%(key, theVars1[key][0])
-                            for i in range(2):
-                                print 'dPhi %.0f %.2f' %(i,hJet_MET_dPhiArray[i][0])
-                            for i in range(2):
-                                print 'ptRaw %.0f %.2f' %(i,hJet_rawPtArray[i][0])
-                            for i in range(2):
-                                print 'Mt %.0f %.2f' %(i,hJet_MtArray[i][0])
-                            for i in range(2):
-                                print 'Et %.0f %.2f' %(i,hJet_etarray[i][0])
-                            print 'corr 0 %.2f' %(hJet_regWeight[0])
-                            print 'corr 1 %.2f' %(hJet_regWeight[1])
-                            print 'rPt0 %.2f' %(rPt0)
-                            print 'rPt1 %.2f' %(rPt1)
-                            print 'rMass0 %.2f' %(rMass0)
-                            print 'rMass1 %.2f' %(rMass1)
-                            print 'Mass %.2f' %(H.mass)
-
-                            print 'hJet_pt0: ',hJet_pt0
-                            print 'hJet_pt1: ',hJet_pt1
-                        # if fatHiggsFlag:
-                            # hFJ0.SetPtEtaPhiE(fathFilterJets_pt0,fathFilterJets_eta0,fathFilterJets_phi0,fathFilterJets_e0)
-                            # hFJ1.SetPtEtaPhiE(fathFilterJets_pt1,fathFilterJets_eta1,fathFilterJets_phi1,fathFilterJets_e1)
-                            # rFJPt0 = max(0.0001,readerFJ0.EvaluateRegression( "jet0RegressionFJ" )[0])
-                            # rFJPt1 = max(0.0001,readerFJ1.EvaluateRegression( "jet1RegressionFJ" )[0])
-                            # fathFilterJets_regWeight[0] = rPt0/fathFilterJets_pt0
-                            # fathFilterJets_regWeight[1] = rPt1/fathFilterJets_pt1
-                            # rFJE0 = fathFilterJets_e0*fathFilterJets_regWeight[0]
-                            # rFJE1 = fathFilterJets_e1*fathFilterJets_regWeight[1]
-                            # hFJ0.SetPtEtaPhiE(rFJPt0,fathFilterJets_eta0,fathFilterJets_phi0,rFJE0)
-                            # hFJ1.SetPtEtaPhiE(rFJPt1,fathFilterJets_eta1,fathFilterJets_phi1,rFJE1)
-                            # FatHReg[0] = (hFJ0+hFJ1).M()
-                            # FatHReg[1] = (hFJ0+hFJ1).Pt()
-                        # else:
-                            # FatHReg[0] = 0.
-                            # FatHReg[1] = 0.
-
-                            # print rFJPt0
-                            # print rFJPt1
-
-                    if channel == "Znn":
-                        angleHB[0]=fAngleHB.EvalInstance()
-                        angleLZ[0]=fAngleLZ.EvalInstance()
-                        angleZZS[0]=fAngleZZS.EvalInstance()
-
-               #     for i, angLikeBkg in enumerate(AngLikeBkgs):
-                       # likeSBH[i] = math.fabs(SigBH[i].Eval(angleHB[0]))
-                       # likeBBH[i] = math.fabs(BkgBH[i].Eval(angleHB[0]))
-
-                       # likeSZZS[i] = math.fabs(SigZZS[i].Eval(angleZZS[0]))
-                       # likeBZZS[i] = math.fabs(BkgZZS[i].Eval(angleZZS[0]))
-
-                       # likeSLZ[i] = math.fabs(SigLZ[i].Eval(angleLZ[0]))
-                       # likeBLZ[i] = math.fabs(BkgLZ[i].Eval(angleLZ[0]))
-
-                       # likeSMassZS[i] = math.fabs(SigMassZS[i].Eval(fHVMass.EvalInstance()))
-                       # likeBMassZS[i] = math.fabs(BkgMassZS[i].Eval(fHVMass.EvalInstance()))
-
-                       # scaleSig  = float( ang_yield['Sig'] / (ang_yield['Sig'] + ang_yield[angLikeBkg]))
-                       # scaleBkg  = float( ang_yield[angLikeBkg] / (ang_yield['Sig'] + ang_yield[angLikeBkg]) )
-
-                       # numerator = (likeSBH[i]*likeSZZS[i]*likeSLZ[i]*likeSMassZS[i]);
-                       # denominator = ((scaleBkg*likeBLZ[i]*likeBZZS[i]*likeBBH[i]*likeBMassZS[i])+(scaleSig*likeSBH[i]*likeSZZS[i]*likeSLZ[i]*likeSMassZS[i]))
-
-                       # if denominator > 0:
-                           # kinLikeRatio[i] = numerator/denominator;
-                       # else:
-                           # kinLikeRatio[i] = 0;
-
-
-                    if channel == "Znn":
-                        if job.type == 'DATA':
-                            for i in range(2):
-                                csv = float(tree.Jet_btagCSV[tree.hJCidx[i]])
-                                hJet_btagCSVOld[i] = csv
-                                hJet_btagCSV[i] = csv
-                            newtree.Fill()
-                            continue
-
-                        for i in range(2):
-                            flavour = int(tree.Jet_hadronFlavour[tree.hJCidx[i]])
-                            pt = float(tree.Jet_pt[tree.hJCidx[i]])
-                            eta = float(tree.Jet_eta[tree.hJCidx[i]])
-                            csv = float(tree.Jet_btagCSV[tree.hJCidx[i]])
-                            ##FIXME## we have to add the CSV reshaping
-                            hJet_btagCSVOld[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-                            hJet_btagCSV[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-                            hJet_btagCSVDown[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-                            hJet_btagCSVUp[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-                            hJet_btagCSVFDown[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-                            hJet_btagCSVFUp[i] = tree.Jet_btagCSV[tree.hJCidx[i]]
-
-                    #Add here all the new JER/JEC variables
-
-                    if job.type != 'DATA':
-
-                      # # hJet flags
-
-                      #  hJet_high[0], hJet_high[1] = 0,0
-                      #  hJet_low[0],hJet_low[0]  = 0,0
-                      #  hJet_central[0],hJet_central[0]  = 0,0
-                      #  hJet_forward[0],hJet_forward[0]  = 0,0
-
-                      # # hJet flags
-                      #  if tree.Jet_pt_reg[tree.hJCidx[0]] > 100.: hJet_high[0] == 1
-                      #  if tree.Jet_pt_reg[tree.hJCidx[1]] > 100.: hJet_high[1] == 1
-
-                      #  if tree.Jet_pt_reg[tree.hJCidx[0]] < 100.: hJet_low[0] == 1
-                      #  if tree.Jet_pt_reg[tree.hJCidx[1]] < 100.: hJet_low[1] == 1
-
-                      #  if tree.Jet_eta[tree.hJCidx[0]] > 1.4: hJet_forward[0] == 1
-                      #  if tree.Jet_eta[tree.hJCidx[1]] > 1.4: hJet_forward[1] == 1
-
-                      #  if tree.Jet_eta[tree.hJCidx[0]] < 1.4: hJet_central[0] == 1
-                      #  if tree.Jet_eta[tree.hJCidx[1]] < 1.4: hJet_central[1] == 1
-
-                        ####################
-                        #Dijet mass
-                        ####################
-
-                        # Set up four vectors for the nominal Higgs and its jets
-                        higgs_jet_1 = ROOT.TLorentzVector()
-                        higgs_jet_1.SetPtEtaPhiM(
-                            tree.Jet_pt_reg[tree.hJCidx[0]],
-                            tree.Jet_eta[tree.hJCidx[0]],
-                            tree.Jet_phi[tree.hJCidx[0]],
-                            tree.Jet_mass[tree.hJCidx[0]]
-                        )
-
-                        higgs_jet_2 = ROOT.TLorentzVector()
-                        higgs_jet_2.SetPtEtaPhiM(
-                            tree.Jet_pt_reg[tree.hJCidx[1]],
-                            tree.Jet_eta[tree.hJCidx[1]],
-                            tree.Jet_phi[tree.hJCidx[1]],
-                            tree.Jet_mass[tree.hJCidx[1]]
-                        )
-
-                        higgs = higgs_jet_1 + higgs_jet_2
-
-                        for systematic, variation, category in iter(modifiers):
-
-                            # Set up the four vectors for the systematically varied Higgs and its jets
-                            higgs_jet_syst_1 = ROOT.TLorentzVector()
-                            higgs_jet_syst_2 = ROOT.TLorentzVector()
-
-                            if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[0]], tree.Jet_eta[tree.hJCidx[0]]):
-                                higgs_jet_syst_1.SetPtEtaPhiM(
-                                    getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[0]],
-                                    tree.Jet_eta[tree.hJCidx[0]],
-                                    tree.Jet_phi[tree.hJCidx[0]],
-                                    tree.Jet_mass[tree.hJCidx[0]]
-                                )
-                            else:
-                                higgs_jet_syst_1 = higgs_jet_1
-
-                            if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[1]], tree.Jet_eta[tree.hJCidx[1]]):
-                                higgs_jet_syst_2.SetPtEtaPhiM(
-                                    getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[1]],
-                                    tree.Jet_eta[tree.hJCidx[1]],
-                                    tree.Jet_phi[tree.hJCidx[1]],
-                                    tree.Jet_mass[tree.hJCidx[1]]
-                                )
-                            else:
-                                higgs_jet_syst_2 = higgs_jet_2
-
-                            higgs_syst = higgs_jet_syst_1 + higgs_jet_syst_2
-
-                            # Assign newly calculated values to branch addresses
-                            branch_addresses['HCSV_reg_corr{systematic}{variation}_mass_{category}'.format(**locals())][0] = tree.HCSV_reg_mass * (higgs_syst.M()/higgs.M())
-                            branch_addresses['HCSV_reg_corr{systematic}{variation}_pt_{category}'.format(**locals())][0] = tree.HCSV_reg_pt * (higgs_syst.Pt()/higgs.Pt())
-                            branch_addresses['HCSV_reg_corr{systematic}{variation}_eta_{category}'.format(**locals())][0] = tree.HCSV_reg_eta * (higgs_syst.Eta()/higgs.Eta())
-                            branch_addresses['HCSV_reg_corr{systematic}{variation}_phi_{category}'.format(**locals())][0] = tree.HCSV_reg_phi * (higgs_syst.Phi()/higgs.Phi())
-
-                            jet_branch_new = 'Jet_pt_reg_corr{systematic}{variation}_{category}'.format(**locals())
-                            jet_branch_old = 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals())
-                            for j in xrange(tree.nJet):
-                                if category_definitions[category](tree.Jet_pt_reg[j], tree.Jet_eta[j]):
-                                    branch_addresses[jet_branch_new][j] = getattr(tree, jet_branch_old)[j]
-                                else:
-                                    branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
-
-
-
-
-                        #sample_name_ = 'Ilove10cats'
-                        #print 'sample_name is', sample_name
-                        #j = 0
-                        #for i in range(0,len(sample_name)):
-                        #    sample_name.pop(i-j)
-                        #    j = j + 1
-                        #for s in sample_name_:
-                        #    sample_name.append(s)
-
-                        #def fillvar():
-                        #    #DefaultVar = {'HCSV_reg_corrSYSUD_mass_CAT':tree.HCSV_reg_mass,'HCSV_reg_corrSYSUD_pt_CAT':tree.HCSV_reg_pt,'HCSV_reg_corrSYSUD_phi_CAT':tree.HCSV_reg_phi,'HCSV_reg_corrSYSUD_eta_CAT':tree.HCSV_reg_eta}
-                        #    for SysDic in SysDicList:
-                        #        if not eval(ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])):
-                        #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                        #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #                SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            else:
-                        #                SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']])
-                        #        else:
-                        #            if SysDic['var'] == 'Jet_pt_reg_corrSYSUD_CAT':
-                        #                for jetindex in range(len(tree.Jet_eta)):
-                        #                    booljet = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('tree.hJCidx[INDEX]',str(jetindex)))
-                        #                    if booljet:
-                        #                        #print 'jetindex is', jetindex
-                        #                        #print 'sysdic is', SysDic['varptr']
-                        #                        SysDic['varptr'][jetindex] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX',str(jetindex)))
-
-                        #            #    booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #    booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    if booljet1 and not booljet2:
-                        #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    elif not booljet1 and booljet2:
-                        #            #        SysDic['varptr'][0] =  eval(DefaultVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    elif booljet1 and booljet1:
-                        #            #        SysDic['varptr'][0] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #            #        SysDic['varptr'][1] =  eval(SYSVar[SysDic['var']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-                        #            #    else:
-                        #            #        print '@ERROR: jet category could not be indentified. Aborting'
-                        #            else:
-                        #                Jet1 = ROOT.TLorentzVector()
-                        #                Jet2 = ROOT.TLorentzVector()
-                        #                Jet1_sys = ROOT.TLorentzVector()
-                        #                Jet2_sys = ROOT.TLorentzVector()
-                        #                Jet1.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])
-                        #                Jet2.SetPtEtaPhiM(tree.Jet_pt_reg[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])
-
-                        #                booljet1 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','0'))
-                        #                booljet2 = eval(JetConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('INDEX','1'))
-
-                        #                if booljet1 and not booljet2:
-                        #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    Jet2_sys = Jet2
-                        #                elif not booljet1 and booljet2:
-                        #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    Jet1_sys = Jet1
-                        #                elif booljet1 and booljet1:
-                        #                    eval('Jet1_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[0]],tree.Jet_eta[tree.hJCidx[0]],tree.Jet_phi[tree.hJCidx[0]],tree.Jet_mass[tree.hJCidx[0]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                    eval('Jet2_sys.SetPtEtaPhiM(tree.Jet_pt_reg_corrSYSUD[tree.hJCidx[1]],tree.Jet_eta[tree.hJCidx[1]],tree.Jet_phi[tree.hJCidx[1]],tree.Jet_mass[tree.hJCidx[1]])'.replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']))
-                        #                else:
-                        #                    print '@ERROR: jet category could not be indentified. Aborting'
-                        #                    print 'cat is', SysDic['cat']
-                        #                    print 'condition is', ConditionDic[SysDic['cat']].replace('SYS',SysDic['sys']).replace('UD',SysDic['UD']).replace('CAT',SysDic['cat'])
-                        #                    print 'jet cond is', JetConditionDic[SysDic['cat']].replace('INDEX','1')
-                        #                    sys.exit()
-
-                        #                HJet = Jet1+Jet2
-                        #                HJet_sys = Jet1_sys+Jet2_sys
-                        #                SysDic['varptr'][0] = eval(SYSVar[SysDic['var']])
-
-                        #fillvar()
-
-
-
-                        ####  Btag Weights for high/low and eta regions ####
-                        #if tree.Jet_pt_reg[tree.hJCidx[0]]>100. or tree.Jet_pt_reg[tree.hJCidx[1]]>100.:
-                        #    btag_weight_JECUp_high[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_high[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_high[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_high[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_high[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_high[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_high[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_high[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_high[0] = tree.btagWeightCSV
-
-
-                        #if tree.Jet_pt_reg[tree.hJCidx[0]]<100. or tree.Jet_pt_reg[tree.hJCidx[1]]<100.:
-                        #    btag_weight_JECUp_low[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_low[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_low[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_low[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_low[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_low[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_low[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_low[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_low[0] = tree.btagWeightCSV
-
-                        #if tree.Jet_eta[tree.hJCidx[0]]>1.4 or tree.Jet_eta[tree.hJCidx[1]]>1.4:
-                        #    btag_weight_JECUp_central[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_central[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_central[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_central[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_central[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_central[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_central[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_central[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_central[0] = tree.btagWeightCSV
-
-
-                        #if tree.Jet_eta[tree.hJCidx[0]]<1.4 or tree.Jet_eta[tree.hJCidx[1]]<1.4:
-                        #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV_up_jes
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV_down_jes
-                        #    btag_weight_lfUp_forward[0] = tree. btagWeightCSV_up_lf
-                        #    btag_weight_lfDown_forward[0] = tree. btagWeightCSV_down_lf
-                        #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV_up_hf
-                        #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV_down_hf
-                        #    btag_weight_lfstats1Up_forward[0] = tree. btagWeightCSV_up_lfstats1
-                        #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV_down_lfstats1
-                        #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV_up_lfstats2
-                        #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV_down_lfstats2
-                        #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV_up_hfstats1
-                        #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV_up_hfstats2
-                        #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV_down_hfstats1
-                        #    btag_weight_hfstats2Down_forward[0] = tree. btagWeightCSV_down_hfstats2
-                        #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV_up_cferr1
-                        #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV_up_cferr2
-                        #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV_down_cferr1
-                        #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV_down_cferr2
-
-                        #else:
-                        #    btag_weight_JECUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_JECDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfUp_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfDown_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_lfstats2Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_hfstats2Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Up_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr1Down_forward[0] = tree.btagWeightCSV
-                        #    btag_weight_cferr2Down_forward[0] = tree.btagWeightCSV
-
-
-                    if applyRegression:
-                        if job.type != 'DATA':
-                            ## JER_up
-                            rPt0 = max(0.0001,readerJet0_JER_up.EvaluateRegression( "jet0Regression" )[0])
-                            rPt1 = max(0.0001,readerJet1_JER_up.EvaluateRegression( "jet1Regression" )[0])
-                            hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
-                            hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
-                            rMass0=hJ0.M()
-                            rMass1=hJ1.M()
-                            hJet_pt_JER_up[0]=rPt0
-                            hJet_pt_JER_up[1]=rPt1
-                            hJet_mass_JER_up[0]=rMass0
-                            hJet_mass_JER_up[1]=rMass1
-                            H_JER[0]=(hJ0+hJ1).M()
-                            H_JER[2]=(hJ0+hJ1).Pt()
-                            HVMass_JER_up[0] = (hJ0+hJ1+vect).M()
-
-                            ## JER_down
-                            rPt0 = max(0.0001,readerJet0_JER_down.EvaluateRegression( "jet0Regression" )[0])
-                            rPt1 = max(0.0001,readerJet1_JER_down.EvaluateRegression( "jet1Regression" )[0])
-                            hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
-                            hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
-                            rMass0=hJ0.M()
-                            rMass1=hJ1.M()
-                            hJet_pt_JER_down[0]=rPt0
-                            hJet_pt_JER_down[1]=rPt1
-                            hJet_mass_JER_down[0]=rMass0
-                            hJet_mass_JER_down[1]=rMass1
-                            H_JER[1]=(hJ0+hJ1).M()
-                            H_JER[3]=(hJ0+hJ1).Pt()
-                            HVMass_JER_down[0] = (hJ0+hJ1+vect).M()
-
-                            ## JEC_up
-                            rPt0 = max(0.0001,readerJet0_JEC_up.EvaluateRegression( "jet0Regression" )[0])
-                            rPt1 = max(0.0001,readerJet1_JEC_up.EvaluateRegression( "jet1Regression" )[0])
-                            hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
-                            hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
-                            rMass0=hJ0.M()
-                            rMass1=hJ1.M()
-                            hJet_pt_JES_up[0]=rPt0
-                            hJet_pt_JES_up[1]=rPt1
-                            hJet_mass_JES_up[0]=rMass0
-                            hJet_mass_JES_up[1]=rMass1
-                            H_JES[0]=(hJ0+hJ1).M()
-                            H_JES[2]=(hJ0+hJ1).Pt()
-                            HVMass_JES_up[0] = (hJ0+hJ1+vect).M()
-
-                            ## JEC_down
-                            rPt0 = max(0.0001,readerJet0_JEC_down.EvaluateRegression( "jet0Regression" )[0])
-                            rPt1 = max(0.0001,readerJet1_JEC_down.EvaluateRegression( "jet1Regression" )[0])
-                            hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
-                            hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
-                            rMass0=hJ0.M()
-                            rMass1=hJ1.M()
-                            hJet_pt_JES_down[0]=rPt0
-                            hJet_pt_JES_down[1]=rPt1
-                            hJet_mass_JES_down[0]=rMass0
-                            hJet_mass_JES_down[1]=rMass1
-                            H_JES[1]=(hJ0+hJ1).M()
-                            H_JES[3]=(hJ0+hJ1).Pt()
-                            HVMass_JES_down[0] = (hJ0+hJ1+vect).M()
-
-                        angleHB_JER_up[0]=fAngleHB_JER_up.EvalInstance()
-                        angleHB_JER_down[0]=fAngleHB_JER_down.EvalInstance()
-                        angleHB_JES_up[0]=fAngleHB_JES_up.EvalInstance()
-                        angleHB_JES_down[0]=fAngleHB_JES_down.EvalInstance()
-                        angleZZS[0]=fAngleZZS.EvalInstance()
-                        angleZZS_JER_up[0]=fAngleZZS_JER_up.EvalInstance()
-                        angleZZS_JER_down[0]=fAngleZZS_JER_down.EvalInstance()
-                        angleZZS_JES_up[0]=fAngleZZS_JES_up.EvalInstance()
-                        angleZZS_JES_down[0]=fAngleZZS_JES_down.EvalInstance()
-
-                    # print "hJet_eta[0]",hJet_eta[0]
-                    # print "hJet_eta[1]",hJet_eta[1]
-                    # print "hJet_phi[0]",hJet_phi[0]
-                    # print "hJet_phi[1]",hJet_phi[1]
-                    # print "hJet_mass[0]",hJet_mass[0]
-                    # print "hJet_mass[1]",hJet_mass[1]
+                    #####
+                    #Old (ICHEP 2016) JER/JEC spliting
+                    #####
+
+                    ##Add here all the new JER/JEC variables
+                    #if job.type != 'DATA':
+
+                    #  # # hJet flags
+
+                    #  #  hJet_high[0], hJet_high[1] = 0,0
+                    #  #  hJet_low[0],hJet_low[0]  = 0,0
+                    #  #  hJet_central[0],hJet_central[0]  = 0,0
+                    #  #  hJet_forward[0],hJet_forward[0]  = 0,0
+
+                    #  # # hJet flags
+                    #  #  if tree.Jet_pt_reg[tree.hJCidx[0]] > 100.: hJet_high[0] == 1
+                    #  #  if tree.Jet_pt_reg[tree.hJCidx[1]] > 100.: hJet_high[1] == 1
+
+                    #  #  if tree.Jet_pt_reg[tree.hJCidx[0]] < 100.: hJet_low[0] == 1
+                    #  #  if tree.Jet_pt_reg[tree.hJCidx[1]] < 100.: hJet_low[1] == 1
+
+                    #  #  if tree.Jet_eta[tree.hJCidx[0]] > 1.4: hJet_forward[0] == 1
+                    #  #  if tree.Jet_eta[tree.hJCidx[1]] > 1.4: hJet_forward[1] == 1
+
+                    #  #  if tree.Jet_eta[tree.hJCidx[0]] < 1.4: hJet_central[0] == 1
+                    #  #  if tree.Jet_eta[tree.hJCidx[1]] < 1.4: hJet_central[1] == 1
+
+                    #    ####################
+                    #    #Dijet mass
+                    #    ####################
+
+                    #    # Set up four vectors for the nominal Higgs and its jets
+                    #    higgs_jet_1 = ROOT.TLorentzVector()
+                    #    higgs_jet_1.SetPtEtaPhiM(
+                    #        tree.Jet_pt_reg[tree.hJCidx[0]],
+                    #        tree.Jet_eta[tree.hJCidx[0]],
+                    #        tree.Jet_phi[tree.hJCidx[0]],
+                    #        tree.Jet_mass[tree.hJCidx[0]]
+                    #    )
+
+                    #    higgs_jet_2 = ROOT.TLorentzVector()
+                    #    higgs_jet_2.SetPtEtaPhiM(
+                    #        tree.Jet_pt_reg[tree.hJCidx[1]],
+                    #        tree.Jet_eta[tree.hJCidx[1]],
+                    #        tree.Jet_phi[tree.hJCidx[1]],
+                    #        tree.Jet_mass[tree.hJCidx[1]]
+                    #    )
+
+                    #    higgs = higgs_jet_1 + higgs_jet_2
+
+                    #    for systematic, variation, category in iter(modifiers):
+
+                    #        # Set up the four vectors for the systematically varied Higgs and its jets
+                    #        higgs_jet_syst_1 = ROOT.TLorentzVector()
+                    #        higgs_jet_syst_2 = ROOT.TLorentzVector()
+
+                    #        if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[0]], tree.Jet_eta[tree.hJCidx[0]]):
+                    #            higgs_jet_syst_1.SetPtEtaPhiM(
+                    #                getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[0]],
+                    #                tree.Jet_eta[tree.hJCidx[0]],
+                    #                tree.Jet_phi[tree.hJCidx[0]],
+                    #                tree.Jet_mass[tree.hJCidx[0]]
+                    #            )
+                    #        else:
+                    #            higgs_jet_syst_1 = higgs_jet_1
+
+                    #        if category_definitions[category](tree.Jet_pt_reg[tree.hJCidx[1]], tree.Jet_eta[tree.hJCidx[1]]):
+                    #            higgs_jet_syst_2.SetPtEtaPhiM(
+                    #                getattr(tree, 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals()))[tree.hJCidx[1]],
+                    #                tree.Jet_eta[tree.hJCidx[1]],
+                    #                tree.Jet_phi[tree.hJCidx[1]],
+                    #                tree.Jet_mass[tree.hJCidx[1]]
+                    #            )
+                    #        else:
+                    #            higgs_jet_syst_2 = higgs_jet_2
+
+                    #        higgs_syst = higgs_jet_syst_1 + higgs_jet_syst_2
+
+                    #        # Assign newly calculated values to branch addresses
+                    #        branch_addresses['HCSV_reg_corr{systematic}{variation}_mass_{category}'.format(**locals())][0] = tree.HCSV_reg_mass * (higgs_syst.M()/higgs.M())
+                    #        branch_addresses['HCSV_reg_corr{systematic}{variation}_pt_{category}'.format(**locals())][0] = tree.HCSV_reg_pt * (higgs_syst.Pt()/higgs.Pt())
+                    #        branch_addresses['HCSV_reg_corr{systematic}{variation}_eta_{category}'.format(**locals())][0] = tree.HCSV_reg_eta * (higgs_syst.Eta()/higgs.Eta())
+                    #        branch_addresses['HCSV_reg_corr{systematic}{variation}_phi_{category}'.format(**locals())][0] = tree.HCSV_reg_phi * (higgs_syst.Phi()/higgs.Phi())
+
+                    #        jet_branch_new = 'Jet_pt_reg_corr{systematic}{variation}_{category}'.format(**locals())
+                    #        jet_branch_old = 'Jet_pt_reg_corr{systematic}{variation}'.format(**locals())
+                    #        for j in xrange(tree.nJet):
+                    #            if category_definitions[category](tree.Jet_pt_reg[j], tree.Jet_eta[j]):
+                    #                branch_addresses[jet_branch_new][j] = getattr(tree, jet_branch_old)[j]
+                    #            else:
+                    #                branch_addresses[jet_branch_new][j] = tree.Jet_pt_reg[j]
+
+                    #if applyRegression:
+                    #    if job.type != 'DATA':
+                    #        ## JER_up
+                    #        rPt0 = max(0.0001,readerJet0_JER_up.EvaluateRegression( "jet0Regression" )[0])
+                    #        rPt1 = max(0.0001,readerJet1_JER_up.EvaluateRegression( "jet1Regression" )[0])
+                    #        hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
+                    #        hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
+                    #        rMass0=hJ0.M()
+                    #        rMass1=hJ1.M()
+                    #        hJet_pt_JER_up[0]=rPt0
+                    #        hJet_pt_JER_up[1]=rPt1
+                    #        hJet_mass_JER_up[0]=rMass0
+                    #        hJet_mass_JER_up[1]=rMass1
+                    #        H_JER[0]=(hJ0+hJ1).M()
+                    #        H_JER[2]=(hJ0+hJ1).Pt()
+                    #        HVMass_JER_up[0] = (hJ0+hJ1+vect).M()
+
+                    #        ## JER_down
+                    #        rPt0 = max(0.0001,readerJet0_JER_down.EvaluateRegression( "jet0Regression" )[0])
+                    #        rPt1 = max(0.0001,readerJet1_JER_down.EvaluateRegression( "jet1Regression" )[0])
+                    #        hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
+                    #        hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
+                    #        rMass0=hJ0.M()
+                    #        rMass1=hJ1.M()
+                    #        hJet_pt_JER_down[0]=rPt0
+                    #        hJet_pt_JER_down[1]=rPt1
+                    #        hJet_mass_JER_down[0]=rMass0
+                    #        hJet_mass_JER_down[1]=rMass1
+                    #        H_JER[1]=(hJ0+hJ1).M()
+                    #        H_JER[3]=(hJ0+hJ1).Pt()
+                    #        HVMass_JER_down[0] = (hJ0+hJ1+vect).M()
+
+                    #        ## JEC_up
+                    #        rPt0 = max(0.0001,readerJet0_JEC_up.EvaluateRegression( "jet0Regression" )[0])
+                    #        rPt1 = max(0.0001,readerJet1_JEC_up.EvaluateRegression( "jet1Regression" )[0])
+                    #        hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
+                    #        hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
+                    #        rMass0=hJ0.M()
+                    #        rMass1=hJ1.M()
+                    #        hJet_pt_JES_up[0]=rPt0
+                    #        hJet_pt_JES_up[1]=rPt1
+                    #        hJet_mass_JES_up[0]=rMass0
+                    #        hJet_mass_JES_up[1]=rMass1
+                    #        H_JES[0]=(hJ0+hJ1).M()
+                    #        H_JES[2]=(hJ0+hJ1).Pt()
+                    #        HVMass_JES_up[0] = (hJ0+hJ1+vect).M()
+
+                    #        ## JEC_down
+                    #        rPt0 = max(0.0001,readerJet0_JEC_down.EvaluateRegression( "jet0Regression" )[0])
+                    #        rPt1 = max(0.0001,readerJet1_JEC_down.EvaluateRegression( "jet1Regression" )[0])
+                    #        hJ0.SetPtEtaPhiM(rPt0,hJet_eta0,hJet_phi0,hJet_mass0)
+                    #        hJ1.SetPtEtaPhiM(rPt1,hJet_eta1,hJet_phi1,hJet_mass1)
+                    #        rMass0=hJ0.M()
+                    #        rMass1=hJ1.M()
+                    #        hJet_pt_JES_down[0]=rPt0
+                    #        hJet_pt_JES_down[1]=rPt1
+                    #        hJet_mass_JES_down[0]=rMass0
+                    #        hJet_mass_JES_down[1]=rMass1
+                    #        H_JES[1]=(hJ0+hJ1).M()
+                    #        H_JES[3]=(hJ0+hJ1).Pt()
+                    #        HVMass_JES_down[0] = (hJ0+hJ1+vect).M()
+
+                    #    angleHB_JER_up[0]=fAngleHB_JER_up.EvalInstance()
+                    #    angleHB_JER_down[0]=fAngleHB_JER_down.EvalInstance()
+                    #    angleHB_JES_up[0]=fAngleHB_JES_up.EvalInstance()
+                    #    angleHB_JES_down[0]=fAngleHB_JES_down.EvalInstance()
+                    #    angleZZS[0]=fAngleZZS.EvalInstance()
+                    #    angleZZS_JER_up[0]=fAngleZZS_JER_up.EvalInstance()
+                    #    angleZZS_JER_down[0]=fAngleZZS_JER_down.EvalInstance()
+                    #    angleZZS_JES_up[0]=fAngleZZS_JES_up.EvalInstance()
+                    #    angleZZS_JES_down[0]=fAngleZZS_JES_down.EvalInstance()
+
+                    ## print "hJet_eta[0]",hJet_eta[0]
+                    ## print "hJet_eta[1]",hJet_eta[1]
+                    ## print "hJet_phi[0]",hJet_phi[0]
+                    ## print "hJet_phi[1]",hJet_phi[1]
+                    ## print "hJet_mass[0]",hJet_mass[0]
+                    ## print "hJet_mass[1]",hJet_mass[1]
 
                 newtree.Fill()
 
