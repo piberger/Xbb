@@ -127,6 +127,11 @@ try:
 except:
     applyJESsystematics = False
 print "I shall add the JESsystematics, milord !", AddSpecialWeight
+try:
+   addEWK = config.get('Analysis', 'addEWK').lower().strip() == 'true'
+except:
+   addEWK = False
+print "I shall add the JESsystematics, milord !", AddSpecialWeight
 
 
 namelist=opts.names.split(',')
@@ -154,6 +159,97 @@ def deltaR(phi1, eta1, phi2, eta2):
     dphi = deltaPhi(phi1, phi2)
     result = math.sqrt(deta*deta + dphi*dphi)
     return result
+
+def signal_ewk(GenVbosons_pt):
+
+	SF = 1.
+	#print 'Vpt:', GenVbosons_pt
+	EWK = [0.932072955817,
+	       0.924376254386,
+	       0.916552449249,
+	       0.909654343838,
+	       0.90479110736,
+	       0.902244634267,
+	       0.89957486928,
+	       0.902899199569,
+	       0.899314861082,
+	       0.89204902646,
+	       0.886663993587,
+	       0.878915415638,
+	       0.870241565009,
+	       0.863239359219,
+	       0.85727925851,
+	       0.849770804948,
+	       0.83762562793,
+	       0.829982098864,
+	       0.81108451152,
+	       0.821942287438,
+	       0.796485091295,
+	       0.800127513022,
+	       0.790708718585,
+	       0.779446429438,
+	       0.777869490396]
+
+	#print EWK[0]
+	#print EWK[1]
+
+	if GenVbosons_pt > 0. and GenVbosons_pt < 3000:
+
+		if GenVbosons_pt > 0 and GenVbosons_pt <= 20:
+			SF = EWK[0]
+		if GenVbosons_pt > 20 and GenVbosons_pt <= 40:
+			SF = EWK[1]
+		if GenVbosons_pt > 40 and GenVbosons_pt <= 60:
+			SF = EWK[2]
+		if GenVbosons_pt > 60 and GenVbosons_pt <= 80:
+			SF = EWK[3]
+		if GenVbosons_pt > 80 and GenVbosons_pt <= 100:
+			SF = EWK[4]
+		if GenVbosons_pt > 100 and GenVbosons_pt <= 120:
+			SF = EWK[5]
+		if GenVbosons_pt > 120 and GenVbosons_pt <= 140:
+			SF = EWK[6]
+		if GenVbosons_pt > 140 and GenVbosons_pt <= 160:
+			SF = EWK[7]
+		if GenVbosons_pt > 160 and GenVbosons_pt <= 180:
+			SF = EWK[8]
+		if GenVbosons_pt > 180 and GenVbosons_pt <= 200:
+			SF = EWK[9]
+		if GenVbosons_pt > 200 and GenVbosons_pt <= 220:
+			SF = EWK[10]
+		if GenVbosons_pt > 220 and GenVbosons_pt <= 240:
+			SF = EWK[11]
+		if GenVbosons_pt > 240 and GenVbosons_pt <= 260:
+			SF = EWK[12]
+		if GenVbosons_pt > 260 and GenVbosons_pt <= 280:
+			SF = EWK[13]
+		if GenVbosons_pt > 280 and GenVbosons_pt <= 300:
+			SF = EWK[14]
+		if GenVbosons_pt > 300 and GenVbosons_pt <= 320:
+			SF = EWK[15]
+		if GenVbosons_pt > 320 and GenVbosons_pt <= 340:
+			SF = EWK[16]
+		if GenVbosons_pt > 340 and GenVbosons_pt <= 360:
+			SF = EWK[17]
+		if GenVbosons_pt > 360 and GenVbosons_pt <= 380:
+			SF = EWK[18]
+		if GenVbosons_pt > 380 and GenVbosons_pt <= 400:
+			SF = EWK[19]
+		if GenVbosons_pt > 400 and GenVbosons_pt <= 420:
+			SF = EWK[20]
+		if GenVbosons_pt > 420 and GenVbosons_pt <= 440:
+			SF = EWK[21]
+		if GenVbosons_pt > 440 and GenVbosons_pt <= 460:
+			SF = EWK[22]
+		if GenVbosons_pt > 460 and GenVbosons_pt <= 480:
+			SF = EWK[23]
+		if GenVbosons_pt > 480:
+			SF = EWK[24]
+		if GenVbosons_pt <= 0:
+			SF = 1
+
+
+	return SF
 
 def addAdditionalJets(H, tree):
     for i in range(tree.nhjidxaddJetsdR08):
@@ -815,7 +911,7 @@ for job in info:
             #eleweight[0], eleweight[1], eleweight[2] = 1,1,1
             #newtree.Branch('eleweight',eleweight,'eleweight[3]/F')
 
-        if addBranches:
+        if addEWK:
             if job.type != 'DATA':
 
                 #EWK weights
@@ -837,6 +933,8 @@ for job in info:
                 isDY = array('i',[-1])
                 DYw[0] = -1
                 newtree.Branch('isDY', isDY, 'isDY/I')
+
+        if addBranches:
 
             ### Adding new variable from configuration ###
             newVariableNames = []
@@ -1297,6 +1395,7 @@ for job in info:
 
                 #if entry > 10000: break
                 #if entry > 100: break
+                if entry > 1000: break
                 tree.GetEntry(entry)
 
 
@@ -1720,9 +1819,14 @@ for job in info:
                         else:
                             newVariables[variableName][0] = newVariableFormulas[variableName].EvalInstance()
 
+                if addBranches and Stop_after_addBranches:
+                    newtree.Fill()
+                    continue
+
+                if addEWK:
                     if job.type != 'DATA':
                         ### todo: job.FullName is not defined!
-                        jobName = str(job)
+                        jobName = str(job.FullName)
 
                         if 'DY' in jobName:
                             if '10to50' in jobName:
@@ -1745,12 +1849,11 @@ for job in info:
                             etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
                             if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
 
-                        #pdb.set_trace()
-                        DYw[0] = EWKw[0]*NLOw[0]
+                        elif 'ZH_HToBB' in job.name and not 'ggZH' in job.name:
+                            if tree.nGenVbosons > 0:
+                                EWKw[0] = signal_ewk(tree.GenVbosons_pt[0])
 
-                if addBranches and Stop_after_addBranches:
-                    newtree.Fill()
-                    continue
+                    DYw[0] = EWKw[0]*NLOw[0]
 
 
                 if AddSpecialWeight and job.type != 'DATA':
