@@ -67,7 +67,7 @@ print 'OUTput samples:\t%s'%pathOUT
 
 applyBTagweights=eval(config.get('Analysis','applyBTagweights'))
 print 'applyBTagweights is', applyBTagweights
-csv_rwt_hf=config.get('BTagHFweights','file')
+cV25_iter7_files_Pirminsv_rwt_hf=config.get('BTagHFweights','file')
 csv_rwt_lf=config.get('BTagLFweights','file')
 applyRegression=eval(config.get('Regression','applyRegression'))
 print 'applyRegression is', applyRegression
@@ -483,11 +483,13 @@ for job in info:
 
             # CSVv2
             #calib_csv = ROOT.BTagCalibration("csvv2", "./ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
-            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
+            #calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
+            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/gravall-v25.weights.xml")
 
             # cMVAv2
             #calib_cmva = ROOT.BTagCalibration("cmvav2", "./ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
-            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
+            #calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
+            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/gravall-v25.weights.xml")
 
             print "\nCalibration Init...\n"
 
@@ -1395,7 +1397,7 @@ for job in info:
 
                 #if entry > 10000: break
                 #if entry > 100: break
-                if entry > 1000: break
+                #if entry > 1000: break
                 tree.GetEntry(entry)
 
 
