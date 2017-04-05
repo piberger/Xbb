@@ -67,11 +67,11 @@ print 'OUTput samples:\t%s'%pathOUT
 
 applyBTagweights=eval(config.get('Analysis','applyBTagweights'))
 print 'applyBTagweights is', applyBTagweights
-cV25_iter7_files_Pirminsv_rwt_hf=config.get('BTagHFweights','file')
+csv_rwt_hf=config.get('BTagHFweights','file')
 csv_rwt_lf=config.get('BTagLFweights','file')
 applyRegression=eval(config.get('Regression','applyRegression'))
 print 'applyRegression is', applyRegression
-print "csv_rwt_hf",csv_rwt_hf,"csv_rwt_lf",csv_rwt_lf
+#print "csv_rwt_hf",csv_rwt_hf,"csv_rwt_lf",csv_rwt_lf
 bweightcalc = BTagWeightCalculator(
     csv_rwt_hf,
     csv_rwt_lf
@@ -126,12 +126,22 @@ try:
     applyJESsystematics= config.get('Analysis', 'applyJESsystematics').lower().strip() == 'true'
 except:
     applyJESsystematics = False
-print "I shall add the JESsystematics, milord !", AddSpecialWeight
+print "I shall add the JESsystematics, milord !", applyJESsystematics
 try:
    addEWK = config.get('Analysis', 'addEWK').lower().strip() == 'true'
 except:
    addEWK = False
-print "I shall add the JESsystematics, milord !", AddSpecialWeight
+print "I shall add the EWK weigght, milord !", addEWK
+try:
+   remove_useless_branch = config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
+except:
+   remove_useless_branch = False
+print "I shall remove the useless branches, milord !", remove_useless_branch
+try:
+   remove_useless_after_sys = config.get('Analysis', 'remove_useless_after_sys').lower().strip() == 'true'
+except:
+   remove_useless_after_sys = False
+print "I shall remove the useless branches after sys, milord !", remove_useless_after_sys
 
 
 namelist=opts.names.split(',')
@@ -460,11 +470,21 @@ for job in info:
 
         #Jet structure (to apply CSV weight)
         # For new regresssion zerop the branches out before cloning new tree
-        tree.SetBranchStatus('HCMVAV2_reg_mass',0)
-        tree.SetBranchStatus('HCMVAV2_reg_pt',0)
-        tree.SetBranchStatus('HCMVAV2_reg_eta',0)
-        tree.SetBranchStatus('HCMVAV2_reg_phi',0)
+        if applyJESsystematics:
+            tree.SetBranchStatus('HCMVAV2_reg_mass',0)
+            tree.SetBranchStatus('HCMVAV2_reg_pt',0)
+            tree.SetBranchStatus('HCMVAV2_reg_eta',0)
+            tree.SetBranchStatus('HCMVAV2_reg_phi',0)
 
+        #remove branches
+        if remove_useless_branch:
+            bl_branch = eval(config.get('Branches', 'useless_branch'))
+            for br in bl_branch:
+                tree.SetBranchStatus(br,0)
+        if remove_useless_after_sys:
+            bl_branch = eval(config.get('Branches', 'useless_after_sys'))
+            for br in bl_branch:
+                tree.SetBranchStatus(br,0)
         
        # tree.SetBranchStatus('H',0)
         output.cd()
@@ -483,13 +503,11 @@ for job in info:
 
             # CSVv2
             #calib_csv = ROOT.BTagCalibration("csvv2", "./ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
-            #calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
-            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/gravall-v25.weights.xml")
+            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
 
             # cMVAv2
             #calib_cmva = ROOT.BTagCalibration("cmvav2", "./ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
-            #calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
-            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/gravall-v25.weights.xml")
+            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
 
             print "\nCalibration Init...\n"
 
@@ -678,7 +696,8 @@ for job in info:
             isVerbose = False
             #isVerbose = True
 
-            regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
+            #regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
+            regWeight = './reg/gravall-v25.weights.xml'
             regVars = ["Jet_pt",
                        "nPVs",
                        "Jet_eta",
@@ -1389,6 +1408,8 @@ for job in info:
         #Start event loop
         #########################
 
+        print 'YEAAAAAAAAAAAAAAAAAAAH'
+
         for entry in range(0,nEntries):
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
@@ -1396,7 +1417,7 @@ for job in info:
                     #sys.stdout.flush()
 
                 #if entry > 10000: break
-                #if entry > 100: break
+                if entry > 100: break
                 #if entry > 1000: break
                 tree.GetEntry(entry)
 
@@ -1855,7 +1876,7 @@ for job in info:
                             if tree.nGenVbosons > 0:
                                 EWKw[0] = signal_ewk(tree.GenVbosons_pt[0])
 
-                    DYw[0] = EWKw[0]*NLOw[0]
+                        DYw[0] = EWKw[0]*NLOw[0]
 
 
                 if AddSpecialWeight and job.type != 'DATA':
