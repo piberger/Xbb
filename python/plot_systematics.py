@@ -8,7 +8,8 @@ from myutils import BetterConfigParser, TdrStyles, getRatio
 
 
 argv = sys.argv
-parser = OptionParser() parser.add_option("-C", "--config", dest="config", default=[], action="append", help="configuration file")
+parser = OptionParser()
+parser.add_option("-C", "--config", dest="config", default=[], action="append", help="configuration file")
 (opts, args) = parser.parse_args(argv)
 config = BetterConfigParser()
 config.read(opts.config)
@@ -25,8 +26,18 @@ masses = ['125']
 #channels= ['ZeeBDT_lowpt']
 #channels= ['ZllBDT_lowpt']
 #channels= ['ZllBDT_highpt']
-channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
-path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/'
+#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+channels = ['Zuu_CRZlight_lowpt','Zee_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_highpt','Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['Zuu_CRZlight_highpt']
+#channels = ['Zee_CRZlight_lowpt']
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CMVA_test_sys/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CSV_4_wbTag/Limits/'
+path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_18_03_17/'
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
 #mode = 'Mjj'
@@ -95,6 +106,10 @@ for mass in masses:
             #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZuuBDT_highpt.root'
             #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_lowpt.root'
             #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_highpt.root'
+            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
+            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
+            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
+            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
 
             input_ = '%svhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
@@ -140,13 +155,21 @@ for mass in masses:
                 #input.cd("Vpt1")
                 #input.cd("Vpt2")
                 dir_ = ''
-                dir_list = ['ZuuBDT_lowpt','ZuuBDT_highpt','ZeeBDT_lowpt','ZeeBDT_highpt']
+                #dir_list = ['ZuuBDT_lowpt','ZuuBDT_highpt','ZeeBDT_lowpt','ZeeBDT_highpt']
+                #dir_list = ['ZuuBDT_lowpt','ZuuBDT_highpt','ZeeBDT_lowpt','ZeeBDT_highpt']
+                #dir_list = ['Zuu_CRZlight_lowpt']
+                dir_list = channels
                 for s in dir_list:
                     if s in input_: dir_ = s
+                    print 's is', s
                 if dir_ == '':
                     print('@ERROR: dir not found. Aborting')
                     sys.exit()
                 #input.cd("ZeeBDT_lowpt")
+                print 'dir_ is', dir_
+                print 'channel is', channel
+                print 'the list of channels is'
+                #ROOT.gDirectory.GetListOfKeys().ls()
                 input.cd(dir_)
                 #skip _eff sys if not corresponding dc region
                 if 'Zuu' in dir_ and '_eff_e' in syst: continue

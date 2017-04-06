@@ -20,7 +20,7 @@ def countEvents(rootFileName):
     return nevents
 
 def getExtWeights(config, extParts):
-    
+
     sysOut = config.get('Directories','SYSout').strip()
     t3proto = 'root://t3dcachedb.psi.ch:1094'
     sysOutMountedPath = sysOut.replace(t3proto,'').replace('root://t3dcachedb03.psi.ch:1094','')
@@ -64,7 +64,7 @@ for section in config.sections():
         sampleDict[sampleNameShort].append(sampleName)
     else:
         sampleDict[sampleNameShort] = [sampleName]
-    if verify: 
+    if verify:
         extweight = 0
         try:
             extweight = float(config.get(section, 'extweight'))

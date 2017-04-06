@@ -41,9 +41,11 @@ for file in DC:
     mlfit_= opts.dc_folder+'/'+'mlfit.root'
     dc_bin_ = file.replace('vhbb_DC_TH_','').replace('.txt','')
     if 'BDT' in dc_bin_:
-        var_ = 'BDT'
+        var_ = 'BDTCMVA'
+        #var_ = 'BDT'
     elif 'CR' in dc_bin_:
-        var_ = 'HjCSV1_CSV'
+        #var_ = 'HjCSV1_CSV'
+        var_ = 'HjMVA1_MVA'
     else:
         print '@ERROR: neither CR not SR. Aborting'
         sys.exit()
@@ -58,6 +60,8 @@ for file in DC:
     command_dic['dc_bin'] =  dc_bin_
     command_dic['var'] =  var_
     command_dic['mlfit'] =  mlfit_
+    #command_dic['postfit'] = 'False'
+    command_dic['postfit'] = 'True'
     command_dics.append(command_dic)
 
 if not mlfit_:
@@ -66,17 +70,24 @@ if not mlfit_:
 
 #Launching all the commands
 for command_dic in command_dics:
-    #suffix = ' -C %s/general.ini -C %s/configPlot_vars  -C %s/datacard.ini -C %s/plots.ini -C %s/paths.ini -C %s/datacards.ini  -C %s/vhbbPlotDef.ini -P %s -L %s' %(opts.tag, opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.postfit, opts.log)
-    suffix = ' -C %s/general.ini -C %s/configPlot_vars  -C %s/datacard.ini -C %s/plots.ini -C %s/paths.ini -C %s/datacards.ini  -C %s/vhbbPlotDef.ini' %(opts.tag, opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.tag)
+    suffix = ' -C %s/general.ini -C %s/samples_nosplit.ini -C %s/configPlot_vars  -C %s/datacard.ini -C %s/plots.ini -C %s/paths.ini -C %s/datacards.ini  -C %s/vhbbPlotDef.ini' %(opts.tag, opts.tag, opts.tag,opts.tag,opts.tag,opts.tag,opts.tag,opts.tag)
 
+    #old
     ##prefit
     #command = 'python stack_from_dcv2.py -D %s -B %s -F b -V %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['var'])
     #command += suffix
     ##print 'Prefit command is', command
     #subprocess.call([command], shell=True)
+
+    ##new
+    #command = 'python stack_from_dc_improved.py -D %s -B %s -M %s -F b -V %s -A %s -P %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'], command_dic['postfit'])
+    #command += suffix
+    ###print 'Prefit command is', command
+    #subprocess.call([command], shell=True)
+
     #postfit
     #command = 'python stack_from_dcv2.py -D %s -B %s -M %s -F b -V %s -A %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'])
-    command = 'python stack_from_dc_improved.py -D %s -B %s -M %s -F b -V %s -A %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'])
+    command = 'python stack_from_dc_improved.py -D %s -B %s -M %s -F b -V %s -A %s -P %s' %( command_dic['dc_file'], command_dic['dc_bin'], command_dic['mlfit'], command_dic['var'], command_dic['blind'], command_dic['postfit'])
     command += suffix
     print 'command is', command
     subprocess.call([command], shell=True)

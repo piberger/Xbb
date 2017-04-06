@@ -55,7 +55,7 @@ var_to_plot_ = None
 #This will go in the name of the pdf, png etc file
 subcut_plotname = ''
 
-# reads n files, writes single file. disabled if set to -1 
+# reads n files, writes single file. disabled if set to -1
 mergeCachingPart = -1
 
 if opts.settings:
