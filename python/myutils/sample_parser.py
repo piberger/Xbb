@@ -134,7 +134,8 @@ class ParseInfo:
             newsample.prefix=newprefix
             newsample.FullName = fullname
             
-            if mergeCachingSize > 0:
+            #DEBUG
+            if mergeCachingSize > newsample.mergeCachingSize:
                 newsample.mergeCachingSize = mergeCachingSize
             if config.has_option(sample, 'skipParts'):
                 newsample.skipParts = eval(config.get(sample, 'skipParts'))
