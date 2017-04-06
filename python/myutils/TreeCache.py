@@ -7,10 +7,11 @@ import glob
 from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
+        self.remove_sys = remove_sys
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
         #! Make the cut lists from inputs
@@ -444,6 +445,9 @@ class TreeCache:
 
                 print ('DEBUG: tree=',tree)
                 # first cut, without subcut
+                if self.remove_sys:
+                    tree.SetBranchStatus("*Down",0)
+                    tree.SetBranchStatus("*Up",0)
                 cuttedTree=tree.CopyTree(theCut,"")
                 print ('cut done: '+str(cuttedTree)+' '+str(tree.GetEntries()) + ' => ' + str(cuttedTree.GetEntries()) + ' entries')
                 time2=time.time()
