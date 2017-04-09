@@ -439,10 +439,27 @@ class TreeCache:
 
                 subcutExists = sample.subcut and sample.subcut.strip() != "1"
 
+                # remove branches from tree
                 if self.remove_sys:
                     tree.SetBranchStatus("*Down",0)
                     tree.SetBranchStatus("*Up",0)
-                
+                    
+                    removeBranches = []
+                    try:
+                        removeBranches += eval(self.config.get('Branches','useless_after_sys'))
+                    except:
+                        pass
+                    try:
+                        removeBranches += eval(self.config.get('Branches','useless_branch'))
+                    except:
+                        pass
+
+                    for branch in removeBranches:
+                        try:
+                            tree.SetBranchStatus(branch,0)
+                        except:
+                            pass
+
                 #time2 = time.time()
                 #print ('DEBUG: tree=',tree)
                 #totalCut = '(%s)&(%s)'%(theCut, sample.subcut) if subcutExists else theCut
