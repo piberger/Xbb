@@ -4,7 +4,8 @@ import ROOT
 from samplesclass import Sample
 import time
 import glob
-from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
+#from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
+from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
     def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False):
