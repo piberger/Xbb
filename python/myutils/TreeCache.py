@@ -436,40 +436,100 @@ class TreeCache:
             #print ("the cut (with subcut) is", theCut)
 
             if not treeEmpty:
-                #ROOT.TFormula.SetMaxima(100000,10000,1000000)
                 time1 = time.time()
 
                 subcutExists = sample.subcut and sample.subcut.strip() != "1"
 
-                if subcutExists:
-                    ROOT.gROOT.cd()
-
-                print ('DEBUG: tree=',tree)
-                # first cut, without subcut
+                # remove branches from tree
                 if self.remove_sys:
                     tree.SetBranchStatus("*Down",0)
                     tree.SetBranchStatus("*Up",0)
-                cuttedTree=tree.CopyTree(theCut,"")
-                print ('cut done: '+str(cuttedTree)+' '+str(tree.GetEntries()) + ' => ' + str(cuttedTree.GetEntries()) + ' entries')
-                time2=time.time()
+                    
+                    removeBranches = []
+                    try:
+                        removeBranches += eval(self.config.get('Branches','useless_after_sys'))
+                    except:
+                        pass
+                    try:
+                        removeBranches += eval(self.config.get('Branches','useless_branch'))
+                    except:
+                        pass
 
-                # if subcut exists, apply it by further cutting the tree
-                if subcutExists:
-                    theSubcut = ('(%s)'%sample.subcut).replace(' ','')
-                    print ('the subcut is: '+theSubcut)
-                    output.cd()
-                    print ('scan done')
-                    cuttedTree.SetDebug(1)
-                    tree.SetDebug(1)
-                    subcutTree=cuttedTree.CopyTree(theSubcut)
-                    time3 = time.time()
-                    print ('subcutting done: '+str(subcutTree))
-                    subcutTree.SetDirectory(output)
-                else:
-                    time3 = time.time()
-                    cuttedTree.SetDirectory(output)
-                time4 = time.time()
-                print ('Cut1:'+str(time2-time1)+' Cut2:'+str(time3-time2)+' more:'+str(time4-time3))
+                    for branch in removeBranches:
+                        try:
+                            tree.SetBranchStatus(branch,0)
+                        except:
+                            pass
+
+                #time2 = time.time()
+                #print ('DEBUG: tree=',tree)
+                #totalCut = '(%s)&(%s)'%(theCut, sample.subcut) if subcutExists else theCut
+                #cutTree = tree.CopyTree(totalCut, "")
+                #time3 = time.time()
+                #print ('cut done in ' + str(time3-time2) + ' s')
+               
+                time2 = time.time()
+                print ('DEBUG: tree=',tree)
+                cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
+                subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
+                
+                cutTree = tree.CloneTree(0)
+                print ('lolol')
+                i = 0
+                s = 0
+                s2 = 0
+                print (theCut)
+                print (sample.subcut)
+                oldTreeNum = -1
+                totalEntries = 0
+                finalEntries = 0
+                for event in tree:
+                    tree.LoadTree(i)
+                    treeNum = tree.GetTreeNumber()                        
+                    if treeNum != oldTreeNum:
+                        cutFormula.UpdateFormulaLeaves()
+                        subcutFormula.UpdateFormulaLeaves()
+                        oldTreeNum = treeNum
+
+                    # the GetNdata() here is used because of its side-effects!
+                    n1 = cutFormula.GetNdata()
+                    s = cutFormula.EvalInstance()
+                    if s:
+                        n2 = subcutFormula.GetNdata()
+                        s2 = subcutFormula.EvalInstance()
+                        if s and s2:
+                           cutTree.Fill() 
+                           finalEntries += 1
+                    totalEntries += 1
+                    i += 1
+                
+                time3 = time.time()
+                print ('cut done in ' + str(time3-time2) + ' s' + ' ' + str(finalEntries) + '/' + str(totalEntries))
+                
+                ## first cut, without subcut
+                #if subcutExists:
+                #    gROOT->cd()
+                #cuttedTree=tree.CopyTree(theCut,"")
+                #print ('cut done: '+str(cuttedTree)+' '+str(tree.GetEntries()) + ' => ' + str(cuttedTree.GetEntries()) + ' entries')
+                #time2=time.time()
+
+                ## if subcut exists, apply it by further cutting the tree
+                #if subcutExists:
+                #    theSubcut = ('(%s)'%sample.subcut).replace(' ','')
+                #    print ('the subcut is: '+theSubcut)
+                #    output.cd()
+                #    print ('scan done')
+                #    #cuttedTree.SetDebug(1)
+                #    #tree.SetDebug(1)
+                #    subcutTree=cuttedTree.CopyTree(theSubcut)
+                #    time3 = time.time()
+                #    print ('subcutting done: '+str(subcutTree))
+                #    subcutTree.SetDirectory(output)
+                #else:
+                #    time3 = time.time()
+                #    cuttedTree.SetDirectory(output)
+                #time4 = time.time()
+                #print ('Cut1:'+str(time2-time1)+' Cut2:'+str(time3-time2)+' more:'+str(time4-time3))
 
             # ----------------------------------------------------------------------------------------------------------
             #  write OUTPUT

@@ -95,7 +95,7 @@ class HistoMaker:
         addOverFlow=eval(self.config.get('Plot_general','addOverFlow'))
 
         # get all Histos at once
-        addCut = '1'
+        addCut = '1' #'(%s)&&(%s)'%(self.tc.minCut, job.subcut) #debug!!
         print 'subcut_ is', subcut_
         if subcut_:
             addCut = subcut_
@@ -145,8 +145,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                weightF="("+weightF+")"
-                #weightF="("+weightF+")*(" + job.specialweight +")"
+                #weightF="("+weightF+")"
+                weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")*(" + job.specialweight +")"
 
