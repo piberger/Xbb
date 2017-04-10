@@ -504,6 +504,8 @@ if opts.task == 'mergecaching':
 
             files = getfilelist(sample.identifier)
             files_per_job = sample.mergeCachingSize
+            
+            # test!
             files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
             counter_local = 0
             for files_sublist in files_split:
@@ -559,7 +561,7 @@ if opts.task == 'mergecaching':
                     print "  --->submit"
                     filelistString = ';'.join(files_sublist_filtered)
                     # necessary due to limits on passed arguments size
-                    if sample.mergeCachingSize > 400:
+                    if files_per_job > 400:
                         lenBefore = len(filelistString)
                         filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
                         lenAfter = len(filelistString)
