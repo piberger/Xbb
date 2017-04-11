@@ -301,6 +301,35 @@ def computeSF(weight_SF):
     weight_SF[1] = ( (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1]) )
     weight_SF[2] = ( (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1]) )
 
+def computeSF_leg(leg):
+    #leg is the leg index, can be 0 or 1
+    eff_leg = [1.,0.,0.]
+    eff_leg[0] = (weight[leg][0])
+    eff_leg[1] = weight[leg][0]-weight[leg][1]
+    eff_leg[2] = weight[leg][0]+weight[leg][1]
+    return eff_leg
+
+def computeEventSF_fromleg(effleg1, effleg2):
+    #returns event efficiency and relative uncertainty
+    eff_event = [1.,0.]
+    eff_event[0] = ((effleg1[0][0]**2*effleg2[1][0] + effleg1[1][0]**2*effleg2[0][0])/(effleg1[0][0] + effleg1[1][0]))
+    #relative uncertainty down
+    uncert_down = (abs(((effleg1[0][1]**2*effleg2[1][1] + effleg1[1][1]**2*effleg2[0][1])/(effleg1[0][1] + effleg1[1][1])) - eff_event[0])/eff_event[0])
+    #relative uncertainty up
+    uncert_up = (abs(((effleg1[0][2]**2*effleg2[1][2] + effleg1[1][2]**2*effleg2[0][2])/(effleg1[0][2] + effleg1[1][2])) - eff_event[0])/eff_event[0])
+    eff_event[1]  = (uncert_down+uncert_up)/2.
+    return eff_event
+
+def computeEvenSF_DZ(eff):
+    eff_event = [1.,0.]
+    eff_event[0] = ((eff[0][0]**2 + eff[1][0]**2)/(eff[0][0] + eff[1][0]))
+    #relative uncertainty down
+    uncert_down = (((eff[0][1]**2 + eff[1][1]**2)/(eff[0][1] + eff[1][1])) - eff_event[0])/eff_event[0]
+    #relative uncertainty up
+    uncert_up = (((eff[0][2]**2 + eff[1][2]**2)/(eff[0][2] + eff[1][2])) - eff_event[0])/eff_event[0]
+    eff_event[1]  = (uncert_down+uncert_up)/2.
+    return eff_event
+
 def getLumiAvrgSF(weightLum1, lum1, weightLum2, lum2, weight_SF):
     ##Take SF for two different run categorie and makes lumi average'''
     #print 'weightLum1[0] is', weightLum1[0]
@@ -883,6 +912,10 @@ for job in info:
             eTrigSFWeight_doubleEle80x = array('f',[0]*3)
             eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1,0,0
             newtree.Branch('eTrigSFWeight_doubleEle80x', eTrigSFWeight_doubleEle80x, 'eTrigSFWeight_doubleEle80x[3]/F')
+            #double muon Trig
+            muTrigSFWeight_doublemu= array('f',[0]*3)
+            muTrigSFWeight_doublemu[0], muTrigSFWeight_doublemu[1], muTrigSFWeight_doublemu[2] = 1,0,0
+            newtree.Branch('muTrigSFWeight_doublemu', muTrigSFWeight_doublemu, 'muTrigSFWeight_doublemu[3]/F')
 
             #V24
             ##Loose ISO+ID SF
@@ -1408,8 +1441,6 @@ for job in info:
         #Start event loop
         #########################
 
-        print 'YEAAAAAAAAAAAAAAAAAAAH'
-
         for entry in range(0,nEntries):
                 if ((entry%j_out)==0):
                     if ((entry/j_out)==9 and j_out < 1e4): j_out*=10;
@@ -1417,8 +1448,8 @@ for job in info:
                     #sys.stdout.flush()
 
                 #if entry > 10000: break
-                if entry > 100: break
-                #if entry > 1000: break
+                #if entry > 100: break
+                if entry > 1000: break
                 tree.GetEntry(entry)
 
 
@@ -1692,6 +1723,7 @@ for job in info:
                     weight_SF_TRK[0], weight_SF_TRK[1],  weight_SF_TRK[2] = 1.,0.,0.
                     weight_SF_Lepton[0], weight_SF_Lepton[1], weight_SF_Lepton[2] = 1.,0.,0.
                     eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1.,0.,0.
+                    muTrigSFWeight_doublemu[0], muTrigSFWeight_doublemu[1], muTrigSFWeight_doublemu[2] = 1.,0.,0.
 
 
                     #V24
@@ -1716,6 +1748,20 @@ for job in info:
                     muTRK_BCDEF= [1.0,0.,0.]
                     muTRK_GH = [1.0,0.,0.]
                     btagSF = [1.,0.,0.]
+                    #for muon trigger
+                     #Run BCDEFG
+                    effDataBCDEFG_leg8 = []
+                    effDataBCDEFG_leg17= []
+                    effMCBCDEFG_leg8= []
+                    effMCBCDEFG_leg17 = []
+                     #Run H
+                    effDataH_leg8 = []
+                    effDataH_leg17 = []
+                    effMCH_leg8 = []
+                    effMCH_leg17 = []
+                     #Run H dZ
+                    effDataH_DZ= []
+                    effMCH_DZ= []
 
                     wdir = config.get('Directories','vhbbpath')
 
@@ -1732,15 +1778,30 @@ for job in info:
                         wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
                         wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
                         #Trigg
-                        wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
-                        wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio'],
+                            #BCDEFG
+                        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+                        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+                        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+                        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+                            #H
+                                #no DZ
+                        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+                        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+                        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+                        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+                                #with DZ
+                        wdir+'/python/json/V25/DATA_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_DATA'],
+                        wdir+'/python/json/V25/MC_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_MC'],
                         #
-                        #Muon
+                        #Electron
                         #
                         #ID and ISO
                         wdir+'/python/json/V25/EIDISO_ZH_out.json' : ['EIDISO_ZH', 'eta_pt_ratio'],
                         #Tracker
-                        wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio']
+                        wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio'],
+                        #Trigg
+                        wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
+                        wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio']
                         }
 
                     for j, name in jsons.iteritems():
@@ -1749,9 +1810,12 @@ for job in info:
                         lepCorr = LeptonSF(j , name[0], name[1])
 
                         #2-D binned SF
-                        if not j.find('trk_SF_Run') != -1:
+                        if not j.find('trk_SF_Run') != -1 and not j.find('EfficienciesAndSF_dZ_numH') != -1:
                             weight.append(lepCorr.get_2D(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0]))
                             weight.append(lepCorr.get_2D(tree.vLeptons_new_pt[1], tree.vLeptons_new_eta[1]))
+                        elif not j.find('trk_SF_Run') != -1 and j.find('EfficienciesAndSF_dZ_numH') != -1:
+                            weight.append(lepCorr.get_2D(tree.vLeptons_new_eta[0], tree.vLeptons_new_eta[1]))
+                            weight.append(lepCorr.get_2D(tree.vLeptons_new_eta[1], tree.vLeptons_new_eta[0]))
                         #1-D binned SF
                         else:
                             weight.append(lepCorr.get_1D(tree.vLeptons_new_eta[0]))
@@ -1772,6 +1836,43 @@ for job in info:
                                 computeSF(muTRK_BCDEF)
                             elif j.find('trk_SF_RunGH') != -1:
                                 computeSF(muTRK_GH)
+                            #TRIG
+                            elif j.find('EfficienciesAndSF_doublehlt_perleg') != -1:
+                                    #BCDEFG
+                                if   j.find('Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8') != -1:
+                                    #compute the efficiency for both legs
+                                    effDataBCDEFG_leg8.append(computeSF_leg(0))
+                                    effDataBCDEFG_leg8.append(computeSF_leg(1))
+                                elif j.find('Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17') != -1:
+                                    effDataBCDEFG_leg17.append(computeSF_leg(0))
+                                    effDataBCDEFG_leg17.append(computeSF_leg(1))
+                                elif j.find('MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8') != -1:
+                                    effMCBCDEFG_leg8.append(computeSF_leg(0))
+                                    effMCBCDEFG_leg8.append(computeSF_leg(1))
+                                elif j.find('MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17') != -1:
+                                    effMCBCDEFG_leg17.append(computeSF_leg(0))
+                                    effMCBCDEFG_leg17.append(computeSF_leg(1))
+                                    #H
+                                elif j.find('Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg8') != -1:
+                                    effDataH_leg8.append(computeSF_leg(0))
+                                    effDataH_leg8.append(computeSF_leg(1))
+                                elif j.find('Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg17') != -1:
+                                    effDataH_leg17.append(computeSF_leg(0))
+                                    effDataH_leg17.append(computeSF_leg(1))
+                                elif j.find('MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg8') != -1:
+                                    effMCH_leg8.append(computeSF_leg(0))
+                                    effMCH_leg8.append(computeSF_leg(1))
+                                elif j.find('MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg17') != -1:
+                                    effMCH_leg17.append(computeSF_leg(0))
+                                    effMCH_leg17.append(computeSF_leg(1))
+                                    #H dZ only
+                            elif j.find('DATA_EfficienciesAndSF_dZ_numH') != -1:
+                                effDataH_DZ.append(computeSF_leg(0))
+                                effDataH_DZ.append(computeSF_leg(1))
+                            elif j.find('MC_EfficienciesAndSF_dZ_numH') != -1:
+                                effMCH_DZ.append(computeSF_leg(0))
+                                effMCH_DZ.append(computeSF_leg(1))
+
                         elif tree.Vtype_new == 1:
                             #IDISO
                             if j.find('EIDISO_ZH_out') != -1:
@@ -1814,6 +1915,63 @@ for job in info:
                         weight_SF_LooseIDnISO[0] = weight_SF_LooseID[0]*weight_SF_LooseISO[0]
                         weight_SF_LooseIDnISO[1] = weight_SF_LooseID[1]*weight_SF_LooseISO[1]
                         weight_SF_LooseIDnISO[2] = weight_SF_LooseID[2]*weight_SF_LooseISO[2]
+                        #Trigger
+                            #BCDEFG no DZ
+                        EffData_BCDEFG = [1.0,0.]
+                        EffMC_BCDEFG = [1.0,0.]
+                        SF_BCDEFG = [1.0,0.,0.]
+                        EffData_BCDEFG = computeEventSF_fromleg(effDataBCDEFG_leg8,effDataBCDEFG_leg17)
+                        EffMC_BCDEFG = computeEventSF_fromleg(effMCBCDEFG_leg8,effMCBCDEFG_leg17)
+                        SF_BCDEFG[0] =  (EffData_BCDEFG[0]/EffMC_BCDEFG[0])
+                        SF_BCDEFG[1] = (1-math.sqrt(EffData_BCDEFG[1]**2+ EffMC_BCDEFG[1]**2))*SF_BCDEFG[0]
+                        SF_BCDEFG[2] = (1+math.sqrt(EffData_BCDEFG[1]**2+ EffMC_BCDEFG[1]**2))*SF_BCDEFG[0]
+                            #H no DZ
+                        EffData_H = [1.0,0.]
+                        EffMC_H = [1.0,0.]
+                        SF_H = [1.0,0.,0.]
+                        EffData_H = computeEventSF_fromleg(effDataH_leg8,effDataH_leg17)
+                        EffMC_H = computeEventSF_fromleg(effMCH_leg8,effMCH_leg17)
+                        SF_H[0] =  (EffData_H[0]/EffMC_H[0])
+                        SF_H[1] = (1-math.sqrt(EffData_H[1]**2+ EffMC_H[1]**2))*SF_H[0]
+                        SF_H[2] = (1+math.sqrt(EffData_H[1]**2+ EffMC_H[1]**2))*SF_H[0]
+                            #H DZ SF
+                        EffData_DZ = [1.0,0.]
+                        EffMC_DZ = [1.0,0.]
+                        SF_DZ = [1.0,0.,0.]
+                        EffData_DZ = computeEvenSF_DZ(effDataH_DZ)
+                        EffMC_DZ = computeEvenSF_DZ(effMCH_DZ)
+                        SF_DZ[0] = (EffData_DZ[0]/EffMC_DZ[0])
+                        SF_DZ[1] = (1-math.sqrt(EffData_DZ[1]**2+ EffMC_DZ[1]**2))*SF_DZ[0]
+                        SF_DZ[2] = (1+math.sqrt(EffData_DZ[1]**2+ EffMC_DZ[1]**2))*SF_DZ[0]
+
+                        #print 'List of all the double trigger SF + uncert'
+                        #print 'SF_BCDEFG:', SF_BCDEFG[0], '+', SF_BCDEFG[1], '-', SF_BCDEFG[2]
+                        #print 'SF_H:', SF_H[0], '+', SF_H[1], '-', SF_H[2]
+                        #print 'SF_DZ:', SF_DZ[0], '+', SF_DZ[1], '-', SF_DZ[2]
+                        #Final weight
+                        muTrigSFWeight_doublemu[0] = (27.221/35.827)*SF_BCDEFG[0] + (8.606/35.827)*SF_H[0]*SF_DZ[0]
+                        muTrigSFWeight_doublemu[1] = (27.221/35.827)*SF_BCDEFG[1] + (8.606/35.827)*SF_H[1]*SF_DZ[1]
+                        muTrigSFWeight_doublemu[2] = (27.221/35.827)*SF_BCDEFG[2] + (8.606/35.827)*SF_H[2]*SF_DZ[2]
+
+
+                        #Final weight
+
+                        #OLD
+                        #Trigger
+                        #    #BCDEFG no DZ
+                        #EffData_BCDEFG = ((effDataBCDEFG_leg8[0]**2*effDataBCDEFG_leg17[1] + effDataBCDEFG_leg8[1]**2*effDataBCDEFG_leg17[0])/(effDataBCDEFG_leg8[0] + effDataBCDEFG_leg8[1]))
+                        #EffMC_BCDEFG = ((effMCBCDEFG_leg8[0]**2*effMCBCDEFG_leg17[1] + effMCBCDEFG_leg8[1]**2*effMCBCDEFG_leg17[0])/(effMCBCDEFG_leg8[0] + effMCBCDEFG_leg8[1]))
+                        #SF_BCDEFG = EffData_BCDEFG/EffMC_BCDEFG
+                        #    #H no DZ
+                        #EffData_H = ((effDataH_leg8[0]**2*effDataH_leg17[1] + effDataH_leg8[1]**2*effDataH_leg17[0])/(effDataH_leg8[0] + effDataH_leg8[1]))
+                        #EffMC_H = ((effMCH_leg8[0]**2*effMCH_leg17[1] + effMCH_leg8[1]**2*effMCH_leg17[0])/(effMCH_leg8[0] + effMCH_leg8[1]))
+                        #SF_H = EffData_H/EffMC_H
+                        #    #H DZ SF
+                        #EffData_DZ = ((effDataH_DZ[0]**2 + effDataH_DZ[1]**2)/(effDataH_DZ[0] + effDataH_DZ[1]))
+                        #EffMC_DZ = ((effMCH_DZ[0]**2 + effMCH_DZ[1]**2)/(effMCH_DZ[0] + effMCH_DZ[1]))
+                        #EffMC_SF = EffData_DZ/EffMC_DZ
+                        ##Final weight
+
 
                     if tree.Vtype_new == 1:
 			            eTrigSFWeight_doubleEle80x[0]     = eff1*(1-eff2)*eff1 + eff2*(1-eff1)*eff2 + eff1*eff1*eff2*eff2
