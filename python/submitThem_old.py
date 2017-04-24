@@ -362,7 +362,6 @@ def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="n
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=False):
-    print 'oh yeah'
     global counter
     repDict['job'] = job
     nJob = counter % len(logo)
@@ -422,7 +421,11 @@ def getfilelist(job):
     return list
 
 
-if opts.task == 'train': training('')
+if opts.task == 'train':
+    training('')
+if opts.task == 'mergesubcachingtrain':
+    print 'yeah baby'
+    training('')
 
 elif opts.task == 'splitsubcaching':
     train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
@@ -446,7 +449,7 @@ if opts.task == 'dc':
     print DC_vars
 
 Plot_vars = ['']
-if opts.task in ['plot', 'splitvarplot', 'singleplot', 'mergesingleplot', 'mergecachingplot']:
+if opts.task in ['plot', 'splitvarplot', 'singleplot', 'mergesingleplot', 'mergecachingplot','mergecachingplotvar']:
     Plot_vars= [x.strip() for x in (config.get('Plot_general','List')).split(',')]
 
 if not opts.task == 'prep':
@@ -456,7 +459,7 @@ if not opts.task == 'prep':
 if opts.task in ['plot', 'mergecachingplot']:
     ploting()
 
-if opts.task == 'splitvarplot':
+if opts.task == 'splitvarplot' or opts.task == 'mergecachingplotvar':
     ploting(None, True)
 
 #Old and working
@@ -482,21 +485,32 @@ if opts.task == 'splitvarplot':
 #                repDict['additional']= cut_
 #                submit(region,repDict)
 
-#if opts.task == 'splitcaching':
-#    plitcaching()
-if opts.task == 'mergecaching':
+if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
     Plot_vars = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
-    for region in Plot_vars:
-        section='Plot:%s'%region
-        print 'section is', section
-        samplesinfo=config.get('Directories','samplesinfo')
-        data = eval(config.get(section,'Datas'))
-        mc = eval(config.get('Plot_general','samples'))
-        info = ParseInfo(samplesinfo,path)
-        print info
-        datasamples = info.get_samples(data)
-        mcsamples = info.get_samples(mc)
-        samples = mcsamples+datasamples
+    train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    if opts.task == 'mergecaching': region_list = Plot_vars
+    elif opts.task == 'mergesubcaching': region_list = train_list
+    #for region in Plot_vars:
+    for region in region_list:
+        if opts.task == 'mergecaching':
+            section='Plot:%s'%region
+            print 'section is', section
+            samplesinfo=config.get('Directories','samplesinfo')
+            data = eval(config.get(section,'Datas'))
+            mc = eval(config.get('Plot_general','samples'))
+            info = ParseInfo(samplesinfo,path)
+            print info
+            datasamples = info.get_samples(data)
+            mcsamples = info.get_samples(mc)
+            samples = mcsamples+datasamples
+        elif opts.task == 'mergesubcaching':
+            print 'region is', region
+            path = config.get("Directories","samplepath")
+            samplesinfo=config.get('Directories','samplesinfo')
+            info = ParseInfo(samplesinfo,path)
+            signals = eval(config.get(region,'signals'))
+            backgrounds = eval(config.get(region,'backgrounds'))
+            samples = info.get_samples(signals+backgrounds)
 
         for sample in samples:
             print "SAMPLE",sample
@@ -516,7 +530,7 @@ if opts.task == 'mergecaching':
 
                 repDict['additional'] = 'MERGECACHING'+'_'+str(counter_local)+'__'+str(sample)
 
-                if config.has_option(section,'subcut'):
+                if opts.task == 'mergecaching' and config.has_option(section,'subcut'):
                     subcut = eval(config.get(section,'subcut'))
                     print 'subcut is', subcut
 
@@ -530,13 +544,20 @@ if opts.task == 'mergecaching':
 
                 print "  REPDICT:",repDict['additional']
                 jobName = region # todo: add sample name
-
-                if config.has_option('Cuts',region):
-                    cut = config.get('Cuts',region)
-                elif config.has_option(section, 'Datacut'):
-                    cut = config.get(section, 'Datacut')
-                else:
-                    cut = None
+                if opts.task == 'mergecaching':
+                    if config.has_option('Cuts',region):
+                        cut = config.get('Cuts',region)
+                    elif config.has_option(section, 'Datacut'):
+                        cut = config.get(section, 'Datacut')
+                    else:
+                        cut = None
+                if opts.task == 'mergesubcaching':
+                    cutregion = config.get(region,"treeCut")
+                    print 'cutregion is', cutregion
+                    if config.has_option('Cuts',cutregion):
+                        cut = config.get('Cuts',cutregion)
+                    else:
+                        cut = None
 
                 minCut = '(%s)'%cut.replace(' ','')
                 #if sample.subsample:
@@ -553,10 +574,11 @@ if opts.task == 'mergecaching':
                     else:
                         print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
 
-                if tmp_file_exists(hash, counter_local):
-                    print "  --->exists"
-                    globalFilesSkipped += 1
-                else:
+                #if tmp_file_exists(hash, counter_local):
+                #    print "  --->exists"
+                #    globalFilesSkipped += 1
+                #else:
+                if True:
                     globalFilesSubmitted += 1
                     print "  --->submit"
                     filelistString = ';'.join(files_sublist_filtered)
