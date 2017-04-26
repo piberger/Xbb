@@ -269,11 +269,12 @@ print "XXXXXXXXXXXXXXXX"
 #tc = TreeCache(cuts,samples,path,config, [])
 #to be compatible with mergecaching
 tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_cache_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_)  # created cached tree i.e. create new skimmed trees using the list of cuts
-#if len(filelist)>0 or opts.mergeplot:
-#    print('ONLY CACHING PERFORMED, EXITING');
-#    sys.exit(1)
 
-tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_)
+#for mergesubcaching step, need to continue even if some root files are missing to perform the caching in parallel
+if sample_to_cache_ or mergeCachingPart:
+    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_, do_onlypart_n=True)
+else:
+    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_)
 
 #if sample_to_cache_:
 #    print "@INFO: performed caching only. bye"
@@ -320,7 +321,7 @@ for job in signal_samples:
     Tsignals.append(Tsignal)
     TsScales.append(TsScale)
     #INPUT_ESIG.append(ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read'))
-    INPUT_ESIG.append(getTree(tc.get_tree(job,TrainCut)))
+    INPUT_ESIG.append(getTree(tc.get_tree(job,EvalCut)))
     #Esignal = INPUT_ESIG[-1].Get(job.tree)
     Esignal = INPUT_ESIG[-1]
 
@@ -341,8 +342,8 @@ for job in background_samples:
     TbScale = tc.get_scale(job,config)*global_rescale
     Tbackgrounds.append(Tbackground)
     TbScales.append(TbScale)
-    #INPUT_EBKG.append(ROOT.TFile.Open(tc.get_tree(job,EvalCut),'read'))
-    INPUT_EBKG.append(getTree(tc.get_tree(job,TrainCut)))
+    #INPUT_EBKG.append(ROOT.TFile.Open(tc.get_tree(job,),'read'))
+    INPUT_EBKG.append(getTree(tc.get_tree(job,EvalCut)))
     #Ebackground = INPUT_EBKG[-1].Get(job.tree)
     Ebackground = INPUT_EBKG[-1]
 

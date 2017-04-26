@@ -4,15 +4,17 @@ import ROOT
 from samplesclass import Sample
 import time
 import glob
+import pdb
 #from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
         self.remove_sys = remove_sys
+        self.do_onlypart_n = do_onlypart_n
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
         #! Make the cut lists from inputs
@@ -85,7 +87,7 @@ class TreeCache:
 
         #if exist in tmpdir, just copy
         tmpfile = "%s/%s" %(self.__tmpPath,'tmp_'+str(output_hash)+'.root')
-        outputFile = '%s/tmp_%s.root'%(self.__cachedPath,output_hash)
+        outputFile = '%s/tmp_%s_%i.root'%(self.__cachedPath,output_hash,int(input_hash.split('_')[-1]))
         print('outputFile is', outputFile)
 
         if self.__doCache and self.file_exists(tmpfile):
@@ -446,17 +448,33 @@ class TreeCache:
                     tree.SetBranchStatus("*Up",0)
                     
                     removeBranches = []
+                    remove_useless_branch = False
+                    remove_useless_after_sys = False
+
                     try:
-                        removeBranches += eval(self.config.get('Branches','useless_after_sys'))
+                       remove_useless_branch = self.config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
                     except:
-                        pass
+                       remove_useless_branch = False
+
                     try:
-                        removeBranches += eval(self.config.get('Branches','useless_branch'))
+                       remove_useless_after_sys = self.config.get('Analysis', 'remove_useless_after_sys').lower().strip() == 'true'
                     except:
-                        pass
+                       remove_useless_after_sys = False
+
+                    if remove_useless_branch:
+                        try:
+                            removeBranches += eval(self.config.get('Branches','useless_after_sys'))
+                        except:
+                            pass
+                    if remove_useless_after_sys:
+                        try:
+                            removeBranches += eval(self.config.get('Branches','useless_branch'))
+                        except:
+                            pass
 
                     for branch in removeBranches:
                         try:
+                            #print ('will remove', branch)
                             tree.SetBranchStatus(branch,0)
                         except:
                             pass
@@ -615,6 +633,7 @@ class TreeCache:
                 theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
+                print ('Sample name: '+sample.FullName)
                 print (tmpFileMask)
 
                 # get list of unmerged root files
@@ -637,10 +656,13 @@ class TreeCache:
                             break
                     if not found:
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
-                        raise Exception('files missing')
+                        if not self.do_onlypart_n:
+                            raise Exception('files missing')
                 if (len(mergeList) != len(mergedFiles)):
                     print ('\x1b[31mERROR len(mergeList) != len(mergedFiles) \x1b[0m')
-                    raise Exception('files missing')
+                    #Need to continue for the training in order to run in parallel
+                    if not self.do_onlypart_n:
+                        raise Exception('files missing')
 
                 # extract hashes from filenames and pass them as a list to __hashDict
                 self.__hashDict[sample.name] = [x.split('/')[-1].replace('tmp_','').split('.')[0] for x in mergedFiles]
@@ -726,7 +748,10 @@ class TreeCache:
 
         #fill all Count* histos as lists, like self.CountWeighted = [123.23]
         inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
+        #print ('inputHashesList is', inputHashesList)
         for inputHash in inputHashesList:
+            if self.do_onlypart_n and not (inputHash.endswith('_%i'%(self.mergeCachingPart) )):
+                continue
             input = ROOT.TFile.Open('{tmpdir}/tmp_{hash}.root'.format(tmpdir=self.__cachedPath, hash=inputHash),'read')
             if not input.IsZombie():
                 for obj in input.GetListOfKeys():
@@ -798,9 +823,11 @@ class TreeCache:
             inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
             subcutFileNames = []
             for inputHash in inputHashesList:
+                if self.do_onlypart_n and not (inputHash.endswith('_%i'%(self.mergeCachingPart) )):
+                    continue
                 subcut_hash = hashlib.sha224('%s_%s'%(inputHash,cut)).hexdigest()
-                print('subcut input file %s/tmp_%s.root'%(self.__cachedPath, subcut_hash))
-                input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                print('subcut input file %s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1])))
+                input_ = '%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1]))
                 input = ROOT.TFile.Open(input_,'read')
                 print('Opening ', input_)
                 try:
@@ -809,12 +836,13 @@ class TreeCache:
                 except:
                     print (input_,"is corrupted. I'm relaunching _subtrim_tree")
                     self._subtrim_tree(inputHash, subcut_hash, cut)
-                    input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                    #input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                    input_ = '%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1]))
                     input = ROOT.TFile.Open(input_,'read')
                     if input.IsZombie():
                         print ('ERROR: file with subcuts is zombie:' + input_)
                     tree = input.Get(sample.tree)
-                subcutFileNames.append('%s/tmp_%s.root'%(self.__cachedPath, subcut_hash))
+                subcutFileNames.append('%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1])))
 
             if len(subcutFileNames) == 1:
                 return subcutFileNames[0]

@@ -412,6 +412,15 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
 def tmp_file_exists(hash, part):
     tmpDir = config.get('Directories','tmpSamples').replace('root://t3dcachedb03.psi.ch:1094/','')
     tmpFileName = '/tmp_%s_%d.root'%(hash, part)
+    print 'filename %s' %(tmpFileName)
+    return os.path.isfile(tmpDir + tmpFileName)
+def subcut_tmpfile_exists(hash,part,cut):
+    """Given the hash of the cached file and the subcut, check if the corresponding subcached file exists"""
+    tmpDir = config.get('Directories','tmpSamples').replace('root://t3dcachedb03.psi.ch:1094/','')
+    subcut_hash = hashlib.sha224('%s_%s'%('%s_%d'%(hash,part),cut)).hexdigest()
+    tmpFileName = '/tmp_%s_%d.root'%(subcut_hash, part)
+    print 'Cut %s, filename %s' %(cut,tmpFileName)
+    print ('Command is os.path.isfile(%s)'%(tmpDir + tmpFileName))
     return os.path.isfile(tmpDir + tmpFileName)
 
 # RETRIEVE FILELIST FOR THE TREECOPIER PSI AND SINGLE FILE SYS STEPS
@@ -424,7 +433,6 @@ def getfilelist(job):
 if opts.task == 'train':
     training('')
 if opts.task == 'mergesubcachingtrain':
-    print 'yeah baby'
     training('')
 
 elif opts.task == 'splitsubcaching':
@@ -567,6 +575,9 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                 print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
                 print "  HASH:", hash
 
+
+
+
                 files_sublist_filtered = []
                 for filename in files_sublist:
                     if filename.split('/')[-1] not in sample.skipParts:
@@ -574,11 +585,24 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                     else:
                         print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
 
-                #if tmp_file_exists(hash, counter_local):
-                #    print "  --->exists"
-                #    globalFilesSkipped += 1
-                #else:
-                if True:
+                bool_submit = True
+                if tmp_file_exists(hash, counter_local):
+                    print "  --->exists"
+
+                    if opts.task == 'mergesubcaching':
+                        #Note: those should be exaclty the same cut string as in train.py, otherwise jobs are not skipped correctly
+                        MVAcut_train = '!((evt%2)==0 || isData)'
+                        MVAcut_eval = '((evt%2)==0 || isData)'
+                        if subcut_tmpfile_exists(hash,counter_local,MVAcut_train) and subcut_tmpfile_exists(hash,counter_local,MVAcut_eval):
+                            print "subcached  --->exists"
+                            bool_submit = False
+                            globalFilesSkipped += 1
+                    else:
+                        globalFilesSkipped += 1
+                        bool_submit = False
+
+                if bool_submit:
+                    print 'SUBMITED'
                     globalFilesSubmitted += 1
                     print "  --->submit"
                     filelistString = ';'.join(files_sublist_filtered)
@@ -589,6 +613,11 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                         lenAfter = len(filelistString)
                         print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
                     submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
+                else:
+                    print 'SKIPED !'
+                    print 'TRAINCUT',subcut_tmpfile_exists(hash,counter,MVAcut_train)
+                    print 'EVALCUT',subcut_tmpfile_exists(hash,counter,MVAcut_eval)
+                    print ''
                 counter_local = counter_local + 1
 
                 #break # only first bunch of n files
