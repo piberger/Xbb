@@ -29,6 +29,18 @@ def getTree(rootFileNames):
         #CuttedTree = input.Get(job.tree)
         #CuttedTree.SetCacheSize(0)
     #print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
+
+    found = False
+    try:
+        for branch in CuttedTree.GetListOfBranches():
+              if( branch.GetName() == "DY_specialWeight" ):
+                  found = True
+                  break
+        if not found:
+            print "Warning 21347120983: Tree doesn't contrain DY_specialWeight"
+    except TypeError:
+        print 'TypeError: iteration over non-sequence'
+
     return CuttedTree
 
 #CONFIGURE
@@ -335,7 +347,6 @@ for job in background_samples:
     #INPUT_BKG.append(ROOT.TFile.Open(tc.get_tree(job,TrainCut),'read'))
     INPUT_BKG.append(getTree(tc.get_tree(job,TrainCut)))
     #Tbackground = INPUT_BKG[-1].Get(job.tree)
-    getTree(tc.get_tree(job,TrainCut))
     Tbackground = INPUT_BKG[-1]
 
     ROOT.gDirectory.Cd(workdir)
