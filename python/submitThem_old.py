@@ -264,37 +264,6 @@ def ploting(additional_ = None, splitvar = False, splitfiles = False):
                     else: repDict['additional']= cut_
                     submit(region,repDict)
 
-#def splitcaching()
-#
-#    repDict['queue'] = 'all.q'
-#    for region in Plot_vars:
-#        section='Plot:%s'%region
-#        samplesinfo=config.get('Directories','samplesinfo')
-#        data = eval(config.get(section,'Datas'))
-#        mc = eval(config.get('Plot_general','samples'))
-#        info = ParseInfo(samplesinfo,path)
-#        datasamples = info.get_samples(data)
-#        mcsamples = info.get_samples(mc)
-#        samples= mcsamples+datasamples
-#        for sample in samples:
-#            #include caching parameter such that only one sample is processed
-#            repDict['additional'] = 'CACHING'+'__'+str(sample)
-#            if not config.has_option(section, 'subcut'):
-#                print 'No subcut for the plot region', region
-#                submit(region,repDict)
-#                continue
-#            subcut = eval(config.get(section,'subcut'))
-#            print 'subcut is', subcut
-#            for cutvar, CUTBIN in subcut.iteritems():
-#                print 'cutvar is', cutvar
-#                #cutbin_first = CUTBIN[0]
-#                for cutbins in CUTBIN:
-#                    print 'cutbins is', cutbins
-#                    cut_ = 'CUTBIN_%s__%g__%g'%(cutvar,cutbins[0], cutbins[1])
-#                    print 'cut_ is', cut_
-#                    #Need to propagate the cutbin param
-#                    else: repDict['additional'] += cut_
-#                    submit(region,repDict)
 
 print '===============================\n'
 print 'Compiling the macros'
@@ -493,11 +462,27 @@ if opts.task == 'splitvarplot' or opts.task == 'mergecachingplotvar':
 #                repDict['additional']= cut_
 #                submit(region,repDict)
 
-if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
+#print 'item is', item
+#signals = eval('['+config.get('dc:%s'%item,'signal')+']')
+#backgrounds = eval(config.get('LimitGeneral','BKG'))
+#all_samples = info.get_samples(signals+backgrounds)
+#data_sample_names = eval(config.get('dc:%s'%item,'data'))
+#data_samples = info.get_samples(data_sample_names)
+#samples = all_samples+data_samples
+#for sample in samples:
+#    print 'sample is', sample
+#    repDict['additional'] = 'CACHING'+'__'+str(sample)
+#    submit(item,repDict)
+
+#mergecaching:     Caching for ploting step
+#mergesubcaching:  Caching for train step
+#mergesyscaching:  Caching for dc step
+if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task == 'mergesyscaching':
     Plot_vars = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
     train_list = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     if opts.task == 'mergecaching': region_list = Plot_vars
     elif opts.task == 'mergesubcaching': region_list = train_list
+    elif opts.task == 'mergesyscaching': region_list = [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     #for region in Plot_vars:
     for region in region_list:
         if opts.task == 'mergecaching':
@@ -519,6 +504,21 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
             signals = eval(config.get(region,'signals'))
             backgrounds = eval(config.get(region,'backgrounds'))
             samples = info.get_samples(signals+backgrounds)
+        elif opts.task == 'mergesyscaching':
+            print 'region is', region
+            signals = eval('['+config.get('dc:%s'%region,'signal')+']')
+            backgrounds = eval('['+config.get('dc:%s'%region,'background')+']')
+            #backgrounds = eval(config.get('Plot_general','allBKG'))
+            all_samples = info.get_samples(signals+backgrounds)
+            data_sample_names = eval(config.get('dc:%s'%region,'data'))
+            data_samples = info.get_samples(data_sample_names)
+            samples = all_samples+data_samples
+
+            ##check if all samples are included
+            #print 'samples are'
+            #for sample_ in samples:
+            #    print sample_.FullName
+            #sys.exit()
 
         for sample in samples:
             print "SAMPLE",sample
@@ -551,6 +551,8 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                             repDict['additional'] += cut_
 
                 print "  REPDICT:",repDict['additional']
+
+                #Retrieve the caching cuts (methode depends on the task)
                 jobName = region # todo: add sample name
                 if opts.task == 'mergecaching':
                     if config.has_option('Cuts',region):
@@ -559,13 +561,25 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                         cut = config.get(section, 'Datacut')
                     else:
                         cut = None
-                if opts.task == 'mergesubcaching':
+                elif opts.task == 'mergesubcaching':
                     cutregion = config.get(region,"treeCut")
                     print 'cutregion is', cutregion
                     if config.has_option('Cuts',cutregion):
                         cut = config.get('Cuts',cutregion)
                     else:
                         cut = None
+                elif opts.task == 'mergesyscaching':
+                    #print 'configs is', configs
+                    check_cut_command = 'python workspace_datacard.py'
+                    for conf in configs:
+                        check_cut_command += ' -C %s'%conf
+                    check_cut_command += ' -V %s'%region
+                    check_cut_command += ' -R True'
+                    check_cut_command += ' -f \'\''
+                    print 'check_cut_command is', check_cut_command
+                    os.system(check_cut_command)
+                    #os.system('python workspace_datacard.py -C '+ str(configs))
+                    sys.exit()
 
                 minCut = '(%s)'%cut.replace(' ','')
                 #if sample.subsample:
@@ -615,9 +629,9 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching':
                     submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 else:
                     print 'SKIPED !'
-                    print 'TRAINCUT',subcut_tmpfile_exists(hash,counter,MVAcut_train)
-                    print 'EVALCUT',subcut_tmpfile_exists(hash,counter,MVAcut_eval)
-                    print ''
+                    #print 'TRAINCUT',subcut_tmpfile_exists(hash,counter,MVAcut_train)
+                    #print 'EVALCUT', subcut_tmpfile_exists(hash,counter,MVAcut_eval)
+                    #print ''
                 counter_local = counter_local + 1
 
                 #break # only first bunch of n files

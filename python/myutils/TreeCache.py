@@ -9,7 +9,7 @@ import pdb
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False,return_cut_string = False):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
@@ -47,15 +47,18 @@ class TreeCache:
         # use all the chunks of partially merged samples to plot (from mergecaching step)
         self.plotMergeCached =  plotMergeCached
 
-        if self.plotMergeCached:
-            print('\n\t>>> MERGE & PLOT <<<\n')
-            self.__merge_cache_samples(filelist, self.mergeCachingPart)
-        elif self.mergeCachingPart > -1:
-            print('\n\t>>> Caching FILES, part ' + str(self.mergeCachingPart) +' <<<\n')
-            self.__merge_cache_samples(filelist, self.mergeCachingPart)
-        else:
-            print('\n\t>>> Caching FILES <<<\n')
-            self.__cache_samples(filelist,mergeplot)
+
+        print (return_cut_string)
+        if not return_cut_string:
+            if self.plotMergeCached:
+                print('\n\t>>> MERGE & PLOT <<<\n')
+                self.__merge_cache_samples(filelist, self.mergeCachingPart)
+            elif self.mergeCachingPart > -1:
+                print('\n\t>>> Caching FILES, part ' + str(self.mergeCachingPart) +' <<<\n')
+                self.__merge_cache_samples(filelist, self.mergeCachingPart)
+            else:
+                print('\n\t>>> Caching FILES <<<\n')
+                self.__cache_samples(filelist,mergeplot)
 
     def putOptions(self):
         return (self.__sampleList,self.__doCache,self.__tmpPath,self._cutList,self.__hashDict,self.minCut,self.path)
@@ -447,37 +450,37 @@ class TreeCache:
                     tree.SetBranchStatus("*Down",0)
                     tree.SetBranchStatus("*Up",0)
                     
-                    removeBranches = []
-                    remove_useless_branch = False
-                    remove_useless_after_sys = False
+                removeBranches = []
+                remove_useless_branch = False
+                remove_useless_after_sys = False
 
+                try:
+                   remove_useless_branch = self.config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
+                except:
+                   remove_useless_branch = False
+
+                try:
+                   remove_useless_after_sys = self.config.get('Analysis', 'remove_useless_after_sys').lower().strip() == 'true'
+                except:
+                   remove_useless_after_sys = False
+
+                if remove_useless_branch:
                     try:
-                       remove_useless_branch = self.config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
+                        removeBranches += eval(self.config.get('Branches','useless_after_sys'))
                     except:
-                       remove_useless_branch = False
-
+                        pass
+                if remove_useless_after_sys:
                     try:
-                       remove_useless_after_sys = self.config.get('Analysis', 'remove_useless_after_sys').lower().strip() == 'true'
+                        removeBranches += eval(self.config.get('Branches','useless_branch'))
                     except:
-                       remove_useless_after_sys = False
+                        pass
 
-                    if remove_useless_branch:
-                        try:
-                            removeBranches += eval(self.config.get('Branches','useless_after_sys'))
-                        except:
-                            pass
-                    if remove_useless_after_sys:
-                        try:
-                            removeBranches += eval(self.config.get('Branches','useless_branch'))
-                        except:
-                            pass
-
-                    for branch in removeBranches:
-                        try:
-                            #print ('will remove', branch)
-                            tree.SetBranchStatus(branch,0)
-                        except:
-                            pass
+                for branch in removeBranches:
+                    try:
+                        #print ('will remove', branch)
+                        tree.SetBranchStatus(branch,0)
+                    except:
+                        pass
 
                 #time2 = time.time()
                 #print ('DEBUG: tree=',tree)

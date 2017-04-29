@@ -61,10 +61,35 @@ parser.add_option("-O", "--optimisation", dest="optimisation", default="",#not u
                       help="variable for shape when optimising the BDT")
 parser.add_option("-s", "--settings", dest="settings", default=False,
                               help="contains target sample for the splitsubcaching")
+parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
+                              help="option to merge")
+parser.add_option("-M", "--mergecachingplot", dest="mergecachingplot", default=False, action='store_true', help="use files from mergecaching")
+parser.add_option("-f", "--filelist", dest="filelist", default="",
+                              help="list of files you want to run on")
+parser.add_option("-R", "--return_cut_string", dest="return_cut_string", default=False,
+                              help="Compute the caching cutstring (correspondings to SYS1_Up/Down || SYS2_Up/Down || ...), returns it and stop. Used to check is mergesyscaching needs to be submited to specific sample")
+
 (opts, args) = parser.parse_args(argv)
 config = BetterConfigParser()
+print 'opts.config is', opts.config
 config.read(opts.config)
 var=opts.variable
+
+# to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
+if opts.filelist.startswith('base64:'):
+    opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
+    #print 'zlib decoded file list:', opts.filelist
+
+filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
+# print filelist
+print "len(filelist)",len(filelist),
+if len(filelist)>0:
+    print "filelist[0]:",filelist[0];
+else:
+    print ''
+
+
+print 'mergecachingplot is', opts.mergecachingplot
 #-------------------------------------------------------------------------------
 
 #--read variables from config---------------------------------------------------
@@ -153,14 +178,18 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so"):
 
 print 'opts.settings is', opts.settings
 sample_to_merge_ = None
+# reads n files, writes single file. disabled if set to -1
+mergeCachingPart = -1
 if opts.settings:
     if 'CACHING' in opts.settings:
         sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
         print 'sample_to_merge is', sample_to_merge_
+    if 'MERGECACHING' in opts.settings:
+        mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
+        print '@INFO: Partially merged caching: this is part', mergeCachingPart
 
 ###
-
 
 print "Using",('dc:%s'%var,'var')
 print name
@@ -421,12 +450,10 @@ for syst in systematics:
                 SYS = syst.split('_UD_')[0]
                 CAT = syst.split('_UD_')[1]
                 _cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
-                #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
                 for c_ in cutlist:
                     if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
             _name = title
             _weight = weightF
-        #print 'the replaced _cut is', _cut
         print ''
 
         #print 'rmv_sys is', rmv_sys
@@ -573,8 +600,22 @@ print '===================\n'
 print 'Preparations for Histograms (HistoMakeri)'
 print '=========================================\n'
 
-mc_hMaker = HistoMaker(all_samples,path,config,optionsList,GroupDict, None, False, sample_to_merge_)
-data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None, None, False, sample_to_merge_)
+
+#Example
+#Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_)
+#mergesyscaching
+#print 'opts.return_cut_string is',opts.return_cut_string
+#sys.exit()
+if eval(opts.return_cut_string):
+    cachingcut = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False, return_cut_string=eval(opts.return_cut_string))#sys should never be removed in dc
+    print 'The cut string is', cachingcut.tc.minCut
+    sys.exit()
+else:
+    mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False)#sys should never be removed in dc
+data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False)
+##before
+#mc_hMaker =   HistoMaker(all_samples ,path,config,optionsList     ,GroupDict, None, False, sample_to_merge_)
+#data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None    , None, False, sample_to_merge_)
 
 if sample_to_merge_:
     print "@INFO: Done splitcachingdc. Bye !"
