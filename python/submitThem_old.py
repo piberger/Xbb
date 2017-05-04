@@ -346,9 +346,9 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
         command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
-    print "the command is ", command
+    #print "the command is ", command
     nFiles = len(file.split(';'))
-    print "submitting", nFiles, 'files like',file.split(';')[0]
+    #print "submitting", nFiles, 'files like',file.split(';')[0]
     filelistString = str(file)
     command = command + ' "' + filelistString + '"' + ' "' + str(Plot)+ '"'
     if opts.interactive:
@@ -392,6 +392,246 @@ def subcut_tmpfile_exists(hash,part,cut):
     print ('Command is os.path.isfile(%s)'%(tmpDir + tmpFileName))
     return os.path.isfile(tmpDir + tmpFileName)
 
+#To retrieve dc hash
+from copy import copy, deepcopy
+def return_splitcaching_hash(treecut):
+
+    optionsList=[]
+    shapecutList=[]
+    _cut = 'dummy'
+    _treevar = 'dummy'
+    _name = 'dummy'
+    nBins = 'dummy'
+    xMin = 'dummy'
+    xMax = 'dummy'
+    _weight = 'dummy'
+    _countHisto = 'dummy'
+    _countbin = 'dummy'
+    blind = 'dummy'
+    shapecut = 'dummy'
+    def appendSCList(): shapecutList.append(shapecut)
+    def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind})
+
+    optionsList=[]
+    shapecutList=[]
+    systematics = eval(config.get('LimitGeneral','sys_BDT'))
+    sys_cut_suffix=eval(config.get('LimitGeneral','sys_cut_suffix'))
+    sys_weight_corr=eval(config.get('LimitGeneral','sys_weight_corr'))
+    weightF_systematics = eval(config.get('LimitGeneral','weightF_sys'))
+
+    lhe_muF = []
+    lhe_muR = []
+    if config.has_option('LimitGeneral','sys_lhe_muF_BDT'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_BDT'))
+    if config.has_option('LimitGeneral','sys_lhe_muR_BDT'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_BDT'))
+
+    #initalize everything to go trough the code snippet
+
+    UD = ['Up','Down']
+    #Here just copying from workspace dc
+    title = ['dummy']
+
+    _cut = treecut
+    _treevar = 'dummy'
+    treevar = 'dummy'
+    _name = 'dummy'
+    _weight = 'dummy'
+    _countHisto = "dummy"
+    weightF = 'dummy'
+    bdt = True
+    mjj = False
+    _countbin = 0
+    #shapecut = _cut
+    #ie. take count from 'CountWeighted->GetBinContent(1)'
+    appendList()
+    #appendSCList()
+
+
+    #all the cuts except the one modified by the shape variation
+    shapecut= ''
+    cutlist =  _cut.split('&')
+    rmv_sys = _cut.split('&')
+    sysnomcut = ''
+    #print 'cutlist is ', cutlist
+
+    #shape systematics
+    for syst in systematics:
+        for Q in UD:
+            #print 'Q is', Q
+            _cut = treecut
+            _name = title
+            _weight = weightF
+            #if not 'UD' in syst:
+            if not isinstance(sys_cut_suffix[syst], list):
+                new_cut=sys_cut_suffix[syst]
+                if not new_cut == 'nominal':
+                    old_str,new_str=new_cut.split('>')
+                    _cut = treecut.replace(old_str,new_str.replace('?',Q))
+                    _name = title
+                    _weight = weightF
+                    for c_ in cutlist:
+                        if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
+            else:
+                new_cut_list=sys_cut_suffix[syst]
+                for new_cut in new_cut_list:
+                    old_str,new_str=new_cut.split('>')
+                    #SYS = syst.split('_UD_')[0]
+                    #CAT = syst.split('_UD_')[1]
+                    #_cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
+                    #print 'new_str is', new_str
+                    #print 'old_str is', old_str
+                    _cut = _cut.replace(old_str,new_str.replace('SYS',syst).replace('UD',Q))
+                    for c_ in cutlist:
+                        if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
+                _name = title
+                _weight = weightF
+            #print ''
+
+            if syst in sys_weight_corr:
+                #print 'sys_weight is',sys_weight_corr[syst]+'_%s' %(Q.upper())
+                _weight = config.get('Weights',sys_weight_corr[syst]+'_%s' %(Q.upper()))
+                #print '_weight is', _weight
+            #replace tree variable
+            if bdt == True:
+                #ff[1]='%s_%s'%(sys,Q.lower())
+                #print 'old treevar', _treevar
+                if not 'UD' in syst:
+                    _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q.lower()))
+                    #_treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
+                else:
+                    _treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
+                    #_treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD',Q)))
+                    #print '.nominal by','.%s'%(syst.replace('UD',Q))
+                #print 'treevar after replacement', _treevar
+            elif mjj == True:
+                if syst == 'JER':
+                    _treevar = treevar.replace('_reg_mass','_reg_corrJER%s_mass'%Q)
+                elif syst == 'JES':
+                    _treevar = treevar.replace('_reg_mass','_reg_corrJEC%s_mass'%Q)
+                else:
+                    _treevar = treevar
+            elif cr == True:
+                _treevar = treevar
+            #append
+            appendList()
+            #appendSCList()
+            #print 'new tree cut is', _cut
+    #print 'OPTIONSLIST IS',optionsList
+    for opt in optionsList:
+        cutlist =  opt['cut'].split('&')
+        #print 'rmv_sys is', rmv_sys
+        #print 'again, cutlist is', cutlist
+        for rsys in rmv_sys:
+            #print 'rsys is', rsys
+            for c_ in cutlist:
+                if (rsys == c_):
+                    #print 'rsys will be removes'
+                    nbra = c_.count('(')
+                    nket = c_.count(')')
+                    if nbra > nket:
+                        newc_ = abs(nbra-nket)*'('+'1'
+                        cutlist[cutlist.index(c_)] = newc_
+                    elif nket > nbra:
+                        newc_ = '1'+ abs(nbra-nket)*')'
+                        cutlist[cutlist.index(c_)] = newc_
+                    elif nket ==  nbra:
+                        cutlist.remove(c_)
+
+        sysnomcut = '&'.join(rmv_sys)
+        shapecut = '&'.join(cutlist)
+        if opt == optionsList[0]:
+            shapecut = opt['cut']
+            #shapecut = sysnomcut
+        appendSCList()
+
+    #print 'after removing shape sys'
+    #print 'cutlist', cutlist
+    #print 'basiccut', shapecut
+    #print 'sysnomcut', sysnomcut
+    #appendSCList()
+    #sys.exit(0)
+
+
+    #UEPS
+    #Appends options for each weight
+    for weightF_sys in weightF_systematics:
+        #if '_eff_e' in weightF_sys and 'Zuu' in ROOToutname : continue
+        #if '_eff_m' in weightF_sys and 'Zee' in ROOToutname : continue
+        for _weight in [config.get('Weights','%s_UP' %(weightF_sys)),config.get('Weights','%s_DOWN' %(weightF_sys))]:
+            #_cut = treecut
+            #shapecut = sysnomcut
+            _cut = "1"
+            shapecut = "1"
+            _treevar = treevar
+            _name = title
+            appendList()
+            appendSCList()
+
+    #lhe_muF
+    #Appends options for each weight (up/down -> len =2 )
+    if len(lhe_muF)==2:
+        for lhe_muF_num in lhe_muF:
+            _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muF_num
+            #_cut = treecut
+            #shapecut = sysnomcut
+            _cut = "1"
+            shapecut = "1"
+            _treevar = treevar
+            _name = title
+            _countHisto = "CountWeightedLHEWeightScale"
+            _countbin = lhe_muF_num
+            appendList()
+            appendSCList()
+
+    if len(lhe_muR)==2:
+        for lhe_muR_num in lhe_muR:
+            _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muR_num
+            #_cut = treecut
+            #shapecut = sysnomcut
+            _cut = "1"
+            shapecut = "1"
+            _treevar = treevar
+            _name = title
+            _countHisto = "CountWeightedLHEWeightScale"
+            _countbin = lhe_muR_num
+            appendList()
+            appendSCList()
+
+    if len(optionsList) != len(shapecutList):
+        print '@ERROR: optionsList and shapecutList don\'t have equal size. Aborting'
+        sys.exit()
+
+    _countHisto = "CountWeighted"
+    _countbin = 0
+
+    #print '===================\n'
+    #print 'comparing cut strings'
+    for optold, optnew in zip(optionsList,shapecutList):
+        #print 'old option is', optold['cut']
+        #print 'new option is', optnew
+        optionsList[optionsList.index(optold)]['cut']=optnew
+
+    #making the final cut
+    cutList = []
+    for options in optionsList:
+        cutList.append('(%s)'%options['cut'].replace(' ',''))
+
+    def __find_min_cut(cutList_):
+        effective_cuts = []
+        #print ('in __find_min_cut')
+        #print ('_cutlist is', _cutList)
+        for cut in cutList_:
+            if not cut in effective_cuts:
+                effective_cuts.append(cut)
+        cutList_ = effective_cuts
+        minCut = '||'.join(cutList_)
+        return minCut
+
+    minCut = __find_min_cut(cutList)
+
+    #print 'minCut is', minCut
+    return minCut
+
+
 # RETRIEVE FILELIST FOR THE TREECOPIER PSI AND SINGLE FILE SYS STEPS
 def getfilelist(job):
     samplefiles = config.get('Directories','samplefiles')
@@ -421,7 +661,7 @@ elif opts.task == 'splitsubcaching':
              repDict['queue'] = 'all.q'
              training(additional_)
 
-if opts.task == 'dc':
+if opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars
 
@@ -569,27 +809,57 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
                     else:
                         cut = None
                 elif opts.task == 'mergesyscaching':
-                    #print 'configs is', configs
-                    check_cut_command = 'python workspace_datacard.py'
-                    for conf in configs:
-                        check_cut_command += ' -C %s'%conf
-                    check_cut_command += ' -V %s'%region
-                    check_cut_command += ' -R True'
-                    check_cut_command += ' -f \'\''
-                    print 'check_cut_command is', check_cut_command
-                    os.system(check_cut_command)
-                    #os.system('python workspace_datacard.py -C '+ str(configs))
-                    sys.exit()
+                    #initalise variables to check hash
+                    RCut = config.get('dc:%s'%region,'cut')
+                    treecut = config.get('Cuts',RCut)
 
-                minCut = '(%s)'%cut.replace(' ','')
+                    minCut = return_splitcaching_hash(treecut)
+
+                    #Old
+                    #print 'configs is', configs
+                    #check_cut_command = 'python workspace_datacard.py'
+                    #for conf in configs:
+                    #    check_cut_command += ' -C %s'%conf
+                    #check_cut_command += ' -V %s'%region
+                    #check_cut_command += ' -R True'
+                    #check_cut_command += ' -f \'\''
+                    #print 'check_cut_command is', check_cut_command
+
+                    ##minCut = 'dummy'
+
+                    ##sys.exit()
+
+                    #proc = subprocess.Popen([check_cut_command],shell = True, stdout=subprocess.PIPE)
+                    #cut_string = proc.communicate()[0]
+                    #minCut = cut_string.split('For submission check: The cut string is')[-1].split('End submission string')[-2]
+                    #print 'cut_string is', minCut
+
+                    #if minCut == minCut2:
+                    #    print 'minCuts are equal'
+                    #else:
+                    #    print 'ERROR: minCuts are not equal !'
+
+                    #print '====================='
+                    #print 'minCut is', minCut
+                    #print '====================='
+                    #print 'minCut2 is', minCut2
+                    #print '====================='
+
+                    #sys.exit()
+
+                    #os.system(check_cut_command)
+                    #sys.exit()
+
+                if not opts.task == 'mergesyscaching':
+                    minCut = '(%s)'%cut.replace(' ','')
                 #if sample.subsample:
                 #    minCut = '((%s)&(%s))' %(minCut,sample.subcut)
                 hash = hashlib.sha224('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)).hexdigest()
-                print "  CUT:", minCut
-                print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
+                if len(minCut) < 2000:
+                    print "  CUT:", minCut
+                if len('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)) < 2000:
+                    print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
                 print "  HASH:", hash
-
-
 
 
                 files_sublist_filtered = []
@@ -725,7 +995,7 @@ if opts.task == 'trainReg':
     submit('trainReg',repDict)
 
 
-elif opts.task == 'dc':
+elif opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
     repDict['queue'] = 'all.q'
     for item in DC_vars:
         # item here contains the dc name
