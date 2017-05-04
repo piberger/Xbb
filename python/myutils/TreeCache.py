@@ -4,7 +4,7 @@ import ROOT
 from samplesclass import Sample
 import time
 import glob
-import pdb
+import math
 #from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
@@ -72,6 +72,8 @@ class TreeCache:
 
     def __find_min_cut(self):
         effective_cuts = []
+        #print ('in __find_min_cut')
+        #print ('self_cutlist is', self._cutList)
         for cut in self._cutList:
             if not cut in effective_cuts:
                 effective_cuts.append(cut)
@@ -489,40 +491,127 @@ class TreeCache:
                 #time3 = time.time()
                 #print ('cut done in ' + str(time3-time2) + ' s')
                
-                time2 = time.time()
-                print ('DEBUG: tree=',tree)
-                cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
-                subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
-                
-                cutTree = tree.CloneTree(0)
-                print ('lolol')
-                i = 0
-                s = 0
-                s2 = 0
-                print (theCut)
-                print (sample.subcut)
-                oldTreeNum = -1
-                totalEntries = 0
-                finalEntries = 0
-                for event in tree:
-                    tree.LoadTree(i)
-                    treeNum = tree.GetTreeNumber()                        
-                    if treeNum != oldTreeNum:
-                        cutFormula.UpdateFormulaLeaves()
-                        subcutFormula.UpdateFormulaLeaves()
-                        oldTreeNum = treeNum
+                str_limit = 3000.
+                if len(theCut) < str_limit:
 
-                    # the GetNdata() here is used because of its side-effects!
-                    n1 = cutFormula.GetNdata()
-                    s = cutFormula.EvalInstance()
-                    if s:
-                        n2 = subcutFormula.GetNdata()
-                        s2 = subcutFormula.EvalInstance()
-                        if s and s2:
-                           cutTree.Fill() 
-                           finalEntries += 1
-                    totalEntries += 1
-                    i += 1
+                    time2 = time.time()
+                    print ('DEBUG: tree=',tree)
+                    cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
+                    subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
+
+                    cutTree = tree.CloneTree(0)
+                    print ('lolol')
+                    i = 0
+                    s = 0
+                    s2 = 0
+                    print (theCut)
+                    print (sample.subcut)
+                    oldTreeNum = -1
+                    totalEntries = 0
+                    finalEntries = 0
+                    for event in tree:
+                        tree.LoadTree(i)
+                        treeNum = tree.GetTreeNumber()
+                        if treeNum != oldTreeNum:
+                            cutFormula.UpdateFormulaLeaves()
+                            subcutFormula.UpdateFormulaLeaves()
+                            oldTreeNum = treeNum
+
+                        # the GetNdata() here is used because of its side-effects!
+                        n1 = cutFormula.GetNdata()
+                        s = cutFormula.EvalInstance()
+                        if s:
+                            n2 = subcutFormula.GetNdata()
+                            s2 = subcutFormula.EvalInstance()
+                            if s and s2:
+                               cutTree.Fill()
+                               finalEntries += 1
+                        totalEntries += 1
+                        i += 1
+                else:
+                    print('len theCut is', len(theCut))
+                    split_cut_factor =  int(math.ceil(len(theCut)/str_limit))
+                    print ('split_cut_factor is', split_cut_factor)
+                    len_list = len(self._cutList)
+                    if len_list <= split_cut_factor:
+                        print ('@ERROR: Cut strings is too large, abort')
+                        sys.exit(0)
+                    step = (len_list - len_list%split_cut_factor)/split_cut_factor
+                    index_list = [i*step for i in range(1,split_cut_factor-1)]
+                    #going now to split theCut in smaller cut strings, added in cut_list
+                    cut_list = []
+                    remaining_Cut = theCut
+                    for index in index_list:
+                        index_cut = remaining_Cut.split(self._cutList[index])[0]+self._cutList[index]
+                        nbra = index_cut.count('(')
+                        nket = index_cut.count(')')
+                        if nbra != nket:
+                            print ('@ERROR: () do not close in', index_cut, 'Aborting')
+                            sys.exit()
+                        cut_list.append(index_cut)
+                        remaining_Cut = remaining_Cut.split(self._cutList[index])[1].replace('||','',1)
+                    nbra = remaining_Cut.count('(')
+                    nket = remaining_Cut.count(')')
+                    if nbra != nket:
+                        print ('@ERROR: () do not close in', remaining_Cut, 'Aborting')
+                        sys.exit()
+                    cut_list.append(remaining_Cut)
+                    #print ('cut_list is', cut_list)
+                    if '||'.join(cut_list) != theCut:
+                        print ('@ERROR: the cut_list is not equal to theCut), aborting')
+                        print ('after joining, new treeCut is', '||'.join(cut_list))
+                        sys.exit()
+                    #caching the tree using every cuts from cut_list
+                    cutformula_list =[]
+                    for formula_cut in cut_list:
+                        formula = ROOT.TTreeFormula("cutFormula%i"%cut_list.index(formula_cut), formula_cut, tree)
+                        cutformula_list.append(formula)
+                    print ('cutformula_list is',cutformula_list)
+
+                    #sys.exit()
+
+                    #loop over the tree and apply cut
+                    time2 = time.time()
+                    print ('DEBUG: tree=',tree)
+                    subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
+
+                    cutTree = tree.CloneTree(0)
+                    print ('lolol')
+                    i = 0
+                    s = 0
+                    s2 = 0
+                    print (theCut)
+                    print (sample.subcut)
+                    oldTreeNum = -1
+                    totalEntries = 0
+                    finalEntries = 0
+                    for event in tree:
+                        tree.LoadTree(i)
+                        treeNum = tree.GetTreeNumber()
+                        if treeNum != oldTreeNum:
+                            subcutFormula.UpdateFormulaLeaves()
+                            for formula in cutformula_list:
+                                formula.UpdateFormulaLeaves()
+                            oldTreeNum = treeNum
+
+                        # the GetNdata() here is used because of its side-effects!
+                        pass_cut = []
+                        for formula in cutformula_list:
+                            n1 = formula.GetNdata()
+                            pass_cut.append(formula.EvalInstance())
+                        #print ('debug: pass_cut is', pass_cut)
+                        if 1.0 in pass_cut:#this is equivalent to the || of each cut in cut_list
+                            n2 = subcutFormula.GetNdata()
+                            s2 = subcutFormula.EvalInstance()
+                            if s2:
+                               cutTree.Fill()
+                               finalEntries += 1
+                        #if 0.0 in pass_cut:
+                        #    print ('pass_cut is', pass_cut)
+                        totalEntries += 1
+                        i += 1
+
+
                 
                 time3 = time.time()
                 print ('cut done in ' + str(time3-time2) + ' s' + ' ' + str(finalEntries) + '/' + str(totalEntries))
@@ -632,6 +721,8 @@ class TreeCache:
         else:
             # for plotting:
             #  get list of previously cached files and check if number of files matches expectations
+            #stop if a file is missing
+            file_missing = False
             for sample in self.__sampleList:
                 theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
@@ -660,15 +751,19 @@ class TreeCache:
                     if not found:
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
                         if not self.do_onlypart_n:
-                            raise Exception('files missing')
+                            file_missing = True
+                            #raise Exception('files missing')
                 if (len(mergeList) != len(mergedFiles)):
                     print ('\x1b[31mERROR len(mergeList) != len(mergedFiles) \x1b[0m')
                     #Need to continue for the training in order to run in parallel
                     if not self.do_onlypart_n:
-                        raise Exception('files missing')
+                        file_missing = True
+                        #raise Exception('files missing')
 
                 # extract hashes from filenames and pass them as a list to __hashDict
                 self.__hashDict[sample.name] = [x.split('/')[-1].replace('tmp_','').split('.')[0] for x in mergedFiles]
+            if file_missing:
+                raise Exception('files missing')
             #print( "DICT:",self.__hashDict)
 
     def __cache_samples(self,filelist=None,mergeplot=False):
