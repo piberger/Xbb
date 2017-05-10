@@ -371,11 +371,12 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
-        repDict['name'] = repDict['name']+'_'+str(counter_local)
+        repDict['name'] = repDict['name'].replace(',','_')+'_'+str(counter_local)
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(logname)s -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     print "the command is ", command
@@ -399,11 +400,12 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if opts.philipp_love_progress_bars:
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
-        repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+        repDict['name'] = ('%(job)s_%(en)s%(task)s' %repDict).replace(',','_')
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(logname)s -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     list_submitted_singlejobs[repDict['name']] = [file,1]
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
@@ -484,9 +486,79 @@ if opts.task == 'splitvarplot':
 
 #if opts.task == 'splitcaching':
 #    plitcaching()
+
+if opts.task == 'mergecaching2':
+
+    samplesinfo = config.get('Directories', 'samplesinfo')
+    info = ParseInfo(samplesinfo,path)
+    print info
+    
+    # get all regions
+    regions = [x.strip() for x in config.get('Plot_general', 'List').split(',')] 
+    
+    # determine which regions are compatible to be cached together in one go
+    regionsDict = {}
+    for region in regions:
+        section = 'Plot:%s'%region
+        dataSamples = eval(config.get(section, 'Datas'))
+        isSignal = config.has_option(section, 'Signal')
+        mcSignalSamples = eval(config.get(section,'Datas'))
+        identifier = ','.join(dataSamples) + '__' + str(isSignal) + '__' + ','.join(mcSignalSamples)
+        if identifier in regionsDict:
+            regionsDict[identifier].append(region)
+        else:
+            regionsDict[identifier] = [region]
+
+    regionGroups = [y for x,y in regionsDict.iteritems()] 
+    print ("REGION GROUPS:",regionGroups)
+
+    for regionGroup in regionGroups:
+        print "GROUP: ", regionGroup
+        section = 'Plot:%s'%regionGroup[0]
+        data = eval(config.get(section, 'Datas'))
+        mc = eval(config.get('Plot_general', 'samples'))
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        samples = mcsamples+datasamples
+
+        for sample in samples:
+            print " SAMPLE",sample
+            print " id",sample.identifier
+
+            # split merging proces for chunk of files
+            files = getfilelist(sample.identifier)
+            files_per_job = sample.mergeCachingSize
+            files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+            counter_local = 0
+            for files_sublist in files_split:
+                print "  SUBMIT:", len(files_sublist), " files"
+                print "  PART:", counter_local
+
+                repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
+                jobName = ','.join(regionGroup) 
+
+                files_sublist_filtered = []
+                for filename in files_sublist:
+                    if filename.split('/')[-1] not in sample.skipParts:
+                        files_sublist_filtered.append(filename)
+                    else:
+                        print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
+
+                globalFilesSubmitted += 1
+                print "  --->submit"
+                filelistString = ';'.join(files_sublist_filtered)
+                # necessary due to limits on passed arguments size
+                if files_per_job > 400:
+                    lenBefore = len(filelistString)
+                    filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
+                    lenAfter = len(filelistString)
+                    print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot='', resubmit=False)
+                counter_local = counter_local + 1
+
 if opts.task == 'mergecaching':
-    Plot_vars = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
-    for region in Plot_vars:
+    plotRegions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    for region in plotRegions:
         section='Plot:%s'%region
         print 'section is', section
         samplesinfo=config.get('Directories','samplesinfo')
