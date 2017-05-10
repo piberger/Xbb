@@ -394,7 +394,7 @@ def subcut_tmpfile_exists(hash,part,cut):
 
 #To retrieve dc hash
 from copy import copy, deepcopy
-def return_splitcaching_hash(treecut):
+def return_splitcaching_hash(treecut,isdata):
 
     optionsList=[]
     shapecutList=[]
@@ -516,6 +516,8 @@ def return_splitcaching_hash(treecut):
             #appendSCList()
             #print 'new tree cut is', _cut
     #print 'OPTIONSLIST IS',optionsList
+    #print 'rmv_sys is', rmv_sys
+    shapecut_first = ''
     for opt in optionsList:
         cutlist =  opt['cut'].split('&')
         #print 'rmv_sys is', rmv_sys
@@ -536,20 +538,83 @@ def return_splitcaching_hash(treecut):
                     elif nket ==  nbra:
                         cutlist.remove(c_)
 
-        sysnomcut = '&'.join(rmv_sys)
         shapecut = '&'.join(cutlist)
         if opt == optionsList[0]:
-            shapecut = opt['cut']
-            #shapecut = sysnomcut
+            shapecut_first = shapecut
+        #    shapecut = opt['cut']
+        #    #shapecut = sysnomcut
         appendSCList()
 
+    #to avoid parsing errors
+    for rmv_ in rmv_sys:
+        index_ =  rmv_sys.index(rmv_)
+        nbra = rmv_.count('(')
+        nket = rmv_.count(')')
+        if nbra > nket:
+            rmv_ = rmv_ + abs(nbra-nket)*')'
+        elif nket > nbra:
+            rmv_ = abs(nbra-nket)*'('+rmv_
+        rmv_sys[index_] = rmv_
+
+    sysnomcut = '&'.join(rmv_sys)
+
+    replace_cut =eval(config.get('LimitGeneral','replace_cut'))
+    #make optimised shapecut
+    shapecut_split = shapecut_first.split('&')
+    for shape__ in shapecut_split:
+        if shape__.replace(' ','')  == '': continue#to avoid && case
+        shapecut_split_ = shape__.split('||')
+        for shape_ in  shapecut_split_:
+            new_cut_list=sys_cut_suffix[syst]
+            for new_cut in replace_cut:
+                old_str,new_str=new_cut.split('>')
+                if old_str in shape_:
+                    #print 'when removing everything, string is', shape_.replace('>','').replace('<','').replace(' ','').replace('(','').replace(')','').replace('||','').replace(old_str,'')
+                    try:
+                        float(shape_.replace('>','').replace('<','').replace(' ','').replace('(','').replace(')','').replace('||','').replace(old_str,''))
+                    except:
+                        newcut_ = '((%s) || (%s))'%(shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Min')),shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Max')))
+                        #duplication of cut will also duplicate addtional ( or ). closing here
+                        nbra = shape_.count('(')
+                        nket = shape_.count(')')
+                        if nbra > nket:
+                            newcut_   = newcut_ + abs(nbra-nket)*')'
+                        elif nket > nbra:
+                            newcut_   = abs(nbra-nket)*'('+newcut_
+                        #print 'newcut_ is ', newcut_
+                        shapecut_split_[shapecut_split_.index(shape_)] = newcut_
+                        continue
+                    if shape_.split(old_str)[0].replace(' ','').replace('(','').replace(')','').endswith('>') or shape_.split(old_str)[1].replace(' ','').replace('(','').replace(')','').startswith('<'):
+                        shapecut_split_[shapecut_split_.index(shape_)] = shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Min'))
+                        continue
+                    elif shape_.split(old_str)[0].replace(' ','').replace('(','').replace(')','').endswith('<') or shape_.split(old_str)[1].replace(' ','').replace('(','').replace(')','').startswith('>'):
+                        shapecut_split_[shapecut_split_.index(shape_)] = shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Max'))
+                        continue
+                    print '@ERROR: cut strings could be parsed correctly'
+                    print 'Aborting'
+                    sys.exit()
+
+        shapecut_split[shapecut_split.index(shape__)] = '||'.join(shapecut_split_)
+    shapecut_MinMax = '&'.join(shapecut_split)
+
+            #_cut = _cut.replace(old_str,new_str.replace('SYS',syst).replace('UD',Q))
+
+    shapecut_MinMax = '&'.join(shapecut_split)
+    #print 'shapecut_MinMax is', shapecut_MinMax
+
+    dccut = sysnomcut + '&(' + shapecut_MinMax + ')'
+    dccutdata = sysnomcut + '&(' + shapecut_first + ')'
+    #print 'dccut is', dccut
+    #print 'dccutdata is', dccutdata
+
     #print 'after removing shape sys'
-    #print 'cutlist', cutlist
-    #print 'basiccut', shapecut
-    #print 'sysnomcut', sysnomcut
+    #print 'shapecut', shapecut #this is the sys variable only
+    #print 'shapecut_first', shapecut_first
+    #print 'sysnomcut', sysnomcut #this is the cut string without the sys variables
     #appendSCList()
     #sys.exit(0)
 
+    #dccut = sysnomcut
 
     #UEPS
     #Appends options for each weight
@@ -615,20 +680,31 @@ def return_splitcaching_hash(treecut):
     for options in optionsList:
         cutList.append('(%s)'%options['cut'].replace(' ',''))
 
-    def __find_min_cut(cutList_):
-        effective_cuts = []
-        #print ('in __find_min_cut')
-        #print ('_cutlist is', _cutList)
-        for cut in cutList_:
-            if not cut in effective_cuts:
-                effective_cuts.append(cut)
-        cutList_ = effective_cuts
-        minCut = '||'.join(cutList_)
-        return minCut
 
-    minCut = __find_min_cut(cutList)
+    #def __find_min_cut(cutList_):
+    #    effective_cuts = []
+    #    for cut in cutList_:
+    #        if not cut in effective_cuts and not cut == "(1)":
+    #            effective_cuts.append(cut)
+    #    cutList_ = effective_cuts
+    #    minCut = '||'.join(cutList_)
+    #    #for dc step
+    #    if dccut:
+    #        minCut = '('+dccut+')&&('+minCut+')'
+
+    #    return minCut
+
+    #if isdata:
+    #    cutList = [cutList[0]]
+
+    #minCut = __find_min_cut(cutList)
+
 
     #print 'minCut is', minCut
+    if isdata:
+        return '('+dccutdata+')'
+    else:
+        return '('+dccut+')'
     return minCut
 
 
@@ -747,9 +823,13 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
         elif opts.task == 'mergesyscaching':
             print 'region is', region
             signals = eval('['+config.get('dc:%s'%region,'signal')+']')
-            backgrounds = eval('['+config.get('dc:%s'%region,'background')+']')
+            #print 'signals are', signals
+            backgrounds = eval(config.get('dc:%s'%region,'background'))
+            #print 'background are', backgrounds
             #backgrounds = eval(config.get('Plot_general','allBKG'))
             all_samples = info.get_samples(signals+backgrounds)
+            #print 'all_samples are', all_samples
+            #sys.exit()
             data_sample_names = eval(config.get('dc:%s'%region,'data'))
             data_samples = info.get_samples(data_sample_names)
             samples = all_samples+data_samples
@@ -812,8 +892,11 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
                     #initalise variables to check hash
                     RCut = config.get('dc:%s'%region,'cut')
                     treecut = config.get('Cuts',RCut)
-
-                    minCut = return_splitcaching_hash(treecut)
+                    isdata = False
+                    if sample in data_samples:
+                        isdata = True
+                    print 'isdata is', isdata
+                    minCut = return_splitcaching_hash(treecut,isdata)
 
                     #Old
                     #print 'configs is', configs
@@ -855,8 +938,8 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
                 #if sample.subsample:
                 #    minCut = '((%s)&(%s))' %(minCut,sample.subcut)
                 hash = hashlib.sha224('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)).hexdigest()
-                if len(minCut) < 2000:
-                    print "  CUT:", minCut
+                #if len(minCut) < 2000:
+                print "  CUT:", minCut
                 if len('%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)) < 2000:
                     print "  HASH-STRING:",'%s_%s_split%d' %(sample,minCut,sample.mergeCachingSize)
                 print "  HASH:", hash

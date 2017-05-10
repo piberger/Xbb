@@ -128,6 +128,11 @@ except:
     applyJESsystematics = False
 print "I shall add the JESsystematics, milord !", applyJESsystematics
 try:
+    applyJESsystematicsMinMax = config.get('Analysis', 'applyJESsystematicsMinMax').lower().strip() == 'true'
+except:
+    applyJESsystematicsMinMax = False
+print "I shall add the JESsystematics, milord !", applyJESsystematicsMinMax
+try:
    addEWK = config.get('Analysis', 'addEWK').lower().strip() == 'true'
 except:
    addEWK = False
@@ -1091,6 +1096,15 @@ for job in info:
 
             #print tree
 
+        if applyJESsystematicsMinMax:
+            JEC_systematicsMinMax = {}
+            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
+            if job.type != 'DATA':
+                for bound in ["Min", "Max"]:
+                    for var in VarList:
+                        JEC_systematicsMinMax[var+"_corr_"+bound] = np.zeros(1, dtype=float)
+                        newtree.Branch(var+"_corr_"+bound, JEC_systematicsMinMax[var+"_corr_"+bound], var+"_corr_"+bound+"/D")
+
         if applyLepSF and job.type != 'DATA':
 
             #
@@ -1563,6 +1577,50 @@ for job in info:
                                 JEC_systematics["HCMVAV2_reg_phi_corr"+syst+sdir][0] = (hJ0+hJ1).Phi()
                                 JEC_systematics["hJetCMVAV2_pt_reg_0_corr"+syst+sdir][0] = hJ0.Pt()
                                 JEC_systematics["hJetCMVAV2_pt_reg_1_corr"+syst+sdir][0] = hJ1.Pt()
+
+                if applyJESsystematicsMinMax:
+                    if job.type != 'DATA':
+                        VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
+                        JECsys = [
+                            "JER",
+                            "PileUpDataMC",
+                            "PileUpPtRef",
+                            "PileUpPtBB",
+                            "PileUpPtEC1",
+                            #"PileUpPtEC2",
+                            #"PileUpPtHF",
+                            "RelativeJEREC1",
+                            #"RelativeJEREC2",
+                            #"RelativeJERHF",
+                            "RelativeFSR",
+                            "RelativeStatFSR",
+                            "RelativeStatEC",
+                            #"RelativeStatHF",
+                            "RelativePtBB",
+                            "RelativePtEC1",
+                            #"RelativePtEC2",
+                            #"RelativePtHF",
+                            "AbsoluteScale",
+                            "AbsoluteMPFBias",
+                            "AbsoluteStat",
+                            "SinglePionECAL",
+                            "SinglePionHCAL",
+                            "Fragmentation"
+                            #"TimePtEta",
+                            #"FlavorQCD"
+                            ]
+                        for var in VarList:
+                            for bound in ['Min','Max']:
+                                val = -42.
+                                first = True
+                                for syst in JECsys:
+                                    for sdir in ["Up", "Down"]:
+                                        if first: val = getattr(tree,var+"_corr"+syst+sdir)
+                                        if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
+                                        if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
+                                        first = False
+                                JEC_systematicsMinMax[var+"_corr_"+bound][0] = val
+                                print 'val is', val
 
                 if applyLepSF and job.type != 'DATA':
             # ================ Lepton Scale Factors =================
