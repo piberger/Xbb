@@ -4,16 +4,22 @@ import ROOT
 from samplesclass import Sample
 import time
 import glob
-from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
+import math
+#from myutils.copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
+from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False, dccut = None):
         ROOT.gROOT.SetBatch(True)
         self.path = path
         self.config = config
         self.remove_sys = remove_sys
+        self.do_onlypart_n = do_onlypart_n
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
+        self.dccut = None
+        if dccut:
+            self.dccut = dccut
         #! Make the cut lists from inputs
         for cut in cutList:
             self._cutList.append('(%s)'%cut.replace(' ',''))
@@ -44,6 +50,7 @@ class TreeCache:
         # use all the chunks of partially merged samples to plot (from mergecaching step)
         self.plotMergeCached =  plotMergeCached
 
+
         if self.plotMergeCached:
             print('\n\t>>> MERGE & PLOT <<<\n')
             self.__merge_cache_samples(filelist, self.mergeCachingPart)
@@ -66,11 +73,20 @@ class TreeCache:
 
     def __find_min_cut(self):
         effective_cuts = []
-        for cut in self._cutList:
-            if not cut in effective_cuts:
-                effective_cuts.append(cut)
-        self._cutList = effective_cuts
-        self.minCut = '||'.join(self._cutList)
+        #for dc step
+        if self.dccut:
+            self.minCut = '('+self.dccut+')'
+        else:
+            #remove repetition and (1) (the latter would keep all the events)
+            for cut in self._cutList:
+                if not cut in effective_cuts and not cut == "(1)":
+                    effective_cuts.append(cut)
+            self._cutList = effective_cuts
+            self.minCut = '||'.join(self._cutList)
+
+        #if self.dccut:
+        #    self.minCut = '('+self.dccut+')&&('+self.minCut+')'
+
 
     def _subtrim_tree(self, input_hash, output_hash, theCut):
         '''Performs a finer caching from an already cached files, using as additional cuts the one used in the get_tree function'''
@@ -84,7 +100,7 @@ class TreeCache:
 
         #if exist in tmpdir, just copy
         tmpfile = "%s/%s" %(self.__tmpPath,'tmp_'+str(output_hash)+'.root')
-        outputFile = '%s/tmp_%s.root'%(self.__cachedPath,output_hash)
+        outputFile = '%s/tmp_%s_%i.root'%(self.__cachedPath,output_hash,int(input_hash.split('_')[-1]))
         print('outputFile is', outputFile)
 
         if self.__doCache and self.file_exists(tmpfile):
@@ -444,21 +460,37 @@ class TreeCache:
                     tree.SetBranchStatus("*Down",0)
                     tree.SetBranchStatus("*Up",0)
                     
-                    removeBranches = []
+                removeBranches = []
+                remove_useless_branch = False
+                remove_useless_after_sys = False
+
+                try:
+                   remove_useless_branch = self.config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
+                except:
+                   remove_useless_branch = False
+
+                try:
+                   remove_useless_after_sys = self.config.get('Analysis', 'remove_useless_after_sys').lower().strip() == 'true'
+                except:
+                   remove_useless_after_sys = False
+
+                if remove_useless_branch:
                     try:
                         removeBranches += eval(self.config.get('Branches','useless_after_sys'))
                     except:
                         pass
+                if remove_useless_after_sys:
                     try:
                         removeBranches += eval(self.config.get('Branches','useless_branch'))
                     except:
                         pass
 
-                    for branch in removeBranches:
-                        try:
-                            tree.SetBranchStatus(branch,0)
-                        except:
-                            pass
+                for branch in removeBranches:
+                    try:
+                        #print ('will remove', branch)
+                        tree.SetBranchStatus(branch,0)
+                    except:
+                        pass
 
                 #time2 = time.time()
                 #print ('DEBUG: tree=',tree)
@@ -467,40 +499,109 @@ class TreeCache:
                 #time3 = time.time()
                 #print ('cut done in ' + str(time3-time2) + ' s')
                
-                time2 = time.time()
-                print ('DEBUG: tree=',tree)
-                cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
-                subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
-                
-                cutTree = tree.CloneTree(0)
-                print ('lolol')
-                i = 0
-                s = 0
-                s2 = 0
-                print (theCut)
-                print (sample.subcut)
-                oldTreeNum = -1
-                totalEntries = 0
-                finalEntries = 0
-                for event in tree:
-                    tree.LoadTree(i)
-                    treeNum = tree.GetTreeNumber()                        
-                    if treeNum != oldTreeNum:
-                        cutFormula.UpdateFormulaLeaves()
-                        subcutFormula.UpdateFormulaLeaves()
-                        oldTreeNum = treeNum
+                #str_limit = 3000.
+                if not self.dccut:
+                #if len(theCut) < str_limit:
 
-                    # the GetNdata() here is used because of its side-effects!
-                    n1 = cutFormula.GetNdata()
-                    s = cutFormula.EvalInstance()
-                    if s:
-                        n2 = subcutFormula.GetNdata()
-                        s2 = subcutFormula.EvalInstance()
-                        if s and s2:
-                           cutTree.Fill() 
-                           finalEntries += 1
-                    totalEntries += 1
-                    i += 1
+                    time2 = time.time()
+                    print ('DEBUG: tree=',tree)
+                    cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
+                    subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
+
+                    cutTree = tree.CloneTree(0)
+                    print ('lolol')
+                    i = 0
+                    s = 0
+                    s2 = 0
+                    print (theCut)
+                    print (sample.subcut)
+                    oldTreeNum = -1
+                    totalEntries = 0
+                    finalEntries = 0
+                    for event in tree:
+                        tree.LoadTree(i)
+                        treeNum = tree.GetTreeNumber()
+                        if treeNum != oldTreeNum:
+                            cutFormula.UpdateFormulaLeaves()
+                            subcutFormula.UpdateFormulaLeaves()
+                            oldTreeNum = treeNum
+
+                        # the GetNdata() here is used because of its side-effects!
+                        n1 = cutFormula.GetNdata()
+                        s = cutFormula.EvalInstance()
+                        if s:
+                            n2 = subcutFormula.GetNdata()
+                            s2 = subcutFormula.EvalInstance()
+                            if s and s2:
+                               cutTree.Fill()
+                               finalEntries += 1
+                        totalEntries += 1
+                        i += 1
+                else:
+                    cutformula_list =[]
+                    for formula_cut in self._cutList:
+                        if formula_cut == "(1)": continue
+                        formula = ROOT.TTreeFormula("cutFormula%i"%self._cutList.index(formula_cut), formula_cut, tree)
+                        cutformula_list.append(formula)
+
+                    print ('cut_list is', self._cutList)
+
+                    #loop over the tree and apply cut
+                    time2 = time.time()
+                    print ('DEBUG: tree=',tree)
+                    subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
+                    dccutFormula = ROOT.TTreeFormula("dccut", self.dccut, tree)
+
+                    cutTree = tree.CloneTree(0)
+                    print ('lolol')
+                    i = 0
+                    print (theCut)
+                    print (sample.subcut)
+                    oldTreeNum = -1
+                    totalEntries = 0
+                    finalEntries = 0
+                    for event in tree:
+
+                        s1 = -1
+                        s2 = -1
+                        #s3 = -1
+
+                        tree.LoadTree(i)
+                        treeNum = tree.GetTreeNumber()
+
+                        if treeNum != oldTreeNum:
+                            dccutFormula.UpdateFormulaLeaves()
+                            subcutFormula.UpdateFormulaLeaves()
+                            for formula in cutformula_list:
+                                formula.UpdateFormulaLeaves()
+                            oldTreeNum = treeNum
+
+                        pass_cut = False
+
+                        #if treeNum != oldTreeNum:
+                        #    dccutFormula.UpdateFormulaLeaves()
+
+                        n1 = dccutFormula.GetNdata()
+                        s1 = dccutFormula.EvalInstance()
+
+                        if s1 == 1.0:
+                            n2 = subcutFormula.GetNdata()
+                            s2 = subcutFormula.EvalInstance()
+                            if s2 == 1.0:
+                                pass_cut = True
+                                #for formula in cutformula_list:
+                                #    n3 = formula.GetNdata()
+                                #    s3 = formula.EvalInstance()
+                                #    if s3 == 1.0:
+                                #        pass_cut = True
+                                #        break
+                        #print ('s1, s2, s3 are', s1, s2, s3)
+                        if pass_cut:
+                            cutTree.Fill()
+                            finalEntries += 1
+
+                        totalEntries += 1
+                        i += 1
                 
                 time3 = time.time()
                 print ('cut done in ' + str(time3-time2) + ' s' + ' ' + str(finalEntries) + '/' + str(totalEntries))
@@ -610,10 +711,13 @@ class TreeCache:
         else:
             # for plotting:
             #  get list of previously cached files and check if number of files matches expectations
+            #stop if a file is missing
+            file_missing = False
             for sample in self.__sampleList:
                 theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
+                print ('Sample name: '+sample.FullName)
                 print (tmpFileMask)
 
                 # get list of unmerged root files
@@ -636,13 +740,20 @@ class TreeCache:
                             break
                     if not found:
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
-                        raise Exception('files missing')
+                        if not self.do_onlypart_n:
+                            file_missing = True
+                            #raise Exception('files missing')
                 if (len(mergeList) != len(mergedFiles)):
                     print ('\x1b[31mERROR len(mergeList) != len(mergedFiles) \x1b[0m')
-                    raise Exception('files missing')
+                    #Need to continue for the training in order to run in parallel
+                    if not self.do_onlypart_n:
+                        file_missing = True
+                        #raise Exception('files missing')
 
                 # extract hashes from filenames and pass them as a list to __hashDict
                 self.__hashDict[sample.name] = [x.split('/')[-1].replace('tmp_','').split('.')[0] for x in mergedFiles]
+            if file_missing:
+                raise Exception('files missing')
             #print( "DICT:",self.__hashDict)
 
     def __cache_samples(self,filelist=None,mergeplot=False):
@@ -725,7 +836,10 @@ class TreeCache:
 
         #fill all Count* histos as lists, like self.CountWeighted = [123.23]
         inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
+        #print ('inputHashesList is', inputHashesList)
         for inputHash in inputHashesList:
+            if self.do_onlypart_n and not (inputHash.endswith('_%i'%(self.mergeCachingPart) )):
+                continue
             input = ROOT.TFile.Open('{tmpdir}/tmp_{hash}.root'.format(tmpdir=self.__cachedPath, hash=inputHash),'read')
             if not input.IsZombie():
                 for obj in input.GetListOfKeys():
@@ -797,9 +911,11 @@ class TreeCache:
             inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
             subcutFileNames = []
             for inputHash in inputHashesList:
+                if self.do_onlypart_n and not (inputHash.endswith('_%i'%(self.mergeCachingPart) )):
+                    continue
                 subcut_hash = hashlib.sha224('%s_%s'%(inputHash,cut)).hexdigest()
-                print('subcut input file %s/tmp_%s.root'%(self.__cachedPath, subcut_hash))
-                input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                print('subcut input file %s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1])))
+                input_ = '%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1]))
                 input = ROOT.TFile.Open(input_,'read')
                 print('Opening ', input_)
                 try:
@@ -808,12 +924,13 @@ class TreeCache:
                 except:
                     print (input_,"is corrupted. I'm relaunching _subtrim_tree")
                     self._subtrim_tree(inputHash, subcut_hash, cut)
-                    input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                    #input_ = '%s/tmp_%s.root'%(self.__cachedPath, subcut_hash)
+                    input_ = '%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1]))
                     input = ROOT.TFile.Open(input_,'read')
                     if input.IsZombie():
                         print ('ERROR: file with subcuts is zombie:' + input_)
                     tree = input.Get(sample.tree)
-                subcutFileNames.append('%s/tmp_%s.root'%(self.__cachedPath, subcut_hash))
+                subcutFileNames.append('%s/tmp_%s_%i.root'%(self.__cachedPath, subcut_hash,int(inputHash.split('_')[-1])))
 
             if len(subcutFileNames) == 1:
                 return subcutFileNames[0]
@@ -927,7 +1044,7 @@ class TreeCache:
         if scaled_count == 0:
             return 0.
         else:
-            return (countWeightNoPU/count)*self.get_scale_training(self, sample, config, lumi, count)*count/(scaled_count*(countWeightNoPU/countWeightPU))
+            return (countWeightNoPU/count)*self.get_scale_training(sample, config, lumi, count)*count/(scaled_count*(countWeightNoPU/countWeightPU))
 
 
     #Jdef get_cache(self, sample, config):
