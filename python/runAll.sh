@@ -188,7 +188,7 @@ elif [ $task = "plot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
 
-elif [ $task = "mergecachingplot" ]; then
+elif [ $task = "mergecachingplotvar" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot
 
@@ -207,6 +207,26 @@ elif [ $task = "mergecaching" ]; then
 elif [ $task = "mergecaching2" ]; then
     echo "python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist (...)"
     python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
+elif [ $task = "mergecachingplot" ]; then
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot
+
+elif [ $task = "mergesubcaching" ]; then
+    echo "./train.py --training $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --mergeplot False  --filelist $filelist
+elif [ $task = "mergesubcachingtrain" ]; then
+    echo "./train.py --training $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False"
+    ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --mergeplot False --mergecachingplot
+elif [ $task = "mergesyscaching" ]; then
+    #echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    #./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
+elif [ $task = "mergesyscachingdc" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True
 
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then

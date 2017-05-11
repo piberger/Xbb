@@ -89,6 +89,10 @@ class LeptonSF:
             stripForEta = 4
             stripForPt= 5
 
+        #if "abseta_pt_DATA" in self.lep_binning or "abseta_pt_MC" in self.lep_binning:
+        #    stripForEta = 8
+        #    stripForPt= 4
+
         # if no bin is found, search for closest one, and double the uncertainty
         closestEtaBin = ""
         closestPtBin = ""
@@ -97,8 +101,12 @@ class LeptonSF:
 
         etaFound = False
         for etaKey, values in sorted(self.res[self.lep_binning].iteritems()) :
-            etaL = float(((etaKey[stripForEta:]).rstrip(']').split(',')[0]))
-            etaH = float(((etaKey[stripForEta:]).rstrip(']').split(',')[1]))
+            #print 'etaKey is', etaKey
+            #print 'etaKey after strip is', etaKey[stripForEta:]
+            #etaL = float(((etaKey[stripForEta:]).rstrip(']').split(',')[0]))
+            #etaH = float(((etaKey[stripForEta:]).rstrip(']').split(',')[1]))
+            etaL = float(((etaKey[etaKey.find('[')+1:]).rstrip(']').split(',')[0]))
+            etaH = float(((etaKey[etaKey.find('[')+1:]).rstrip(']').split(',')[1]))
 
             ptFound = False
 
@@ -111,8 +119,10 @@ class LeptonSF:
                 etaFound = True                
 
             for ptKey, result in sorted(values.iteritems()) :
-                ptL = float(((ptKey[stripForPt:]).rstrip(']').split(',')[0]))
-                ptH = float(((ptKey[stripForPt:]).rstrip(']').split(',')[1]))                
+                #ptL = float(((ptKey[stripForPt:]).rstrip(']').split(',')[0]))
+                #ptH = float(((ptKey[stripForPt:]).rstrip(']').split(',')[1]))
+                ptL = float(((ptKey[ptKey.find('[')+1:]).rstrip(']').split(',')[0]))
+                ptH = float(((ptKey[ptKey.find('[')+1:]).rstrip(']').split(',')[1]))
 
                 if abs(ptL-pt)<closestPt or abs(ptH-pt)<closestPt and not ptFound:
                     closestPt = min(abs(ptL-pt), abs(ptH-pt))
@@ -139,45 +149,85 @@ class LeptonSF:
 if __name__ == "__main__":
 
     wdir = os.environ['CMSSW_BASE']+"/src/Xbb"
-    jsons = {    
-        #
-        #Muon
-        #
+    jsons = {
+        ##
+        ##Muon
+        ##
         ##ID and ISO
-        wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-        wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+        #wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+        #wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
         #wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
         #wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
         ##Tracker
         #wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
         #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-        #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
         #Trigg
-        wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
-        wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio']
-        #
-        #Muon
-        #
-        #ID and ISO
+            #BCDEFG
+        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+            #H
+                #no DZ
+        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
+        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
+                #with DZ
+        wdir+'/python/json/V25/DATA_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_DATA'],
+        wdir+'/python/json/V25/MC_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_MC']
+        ##
+        ##Electron
+        ##
+        ##ID and ISO
         #wdir+'/python/json/V25/EIDISO_ZH_out.json' : ['EIDISO_ZH', 'eta_pt_ratio'],
         ##Tracker
         #wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio']
-        #V24
-        #jsonpath+'/python/json/ScaleFactor_egammaEff_WP90.json' : ['ScaleFactor_egammaEff_WP90', 'eta_pt_ratio'],
-        #jsonpath+'/python/json/WP90_BCD.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCD', 'eta_pt_ratio'],
-        #jsonpath+'/python/json/WP90_BCDEF.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCDEF', 'eta_pt_ratio']
+        ##Trigg
+        #wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
+        #wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio'],
         }
+    #jsons = {
+    #    #
+    #    #Muon
+    #    #
+    #    ##ID and ISO
+    #    wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+    #    wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+    #    #wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
+    #    #wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
+    #    ##Tracker
+    #    #wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+    #    #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+    #    #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+    #    #Trigg
+    #    wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
+    #    wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio']
+    #    #
+    #    #Muon
+    #    #
+    #    #ID and ISO
+    #    #wdir+'/python/json/V25/EIDISO_ZH_out.json' : ['EIDISO_ZH', 'eta_pt_ratio'],
+    #    ##Tracker
+    #    #wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio']
+    #    #V24
+    #    #jsonpath+'/python/json/ScaleFactor_egammaEff_WP90.json' : ['ScaleFactor_egammaEff_WP90', 'eta_pt_ratio'],
+    #    #jsonpath+'/python/json/WP90_BCD.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCD', 'eta_pt_ratio'],
+    #    #jsonpath+'/python/json/WP90_BCDEF.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCDEF', 'eta_pt_ratio']
+    #    }
 
     for j, name in jsons.iteritems():
         print 'j is', j
         lepCorr = LeptonSF(j , name[0], name[1])
-        if not j.find('trk_SF_Run') != -1:
+        if not j.find('trk_SF_Run') != -1 and not j.find('EfficienciesAndSF_dZ_numH') != -1:
             weight = lepCorr.get_2D(65, 1.5)
             #if not j.find('EIDISO_ZH_out') != -1 and not j.find('ScaleFactor_etracker_80x') != -1:
             #    weight = lepCorr.get_2D(65, 1.5)
             #else:
             #    weight = lepCorr.get_2D( 1.5,65)
         #1-D binned SF
+        elif j.find('EfficienciesAndSF_dZ_numH') != -1:
+            weight = lepCorr.get_2D(1.5, 2.0)
         else:
             weight = lepCorr.get_1D(1.5)
         val = weight[0]

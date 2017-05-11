@@ -100,6 +100,36 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
     print 'outputFolder is', outputFolder
     # command = 'hadd -f -k -O
     # command = 'hadd -f '+tmp_filename+' '
+    #create folder if doesn't exists
+    print 'Create the ouput folder if not existing'
+    mkdir_protocol = outputFolder.replace('root://t3dcachedb03.psi.ch:1094/','')
+    print 'mkdir_protocol',mkdir_protocol
+    _output_folder = ''
+    for _folder in mkdir_protocol.split('/'):
+        #if mkdir_protocol.split('/').index(_folder) < 3: continue
+        print 'checking and/or creating folder',_output_folder
+        _output_folder += '/'+_folder
+        if os.path.exists(_output_folder): print 'exists'
+        else:
+            print 'does not exist'
+            command = "uberftp t3se01 'mkdir %s ' " %(_output_folder)
+            subprocess.call([command], shell = True)
+        if os.path.exists(_output_folder): print 'Folder', _output_folder, 'sucessfully created'
+        else:
+            print '@ERROR: Folder was not created'
+            print 'folder name:', _output_folder
+            print 'Exiting'
+            sys.exit()
+    #path_list = outputFolder.replace('root://t3dcachedb03.psi.ch:1094','').replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','').split('/')
+    #check_path = ''
+    #for path_ in path_list:
+    #    if path_ == '': continue
+    #    check_path = check_path +'/'+ path_
+    #    if os.path.isdir(check_path):continue
+    #    else:
+
+
+
     allFiles = []
     for file in os.listdir(outputFolder.replace('root://t3dcachedb03.psi.ch:1094','').replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','')):
         if file.startswith('tree') and ( prefix == '' or Aprefix in file):
@@ -109,8 +139,8 @@ def mergetreePSI_def(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,con
             # t.AddFile(outputFolder+file)
     print 'len(allFiles)',len(allFiles),'allFiles[0]',allFiles[0]
     #n=100
-    n=50
-    #n=20
+    #n=50
+    n=20
     #n=10
     #n=2
 

@@ -8,6 +8,9 @@ from copy import copy, deepcopy
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
 from optparse import OptionParser
 from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebinner, HistoMaker
+import zlib
+import base64
+import re
 
 
 def useSpacesInDC(fileName):
@@ -61,10 +64,40 @@ parser.add_option("-O", "--optimisation", dest="optimisation", default="",#not u
                       help="variable for shape when optimising the BDT")
 parser.add_option("-s", "--settings", dest="settings", default=False,
                               help="contains target sample for the splitsubcaching")
+parser.add_option("-m", "--mergeplot", dest="mergeplot", default=False,
+                              help="option to merge")
+#parser.add_option("-M", "--mergecachingplot", dest="mergecachingplot", default=False, action='store_true', help="use files from mergecaching")
+parser.add_option("-M", "--mergecachingplot", dest="mergecachingplot", default=False, help="use files from mergecaching")
+parser.add_option("-f", "--filelist", dest="filelist", default="",
+                              help="list of files you want to run on")
+#parser.add_option("-R", "--return_cut_string", dest="return_cut_string", default=False,
+#                              help="Compute the caching cutstring (correspondings to SYS1_Up/Down || SYS2_Up/Down || ...), returns it and stop. Used to check is mergesyscaching needs to be submited to specific sample")
+
 (opts, args) = parser.parse_args(argv)
 config = BetterConfigParser()
+print 'opts.config is', opts.config
 config.read(opts.config)
 var=opts.variable
+
+# to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
+if opts.filelist.startswith('base64:'):
+    opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
+    #print 'zlib decoded file list:', opts.filelist
+
+filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
+# print filelist
+print "len(filelist)",len(filelist),
+if len(filelist)>0:
+    print "filelist[0]:",filelist[0];
+else:
+    print ''
+print 'mergecachingplot is', opts.mergecachingplot
+
+#Parsing doesn't work for some reason...
+#opts.mergecachingplot = True
+#opts.mergecachingplot = False
+
+
 #-------------------------------------------------------------------------------
 
 #--read variables from config---------------------------------------------------
@@ -153,14 +186,21 @@ if os.path.exists("$CMSSW_BASE/src/Xbb/interface/VHbbNameSpace_h.so"):
 
 print 'opts.settings is', opts.settings
 sample_to_merge_ = None
+# reads n files, writes single file. disabled if set to -1
+mergeCachingPart = -1
 if opts.settings:
     if 'CACHING' in opts.settings:
-        sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+        sample_to_merge_ = '__'.join(opts.settings[opts.settings.find('CACHING')+7:].split('__')[1:])
         print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
-        print 'sample_to_merge is', sample_to_merge_
+    #if 'CACHING' in opts.settings:
+    #    sample_to_merge_ = opts.settings[opts.settings.find('CACHING')+7:].split('__')[1]
+    #    print '@INFO: Only caching will be performed. The sample to be cached is', sample_to_merge_
+    #    print 'sample_to_merge is', sample_to_merge_
+    if 'MERGECACHING' in opts.settings:
+        mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
+        print '@INFO: Partially merged caching: this is part', mergeCachingPart
 
 ###
-
 
 print "Using",('dc:%s'%var,'var')
 print name
@@ -187,23 +227,23 @@ else:
 bdt = False
 mjj = False
 cr = False
-lhe_muF = []
-lhe_muR = []
+#lhe_muF = []
+#lhe_muR = []
 if str(anType) == 'BDT':
     bdt = True
     systematics = eval(config.get('LimitGeneral','sys_BDT'))
-    if config.has_option('LimitGeneral','sys_lhe_muF_BDT'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_BDT'))
-    if config.has_option('LimitGeneral','sys_lhe_muR_BDT'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_BDT'))
+#    if config.has_option('LimitGeneral','sys_lhe_muF_BDT'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_BDT'))
+#    if config.has_option('LimitGeneral','sys_lhe_muR_BDT'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_BDT'))
 elif str(anType) == 'Mjj':
     mjj = True
     systematics = eval(config.get('LimitGeneral','sys_Mjj'))
-    if config.has_option('LimitGeneral','sys_lhe_muF_Mjj'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_Mjj'))
-    if config.has_option('LimitGeneral','sys_lhe_muR_Mjj'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_Mjj'))
+#    if config.has_option('LimitGeneral','sys_lhe_muF_Mjj'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_Mjj'))
+#    if config.has_option('LimitGeneral','sys_lhe_muR_Mjj'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_Mjj'))
 elif str(anType) == 'cr':
     cr = True
     systematics = eval(config.get('LimitGeneral','sys_cr'))
-    if config.has_option('LimitGeneral','sys_lhe_muF_cr'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_cr'))
-    if config.has_option('LimitGeneral','sys_lhe_muR_cr'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_cr'))
+#    if config.has_option('LimitGeneral','sys_lhe_muF_cr'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_cr'))
+#    if config.has_option('LimitGeneral','sys_lhe_muR_cr'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_cr'))
 else:
     print 'EXIT: please specify if your datacards are BDT, Mjj or cr.'
     sys.exit()
@@ -250,13 +290,18 @@ if str(anType) == 'cr':
 if blind: 
     printc('red','', 'I AM BLINDED!')    
 #get List of backgrounds in use:
-backgrounds = eval(config.get('LimitGeneral','BKG'))
+#backgrounds = eval(config.get('LimitGeneral','BKG'))
 #Groups for adding samples together
 GroupDict = eval(config.get('LimitGeneral','Group'))
 #naming for DC
 Dict= eval(config.get('LimitGeneral','Dict'))
 #treating statistics bin-by-bin:
 binstat = eval(config.get('LimitGeneral','binstat'))
+
+#no bb for CR
+if str(anType) == 'cr':
+    binstat = False
+
 # Use the rebinning:
 rebin_active=eval(config.get('LimitGeneral','rebin_active'))
 #if str(anType) == 'cr':
@@ -338,6 +383,8 @@ info = ParseInfo(samplesinfo,path)
 
 print 'Get the sample list'
 print '===================\n'
+backgrounds = eval(config.get('dc:%s'%var,'background'))
+
 all_samples = info.get_samples(signals+backgrounds+additionals)
 print 'workspace_datacard-all_samples:',[job.name for job in all_samples]
 
@@ -401,11 +448,12 @@ print 'cutlist is ', cutlist
 #shape systematics
 for syst in systematics:
     for Q in UD:
-        print 'Q is', Q
+        #print 'Q is', Q
         _cut = treecut
         _name = title
         _weight = weightF
-        if not 'UD' in syst:
+        #if not 'UD' in syst:
+        if not isinstance(sys_cut_suffix[syst], list):
             new_cut=sys_cut_suffix[syst]
             if not new_cut == 'nominal':
                 old_str,new_str=new_cut.split('>')
@@ -418,42 +466,13 @@ for syst in systematics:
             new_cut_list=sys_cut_suffix[syst]
             for new_cut in new_cut_list:
                 old_str,new_str=new_cut.split('>')
-                SYS = syst.split('_UD_')[0]
-                CAT = syst.split('_UD_')[1]
-                _cut = _cut.replace(old_str,new_str.replace('SYS',SYS).replace('CAT',CAT).replace('UD',Q))
-                #cutlist = [ c_ for c_ in cutlist if (not old_str in c_)]
+                _cut = _cut.replace(old_str,new_str.replace('SYS',syst).replace('UD',Q))
                 for c_ in cutlist:
                     if (old_str in c_) and (c_ in rmv_sys): rmv_sys.remove(c_)
             _name = title
             _weight = weightF
-        #print 'the replaced _cut is', _cut
         print ''
 
-        #print 'rmv_sys is', rmv_sys
-        #print 'again, cutlist is', cutlist
-        #for rsys in rmv_sys:
-        #    print 'rsys is', rsys
-        #    for c_ in cutlist:
-        #        if (rsys == c_):
-        #            print 'rsys will be removes'
-        #            nbra = c_.count('(')
-        #            nket = c_.count(')')
-        #            if nbra > nket:
-        #                newc_ = abs(nbra-nket)*'('+'1'
-        #                cutlist[cutlist.index(c_)] = newc_
-        #            elif nket > nbra:
-        #                newc_ = '1'+ abs(nbra-nket)*')'
-        #                cutlist[cutlist.index(c_)] = newc_
-        #            elif nket ==  nbra:
-        #                cutlist.remove(c_)
-
-        #shapecut = '&'.join(cutlist)
-
-        #print 'after removing shape sys'
-        #print 'cutlist', cutlist
-        #print 'basiccut', shapecut
-
-        #sys.exit()
 
         if syst in sys_weight_corr:
             print 'sys_weight is',sys_weight_corr[syst]+'_%s' %(Q.upper())
@@ -466,6 +485,7 @@ for syst in systematics:
             if not 'UD' in syst:
                 _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q.lower()))
                 #_treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
+                print '.nominal by','.%s_%s'%(syst,Q.lower())
             else:
                 _treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
                 #_treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD',Q)))
@@ -485,6 +505,8 @@ for syst in systematics:
         #appendSCList()
         #print 'new tree cut is', _cut
 
+print 'rmv_sys is', rmv_sys
+shapecut_first = ''
 for opt in optionsList:
     cutlist =  opt['cut'].split('&')
     #print 'rmv_sys is', rmv_sys
@@ -507,14 +529,82 @@ for opt in optionsList:
 
     shapecut = '&'.join(cutlist)
     if opt == optionsList[0]:
-        sysnomcut = shapecut
+        shapecut_first = shapecut
+    #    shapecut = opt['cut']
+    #    #shapecut = sysnomcut
     appendSCList()
 
-print 'after removing shape sys'
-print 'cutlist', cutlist
-print 'basiccut', shapecut
-#appendSCList()
+#to avoid parsing errors
+for rmv_ in rmv_sys:
+    index_ =  rmv_sys.index(rmv_)
+    nbra = rmv_.count('(')
+    nket = rmv_.count(')')
+    if nbra > nket:
+        rmv_ = rmv_ + abs(nbra-nket)*')'
+    elif nket > nbra:
+        rmv_ = abs(nbra-nket)*'('+rmv_
+    rmv_sys[index_] = rmv_
 
+sysnomcut = '&'.join(rmv_sys)
+
+print 'after removing shape sys'
+print 'shapecut', shapecut #this is the sys variable only
+print 'shapecut_first', shapecut_first
+print 'sysnomcut', sysnomcut #this is the cut string without the sys variables
+#appendSCList()
+#sys.exit(0)
+
+
+replace_cut =eval(config.get('LimitGeneral','replace_cut'))
+#make optimised shapecut
+shapecut_split = shapecut_first.split('&')
+for shape__ in shapecut_split:
+    if shape__.replace(' ','')  == '': continue#to avoid && case
+    shapecut_split_ = shape__.split('||')
+    for shape_ in  shapecut_split_:
+        new_cut_list=sys_cut_suffix[syst]
+        for new_cut in replace_cut:
+            old_str,new_str=new_cut.split('>')
+            if old_str in shape_:
+                print 'when removing everything, string is', shape_.replace('>','').replace('<','').replace(' ','').replace('(','').replace(')','').replace('||','').replace(old_str,'')
+                try:
+                    float(shape_.replace('>','').replace('<','').replace(' ','').replace('(','').replace(')','').replace('||','').replace(old_str,''))
+                except:
+                    newcut_ = '((%s) || (%s))'%(shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Min')),shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Max')))
+                    #duplication of cut will also duplicate addtional ( or ). closing here
+                    nbra = shape_.count('(')
+                    nket = shape_.count(')')
+                    if nbra > nket:
+                        newcut_   = newcut_ + abs(nbra-nket)*')'
+                    elif nket > nbra:
+                        newcut_   = abs(nbra-nket)*'('+newcut_
+                    print 'newcut_ is ', newcut_
+                    shapecut_split_[shapecut_split_.index(shape_)] = newcut_
+                    continue
+                if shape_.split(old_str)[0].replace(' ','').replace('(','').replace(')','').endswith('>') or shape_.split(old_str)[1].replace(' ','').replace('(','').replace(')','').startswith('<'):
+                    shapecut_split_[shapecut_split_.index(shape_)] = shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Min'))
+                    continue
+                elif shape_.split(old_str)[0].replace(' ','').replace('(','').replace(')','').endswith('<') or shape_.split(old_str)[1].replace(' ','').replace('(','').replace(')','').startswith('>'):
+                    shapecut_split_[shapecut_split_.index(shape_)] = shape_.replace(old_str,new_str.replace('SYS','_').replace('UD','Max'))
+                    continue
+                print '@ERROR: cut strings could be parsed correctly'
+                print 'Aborting'
+                sys.exit()
+
+    shapecut_split[shapecut_split.index(shape__)] = '||'.join(shapecut_split_)
+shapecut_MinMax = '&'.join(shapecut_split)
+
+        #_cut = _cut.replace(old_str,new_str.replace('SYS',syst).replace('UD',Q))
+
+#shapecut_MinMax = '&'.join(shapecut_split)
+#print 'shapecut_MinMax is', shapecut_MinMax
+
+dccut = sysnomcut + '&(' + shapecut_MinMax + ')'
+dccutdata = sysnomcut + '&(' + shapecut_first + ')'
+print 'dccut is', dccut
+print 'dccutdata is', dccutdata
+
+#sys.exit()
 
 #UEPS
 #Appends options for each weight 
@@ -522,38 +612,46 @@ for weightF_sys in weightF_systematics:
     #if '_eff_e' in weightF_sys and 'Zuu' in ROOToutname : continue
     #if '_eff_m' in weightF_sys and 'Zee' in ROOToutname : continue
     for _weight in [config.get('Weights','%s_UP' %(weightF_sys)),config.get('Weights','%s_DOWN' %(weightF_sys))]:
-        _cut = treecut
-        shapecut = sysnomcut
+        #_cut = treecut
+        #shapecut = sysnomcut
+        #_cut = "1"
+        #shapecut = "1"
+        _cut = shapecut_first
+        shapecut = shapecut_first
         _treevar = treevar
         _name = title
         appendList()
         appendSCList()
 
-#lhe_muF
-#Appends options for each weight (up/down -> len =2 )
-if len(lhe_muF)==2:
-    for lhe_muF_num in lhe_muF:
-        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muF_num
-        _cut = treecut
-        shapecut = sysnomcut
-        _treevar = treevar
-        _name = title
-        _countHisto = "CountWeightedLHEWeightScale"
-        _countbin = lhe_muF_num
-        appendList()
-        appendSCList()
-
-if len(lhe_muR)==2:
-    for lhe_muR_num in lhe_muR:
-        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muR_num
-        _cut = treecut
-        shapecut = sysnomcut
-        _treevar = treevar
-        _name = title
-        _countHisto = "CountWeightedLHEWeightScale"
-        _countbin = lhe_muR_num
-        appendList()
-        appendSCList()
+##lhe_muF
+##Appends options for each weight (up/down -> len =2 )
+#if len(lhe_muF)==2:
+#    for lhe_muF_num in lhe_muF:
+#        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muF_num
+#        #_cut = treecut
+#        #shapecut = sysnomcut
+#        _cut = "1"
+#        shapecut = "1"
+#        _treevar = treevar
+#        _name = title
+#        _countHisto = "CountWeightedLHEWeightScale"
+#        _countbin = lhe_muF_num
+#        appendList()
+#        appendSCList()
+#
+#if len(lhe_muR)==2:
+#    for lhe_muR_num in lhe_muR:
+#        _weight = weightF + "*LHE_weights_scale_wgt[%s]"%lhe_muR_num
+#        #_cut = treecut
+#        #shapecut = sysnomcut
+#        _cut = "1"
+#        shapecut = "1"
+#        _treevar = treevar
+#        _name = title
+#        _countHisto = "CountWeightedLHEWeightScale"
+#        _countbin = lhe_muR_num
+#        appendList()
+#        appendSCList()
 
 if len(optionsList) != len(shapecutList):
     print '@ERROR: optionsList and shapecutList don\'t have equal size. Aborting'
@@ -563,20 +661,25 @@ _countHisto = "CountWeighted"
 _countbin = 0
 
 print '===================\n'
-#print 'comparing cut strings'
-#for optold, optnew in zip(optionsList,shapecutList):
-#    print 'old option is', optold['cut']
-#    print 'new option is', optnew
+print 'comparing cut strings'
+for optold, optnew in zip(optionsList,shapecutList):
+    print 'old option is', optold['cut']
+    print 'new option is', optnew
+    optionsList[optionsList.index(optold)]['cut']=optnew
 #sys.exit()
 
 
 print 'Preparations for Histograms (HistoMakeri)'
 print '=========================================\n'
 
-mc_hMaker = HistoMaker(all_samples,path,config,optionsList,GroupDict, None, False, sample_to_merge_)
-data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None, None, False, sample_to_merge_)
 
-if sample_to_merge_:
+mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False, dccut = dccut)#sys should never be removed in dc
+data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False, dccut = dccutdata)
+##before
+#mc_hMaker =   HistoMaker(all_samples ,path,config,optionsList     ,GroupDict, None, False, sample_to_merge_)
+#data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None    , None, False, sample_to_merge_)
+
+if sample_to_merge_ or opts.mergeplot:
     print "@INFO: Done splitcachingdc. Bye !"
     sys.exit()
 
@@ -632,6 +735,8 @@ print '\n\t...fetching histos...\n'
 
 inputs=[]
 for job in all_samples:
+    #inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
+    #inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
     inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
 #    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
 
@@ -759,29 +864,29 @@ for weightF_sys in weightF_systematics:
     for Q in UD:
         final_histos['%s_%s'%(systematicsnaming[weightF_sys],Q)]= HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
         ind+=1
-print 'add lhe sys'
-print '==============\n'
-if len(lhe_muF)==2:
-    for Q in UD:
-        for group in sys_lhe_affecting.keys():
-            histos = []
-            for job in all_samples:
-                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
-                    print "XXX"
-                    histos.append(all_histos[job.name][ind])
-            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muF'],group,Q)]= HistoMaker.orderandadd(histos,setup)
-        ind+=1
-
-if len(lhe_muR)==2:
-    for Q in UD:
-        for group in sys_lhe_affecting.keys():
-            histos = []
-            for job in all_samples:
-                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
-                    print "XXX"
-                    histos.append(all_histos[job.name][ind])
-            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muR'],group,Q)]= HistoMaker.orderandadd(histos,setup)
-        ind+=1
+#print 'add lhe sys'
+#print '==============\n'
+#if len(lhe_muF)==2:
+#    for Q in UD:
+#        for group in sys_lhe_affecting.keys():
+#            histos = []
+#            for job in all_samples:
+#                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
+#                    print "XXX"
+#                    histos.append(all_histos[job.name][ind])
+#            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muF'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+#        ind+=1
+#
+#if len(lhe_muR)==2:
+#    for Q in UD:
+#        for group in sys_lhe_affecting.keys():
+#            histos = []
+#            for job in all_samples:
+#                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
+#                    print "XXX"
+#                    histos.append(all_histos[job.name][ind])
+#            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muR'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+#        ind+=1
 
 
 
@@ -857,7 +962,7 @@ if not ignore_stats:
                             final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
     else:
         print "Running Statistical uncertainty"
-        threshold =  0.75 #stat error / sqrt(value). It was 0.5
+        threshold =  0.5 #stat error / sqrt(value). It was 0.5
         print "threshold",threshold
         binsBelowThreshold = {}
         for bin in range(1,nBins+1):
@@ -973,7 +1078,7 @@ f.write('\n')
 f.write('process\t')
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
 #VH
-for c in range(0,columns): f.write('\t%s'%(c-len(signals)+2))
+for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
 #VV
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
 f.write('\n')
@@ -1045,26 +1150,26 @@ for weightF_sys in weightF_systematics:
 #    for it in range(0,columns): f.write('\t1.0')
 #    f.write('\n')
 # LHE systematics
-if len(lhe_muF)==2:
-    for group in sys_lhe_affecting.keys():
-        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
-        samples = sys_lhe_affecting[group]
-        for c in setup:
-            if Dict[c] in samples:
-                f.write('\t1.0')
-            else:
-                f.write('\t-')
-        f.write('\n')
-if len(lhe_muR)==2:
-    for group in sys_lhe_affecting.keys():
-        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
-        samples = sys_lhe_affecting[group]
-        for c in setup:
-            if Dict[c] in samples:
-                f.write('\t1.0')
-            else:
-                f.write('\t-')
-        f.write('\n')
+#if len(lhe_muF)==2:
+#    for group in sys_lhe_affecting.keys():
+#        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muF'],group))
+#        samples = sys_lhe_affecting[group]
+#        for c in setup:
+#            if Dict[c] in samples:
+#                f.write('\t1.0')
+#            else:
+#                f.write('\t-')
+#        f.write('\n')
+#if len(lhe_muR)==2:
+#    for group in sys_lhe_affecting.keys():
+#        f.write('%s_%s\tshape' %(systematicsnaming['lhe_muR'],group))
+#        samples = sys_lhe_affecting[group]
+#        for c in setup:
+#            if Dict[c] in samples:
+#                f.write('\t1.0')
+#            else:
+#                f.write('\t-')
+#        f.write('\n')
 # additional sample systematics
 if addSample_sys:
     alreadyAdded = []
