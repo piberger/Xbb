@@ -204,6 +204,10 @@ elif [ $task = "mergecaching" ]; then
     echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
     ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
 
+elif [ $task = "mergecaching2" ]; then
+    echo "python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist (...)"
+    python ./myutils/MultiCaching.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
 elif [ $task = "mergecachingplot" ]; then
     echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
     python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot

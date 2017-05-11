@@ -339,7 +339,8 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
-        repDict['name'] = repDict['name']+'_'+str(counter_local)
+        repDict['name'] = repDict['name'].replace(',','_')+'_'+str(counter_local)
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
@@ -367,7 +368,8 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if opts.philipp_love_progress_bars:
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
-        repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+        repDict['name'] = ('%(job)s_%(en)s%(task)s' %repDict).replace(',','_')
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
@@ -777,6 +779,79 @@ if opts.task == 'splitvarplot' or opts.task == 'mergecachingplotvar':
 #                #Need to propagate the cutbin param
 #                repDict['additional']= cut_
 #                submit(region,repDict)
+
+#if opts.task == 'splitcaching':
+#    plitcaching()
+
+if opts.task == 'mergecaching2':
+
+    samplesinfo = config.get('Directories', 'samplesinfo')
+    info = ParseInfo(samplesinfo,path)
+    print info
+    
+    # get all regions
+    regions = [x.strip() for x in config.get('Plot_general', 'List').split(',')] 
+    
+    # determine which regions are compatible to be cached together in one go
+    regionsDict = {}
+    for region in regions:
+        section = 'Plot:%s'%region
+        dataSamples = eval(config.get(section, 'Datas'))
+        isSignal = config.has_option(section, 'Signal')
+        mcSignalSamples = eval(config.get(section,'Datas'))
+        identifier = ','.join(dataSamples) + '__' + str(isSignal) + '__' + ','.join(mcSignalSamples)
+        if identifier in regionsDict:
+            regionsDict[identifier].append(region)
+        else:
+            regionsDict[identifier] = [region]
+
+    regionGroups = [y for x,y in regionsDict.iteritems()] 
+    print ("REGION GROUPS:",regionGroups)
+
+    # loop over all region group. A region group is defined to have the same data samples.
+    for regionGroup in regionGroups:
+        print "GROUP: ", regionGroup
+        section = 'Plot:%s'%regionGroup[0]
+        data = eval(config.get(section, 'Datas'))
+        mc = eval(config.get('Plot_general', 'samples'))
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        samples = mcsamples+datasamples
+
+        for sample in samples:
+            print " SAMPLE",sample
+            print " id",sample.identifier
+
+            # split merging proces for chunk of files
+            files = getfilelist(sample.identifier)
+            files_per_job = sample.mergeCachingSize
+            files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+            counter_local = 0
+            for files_sublist in files_split:
+                print "  SUBMIT:", len(files_sublist), " files"
+                print "  PART:", counter_local
+
+                repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
+                jobName = ','.join(regionGroup) 
+
+                files_sublist_filtered = []
+                for filename in files_sublist:
+                    if filename.split('/')[-1] not in sample.skipParts:
+                        files_sublist_filtered.append(filename)
+                    else:
+                        print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
+
+                globalFilesSubmitted += 1
+                print "  --->submit"
+                filelistString = ';'.join(files_sublist_filtered)
+                # necessary due to limits on passed arguments size
+                if files_per_job > 400:
+                    lenBefore = len(filelistString)
+                    filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
+                    lenAfter = len(filelistString)
+                    print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot='', resubmit=False)
+                counter_local = counter_local + 1
 
 #print 'item is', item
 #signals = eval('['+config.get('dc:%s'%item,'signal')+']')
