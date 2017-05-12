@@ -2,6 +2,7 @@
 #include "TMath.h"
 #include "TVector2.h"
 #include "TVector3.h"
+#include <iostream>
 
 
 namespace VHbb {
@@ -783,6 +784,15 @@ namespace VHbb {
     return (SF > 0) ? SF : 0;
   }
 
+// weights correction for EWK NLO correction (for ZllHbb only !!!)
+double ptWeightEWK_Zllv2(int isDY ,double GenVbosons_pt){
+    double SF = 1.;
+    //for Z options
+    if (isDY > 0){
+        if (GenVbosons_pt > 100. && GenVbosons_pt < 3000) SF = -0.1808051+6.04146*(TMath::Power((GenVbosons_pt+759.098),-0.242556));
+    }
+    return SF>0?SF:0;
+}
 
 // weights correction for EWK NLO correction (for ZllHbb only !!!)
 double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nGenTop, int nGenHiggsBoson){
@@ -819,6 +829,295 @@ double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nG
 
     return (SF > 0) ? SF : 0;
   }
+
+double LOtoNLOWeightEtabb(double etabb){
+
+    double SF = 1.;
+    if(etabb < 5){
+
+        //SF = 0.895074 + 0.0621916*etabb -0.00512346*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
+//GeneralCuts wQCD
+       //SF = 0.914679 + 0.0215918*etabb +0.010957*etabb*etabb + 0.00926905*etabb*etabb*etabb -0.00154982*etabb*etabb*etabb*etabb;
+//GeneralCuts noQCD
+       //SF = 0.914641 + 0.0216597*etabb + 0.0110062*etabb*etabb + 0.00923401*etabb*etabb*etabb - 0.00154752*etabb*etabb*etabb*etabb;
+       //Z+light
+       //wQCD
+       //SF = 0.888143  + 0.0498867*etabb + 0.0139812*etabb*etabb + 0.00217246*etabb*etabb*etabb + 0.000482098*etabb*etabb*etabb*etabb;
+       //For closure test
+       //SF =   0.929881 + 0.0643316*etabb -0.0541741*etabb*etabb + 0.0306295*etabb*etabb*etabb -0.00340578*etabb*etabb*etabb*etabb;
+       //For closure test on Z+light
+       //SF =   0.936322 + 0.0482062*etabb -0.034030*etabb*etabb + 0.0215382*etabb*etabb*etabb -0.00244087*etabb*etabb*etabb*etabb;
+       //Z+light no w (to check)
+       //SF =   0.895074 + 0.0621916*etabb -0.00512345*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
+       //From 8/11/16
+       //no QCD weights
+       SF =   0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb;
+       //with QCD weights
+       //SF =   0.935996 + 0.0444133*etabb -0.0272901*etabb*etabb +  0.018343*etabb*etabb*etabb -0.00198018*etabb*etabb*etabb*etabb;
+
+    }
+
+    return SF;
+
+}
+
+double LOtoNLOWeightBjetSplitEtabb(double etabb, int njets){
+
+    double SF = 1.;
+    if(etabb < 5){
+        if(njets < 1){
+
+        ////0b jets
+        //SF =   0.937159 + 0.0380638*etabb -0.0114265*etabb*etabb +0.00937904*etabb*etabb*etabb -0.000845364*etabb*etabb*etabb*etabb;
+        //}else if(njets == 1){
+        ////1b jets
+        //SF =   1.00048 -0.120242*etabb + 0.112471*etabb*etabb -0.0288309*etabb*etabb*etabb +0.00278647*etabb*etabb*etabb*etabb;
+        //}else if(njets >=2){
+        ////2b jets
+        ////SF =   0.792924 -0.079221*etabb + 0.335798*etabb*etabb -0.138331*etabb*etabb*etabb +0.0189486*etabb*etabb*etabb*etabb;
+        //SF =   0.797513 -0.104328*etabb + 0.384611*etabb*etabb -0.16464*etabb*etabb*etabb +0.0230427*etabb*etabb*etabb*etabb;
+        //}
+        ////with ewk in benriched and bgen
+        ////0b jets
+        //SF =   0.937159 + 0.0380626*etabb -0.0114244*etabb*etabb +0.00937822*etabb*etabb*etabb -0.000845273*etabb*etabb*etabb*etabb;
+        //}else if(njets == 1){
+        ////1b jets
+        //SF =   1.00046 -0.12019*etabb + 0.112428*etabb*etabb -0.0288139*etabb*etabb*etabb +0.00278412*etabb*etabb*etabb*etabb;
+        //}else if(njets >=2){
+        ////2b jets
+        ////SF =   0.797513 -0.0794639*etabb + 0.336195*etabb*etabb -0.138538*etabb*etabb*etabb +0.0189817*etabb*etabb*etabb*etabb;
+        ////exp
+        ////SF =   (0.744195 -0.208734*etabb + 0.0187821*etabb*etabb +0.000198769*etabb*etabb*etabb)*TMath::Exp(0.524992*etabb);
+        ////exp 8 bins
+        //SF =   (0.719104 -0.0266203*etabb -0.0449267*etabb*etabb +0.00834689*etabb*etabb*etabb)*TMath::Exp(0.369618*etabb);
+        //after pu and ewk 400 to 650
+        SF =   0.935422 + 0.0403162*etabb -0.0089026*etabb*etabb +0.0064324*etabb*etabb*etabb -0.000212443*etabb*etabb*etabb*etabb;
+        }else if(njets == 1){
+        //1b jets
+        SF =   0.962415 +0.0329463*etabb -0.0414479*etabb*etabb +0.0240993*etabb*etabb*etabb -0.00278271*etabb*etabb*etabb*etabb;
+        }else if(njets >=2){
+        //2b jets
+        //exp
+        //exp 8 bins
+        SF =   (0.721265 -0.105643*etabb -0.0206835*etabb*etabb +0.00558626*etabb*etabb*etabb)*TMath::Exp(0.450244*etabb);
+        }
+    }
+
+    return SF;
+
+}
+
+int checkgen(int Jet_mcIdx0, int Jet_mcIdx1, int length){
+
+   if (Jet_mcIdx0 == -1 || Jet_mcIdx1 == -1 || Jet_mcIdx0 >= length || Jet_mcIdx1 >= length){
+       return 0;
+   }else{
+       return Jet_mcIdx0;
+   }
+
+}
+
+double LOtoNLOWeightgenEtabb(double etabb){
+
+    double SF = 1.;
+        if(etabb < 5 && etabb > 0.000001){
+            //GeneralCuts wQCD
+            //SF = 0.889908 + 0.0185636*etabb +0.0353842*etabb*etabb + 0.00142895*etabb*etabb*etabb -0.000413957*etabb*etabb*etabb*etabb;
+            //GeneralCuts noQCD
+            //SF = 0.889875 + 0.0185131*etabb +0.0355196*etabb*etabb + 0.00138352*etabb*etabb*etabb -0.00041181*etabb*etabb*etabb*etabb;
+            //Z+light
+            //w QCD
+            SF =  0.870811+ 0.0386754*etabb + 0.0479672*etabb*etabb - 0.011603*etabb*etabb*etabb + 0.00252448*etabb*etabb*etabb*etabb;
+        }
+    return SF;
+
+}
+
+double LOtoNLOWeightgenEtabbPtJ(double etabb){
+
+    double SF = 1.;
+        if(etabb < 5 && etabb > 0.000001){
+            //SF = 0.860459 + 0.0191792*etabb + 0.0546046*etabb*etabb - 0.00623299*etabb*etabb*etabb + 0.000123637*etabb*etabb*etabb*etabb;
+            //Z+light
+            //w QCD
+            SF = 0.841774 + 0.0725955*etabb + 0.0202381*etabb*etabb + 0.0016097*etabb*etabb*etabb + 0.0000391441*etabb*etabb*etabb*etabb;
+        }
+
+    return SF;
+
+}
+
+//int FirstGenJet(Float_t GenJet_eta[], Float_t GenJet_phi[], Float_t Jet_eta, Float_t Jet_phi, int gensize = 15){
+//
+//    double dR = 999;
+//    int ind = -1;
+//
+//    for (int k = 0; k < gensize; ++k){
+//        if (deltaR(GenJet_eta[k], GenJet_phi[k], Jet_eta, Jet_phi) < dR){
+//           dR = deltaR(GenJet_eta[k], GenJet_phi[k], Jet_eta[l], Jet_phi[l]);
+//           ind = k;
+//        }
+//    }
+//    if dR <
+//
+//}
+
+float puWeight_ichep(float I){
+
+//int i = std::nearbyint(I);
+int i = (int) I;
+
+double puw[38]={0.00026954692859,
+                0.00834201570744,
+                0.0146551644559,
+                0.0267593718187,
+                0.045546866213,
+                0.0351739785649,
+                0.0389242914756,
+                0.131305445658,
+                0.337172065156,
+                0.645651266938,
+                0.908493559723,
+                1.09739459449,
+                1.26533979742,
+                1.41586705341,
+                1.53524109717,
+                1.49032150282,
+                1.39123249386,
+                1.45737145535,
+                1.38588035333,
+                1.4464676134,
+                1.23282560995,
+                1.08387439504,
+                1.02663484504,
+                0.97464906611,
+                0.829692105572,
+                0.758597838706,
+                0.554540190093,
+                0.442016886186,
+                0.291492210196,
+                0.203297812168,
+                0.131804681706,
+                0.0834846669777,
+                0.0680713812995,
+                0.0497105409204,
+                0.0496692836227,
+                0.0581182475108,
+                0.089209326104,
+                0.0941178579122,
+               };
+
+if (i < 0) return 1.;
+if (i > 37) return puw[37];
+
+return puw[i];
+
+}
+
+float puWeight_ichep_up(float I){
+
+int i = (int) I;
+//int i = std::nearbyint(I);
+
+double puw[38]={0.000168728884,
+                0.006518139648,
+                0.012767671099,
+                0.021849922433,
+                0.041129948359,
+                0.031318966078,
+                0.031506395408,
+                0.069139953987,
+                0.201682923142,
+                0.431573069513,
+                0.676688315382,
+                0.885061147726,
+                1.02772732515,
+                1.1496216224,
+                1.26358384716,
+                1.24734104964,
+                1.19950685946,
+                1.30515668683,
+                1.28849179873,
+                1.39604961327,
+                1.24030942651,
+                1.13881318563,
+                1.12938083469,
+                1.13608683795,
+                1.04512825001,
+                1.04965380671,
+                0.848278572582,
+                0.748408550686,
+                0.548182746816,
+                0.426699751655,
+                0.308798449343,
+                0.217654143858,
+                0.197782762841,
+                0.16222993513 ,
+                0.183774325453,
+                0.245159931575,
+                0.426559360962,
+                0.491832630157,
+               };
+
+if (i < 0) return 1.;
+if (i > 37) return puw[37];
+
+return puw[i];
+
+}
+
+float puWeight_ichep_down(float I){
+
+int i = (int) I;
+//int i = std::nearbyint(I);
+
+double puw[38]={0.000394948025924,
+                0.010589291412,
+                0.0168294422346,
+                0.0324871095383,
+                0.0512240404177,
+                0.0392771251619,
+                0.0585204632322,
+                0.252037472998,
+                0.543974217454,
+                0.93479398165,
+                1.17260170322,
+                1.36170067318,
+                1.5793616475,
+                1.74509976454,
+                1.86131835195,
+                1.75449370357,
+                1.57204882742,
+                1.57954789714,
+                1.44148253688,
+                1.43725104611,
+                1.16760012792,
+                0.975000220575,
+                0.8640144709,
+                0.750072693636,
+                0.574219048746,
+                0.469714734739,
+                0.306667353503,
+                0.217186088114,
+                0.126764763282,
+                0.0784330110012,
+                0.0451854756945,
+                0.0252751549695,
+                0.0180049218223,
+                0.0113901195301,
+                0.00987729209672,
+                0.0103547199185,
+                0.0158597867448,
+                0.0210296659761,
+               };
+
+if (i < 0) return 1.;
+if (i > 37) return puw[37];
+
+return puw[i];
+
+}
+
 
 }
 

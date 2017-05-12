@@ -7,11 +7,14 @@ from Ratio import getRatio
 from HistoMaker import HistoMaker
 
 class StackMaker:
-    def __init__(self, config, var,region,SignalRegion,setup=None):
+    def __init__(self, config, var,region,SignalRegion,setup=None, subcut = ''):
         section='Plot:%s'%region
         self.var = var
         self.SignalRegion=SignalRegion
         self.region = region
+        self.subcut = subcut
+        #make log plot even if not defined in plot.ini
+        self.forceLog = None
         #print "region:",region
         self.normalize = eval(config.get(section,'Normalize'))
         self.log = eval(config.get(section,'log'))
@@ -22,7 +25,7 @@ class StackMaker:
             self.setup=config.get('Plot_general','setup')
             if self.log:
                 self.setup=config.get('Plot_general','setupLog')
-            self.setup=self.setup.split(',')
+            self.setup=[x.strip() for x in self.setup.split(',')]
         else:
             self.setup=setup
         if not SignalRegion: 
@@ -91,11 +94,12 @@ class StackMaker:
         # self.hname = self.hname.replace(':','')
         # self.hname = self.hname.replace(':','')
         # self.hname = self.hname.replace('[','')
-        # self.hname = self.hname.replace(']','')
+
         # self.hname = self.hname.replace('$','')
 # >>>>>>> silviodonato/master
         #print ('self.hname',self.hname)
-        self.options = {'var': self.name,'name':self.hname,'xAxis': self.xAxis, 'nBins': self.nBins, 'xMin': self.xMin, 'xMax': self.xMax,'pdfName': '%s_%s_%s.pdf'%(region,var,self.mass),'cut':cut,'mass': self.mass, 'data': data, 'blind': self.blind}
+        print 'test of the sample name', '%s%s_%s_%s.pdf'%(region,self.subcut,var,self.mass)
+        self.options = {'var': self.name,'name':self.hname,'xAxis': self.xAxis, 'nBins': self.nBins, 'xMin': self.xMin, 'xMax': self.xMax,'pdfName': '%s%s_%s_%s.pdf'%(region,self.subcut,var,self.mass),'cut':cut,'mass': self.mass, 'data': data, 'blind': self.blind}
         if config.has_option('Weights','weightF'):
             self.options['weight'] = config.get('Weights','weightF')
         else:
@@ -115,8 +119,10 @@ class StackMaker:
         self.histos = None
         self.typs = None
         self.AddErrors = None
+        self.ratio_band= None
         self.jobnames = None
         self.addFlag2 = ''
+        self.prefit_overlay = None
         if 'TTbar' in self.region:
             self.addFlag2 = 't#bar{t} enriched'
         elif 'ZLight' in self.region:
@@ -154,7 +160,8 @@ class StackMaker:
         for j in range(0,k):
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            self.histos[i].SetLineColor(int(self.colorDict[self.typs[i]]))
+            if self.typs[i] in self.colorDict:
+                self.histos[i].SetLineColor(int(self.colorDict[self.typs[i]]))
             self.histos[i].SetFillColor(0)
             self.histos[i].SetLineWidth(3)
             if self.histos[i].Integral() > 0.:
@@ -185,9 +192,11 @@ class StackMaker:
         name = name.replace(' ',"_")
         pngName = (name.replace('.pdf','.png')).replace("/pdf","")
         rootName = (name.replace('.pdf','.root')).replace("/pdf","/root")
+        CName = (name.replace('.pdf','.C')).replace("/pdf","/C")
         c.Print(name)
         c.Print(pngName)
         c.Print(rootName)
+        c.Print(CName)
 
 
     def doPlot(self):
@@ -207,9 +216,12 @@ class StackMaker:
         for key in self.setup:
           print "The sample in setup are", key
 
-        self.histos=[histo_dict[key] for key in self.setup]
+        self.histos=[histo_dict[key] for key in self.setup if key in histo_dict]
         print "again, self.histos is",self.histos
         self.typs=self.setup
+
+        if self.forceLog is not None and self.forceLog:
+            self.log = True
 
         c = ROOT.TCanvas(self.var,'', 600, 600)
         c.SetFillStyle(4000)
@@ -266,20 +278,35 @@ class StackMaker:
         k=len(self.histos)
     
         for j in range(0,k):
+            print 'j is',j
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            self.histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
+            if self.typs[i] in self.colorDict:
+                self.histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
             self.histos[i].SetLineColor(1)
             allStack.Add(self.histos[i])
+
+        datas_nbins = self.datas[i].GetXaxis().GetNbins()
+        datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
+        datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
+
+        print 'data_nbins:', datas_nbins
+        print 'datas_xMin:', datas_xMin
+        print 'datas_xMax:', datas_xMax
+        print 'nbins:', self.nBins
+        print 'xMin:', self.xMin
+        print 'xMax:',self.xMax
+
 
         d1 = ROOT.TH1F('noData','noData',self.nBins,self.xMin,self.xMax)
         datatitle='Data'
         addFlag = ''
-        if 'Zee' in self.datanames and 'Zmm' in self.datanames:
+        print 'self.datanames is', self.datanames
+        if 'Muon' in self.datanames and 'Electron' in self.datanames:
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Zee' in self.datanames:
+        elif 'Electron' in self.datanames:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Zmm' in self.datanames:
+        elif 'Muon' in self.datanames:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'
@@ -291,7 +318,7 @@ class StackMaker:
             addFlag = 'W(#tau#nu)H(b#bar{b})'
 
         for i in range(0,len(self.datas)):
-            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()
+            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbinsX()
             d1.Add(self.datas[i],1)
         print "\033[1;32m\n\tDATA integral = %s\033[1;m"%d1.Integral()
         flow = d1.GetEntries()-d1.Integral()
@@ -300,23 +327,37 @@ class StackMaker:
 
         if self.overlay and not isinstance(self.overlay,list):
             self.overlay = [self.overlay]
+        print 'self.overlay is', self.overlay
         if self.overlay:
             for _overlay in self.overlay:
+                print 'overlay title is', _overlay.GetTitle()
                 _overlay.SetLineColor(99)
                 _overlay.SetLineColor(int(self.colorDict[_overlay.GetTitle()]))
                 _overlay.SetLineWidth(3)
                 _overlay.SetFillColor(0)
                 _overlay.SetFillStyle(4000)
 
+                # PREfit overlay
+        if self.prefit_overlay:
+            print '\n\n\t\t========PREFIT OVERLAY==========',self.prefit_overlay
+            for _prefit_overlay in self.prefit_overlay:
+                _prefit_overlay.SetLineColor(ROOT.kRed)
+                #_prefit_overlay.SetLineColor(ROOT.kBlue)
+                _prefit_overlay.SetLineWidth(2)
+                _prefit_overlay.SetFillColor(0)
+                _prefit_overlay.SetFillStyle(4000)
+                l_2.AddEntry(_prefit_overlay,'PreFit','L')
+
         numLegend = 2+k
         if self.overlay:
             numLegend += len(self.overlay)
         l.AddEntry(d1,datatitle,'P')
         for j in range(0,k):
+            legendEntryName = self.typLegendDict[self.typs[j]] if self.typs[j] in self.typLegendDict else self.typs[j]
             if j < numLegend/2.-1:
-                l.AddEntry(self.histos[j],self.typLegendDict[self.typs[j]],'F')
+                l.AddEntry(self.histos[j],legendEntryName,'F')
             else:
-                l_2.AddEntry(self.histos[j],self.typLegendDict[self.typs[j]],'F')
+                l_2.AddEntry(self.histos[j],legendEntryName,'F')
         if self.overlay:
             overScale = 100000
             for _overlay in self.overlay: #find minimum scale to use for all overlays
@@ -384,7 +425,10 @@ class StackMaker:
         theErrorGraph.SetFillColor(ROOT.kGray+3)
         theErrorGraph.SetFillStyle(3013)
         theErrorGraph.Draw('SAME2')
-        l_2.AddEntry(theErrorGraph,"MC uncert. (stat.)","fl")
+        if not self.AddErrors:
+            l_2.AddEntry(theErrorGraph,"MC uncert. (stat.)","fl")
+        else:
+            l_2.AddEntry(theErrorGraph,"MC uncert. (stat.+ syst.)","fl")
         Ymax = max(allStack.GetMaximum(),d1.GetMaximum())*1.7
         if self.log:
             allStack.SetMinimum(0.1)
@@ -403,6 +447,10 @@ class StackMaker:
             for _overlay in self.overlay:
                 print("Drawing overlay")
                 _overlay.Draw('hist,same')
+        if self.prefit_overlay:
+            for _prefit_overlay in self.prefit_overlay:
+                print("Drawing overlay")
+                _prefit_overlay.Draw('hist,same')
         d1.Draw("E,same")
         l.Draw()
         l_2.Draw()
@@ -414,7 +462,7 @@ class StackMaker:
             # tLumi = self.myText("#sqrt{s} =  %s, L = %.1f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.)),0.17,0.78)
         # else:
             # tLumi = self.myText("#sqrt{s} =  %s, L = %.1f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.)),0.17,0.83)
-        tLumi = self.myText("#sqrt{s} =  %s, L = %.3f fb^{-1}"%(self.anaTag,(float(self.lumi/1000.0))),0.17,0.83)
+        tLumi = self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag,(float(self.lumi/1000.0))),0.17,0.83)
         tAddFlag = self.myText(addFlag,0.17,0.78)
         print 'Add Flag %s' %self.addFlag2
         if self.addFlag2:
@@ -453,16 +501,29 @@ class StackMaker:
             allMC.Fit(fitMC,"R")
 
 
-        if not self.AddErrors == None:
-            self.AddErrors.SetLineColor(1)
-            self.AddErrors.SetFillColor(5)
-            self.AddErrors.SetFillStyle(3001)
-            self.AddErrors.Draw('SAME2')
+        #if not self.AddErrors == None:
+        #    self.AddErrors.SetLineColor(1)
+        #    self.AddErrors.SetFillColor(5)
+        #    self.AddErrors.SetFillStyle(3001)
+        #    self.AddErrors.Draw('SAME2')
 
-            l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
+        #    l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
 
+        r_err = {}
+        if not self.ratio_band== None:
+            for key in self.ratio_band:
+                print 'key is', key
+                r_err[key] = allMC.Clone()
+                r_err[key].Divide(self.ratio_band[key])
+                r_err[key].Draw('SAME2')
+                r_err[key].SetLineStyle(self.ratio_band[key].GetLineStyle())
+                r_err[key].SetLineWidth(self.ratio_band[key].GetLineWidth())
+                r_err[key].SetLineColor(self.ratio_band[key].GetLineColor())
 
-        l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+        if not self.AddErrors:
+            l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+        else:
+            l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
 
         l2.Draw()
 
@@ -496,9 +557,13 @@ class StackMaker:
         name = name.replace(' ',"_")
         pngName = (name.replace('.pdf','.png')).replace("/pdf","")
         rootName = (name.replace('.pdf','.root')).replace("/pdf","/root")
+        CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
         c.Print(rootName)
+        c.Print(CName)
+        #c.SaveAs(rootName)
+        #c.SaveAs(CName)
 
         #print "DATA INTEGRAL: %s" %d1.Integral(d1.GetNbinsX()-2,d1.GetNbinsX()) 
         #fOut = ROOT.TFile.Open(name.replace('.pdf','.root'),'RECREATE')
@@ -583,7 +648,8 @@ class StackMaker:
         for j in range(0,k):
             #print histos[j].GetBinContent(1)
             i=k-j-1
-            sub_histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
+            if self.typs[i] in self.colorDict:
+                sub_histos[i].SetFillColor(int(self.colorDict[self.typs[i]]))
             sub_histos[i].SetLineColor(1)
             allStack.Add(sub_histos[i])
             print sub_histos[i].GetName()
@@ -615,7 +681,7 @@ class StackMaker:
         else:
             addFlag = 'pp #rightarrow VH; H #rightarrow b#bar{b}'
         for i in range(0,len(self.datas)):
-            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()
+            print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbins()
             d1.Add(self.datas[i],1)
         print "\033[1;32m\n\tDATA integral = %s\033[1;m"%d1.Integral()
         flow = d1.GetEntries()-d1.Integral()
@@ -713,6 +779,8 @@ class StackMaker:
             for _overlay in self.overlay:
                 print "Drawing overlay"
                 _overlay.Draw('hist,same')
+                for _prefit_overlay in self.prefit_overlay:
+                                    _prefit_overlay.Draw('same')
         sub_d1.Draw("E,same")
         l.Draw()
 
@@ -733,12 +801,12 @@ class StackMaker:
 
 
 
-        if not self.AddErrors == None:
-            self.AddErrors.SetFillColor(5)
-            self.AddErrors.SetFillStyle(1001)
-            self.AddErrors.Draw('SAME2')
+        #if not self.AddErrors == None:
+        #    self.AddErrors.SetFillColor(5)
+        #    self.AddErrors.SetFillStyle(1001)
+        #    self.AddErrors.Draw('SAME2')
 
-            l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
+        #    l2.AddEntry(self.AddErrors,"MC uncert. (stat. + syst.)","f")
 
 
         if not os.path.exists(self.plotDir):
@@ -749,7 +817,11 @@ class StackMaker:
         c.Print(name)
         pngName = (name.replace('.pdf','.png')).replace("/pdf","")
         rootName = (name.replace('.pdf','.root')).replace("/pdf","/root")
+        CName = (name.replace('.pdf','.C')).replace("/pdf","/root")
         c.Print(name)
         c.Print(pngName)
         c.Print(rootName)
+        c.Print(CName)
+        #c.SaveAs(rootName)
+        #c.SaveAs(CName)
 

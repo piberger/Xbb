@@ -1,0 +1,15 @@
+*.root
+*/*
+*.swo
+!Gael*/
+!myutils/
+luca
+!json
+!*config/*
+*/*.swo
+!myutils/
+!csv/*
+csv/*.d
+csv/*.pcm
+csv/*.so
+core.*

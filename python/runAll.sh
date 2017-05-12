@@ -116,70 +116,113 @@ END
 # Run Task
 
 if [ $task = "prep" ]; then
-    echo "./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}"
-    ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}
+    echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}"
+    python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singleprep" ]; then
-    echo "./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist"
-    ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist
+    echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
+    python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleprep" ]; then
-    echo "./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}"
-    ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}
+    echo "python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}"
+    python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "trainReg" ]; then
-    echo "./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
-    ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
+    echo "python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
+    python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
 
 elif [ $task = "sys" ]; then
-    echo "./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
-    ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
+    echo "python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
+    python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
+
+elif [ $task = "vars" ]; then
+    echo "python ./write_newVariables.py --samples $sample ${config_filenames[@]}"
+    python ./write_newVariables.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singlesys" ]; then
-    echo "./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist $filelist"
-    ./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist $filelist
+    echo "python ./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
+    python ./write_regression_systematics.py --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesinglesys" ]; then
-    echo "./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}  --mergesys True"
-    ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]} --mergesys True
+    echo "python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}  --mergesys True"
+    python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]} --mergesys True
 
 elif [ $task = "reg" ]; then
-    echo "./only_regression.py --samples $sample ${config_filenames[@]}"
-    ./only_regression.py --samples $sample ${config_filenames[@]}
+    echo "python ./only_regression.py --samples $sample ${config_filenames[@]}"
+    python ./only_regression.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "eval" ]; then
-    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}"
-    ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
+    echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}"
+    python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
 
 elif [ $task = "singleeval" ]; then
-    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist"
-    ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist
+    echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
+    python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleeval" ]; then
-    echo "./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}  --mergeeval True"
-    ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]} --mergeeval True
+    echo "python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}  --mergeeval True"
+    python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]} --mergeeval True
 
 elif [ $task = "syseval" ]; then
-    echo "./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
-    ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
-    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}"
-    ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
+    echo "python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
+    python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
+    echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}"
+    python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]}
 
-elif [ $task = "train" ]; then
-    echo "./train.py --training $sample ${config_filenames[@]} --local True"
-    ./train.py --training $sample ${config_filenames[@]} --local True
+elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
+    echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
+    python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
+elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
+    echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
+    python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "singleplot" ]; then
-    echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist"
+    echo "./tree_stack.py --region $region ${config_filenames[@]} --filelist ...(${#filelist} char)"
     ./tree_stack.py --region $region ${config_filenames[@]} --filelist $filelist
 
 elif [ $task = "mergesingleplot" ]; then
     echo "./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True"
-    ./tree_stack.py --region $region ${config_filenames[@]} --mergeplot True
+    ./tree_stack.py --region $region ${config_filenames[@]} --filelist $sample --mergeplot True
 
 elif [ $task = "plot" ]; then
-    echo "./tree_stack.py --region $sample ${config_filenames[@]}"
-    ./tree_stack.py --region $sample ${config_filenames[@]}
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
+
+elif [ $task = "mergecachingplotvar" ]; then
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot
+
+elif [ $task = "splitvarplot" ]; then
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params
+
+elif [ $task = "splitcaching" ]; then
+    echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False"
+    ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False
+
+elif [ $task = "mergecaching" ]; then
+    echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
+elif [ $task = "mergecachingplot" ]; then
+    echo "python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot"
+    python ./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergecachingplot
+
+elif [ $task = "mergesubcaching" ]; then
+    echo "./train.py --training $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --mergeplot False  --filelist $filelist
+elif [ $task = "mergesubcachingtrain" ]; then
+    echo "./train.py --training $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False"
+    ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --mergeplot False --mergecachingplot
+elif [ $task = "mergesyscaching" ]; then
+    #echo "./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    #./tree_stack.py --region $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False  --filelist $filelist"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params --mergeplot False --filelist $filelist
+
+elif [ $task = "mergesyscachingdc" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True
 
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
@@ -193,34 +236,37 @@ elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = 
     # echo $exitcode
     exit $exitcode
 elif [ $task = "dc" ]; then
-    echo "./workspace_datacard.py --variable $sample ${config_filenames[@]}"
-    ./workspace_datacard.py --variable $sample ${config_filenames[@]}
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]}"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]}
+elif [ $task = "splitcachingdc" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --settings $bdt_params
 
 elif [ $task = "split" ]; then
-    echo "./split_tree.py --samples $sample ${config_filenames[@]} --max-events $job_id"
-    ./split_tree.py --samples $sample ${config_filenames[@]} --max-events $job_id
+    echo "python ./split_tree.py --samples $sample ${config_filenames[@]} --max-events $job_id"
+    python ./split_tree.py --samples $sample ${config_filenames[@]} --max-events $job_id
 
 elif [ $task = "stack" ]; then
-    echo "./manualStack.py --config ${config_filenames[@]}"
-    ./manualStack.py ${config_filenames[@]}
+    echo "python ./manualStack.py --config ${config_filenames[@]}"
+    python ./manualStack.py ${config_filenames[@]}
 
 elif [ $task = "plot_sys" ]; then
-    echo "./plot_systematics.py ${config_filenames[@]}"
-    ./plot_systematics.py ${config_filenames[@]}
+    echo "python ./plot_systematics.py ${config_filenames[@]}"
+    python ./plot_systematics.py ${config_filenames[@]}
 
-elif [ $task = "mva_opt" ]; then
-    echo "BDT Hyperparameters: $bdt_params"
-    echo "./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params  --local True"
-    ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params --local True
+#elif [ $task = "mva_opt" ]; then
+#    echo "BDT Hyperparameters: $bdt_params"
+#    echo "python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params  --local True"
+#    python ./train.py --name ${sample} --training ${job_id} ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "mva_opt_eval" ]; then
-    echo "./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params"
-    ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params
+    echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params"
+    python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --weight $bdt_params
 
 # WORK IN PROGRESS
 elif [ $task = "mva_opt_dc" ]; then
-    echo "./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params"
-    ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
 
 fi
 

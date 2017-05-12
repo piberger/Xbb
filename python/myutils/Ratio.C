@@ -11,7 +11,7 @@
 #include <math.h>
 
 struct coolRatio {
-    //coolRatio() :  
+  //coolRatio() :
     
   // User must clean up the created ratio histograms.
   //TH1 make_rebinned_ratios(TH1* theHist, TH1* theReference, double maxUncertainty);

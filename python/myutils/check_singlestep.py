@@ -45,25 +45,32 @@ if __name__ == "__main__":
 
     if opts.task == 'checksingleprep':
         pathOUT_orig = config.get('Directories','PREPout')
+        pathIN_orig = 'DAS'
     elif opts.task == 'checksinglesys':
         pathOUT_orig = config.get('Directories','SYSout')
+        pathIN_orig = config.get('Directories','SYSin')
     elif opts.task == 'checksingleeval':
         pathOUT_orig = config.get('Directories','MVAout')
+        pathIN_orig = config.get('Directories','MVAin')
     elif opts.task == 'checksingleplot':
         pathOUT_orig = config.get('Directories','tmpSamples')
+        pathIN_orig = config.get('Directories','plottingSamples')
 
     pathOUT_orig = pathOUT_orig.replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','').replace('root://t3dcachedb03.psi.ch:1094/','')
+    pathIN_orig = pathIN_orig.replace('gsidcap://t3se01.psi.ch:22128/','').replace('dcap://t3se01.psi.ch:22125/','').replace('root://t3dcachedb03.psi.ch:1094/','')
     # print "opts.task",opts.task
     samplefiles = config.get('Directories','samplefiles')
+    print 'pathIN_orig',pathIN_orig
+    print 'pathOUT_orig',pathOUT_orig
 
     hash = ''
     if opts.region:
-        print 'opts.region',opts.region
+        # print 'opts.region',opts.region
         region = opts.region
         print 'evaluating cuts for region',region
         section='Plot:%s'%region
         vars = (config.get(section, 'vars')).split(',')#get the variables to be ploted in each region
-        print 'vars',vars
+        # print 'vars',vars
         SignalRegion = False
         if config.has_option(section,'Signal'):
             # mc.append(config.get(section,'Signal'))
@@ -120,33 +127,49 @@ if __name__ == "__main__":
             filenames = open(samplefiles+'/'+identifier+'.txt').readlines()
             print 'number of files on DAS:',len(filenames),#filenames[0]
 
+            if pathIN_orig != 'DAS':
+                pathIN = pathIN_orig+'/'+identifier
+                nFilesInPathIn = int(os.popen('ls '+pathIN+'/*.root |wc -l').read())
+                print '    --->>    number of input files for '+opts.task+':',nFilesInPathIn,#,firstfileInPathOut[0]
+            else:
+                nFilesInPathIn = len(filenames)
+
             # print 'pathOUT', pathOUT
             # print('ls '+pathOUT+'/*.root |wc -l')
             nFilesInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|wc -l').read())
             firstfileInPathOut = os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|head -n 1').read()
-            print '    --->>    number of files produced by '+opts.task+':',nFilesInPathOut#,firstfileInPathOut[0]
-
-            if len(filenames) == int(nFilesInPathOut):
+            print '    --->>    number of output files:',nFilesInPathOut#,firstfileInPathOut[0]
+            if int(nFilesInPathIn) == int(nFilesInPathOut):
                 print 'ALL FILES CORRECTLY PROCESSED BY '+opts.task+'\n'
                 # sys.exit(0)
             else:
-                print '-------->>>>>> MISSING '+str(len(filenames)-int(nFilesInPathOut))+'/'+str(len(filenames))+' FILES IN THE '+opts.task+' TASK FOR THE SAMPLE '+identifier+'\n'
+                print '-------->>>>>> MISSING '+str(nFilesInPathIn-int(nFilesInPathOut))+'/'+str(nFilesInPathIn)+' OUTPUT FILES IN THE '+opts.task+' TASK FOR THE SAMPLE '+identifier
                 # sys.exit(1)
                 if sampleType == 'DATA':
                     data_dataset_missing_files.append(identifier)
                 else:
                     mc_dataset_missing_files.append(identifier)
-
+            if len(filenames) != int(nFilesInPathIn):
+                print '-------->>>>>> MISSING '+str(len(filenames)-int(nFilesInPathIn))+'/'+str(len(filenames))+' INPUT FILES FOR THE '+opts.task+' TASK WITH RESPECT TO DAS\n'
 
         print '\n\nFINAL RECAP: \n\nmissing files for the following MC datasets:'
         print mc_dataset_missing_files
+        for file in mc_dataset_missing_files:
+            print file
         print '\nmissing files for the following DATA datasets (VERY IMPORTANT!!!):'
         print data_dataset_missing_files
+        for file in data_dataset_missing_files:
+            print file
     else:
         pathOUT = pathOUT_orig+'/'+opts.names
         filenames = open(samplefiles+'/'+opts.names+'.txt').readlines()
         nFilesInPathOut = int(os.popen('ls '+pathOUT+'/*.root '+grep_hash+'|wc -l').read())
-        if len(filenames) == int(nFilesInPathOut): print 'all files available'; sys.exit(10)
+        if pathIN_orig != 'DAS':
+            pathIN = pathIN_orig+'/'+opts.names
+            nFilesInPathIn = int(os.popen('ls '+pathIN+'/*.root |wc -l').read())
+        else:
+            nFilesInPathIn = len(filenames)
+        if int(nFilesInPathIn) == int(nFilesInPathOut): print 'all files available'; sys.exit(10)
 
         filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
         for inputfile in filelist:

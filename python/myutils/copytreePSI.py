@@ -46,7 +46,7 @@ def copySingleFile(whereToLaunch,inputFile,outputFile,Acut,remove_branches):
         output.Write()
         output.Close()
         input.Close()
-        command = 'srmcp -2 -globus_tcp_port_range 20000,25000 file:///'+__tmpPath+'/'+outputFileName+' '+ outputFile.replace('root://t3dcachedb03.psi.ch:1094','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/')
+        command = 'xrdcp -d 1 '+__tmpPath+'/'+outputFileName+' '+ outputFile
         subprocess.call([command], shell=True)
         command = 'rm '+__tmpPath+'/'+outputFileName
         subprocess.call([command], shell=True)
@@ -105,7 +105,7 @@ def copytreePSI(pathIN,pathOUT,prefix,newprefix,folderName,Aprefix,Acut,config,f
           _output_folder += '/'+_folder
           if not os.path.exists(_output_folder):
               # print 'does not exist'
-              command = 'srmmkdir srm://t3se01.psi.ch/' + _output_folder
+              command = "uberftp t3se01 'mkdir %s ' " %(_output_folder)
               subprocess.call([command], shell = True)
 
     ## prepare a list of input(inputFile,outputFile,Acut) for the files to be processed
