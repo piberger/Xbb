@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import sys,hashlib
 import os,subprocess
 import ROOT 
@@ -1611,16 +1612,18 @@ for job in info:
                             ]
                         for var in VarList:
                             for bound in ['Min','Max']:
-                                val = -42.
-                                first = True
+                                #val = -42.
+                                #intialise by using central value (no sys)
+                                val =  getattr(tree,var)
+                                #first = True
                                 for syst in JECsys:
                                     for sdir in ["Up", "Down"]:
-                                        if first: val = getattr(tree,var+"_corr"+syst+sdir)
+                                        #if first: val = getattr(tree,var+"_corr"+syst+sdir)
                                         if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
                                         if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
-                                        first = False
+                                        #first = False
                                 JEC_systematicsMinMax[var+"_corr_"+bound][0] = val
-                                print 'val is', val
+                                #print 'val is', val
 
                 if applyLepSF and job.type != 'DATA':
             # ================ Lepton Scale Factors =================
