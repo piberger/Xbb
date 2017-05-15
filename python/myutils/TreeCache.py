@@ -11,6 +11,7 @@ from copytreePSI import filelist as getSampleFileList  # to avoid name conflict 
 class TreeCache:
     def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False, dccut = None):
         ROOT.gROOT.SetBatch(True)
+        self.verbose = False
         self.path = path
         self.config = config
         self.remove_sys = remove_sys
@@ -207,11 +208,13 @@ class TreeCache:
                     filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
                     hash = hashlib.sha224(filename).hexdigest()
                     inputFileNew = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-                    print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
+                    if self.verbose:
+                        print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
                     filelistCopied.append(inputFileNew)
                 except Exception as e:
                     print ('Exception:'+str(e))
                     print ('ERROR occured for "'+inputFile+'"')
+                    print ('->'+inputFileNew)
 
             # append semicolon separated list as single element to inputfiles list and just one file to tmpfiles
             inputfiles.append(';'.join(filelistCopied))
@@ -379,6 +382,7 @@ class TreeCache:
                 tree = ROOT.TChain(sample.tree)
                 histograms = {}
                 time1=time.time()
+                nFilesChained = 0
                 for rootFileName in inputfile.split(';'):
                     chainTree = '%s/%s'%(rootFileName, sample.tree)
                     if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','')):
@@ -402,21 +406,23 @@ class TreeCache:
                             input.Close()
 
                             # add file to chain
-                            print ('chaining '+chainTree)
+                            if self.verbose:
+                                print ('chaining '+chainTree)
                             statusCode = tree.Add(chainTree)
                             if statusCode != 1 or not tree:
                                 print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
                                 raise Exception("TChain method Add failure")
                             else:
                                 treeEmpty = False
+                                nFilesChained += 1
                         else:
                             print ('ERROR: Cant open file:'+chainTree)
                 assert type(tree) is ROOT.TChain
                 time2=time.time()
-                print ('adding files to chain took %f seconds.'%(time2-time1))
+                print ('adding %d files to chain took %f seconds.'%(nFilesChained, time2-time1))
                 input = None
-
-                print ("HISTOGRAMS: %r"%histograms)
+                if self.verbose:
+                    print ("HISTOGRAMS: %r"%histograms)
                 output.cd()
                 for histogramName, histogram in histograms.iteritems():
                     histogram.SetDirectory(output)

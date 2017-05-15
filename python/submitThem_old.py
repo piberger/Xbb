@@ -333,6 +333,7 @@ def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="n
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=False):
     global counter
     repDict['job'] = job
+    repDict['joblogname'] = job.replace(',','_')
     nJob = counter % len(logo)
     counter += 1
     if opts.philipp_love_progress_bars:
@@ -344,7 +345,7 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     #print "the command is ", command
@@ -355,7 +356,9 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     if opts.interactive:
         print "the real command is:",command
         print "(press ENTER to run it and continue)"
-        raw_input()
+        answer = raw_input().strip()
+        if answer == 'no' or answer == 'skip':
+            return
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
@@ -817,41 +820,44 @@ if opts.task == 'mergecaching2':
         datasamples = info.get_samples(data)
         mcsamples = info.get_samples(mc)
         samples = mcsamples+datasamples
+        
+        samplesListToRun = [x for x in samplesList if len(x) > 0]
 
         for sample in samples:
-            print " SAMPLE",sample
-            print " id",sample.identifier
+            if sample.identifier in samplesListToRun or len(samplesListToRun) < 1:
+                print " SAMPLE",sample
+                print " id",sample.identifier
 
-            # split merging proces for chunk of files
-            files = getfilelist(sample.identifier)
-            files_per_job = sample.mergeCachingSize
-            files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
-            counter_local = 0
-            for files_sublist in files_split:
-                print "  SUBMIT:", len(files_sublist), " files"
-                print "  PART:", counter_local
+                # split merging proces for chunk of files
+                files = getfilelist(sample.identifier)
+                files_per_job = sample.mergeCachingSize
+                files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+                counter_local = 0
+                for files_sublist in files_split:
+                    print "  SUBMIT:", len(files_sublist), " files"
+                    print "  PART:", counter_local
 
-                repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
-                jobName = ','.join(regionGroup) 
+                    repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
+                    jobName = ','.join(regionGroup) 
 
-                files_sublist_filtered = []
-                for filename in files_sublist:
-                    if filename.split('/')[-1] not in sample.skipParts:
-                        files_sublist_filtered.append(filename)
-                    else:
-                        print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
+                    files_sublist_filtered = []
+                    for filename in files_sublist:
+                        if filename.split('/')[-1] not in sample.skipParts:
+                            files_sublist_filtered.append(filename)
+                        else:
+                            print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
 
-                globalFilesSubmitted += 1
-                print "  --->submit"
-                filelistString = ';'.join(files_sublist_filtered)
-                # necessary due to limits on passed arguments size
-                if files_per_job > 400:
-                    lenBefore = len(filelistString)
-                    filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
-                    lenAfter = len(filelistString)
-                    print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
-                submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot='', resubmit=False)
-                counter_local = counter_local + 1
+                    globalFilesSubmitted += 1
+                    print "  --->submit"
+                    filelistString = ';'.join(files_sublist_filtered)
+                    # necessary due to limits on passed arguments size
+                    if files_per_job > 400:
+                        lenBefore = len(filelistString)
+                        filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
+                        lenAfter = len(filelistString)
+                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                    submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot='', resubmit=False)
+                    counter_local = counter_local + 1
 
 #print 'item is', item
 #signals = eval('['+config.get('dc:%s'%item,'signal')+']')
@@ -1053,7 +1059,7 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
                         lenBefore = len(filelistString)
                         filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
                         lenAfter = len(filelistString)
-                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                        #print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
                     submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 else:
                     print 'SKIPED !'
