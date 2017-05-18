@@ -189,6 +189,9 @@ class MultiCache:
      return '||'.join(cuts) 
     
     def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False, mergeCachingPart = -1):
+        
+        # DEBUG
+        #forceReDo = True
 
         start_time = time.time()
         print("Caching the sample")
@@ -306,16 +309,18 @@ class MultiCache:
                             obj = key.ReadObj()
                             if obj.GetName() == 'tree':
                                 continue
-                            if obj.GetName() in histograms:
-                                if histograms[obj.GetName()]:
-                                    histograms[obj.GetName()].Add(obj.Clone(obj.GetName()))
+                            for region in self.regions:
+                                histogramName = obj.GetName()+region
+
+                                if histogramName in histograms:
+                                    if histograms[histogramName]:
+                                        histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                    else:
+                                        print ("ERROR: histogram object was None!!!")
                                 else:
-                                    print ("ERROR: histogram object was None!!!")
-                            else:
-                                # copy count histogram to the appropriate output file
-                                for region in self.regions:
-                                    histograms[obj.GetName()+region] = obj.Clone(obj.GetName())
-                                    histograms[obj.GetName()+region].SetDirectory(regionDict[region]['tmpfile'])
+                                    # copy count histogram to the appropriate output file
+                                    histograms[histogramName] = obj.Clone(obj.GetName())
+                                    histograms[histogramName].SetDirectory(regionDict[region]['tmpfile'])
                         input.Close()
 
                         # add file to chain
@@ -335,7 +340,9 @@ class MultiCache:
                         print ('ERROR: Cant open file:'+chainTree)
             assert type(tree) is ROOT.TChain
             time2=time.time()
+
             print ('adding %d files to chain took %f seconds.'%(nFilesChained, time2-time1))
+            assert nFilesChained > 0
             input = None
             
             if self.verbose:
@@ -387,10 +394,11 @@ class MultiCache:
                     removeBranches += eval(self.config.get('Branches','useless_branch'))
                 except:
                     pass
-
+                branchList = tree.GetListOfBranches()
                 for branch in removeBranches:
                     try:
-                        tree.SetBranchStatus(branch,0)
+                        if tree.FindObject(branch):
+                            tree.SetBranchStatus(branch,0)
                     except:
                         pass
             
@@ -517,6 +525,7 @@ class MultiCache:
                 else: command = 'gfal-rm %s' %(tmpfile)
                 if not filelist or len(filelist) == 0: return (theName,theHash)
         copyTime1 = time.time()
+        print ("Copy of files to cache dir is complete, that fills you with determination")
         print ("Copy files took " + str(copyTime1 - copyTime0) + " s.")
 
     def file_valid(self, file):
