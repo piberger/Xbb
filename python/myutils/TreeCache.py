@@ -723,8 +723,6 @@ class TreeCache:
                 theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
-                print ('Sample name: '+sample.FullName)
-                print (tmpFileMask)
 
                 # get list of unmerged root files
                 samplefiles = self.config.get('Directories','samplefiles')
@@ -737,7 +735,8 @@ class TreeCache:
                 mergeList = [unmergedFiles[x:x+sample.mergeCachingSize] for x in xrange(0, len(unmergedFiles), sample.mergeCachingSize)]
 
                 # compare filenames from cached files with expectation from mergeList
-                print ('LEN mergelist:', len(mergeList), ' LEN cached files:', len(mergedFiles))
+                print ('%s (%s): %d/%d'%(sample.FullName, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
+
                 for i,mergeListPart in enumerate(mergeList):
                     found = False
                     for mergedFile in mergedFiles:
