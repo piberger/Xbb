@@ -7,7 +7,6 @@ import glob
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 from BetterConfigParser import BetterConfigParser
 from sample_parser import ParseInfo
-import os
 from optparse import OptionParser
 import zlib
 import base64
@@ -394,13 +393,17 @@ class MultiCache:
                     removeBranches += eval(self.config.get('Branches','useless_branch'))
                 except:
                     pass
+                nBranchesRemoved = 0
                 branchList = tree.GetListOfBranches()
                 for branch in removeBranches:
                     try:
-                        if tree.FindObject(branch):
+                        if branchList.FindObject(branch):
                             tree.SetBranchStatus(branch,0)
+                            nBranchesRemoved += 1
                     except:
                         pass
+                print ("# of branches removed:", nBranchesRemoved)
+
             
             # add branches to cache
             tree.AddBranchToCache("*")
@@ -427,7 +430,9 @@ class MultiCache:
                 regionDict[region]['cutTree'].SetDirectory(regionDict[region]['tmpfile'])
                 regionDict[region]['filledEntries'] = 0
 
-            print ('lolol')
+            print ('region dictionary created, now looping over the events')
+            sys.stdout.flush()
+
             if self.verbose:
                 print (regionDict)
 
@@ -436,7 +441,8 @@ class MultiCache:
             s2 = 0
             oldTreeNum = -1
             totalEntries = 0
-            
+           
+            timeLoopStart = time.time()
             # loop over all events in tree/tchain
             for event in tree:
                 tree.LoadTree(i)
@@ -466,11 +472,15 @@ class MultiCache:
                 
                 # output status
                 if i % 10000 == 0:
-                    print ('%d %%, tree: %d, event number: %d'%(int(100.0*treeNum/nFilesChained), treeNum, i))
+                    timeNow = time.time()
+                    eventsPerSecond = i/(timeNow-timeLoopStart) if timeNow-timeLoopStart > 0 else 0
+                    timeETA = (timeNow-timeLoopStart)/(1.0*treeNum/nFilesChained)*(1-1.0*treeNum/nFilesChained) if treeNum > 0 else 0
+                    print ('%d %%, tree: %d, event number: %d, ETA: %1.1f min'%(int(100.0*treeNum/nFilesChained), treeNum, i, timeETA/60.0))
                     if self.verbose and i % 100000:
                         print (' region\t\t\t#')
                         for region in self.regionsToProcess:
                             print (' %s\t\t\t%d'%(region, regionDict[region]['filledEntries']))
+                    sys.stdout.flush()
 
             
             time3 = time.time()
