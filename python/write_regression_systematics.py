@@ -721,15 +721,22 @@ for job in info:
             tree.SetBranchStatus('hJetCMVAV2_pt_reg',0)
 
         #remove branches
+        nBranchesRemoved = 0
+        branchList = tree.GetListOfBranches()
         if remove_useless_branch:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
             for br in bl_branch:
-                tree.SetBranchStatus(br,0)
+                if branchList.FindObject(br):
+                    tree.SetBranchStatus(br,0)
+                    nBranchesRemoved += 1
         if remove_useless_after_sys:
             bl_branch = eval(config.get('Branches', 'useless_after_sys'))
             for br in bl_branch:
-                tree.SetBranchStatus(br,0)
-        
+                if branchList.FindObject(br):
+                    tree.SetBranchStatus(br,0)
+                    nBranchesRemoved += 1
+        print "# of branches removed:", nBranchesRemoved
+
        # tree.SetBranchStatus('H',0)
         output.cd()
         newtree = tree.CloneTree(0)
