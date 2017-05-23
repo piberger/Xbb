@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import sys,hashlib
 import os,subprocess
 import ROOT 
@@ -216,16 +217,17 @@ def signal_ewk(GenVbosons_pt):
 	       0.829982098864,
 	       0.81108451152,
 	       0.821942287438,
-	       0.796485091295,
-	       0.800127513022,
-	       0.790708718585,
-	       0.779446429438,
-	       0.777869490396]
+	       0.79,
+	       0.79,
+	       0.79,
+	       0.79,
+	       0.79]
 
 	#print EWK[0]
 	#print EWK[1]
 
 	if GenVbosons_pt > 0. and GenVbosons_pt < 3000:
+
 		if GenVbosons_pt > 0 and GenVbosons_pt <= 20:
 			SF = EWK[0]
 		if GenVbosons_pt > 20 and GenVbosons_pt <= 40:
@@ -457,8 +459,8 @@ def signal_ewk_down(GenVbosons_pt):
 		if GenVbosons_pt <= 0:
 			SF = 1
 
-
 	return SF
+
 
 def addAdditionalJets(H, tree):
     for i in range(tree.nhjidxaddJetsdR08):
@@ -1194,6 +1196,11 @@ for job in info:
 
         if addEWK:
             if job.type != 'DATA':
+                #In case of redoing, make sure to disable the branches
+                tree.SetBranchStatus('EWKw',0)
+                tree.SetBranchStatus('NLOw',0)
+                tree.SetBranchStatus('DYw',0)
+                tree.SetBranchStatus('isDY',0)
 
                 #EWK weights
                 EWKw = array('f',[0]*3)
@@ -1611,16 +1618,18 @@ for job in info:
                             ]
                         for var in VarList:
                             for bound in ['Min','Max']:
-                                val = -42.
-                                first = True
+                                #val = -42.
+                                #intialise by using central value (no sys)
+                                val =  getattr(tree,var)
+                                #first = True
                                 for syst in JECsys:
                                     for sdir in ["Up", "Down"]:
-                                        if first: val = getattr(tree,var+"_corr"+syst+sdir)
+                                        #if first: val = getattr(tree,var+"_corr"+syst+sdir)
                                         if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
                                         if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
-                                        first = False
+                                        #first = False
                                 JEC_systematicsMinMax[var+"_corr_"+bound][0] = val
-                                print 'val is', val
+                                #print 'val is', val
 
                 if applyLepSF and job.type != 'DATA':
             # ================ Lepton Scale Factors =================

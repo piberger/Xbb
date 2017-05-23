@@ -305,6 +305,7 @@ if str(anType) == 'cr':
 # Use the rebinning:
 rebin_active=eval(config.get('LimitGeneral','rebin_active'))
 #if str(anType) == 'cr':
+print 'rebin active is', rebin_active
 if not bdt:
     if rebin_active:
         print '@WARNING: Changing rebin_active to false since you are running for control region.'
@@ -791,6 +792,7 @@ if signal_inject:
         sig_hMaker.nBins = copy(mc_hMaker.nBins)
         sig_hMaker._rebin = copy(mc_hMaker._rebin)
         sig_hMaker.mybinning = deepcopy(mc_hMaker.mybinning)
+#sys.exit()
 
 print 'Get the signal histo'
 print '====================\n'
