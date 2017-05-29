@@ -731,6 +731,17 @@ for job in info:
             bl_branch = eval(config.get('Branches', 'useless_after_sys'))
             for br in bl_branch:
                 tree.SetBranchStatus(br,0)
+
+        if addEWK:
+            if job.type != 'DATA':
+                #In case of redoing, make sure to disable the branches
+                tree.SetBranchStatus('EWKw',0)
+                tree.SetBranchStatus('NLOw',0)
+                tree.SetBranchStatus('DYw',0)
+                tree.SetBranchStatus('isDY',0)
+
+        if applyBTagweights:
+            tree.SetBranchStatus("bTagWeightCMVAV2_Moriond*",0)
         
        # tree.SetBranchStatus('H',0)
         output.cd()
@@ -925,13 +936,22 @@ for job in info:
                         #bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir] = np.zeros(1, dtype=float)
                         #newtree.Branch("bTagWeightCSV_Moriond_"+syst+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+sdir], "bTagWeightCSV_Moriond_"+syst+sdir+"/D")
 
-                        for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+                        for ipt in range(0,5):
+                            for ieta in range(1,4):
+                                bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir] = np.zeros(1, dtype=float)
+                                newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir], "bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir+"/D")
 
-                            bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-                            newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir+"/D")
+                        ##remove old branches
+                        #for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+                        #    tree.SetBranchStatus("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir,0)
+                        #OLD
+                        #for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
 
-                            #bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
-                            #newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
+                        #    bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
+                        #    newtree.Branch("bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir], "bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir+"/D")
+
+                        #    #bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir] = np.zeros(1, dtype=float)
+                        #    #newtree.Branch("bTagWeightCSV_Moriond_"+syst+systcat+sdir, bTagWeights["bTagWeightCSV_Moriond_"+syst+systcat+sdir], "bTagWeightCSV_Moriond_"+syst+systcat+sdir+"/D")
 
 
     ######################
@@ -1041,9 +1061,9 @@ for job in info:
                     "AbsoluteStat",
                     "SinglePionECAL",
                     "SinglePionHCAL",
-                    "Fragmentation"
-                    #"TimePtEta",
-                    #"FlavorQCD"
+                    "Fragmentation",
+                    "TimePtEta",
+                    "FlavorQCD"
                     ]
 
 
@@ -1059,9 +1079,13 @@ for job in info:
                 if not var == 'hJetCMVAV2_pt_reg':
                     JEC_systematics[var] = np.zeros(1, dtype=float)
                     newtree.Branch(var, JEC_systematics[var], var+'/D')
+                    #disable old branch in case of rerunning
+                    tree.SetBranchStatus(var,0)
                 else:
+                    #disable old branch in case of rerunning
                     JEC_systematics[var] = np.zeros(21, dtype=float)
                     newtree.Branch(var, JEC_systematics[var], var+'[21]/D')
+                    tree.SetBranchStatus(var,0)
 
             if job.type != 'DATA':
                 for syst in JECsys:
@@ -1071,9 +1095,22 @@ for job in info:
                             if not var == 'hJetCMVAV2_pt_reg':
                                 JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(1, dtype=float)
                                 newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"/D")
+                                #disable old branch in case of rerunning
+                                tree.SetBranchStatus(var+"_corr"+syst+sdir,0)
                             else:
                                 JEC_systematics[var+"_corr"+syst+sdir] = np.zeros(21, dtype=float)
                                 newtree.Branch(var+"_corr"+syst+sdir, JEC_systematics[var+"_corr"+syst+sdir], var+"_corr"+syst+sdir+"[21]/D")
+                                #disable old branch in case of rerunning
+                                tree.SetBranchStatus(var+"_corr"+syst+sdir,0)
+            ##Compute MinMax
+            ###Those branches will Max/Minimise the systematic values. Used to speed-up th dc step
+            JEC_systematicsMinMax = {}
+            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
+            if job.type != 'DATA':
+                for bound in ["Min", "Max"]:
+                    for var in VarList:
+                        JEC_systematicsMinMax[var+"_corr_"+bound] = np.zeros(1, dtype=float)
+                        newtree.Branch(var+"_corr_"+bound, JEC_systematicsMinMax[var+"_corr_"+bound], var+"_corr_"+bound+"/D")
 
             # define all the readers
             TMVA_reader = {}
@@ -1098,14 +1135,14 @@ for job in info:
 
             #print tree
 
-        if applyJESsystematicsMinMax:
-            JEC_systematicsMinMax = {}
-            VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
-            if job.type != 'DATA':
-                for bound in ["Min", "Max"]:
-                    for var in VarList:
-                        JEC_systematicsMinMax[var+"_corr_"+bound] = np.zeros(1, dtype=float)
-                        newtree.Branch(var+"_corr_"+bound, JEC_systematicsMinMax[var+"_corr_"+bound], var+"_corr_"+bound+"/D")
+        #if applyJESsystematicsMinMax:
+        #    JEC_systematicsMinMax = {}
+        #    VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
+        #    if job.type != 'DATA':
+        #        for bound in ["Min", "Max"]:
+        #            for var in VarList:
+        #                JEC_systematicsMinMax[var+"_corr_"+bound] = np.zeros(1, dtype=float)
+        #                newtree.Branch(var+"_corr_"+bound, JEC_systematicsMinMax[var+"_corr_"+bound], var+"_corr_"+bound+"/D")
 
         if applyLepSF and job.type != 'DATA':
 
@@ -1196,11 +1233,11 @@ for job in info:
 
         if addEWK:
             if job.type != 'DATA':
-                #In case of redoing, make sure to disable the branches
-                tree.SetBranchStatus('EWKw',0)
-                tree.SetBranchStatus('NLOw',0)
-                tree.SetBranchStatus('DYw',0)
-                tree.SetBranchStatus('isDY',0)
+                ##In case of redoing, make sure to disable the branches
+                #tree.SetBranchStatus('EWKw',0)
+                #tree.SetBranchStatus('NLOw',0)
+                #tree.SetBranchStatus('DYw',0)
+                #tree.SetBranchStatus('isDY',0)
 
                 #EWK weights
                 EWKw = array('f',[0]*3)
@@ -1449,25 +1486,67 @@ for job in info:
 
                             bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+sdir][0] = get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
 
-                            for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+                            for ipt in range(0,5):
 
                                 ptmin = 20.
                                 ptmax = 1000.
                                 etamin = 0.
                                 etamax = 2.4
-                                if (systcat.find("High")!=-1):
-                                    ptmin = 100.
-                                if (systcat.find("Low")!=-1):
-                                    ptmax = 100.
-                                if (systcat.find("Central")!=-1):
-                                    etamax = 1.4
-                                if (systcat.find("Forward")!=-1):
-                                    etamin = 1.4
 
-                                event_SF_ = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                                bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = event_SF_
-                                #print "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, ' is', event_SF_#get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
-                                #print ""
+                                if ipt == 0:
+                                    ptmin = 20.
+                                    ptmax = 30.
+                                elif ipt == 1:
+                                    ptmin = 30.
+                                    ptmax = 40.
+                                elif ipt ==2:
+                                    ptmin = 40.
+                                    ptmax = 60.
+                                elif ipt ==3:
+                                    ptmin = 60.
+                                    ptmax = 100.
+                                elif ipt ==4:
+                                    ptmin = 100.
+                                    ptmax = 1000.
+
+                                for ieta in range(1,4):
+
+                                    #print '\n Btag for SYS:', syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
+                                    if ieta ==1:
+                                        etamin = 0.
+                                        etamax = 0.8
+                                    elif ieta ==2:
+                                        etamin = 0.8
+                                        etamax = 1.6
+                                    elif ieta ==3:
+                                        etamin = 1.6
+                                        etamax = 2.4
+
+                                        #bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                                    bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir][0] = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+
+
+                            #OLD
+                            #for systcat in ["HighCentral","LowCentral","HighForward","LowForward"]:
+
+                            #    ptmin = 20.
+                            #    ptmax = 1000.
+                            #    etamin = 0.
+                            #    etamax = 2.4
+                            #    if (systcat.find("High")!=-1):
+                            #        ptmin = 100.
+                            #    if (systcat.find("Low")!=-1):
+                            #        ptmax = 100.
+                            #    if (systcat.find("Central")!=-1):
+                            #        etamax = 1.4
+                            #    if (systcat.find("Forward")!=-1):
+                            #        etamin = 1.4
+
+                            #    event_SF_ = get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                            #    bTagWeights["bTagWeightCMVAV2_Moriond_"+syst+systcat+sdir][0] = event_SF_
+                            #    #print "bTagWeightCMVAV2_Moriond_v2_"+syst+systcat+sdir, ' is', event_SF_#get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, sysMap[syst+sdir], "CMVAV2", btag_calibrators)
+                            #    #print ""
+
                 if channel == "Zmm" and applyBTagweights and Stop_after_BTagweights:
                     newtree.Fill()
                     continue
@@ -1585,51 +1664,71 @@ for job in info:
                                 JEC_systematics["hJetCMVAV2_pt_reg_0_corr"+syst+sdir][0] = hJ0.Pt()
                                 JEC_systematics["hJetCMVAV2_pt_reg_1_corr"+syst+sdir][0] = hJ1.Pt()
 
-                if applyJESsystematicsMinMax:
-                    if job.type != 'DATA':
+                        #Compute Min/Max
                         VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
-                        JECsys = [
-                            "JER",
-                            "PileUpDataMC",
-                            "PileUpPtRef",
-                            "PileUpPtBB",
-                            "PileUpPtEC1",
-                            #"PileUpPtEC2",
-                            #"PileUpPtHF",
-                            "RelativeJEREC1",
-                            #"RelativeJEREC2",
-                            #"RelativeJERHF",
-                            "RelativeFSR",
-                            "RelativeStatFSR",
-                            "RelativeStatEC",
-                            #"RelativeStatHF",
-                            "RelativePtBB",
-                            "RelativePtEC1",
-                            #"RelativePtEC2",
-                            #"RelativePtHF",
-                            "AbsoluteScale",
-                            "AbsoluteMPFBias",
-                            "AbsoluteStat",
-                            "SinglePionECAL",
-                            "SinglePionHCAL",
-                            "Fragmentation"
-                            #"TimePtEta",
-                            #"FlavorQCD"
-                            ]
                         for var in VarList:
                             for bound in ['Min','Max']:
-                                #val = -42.
                                 #intialise by using central value (no sys)
-                                val =  getattr(tree,var)
-                                #first = True
+                                #new
+                                val = JEC_systematics[var][0]
+                                #old
+                                #val =  getattr(tree,var)
                                 for syst in JECsys:
                                     for sdir in ["Up", "Down"]:
-                                        #if first: val = getattr(tree,var+"_corr"+syst+sdir)
-                                        if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
-                                        if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
-                                        #first = False
+                                        #new
+                                        if bound == 'Min': val = min(val, JEC_systematics[var+"_corr"+syst+sdir])
+                                        if bound == 'Max': val = max(val, JEC_systematics[var+"_corr"+syst+sdir])
+                                        #old
+                                        #if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
+                                        #if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
                                 JEC_systematicsMinMax[var+"_corr_"+bound][0] = val
                                 #print 'val is', val
+
+                #if applyJESsystematicsMinMax:
+                #    if job.type != 'DATA':
+                #        VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1']
+                #        JECsys = [
+                #            "JER",
+                #            "PileUpDataMC",
+                #            "PileUpPtRef",
+                #            "PileUpPtBB",
+                #            "PileUpPtEC1",
+                #            #"PileUpPtEC2",
+                #            #"PileUpPtHF",
+                #            "RelativeJEREC1",
+                #            #"RelativeJEREC2",
+                #            #"RelativeJERHF",
+                #            "RelativeFSR",
+                #            "RelativeStatFSR",
+                #            "RelativeStatEC",
+                #            #"RelativeStatHF",
+                #            "RelativePtBB",
+                #            "RelativePtEC1",
+                #            #"RelativePtEC2",
+                #            #"RelativePtHF",
+                #            "AbsoluteScale",
+                #            "AbsoluteMPFBias",
+                #            "AbsoluteStat",
+                #            "SinglePionECAL",
+                #            "SinglePionHCAL",
+                #            "Fragmentation"
+                #            "TimePtEta",
+                #            "FlavorQCD"
+                #            ]
+                #        for var in VarList:
+                #            for bound in ['Min','Max']:
+                #                #val = -42.
+                #                #intialise by using central value (no sys)
+                #                val =  getattr(tree,var)
+                #                #first = True
+                #                for syst in JECsys:
+                #                    for sdir in ["Up", "Down"]:
+                #                        #if first: val = getattr(tree,var+"_corr"+syst+sdir)
+                #                        if bound == 'Min': val = min(val, getattr(tree,var+"_corr"+syst+sdir))
+                #                        if bound == 'Max': val = max(val, getattr(tree,var+"_corr"+syst+sdir))
+                #                        #first = False
+                #                JEC_systematicsMinMax[var+"_corr_"+bound][0] = val
+                #                #print 'val is', val
 
                 if applyLepSF and job.type != 'DATA':
             # ================ Lepton Scale Factors =================
@@ -1942,6 +2041,7 @@ for job in info:
                         EWKw[0] = 1
                         EWKw[1] = 1
                         EWKw[2] = 1
+
                         if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
                             #print 'GebVboson is', tree.GenVbosons_pt[0]
                             if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
@@ -1959,6 +2059,8 @@ for job in info:
                                 EWKw[0] = signal_ewk(tree.GenVbosons_pt[0])
                                 EWKw[1] = signal_ewk_down(tree.GenVbosons_pt[0])
                                 EWKw[2] = signal_ewk_up(tree.GenVbosons_pt[0])
+
+                        #print 'EWKw is ', EWKw[0]
 
                         DYw[0] = EWKw[0]*NLOw[0]
 
