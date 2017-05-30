@@ -296,7 +296,6 @@ class MultiCache:
             time1=time.time()
             nFilesChained = 0
             for rootFileName in inputfile.split(';'):
-
                 # check root file existence
                 if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','')):
                     obj = None
@@ -404,17 +403,9 @@ class MultiCache:
                         pass
                 print ("# of branches removed:", nBranchesRemoved)
 
-            
             # add branches to cache
             tree.AddBranchToCache("*")
 
-            #time2 = time.time()
-            #print ('DEBUG: tree=',tree)
-            #totalCut = '(%s)&(%s)'%(theCut, sample.subcut) if subcutExists else theCut
-            #cutTree = tree.CopyTree(totalCut, "")
-            #time3 = time.time()
-            #print ('cut done in ' + str(time3-time2) + ' s')
-           
             time2 = time.time()
             if self.verbose:
                 print ('DEBUG: tree=',tree)
@@ -539,8 +530,8 @@ class MultiCache:
         print ("Copy files took " + str(copyTime1 - copyTime0) + " s.")
 
     def file_valid(self, file):
-        print ('Will now check if the file exists and is valid')
-        print ('==============================================\n')
+        #print ('Will now check if the file exists and is valid')
+        #print ('==============================================\n')
 
         file_exists = False
         file_dummy = file
@@ -566,6 +557,7 @@ class MultiCache:
                 print(command)
             else:
                 file_exists = True
+                #print ("E:"+file_dummy)
 
         return file_exists
 
