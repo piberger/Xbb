@@ -167,6 +167,8 @@ Datacardbin=config.get('dc:%s'%var,'dcBin')
 anType = config.get('dc:%s'%var,'type')
 setup=eval(config.get('LimitGeneral','setup'))
 
+Custom_BDT_bins = eval(config.get('LimitGeneral','Custom_BDT_bins'))
+
 if optimisation_training:
    ROOToutname += optimisation
    if UseTrainSample:
@@ -709,6 +711,8 @@ if addBlindingCut:
 
 if rebin_active:
     print "background_samples: ",background_samples
+    if Custom_BDT_bins:
+        mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
     mc_hMaker.calc_rebin(background_samples)
     #transfer rebinning info to data maker
     data_hMaker.norebin_nBins = copy(mc_hMaker.norebin_nBins)
