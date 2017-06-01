@@ -8,6 +8,7 @@ from copy import copy,deepcopy
 from math import sqrt
 import zlib
 import base64
+import time
 ROOT.gROOT.SetBatch(True)
 
 argv = sys.argv
@@ -19,6 +20,8 @@ print ""
 print "=================="
 print "Start Ploting Step"
 print "==================\n"
+
+begin_time  = time.time()
 
 print "Read Parameters"
 print "===================\n"
@@ -228,6 +231,8 @@ def doPlot():
     # if('pisa' in config.get('Configuration','whereToLaunch')):
     multiprocess=int(config.get('Configuration','nprocesses'))
 #    multiprocess=0
+
+    start_time = time.time()
     outputs = []
     if multiprocess>1:
         from multiprocessing import Pool
@@ -241,6 +246,11 @@ def doPlot():
             outputs.append(getattr(input_[0],input_[1])(*input_[2])) #ie. Plotter.get_histos_from_tree(job)
     #print 'get_histos_from_tree DONE'
     Overlaylist = []
+
+    print "All histograms retrived. DONE in ", str(time.time() - start_time)," s."
+
+    start_time = time.time()
+
     for i,job in enumerate(mcsamples):
         hDictList = outputs[i]
         if job.name in mass:
@@ -361,6 +371,9 @@ def doPlot():
 #        Stacks[v].options['pdfName'] = Stacks[v].options['pdfName'].replace('.pdf','_norm.pdf')
 #        Stacks[v].doPlot()
         print 'i am done!\n'
+
+    print "Last part DONE in ", str(time.time() - start_time)," s."
+    print "tree_stack done in ", str(time.time() - begin_time)," s."
     print 'DOPLOT END'
 #----------------------------------------------------
 doPlot()
