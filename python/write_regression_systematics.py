@@ -670,6 +670,11 @@ for job in info:
         print 'outputFile',outputFile
         print ''
 
+        # continue if some of the files are not there
+        if not input or input.IsZombie():
+            print 'file does not exist ==> SKIPPED!'
+            continue
+
         try:
             input.cd()
         except Exception as e:
@@ -723,14 +728,21 @@ for job in info:
             tree.SetBranchStatus('hJetCMVAV2_pt_reg',0)
 
         #remove branches
+        nBranchesRemoved = 0
+        branchList = tree.GetListOfBranches()
         if remove_useless_branch:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
             for br in bl_branch:
-                tree.SetBranchStatus(br,0)
+                if branchList.FindObject(br):
+                    tree.SetBranchStatus(br,0)
+                    nBranchesRemoved += 1
         if remove_useless_after_sys:
             bl_branch = eval(config.get('Branches', 'useless_after_sys'))
             for br in bl_branch:
-                tree.SetBranchStatus(br,0)
+                if branchList.FindObject(br):
+                    tree.SetBranchStatus(br,0)
+                    nBranchesRemoved += 1
+        print "# of branches removed:", nBranchesRemoved
 
         if addEWK:
             if job.type != 'DATA':
@@ -1073,6 +1085,8 @@ for job in info:
             hJ0 = ROOT.TLorentzVector()
             hJ1 = ROOT.TLorentzVector()
 
+
+
             VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1','hJetCMVAV2_pt_reg']
 
             for var in VarList:
@@ -1233,7 +1247,6 @@ for job in info:
 
         if addEWK:
             if job.type != 'DATA':
-                ##In case of redoing, make sure to disable the branches
                 #tree.SetBranchStatus('EWKw',0)
                 #tree.SetBranchStatus('NLOw',0)
                 #tree.SetBranchStatus('DYw',0)
@@ -2048,7 +2061,6 @@ for job in info:
                                 EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
                                 EWKw[1]= EWKw[0]
                                 EWKw[2]= EWKw[0]
-
                         NLOw[0] = 1
                         if isDY[0] == 1:
                             etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
@@ -2124,6 +2136,9 @@ for job in info:
                 f = ROOT.TFile.Open(outputFile,'read')
                 if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
                     print 'TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! ERROR: exiting'
+                    print outputFile
+                    print f, f.IsZombie(), f.TestBit(ROOT.TFile.kRecovered), f.GetNkeys()
+
                     sys.exit(1)
 
                 command = 'rm '+tmpfile
