@@ -12,7 +12,7 @@ import time
 import pdb
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False,  remove_sys=False, dccut=None):
+    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False,  branch_to_keep=None, dccut=None):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
@@ -35,7 +35,7 @@ class HistoMaker:
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
-        self.tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart, plotMergeCached, remove_sys, False, dccut)  # created cached tree i.e. create new skimmed trees using the list of cuts
+        self.tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart, plotMergeCached, branch_to_keep, False, dccut)  # created cached tree i.e. create new skimmed trees using the list of cuts
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             return 
@@ -148,8 +148,8 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
                 weightF="("+weightF+")"
                 #weightF="("+weightF+")*(" + job.specialweight +")"

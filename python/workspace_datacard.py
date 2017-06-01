@@ -175,6 +175,8 @@ if optimisation_training:
        ROOToutname += '_Train'
 
 
+keep_branches = eval(config.get('Branches', 'keep_branches'))
+
 import os
 if os.path.exists("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so"):
     print 'ROOT.gROOT.LoadMacro("$CMSSW_BASE/src/Xbb/interface/DrawFunctions_C.so")'
@@ -316,6 +318,7 @@ if not bdt:
 ignore_stats = eval(config.get('LimitGeneral','ignore_stats'))
 #max_rel = float(config.get('LimitGeneral','rebin_max_rel'))
 signal_inject=eval(config.get('LimitGeneral','signal_inject'))
+print 'signal_inject is',signal_inject
 # add signal as background
 add_signal_as_bkg=config.get('LimitGeneral','add_signal_as_bkg')
 if not add_signal_as_bkg == 'None':
@@ -671,13 +674,80 @@ for optold, optnew in zip(optionsList,shapecutList):
     optionsList[optionsList.index(optold)]['cut']=optnew
 #sys.exit()
 
+############
+#List the branches to keep here
+############
+
+def MakeBranchList(mystring):
+    '''Takes a string as input (should be a cut/weigt/variable expression) and returns a list containing all the corresponding branches'''
+    mylist = []
+    def isfloat(value):
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    mystring = mystring.replace('[','??').replace(']','??').replace('*','??').replace('(','??').replace(')','??').replace('||','??').replace('<','??').replace('>','??').replace('=','??').replace('.','??').replace('&','??').replace('+','??').replace('-','??').replace(',','??').replace(' ','')
+    mystring_list = mystring.split('??')
+    #remove '' and flaot from list
+    for l in mystring_list:
+        if (l == '' or isfloat(l)): continue
+        mylist.append(l)
+
+    return mylist
+
+list_weights_ =  []
+list_cuts_ =  []
+list_cuts_.append(MakeBranchList(dccut))
+list_cuts_.append(MakeBranchList(dccutdata))
+list_var_ =  []
+list_alwayskeep = []
+
+for opt in optionsList:
+    #weights
+    list_weights_.append(MakeBranchList(opt['weight']))
+    list_cuts_.append(MakeBranchList(opt['cut']))
+    list_var_.append(MakeBranchList(opt['var']))
+
+list_weights =  []
+list_cuts =  []
+list_var =  []
+
+for l1 in list_weights_:
+    for l2 in l1:
+        list_weights.append(l2)
+for l1 in list_cuts_:
+    for l2 in l1:
+        list_cuts.append(l2)
+for l1 in list_var_:
+    for l2 in l1:
+        list_var.append(l2)
+
+#print 'weights to keep are', list_weights
+#print 'cuts to keep are', list_cuts
+#print 'vars to keep are', list_var
+#print 'keep_branches are', keep_branches
+
+list_weights = list(set(list_weights))
+list_cuts = list(set(list_cuts))
+list_var = list(set(list_var))
+
+#print 'weights to keep are', list_weights
+#print 'cuts to keep are', list_cuts
+#print 'vars to keep are', list_var
+#print 'keep_branches are', keep_branches
+#
+all_keep_list = list_weights+list_cuts+list_var+keep_branches
+print 'all branches to keep are', all_keep_list
+print 'length is', len(all_keep_list)
+#sys.exit()
+
 
 print 'Preparations for Histograms (HistoMakeri)'
 print '=========================================\n'
 
-
-mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False, dccut = dccut)#sys should never be removed in dc
-data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=False, dccut = dccutdata)
+mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccut)#sys should never be removed in dc
+data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccutdata)
 ##before
 #mc_hMaker =   HistoMaker(all_samples ,path,config,optionsList     ,GroupDict, None, False, sample_to_merge_)
 #data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None    , None, False, sample_to_merge_)
@@ -711,7 +781,7 @@ if addBlindingCut:
 
 if rebin_active:
     print "background_samples: ",background_samples
-    if Custom_BDT_bins:
+    if Custom_BDT_bins and str(anType) == 'BDT':
         mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
     mc_hMaker.calc_rebin(background_samples)
     #transfer rebinning info to data maker
