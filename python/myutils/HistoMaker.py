@@ -12,7 +12,7 @@ import time
 import pdb
 
 class HistoMaker:
-    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False,  branch_to_keep=None, dccut=None):
+    def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False,  branch_to_keep=None, dccut=None, remove_sys=None):
         #samples: list of the samples, data and mc
         #path: location of the samples used to perform the plot
         #config: list of the configuration files
@@ -31,11 +31,12 @@ class HistoMaker:
         self.nBins = optionsList[0]['nBins']
         self.lumi=0.
         self.cuts = []
-        self.Custom_BDT_bins = None
+        #self.Custom_BDT_bins = None
+        self.BDTmin= None
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
-        self.tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart, plotMergeCached, branch_to_keep, False, dccut)  # created cached tree i.e. create new skimmed trees using the list of cuts
+        self.tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart, plotMergeCached, branch_to_keep, False, dccut, remove_sys)  # created cached tree i.e. create new skimmed trees using the list of cuts
         if filelist and len(filelist)>0 or mergeplot or sample_to_merge:
             print('ONLY CACHING PERFORMED, EXITING');
             return 
@@ -148,11 +149,11 @@ class HistoMaker:
             weightF=options['weight']
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
 
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
@@ -399,46 +400,114 @@ class HistoMaker:
         print 'upper bin is %s'%binR
         print "END loop from right"
 
-        #Custom bins will be applied if this is true. Rebinning from left is not needed (big lower bin should have enough stats).
-        if self.Custom_BDT_bins:
-            if self.Custom_BDT_bins[-2] > totalBG.GetBinLowEdge(binR):
-                print '@ERROR: highest BDT bins doesn\'t satifie rebinning condition when using variable size bins, please change the bin size accordinly.Aborting'
-                print 'binR x-range should be', totalBG.GetBinLowEdge(binR)
-                sys.exit()
-            self.mybinning = Rebinner(len(self.Custom_BDT_bins)-1,array('d',self.Custom_BDT_bins),True, True)
-        else:
-            #---- from left
-            rel=1.0
-            print "START loop from left"
-            while rel > tolerance:
-                TotL+=totalBG.GetBinContent(binL)
-                ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
-                binL+=1
-                if binL > nBins_start: break
-                if TotL < 1.: continue
-                if not TotL <= 0 and not ErrorL == 0:
-                    rel=ErrorL/TotL
-                    print rel
-            #it's the lower edge
-            print "STOP loop from left"
+        ##Custom bins will be applied if this is true. Rebinning from left is not needed (big lower bin should have enough stats).
+        #if self.Custom_BDT_bins:
+        #    pass
+        #    #def RebinCustomBin(l,xmin):
+        #    #    import copy
+        #    #    lr = copy.copy(l)
+        #    #    lr.reverse()
+
+        #    #    for i in lr[1:]:
+        #    #        if i < xmin:
+        #    #            lr[lr.index(i)] = xmin
+        #    #            break
+        #    #        else:
+        #    #            lr.remove(i)
+
+        #    #    lf = lr
+        #    #    lf.reverse()
+        #    #    if lf[0] != l[0]:
+        #    #        lf = [l[0]] + lf
+        #    #    return lf
+        #    #if self.Custom_BDT_bins[-2] > totalBG.GetBinLowEdge(binR):
+        #    #    print '@ERROR: highest BDT bins doesn\'t satifie rebinning condition when using variable size bins, please change the bin size accordinly.Aborting'
+        #    #    print 'binR x-range should be', totalBG.GetBinLowEdge(binR)
+        #    #    sys.exit()
+        #    #self.mybinning = Rebinner(len(self.Custom_BDT_bins)-1,array('d',self.Custom_BDT_bins),True, True)
+        #else:
+        #---- from left
+
+        rel=1.0
+        print "START loop from left"
+        while rel > tolerance:
+            TotL+=totalBG.GetBinContent(binL)
+            ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
             binL+=1
-            print 'lower bin is %s'%binL
+            if binL > nBins_start: break
+            if TotL < 1.: continue
+            if not TotL <= 0 and not ErrorL == 0:
+                rel=ErrorL/TotL
+                print rel
+        #it's the lower edge
+        print "STOP loop from left"
+        binL+=1
+        print 'lower bin is %s'%binL
 
-            inbetween=binR-binL
-            stepsize=int(inbetween)/(int(self.norebin_nBins)-2)
-            modulo = int(inbetween)%(int(self.norebin_nBins)-2)
+        inbetween=binR-binL
+        stepsize=int(inbetween)/(int(self.norebin_nBins)-2)
+        modulo = int(inbetween)%(int(self.norebin_nBins)-2)
 
-            print 'stepsize %s'% stepsize
-            print 'modulo %s'%modulo
-            binlist=[binL]
-            for i in range(0,int(self.norebin_nBins)-3):
-                binlist.append(binlist[-1]+stepsize)
-            binlist[-1]+=modulo
-            binlist.append(binR)
-            binlist.append(self.rebin_nBins+1)
-            print 'binning set to %s'%binlist
-            #print "START REBINNER"
+        print 'stepsize %s'% stepsize
+        print 'modulo %s'%modulo
+        binlist=[binL]
+        for i in range(0,int(self.norebin_nBins)-3):
+            binlist.append(binlist[-1]+stepsize)
+        binlist[-1]+=modulo
+        binlist.append(binR)
+        binlist.append(self.rebin_nBins+1)
+        print 'binning set to %s'%binlist
+        #print "START REBINNER"
+        #if not self.Custom_BDT_bins:
+        #    self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+        #else:
+        if self.BDTmin:
+            if not type(self.BDTmin) is list: self.BDTmin = [self.BDTmin]
+            #default from the rebinner
+            default_rebin = array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist])
+            #cutsom lower bins
+            custom_rebin = array('d',self.BDTmin)
+            #now making event bins between rightmost bin and cutom bin i.e. [self.BDTmin, event bins, last bin]
+            print 'The original number of bins is', len(default_rebin) -1
+            nBetween_bins = (len(default_rebin) -1) - 1 - (len(self.BDTmin) -1)
+            if default_rebin[-2] < self.BDTmin[-1]:
+                print '@ERROR: the custom lower BDT range contains lower edge of rightmost bin. Please change the range definiton. Aborting'
+                sys.exit()
+            custom_step = (default_rebin[-2] - self.BDTmin[-1])/(nBetween_bins*1.0)
+            for b in range(1,nBetween_bins):
+                custom_rebin.append(self.BDTmin[-1] + b*custom_step)
+            custom_rebin.append(default_rebin[-2])
+            custom_rebin.append(1)
+            print 'custom_rebin is', custom_rebin
+            print 'the final number of bins is', len(custom_rebin) -1
+            self.mybinning = Rebinner(len(custom_rebin) -1 ,custom_rebin,True,True)
+            #else:
+            #if type(self.BDTmin) is list:
+            #    #default from the rebinner
+            #    default_rebin = array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist])
+            #    #cutsom lower bins
+            #    custom_rebin = array('d',self.BDTmin)
+
+            #    #now making event bins between rightmost bin and cutom bin i.e. [self.BDTmin, event bins, last bin]
+            #    nBetween_bins = self.norebin_nBins - 1 - len(self.BDTmin)
+            #    custom_step = (default_rebin[-1] - self.BDTmin[-1])/(nBetween_bins*1.0)
+            #    for b in range(1,nBetween_bins):
+            #        custom_rebin.append(self.BDTmin[-1] + b*custom_step)
+            #    custom_rebin.append(default_rebin[-1])
+            #    custom_rebin.append(1)
+            #    #for b in default_rebin:
+            #    #    if b <= self.BDTmin[-1]: continue
+            #    #    custom_rebin.append(b)
+            #else:
+            #    default_rebin = array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist])
+            #    custom_rebin = array('d',[self.BDTmin])
+            #    for b in default_rebin:
+            #        if b <= self.BDTmin: continue
+            #        custom_rebin.append(b)
+            #    self.mybinning = Rebinner(len(custom_rebin) -1 ,custom_rebin),True,self.BDTmin)
+        else:
             self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+        #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[0.]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
         print '\t > rebinning is set <\n'
 
@@ -482,18 +551,18 @@ class HistoMaker:
 
 
 class Rebinner:
-    def __init__(self,nBins,lowedgearray,active=True,keep_irreg_bins=False):
+    def __init__(self,nBins,lowedgearray,active=True,custom_rebin=False):
         self.lowedgearray=lowedgearray
         self.nBins=nBins
         self.active=active
-        self.keep_irreg_bins=keep_irreg_bins
+        self.custom_rebin = True
     def rebin(self, histo):
         if not self.active: return histo
         #print histo.Integral()
         ROOT.gDirectory.Delete('hnew')
         histo.Rebin(self.nBins,'hnew',self.lowedgearray)
         binhisto=ROOT.gDirectory.Get('hnew')
-        if not self.keep_irreg_bins:#Histogram will be presented with same sized binned (the rebinning is still performed)
+        if not self.custom_rebin:#Histogram will be presented with same sized binned (the rebinning is still performed)
             newhisto=ROOT.TH1F('new','new',self.nBins,self.lowedgearray[0],self.lowedgearray[-1])
             newhisto.Sumw2()
             for bin in range(1,self.nBins+1):
