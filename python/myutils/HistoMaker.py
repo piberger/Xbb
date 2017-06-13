@@ -7,7 +7,9 @@ from BetterConfigParser import BetterConfigParser
 from TreeCache import TreeCache
 from math import sqrt
 from copy import copy
+from math import floor
 import time
+import pdb
 
 class HistoMaker:
     def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergeCachingPart=-1, plotMergeCached=False,  remove_sys=False, dccut=None):
@@ -29,6 +31,7 @@ class HistoMaker:
         self.nBins = optionsList[0]['nBins']
         self.lumi=0.
         self.cuts = []
+        self.Custom_BDT_bins = None
         for options in optionsList:
             self.cuts.append(options['cut'])
         #print "The cut is:",self.cuts
@@ -126,6 +129,8 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
+            if self.optionsList.index(options) == 0:
+                print 'This is the nominal histo, going to save him separatly'
             start_time = time.time()
             name=job.name
             if self.GroupDict is None:
@@ -176,10 +181,10 @@ class HistoMaker:
             #print('hTree.name() 1 =',hTree.GetName())
             #print('treeVar 1 =',treeVar)
             drawoption = ''
-            #print 'treeVar: %s'%(treeVar)
-            #print 'weightF: %s'%(weightF)
-            #print 'treeVar: %s'%(treeVar)
-            #print 'treeCut: %s'%(treeCut)
+            print 'treeVar: %s'%(treeVar)
+            print 'weightF: %s'%(weightF)
+            print 'BDT_add_cut: %s'%(BDT_add_cut)
+            print 'treeCut: %s'%(treeCut)
 
 #            print("START DRAWING")
             if job.type != 'DATA':
@@ -201,6 +206,7 @@ class HistoMaker:
                 ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
                 #from ROOT import TreeDraw
                 TD = ROOT.treedraw()
+                print 'drawoptions are', drawoption
                 hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
                 #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
                 #if First_iter: print 'Number of events are', nevents
@@ -254,6 +260,7 @@ class HistoMaker:
                             MC_rescale_factor=2. ##FIXME## only dataset used for training must be rescaled!!
                     else: 
                         MC_rescale_factor = 1.
+
                     if 'LHE_weights_scale_wgt[0+2]' in weightF:
                         ScaleFactor = self.tc.get_scale_LHE(job,self.config,0,self.lumi, count)*MC_rescale_factor
                     elif 'LHE_weights_scale_wgt[1+2]' in weightF:
@@ -306,12 +313,20 @@ class HistoMaker:
                 gDict[group] = self.mybinning.rebin(hTree)
                 del hTree
             else: 
-                #print 'not rebinning %s'%job.name 
+                print 'not rebinning %s'%job.name
                 gDict[group] = hTree
 #            print("STOP %s"%treeVar)
             hTreeList.append(gDict)
             First_iter = False
             print "get_histos_from_tree DONE for ",job.name, "var", options['var'], " in ", str(time.time() - start_time)," s."
+            #if self.optionsList.index(options) == 0:
+            #    c = ROOT.TCanvas('c','c')
+            #    c.cd()
+            #    hTree.Draw()
+            #    c.SaveAs('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/TESTDC/'+group+hTree.GetName()+job.name+'.root')
+            #    c.SaveAs('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/TESTDC/'+group+hTree.GetName()+job.name+'.C')
+            #    break
+
         if CuttedTree: CuttedTree.IsA().Destructor(CuttedTree)
         del CuttedTree
         #print "Finished to extract the histos from trees (get_histos_from_tree)"
@@ -384,38 +399,46 @@ class HistoMaker:
         print 'upper bin is %s'%binR
         print "END loop from right"
 
-        #---- from left
-        rel=1.0
-        print "START loop from left"
-        while rel > tolerance:
-            TotL+=totalBG.GetBinContent(binL)
-            ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
+        #Custom bins will be applied if this is true. Rebinning from left is not needed (big lower bin should have enough stats).
+        if self.Custom_BDT_bins:
+            if self.Custom_BDT_bins[-2] > totalBG.GetBinLowEdge(binR):
+                print '@ERROR: highest BDT bins doesn\'t satifie rebinning condition when using variable size bins, please change the bin size accordinly.Aborting'
+                print 'binR x-range should be', totalBG.GetBinLowEdge(binR)
+                sys.exit()
+            self.mybinning = Rebinner(len(self.Custom_BDT_bins)-1,array('d',self.Custom_BDT_bins),True, True)
+        else:
+            #---- from left
+            rel=1.0
+            print "START loop from left"
+            while rel > tolerance:
+                TotL+=totalBG.GetBinContent(binL)
+                ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
+                binL+=1
+                if binL > nBins_start: break
+                if TotL < 1.: continue
+                if not TotL <= 0 and not ErrorL == 0:
+                    rel=ErrorL/TotL
+                    print rel
+            #it's the lower edge
+            print "STOP loop from left"
             binL+=1
-            if binL > nBins_start: break
-            if TotL < 1.: continue
-            if not TotL <= 0 and not ErrorL == 0:
-                rel=ErrorL/TotL
-                print rel
-        #it's the lower edge
-        print "STOP loop from left"
-        binL+=1
-        print 'lower bin is %s'%binL
+            print 'lower bin is %s'%binL
 
-        inbetween=binR-binL
-        stepsize=int(inbetween)/(int(self.norebin_nBins)-2)
-        modulo = int(inbetween)%(int(self.norebin_nBins)-2)
+            inbetween=binR-binL
+            stepsize=int(inbetween)/(int(self.norebin_nBins)-2)
+            modulo = int(inbetween)%(int(self.norebin_nBins)-2)
 
-        print 'stepsize %s'% stepsize
-        print 'modulo %s'%modulo
-        binlist=[binL]
-        for i in range(0,int(self.norebin_nBins)-3):
-            binlist.append(binlist[-1]+stepsize)
-        binlist[-1]+=modulo
-        binlist.append(binR)
-        binlist.append(self.rebin_nBins+1)
-        print 'binning set to %s'%binlist
-        #print "START REBINNER"
-        self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            print 'stepsize %s'% stepsize
+            print 'modulo %s'%modulo
+            binlist=[binL]
+            for i in range(0,int(self.norebin_nBins)-3):
+                binlist.append(binlist[-1]+stepsize)
+            binlist[-1]+=modulo
+            binlist.append(binR)
+            binlist.append(self.rebin_nBins+1)
+            print 'binning set to %s'%binlist
+            #print "START REBINNER"
+            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
         print '\t > rebinning is set <\n'
 
@@ -459,25 +482,28 @@ class HistoMaker:
 
 
 class Rebinner:
-    def __init__(self,nBins,lowedgearray,active=True):
+    def __init__(self,nBins,lowedgearray,active=True,keep_irreg_bins=False):
         self.lowedgearray=lowedgearray
         self.nBins=nBins
         self.active=active
+        self.keep_irreg_bins=keep_irreg_bins
     def rebin(self, histo):
         if not self.active: return histo
         #print histo.Integral()
         ROOT.gDirectory.Delete('hnew')
         histo.Rebin(self.nBins,'hnew',self.lowedgearray)
         binhisto=ROOT.gDirectory.Get('hnew')
-        #print binhisto.Integral()
-        newhisto=ROOT.TH1F('new','new',self.nBins,self.lowedgearray[0],self.lowedgearray[-1])
-        newhisto.Sumw2()
-        for bin in range(1,self.nBins+1):
-            newhisto.SetBinContent(bin,binhisto.GetBinContent(bin))
-            newhisto.SetBinError(bin,binhisto.GetBinError(bin))
-        newhisto.SetName(binhisto.GetName())
-        newhisto.SetTitle(binhisto.GetTitle())
-        #print newhisto.Integral()
-        del histo
-        del binhisto
-        return copy(newhisto)
+        if not self.keep_irreg_bins:#Histogram will be presented with same sized binned (the rebinning is still performed)
+            newhisto=ROOT.TH1F('new','new',self.nBins,self.lowedgearray[0],self.lowedgearray[-1])
+            newhisto.Sumw2()
+            for bin in range(1,self.nBins+1):
+                newhisto.SetBinContent(bin,binhisto.GetBinContent(bin))
+                newhisto.SetBinError(bin,binhisto.GetBinError(bin))
+            newhisto.SetName(binhisto.GetName())
+            newhisto.SetTitle(binhisto.GetTitle())
+            #print newhisto.Integral()
+            del histo
+            del binhisto
+            return copy(newhisto)
+        else:
+            return copy(binhisto)

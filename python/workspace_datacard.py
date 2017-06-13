@@ -167,6 +167,8 @@ Datacardbin=config.get('dc:%s'%var,'dcBin')
 anType = config.get('dc:%s'%var,'type')
 setup=eval(config.get('LimitGeneral','setup'))
 
+Custom_BDT_bins = eval(config.get('LimitGeneral','Custom_BDT_bins'))
+
 if optimisation_training:
    ROOToutname += optimisation
    if UseTrainSample:
@@ -305,6 +307,7 @@ if str(anType) == 'cr':
 # Use the rebinning:
 rebin_active=eval(config.get('LimitGeneral','rebin_active'))
 #if str(anType) == 'cr':
+print 'rebin active is', rebin_active
 if not bdt:
     if rebin_active:
         print '@WARNING: Changing rebin_active to false since you are running for control region.'
@@ -708,6 +711,8 @@ if addBlindingCut:
 
 if rebin_active:
     print "background_samples: ",background_samples
+    if Custom_BDT_bins:
+        mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
     mc_hMaker.calc_rebin(background_samples)
     #transfer rebinning info to data maker
     data_hMaker.norebin_nBins = copy(mc_hMaker.norebin_nBins)
@@ -791,6 +796,7 @@ if signal_inject:
         sig_hMaker.nBins = copy(mc_hMaker.nBins)
         sig_hMaker._rebin = copy(mc_hMaker._rebin)
         sig_hMaker.mybinning = deepcopy(mc_hMaker.mybinning)
+#sys.exit()
 
 print 'Get the signal histo'
 print '====================\n'
