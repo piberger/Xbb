@@ -167,7 +167,13 @@ Datacardbin=config.get('dc:%s'%var,'dcBin')
 anType = config.get('dc:%s'%var,'type')
 setup=eval(config.get('LimitGeneral','setup'))
 
-Custom_BDT_bins = eval(config.get('LimitGeneral','Custom_BDT_bins'))
+#new
+try:
+    BDTmin = eval(config.get('LimitGeneral', 'BDTmin'))
+except:
+    BDTmin = None
+#old
+#Custom_BDT_bins = eval(config.get('LimitGeneral','Custom_BDT_bins'))
 
 if optimisation_training:
    ROOToutname += optimisation
@@ -203,6 +209,10 @@ if opts.settings:
     if 'MERGECACHING' in opts.settings:
         mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
         print '@INFO: Partially merged caching: this is part', mergeCachingPart
+    #if 'SPLITSAMPLE' in opts.settings:
+    #    splitSample= int(opts.settings[opts.settings.find('CACHING')+11:].split('__')[0].split('_')[-1])
+    #    print '@INFO: will only do the dc step for the following sample', mergeCachingPart
+
 
 ###
 
@@ -352,10 +362,37 @@ systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_%s'%pt_region))
 print 'systematicsnaming is', systematicsnaming
 weightF_systematics = eval(config.get('LimitGeneral','weightF_sys'))
+print 'ROOToutname is', ROOToutname
 if 'Zee' in ROOToutname :
-    if 'CMS_vhbb_eff_m_13TeV' in weightF_systematics: weightF_systematics.remove('CMS_vhbb_eff_m_13TeV')
+    for weight_ in copy(weightF_systematics):
+        if weight_ == 'CMS_vhbb_eff_m_13TeV': weightF_systematics.remove('CMS_vhbb_eff_m_13TeV')
+        if weight_ == 'CMS_vhbb_eff_m_trigger_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_m_trigger_Zll_13TeV')
+        if weight_ == 'CMS_vhbb_eff_m_MVAID_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_m_MVAID_Zll_13TeV')
+        if weight_ == 'CMS_vhbb_eff_m_tracker_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_m_tracker_Zll_13TeV')
+        if weight_ == 'CMS_vhbb_eff_m_ISO_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_m_ISO_Zll_13TeV')
+
+#    if '_m_' in weightF_systematics:
+#        weightF_systematics.remove('CMS_vhbb_eff_m_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_m_trigger_Zll_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_m_MVAID_Zll_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_m_tracker_Zll_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_m_ISO_Zll_13TeV')
 if 'Zuu' in ROOToutname :
-    if 'CMS_vhbb_eff_e_13TeV' in weightF_systematics: weightF_systematics.remove('CMS_vhbb_eff_e_13TeV')
+    for weight_ in copy(weightF_systematics):
+        if weight_ == 'CMS_vhbb_eff_e_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_13TeV')
+        if weight_ == 'CMS_vhbb_eff_e_trigger_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_trigger_Zll_13TeV')
+        if weight_ == 'CMS_vhbb_eff_e_MVAID_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_MVAID_Zll_13TeV')
+        if weight_ == 'CMS_vhbb_eff_e_MVAID_Zll_eta0_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_MVAID_Zll_eta0_13TeV')
+        if weight_ == 'CMS_vhbb_eff_e_MVAID_Zll_eta1_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_MVAID_Zll_eta1_13TeV')
+        if weight_ == 'CMS_vhbb_eff_e_tracker_Zll_13TeV': weightF_systematics.remove('CMS_vhbb_eff_e_tracker_Zll_13TeV')
+#    if if weight == ''_e_' in weightF_systematics:
+#        weightF_systematics.remove('CMS_vhbb_eff_e_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_e_trigger_Zll_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_e_MVAID_Zll_13TeV')
+#        weightF_systematics.remove('CMS_vhbb_eff_e_tracker_Zll_13TeV')
+
+#print 'weightF_systematics are', weightF_systematics
+#sys.exit()
 
 #if str(anType) == 'cr': 
 #    if pt_region == 'NoSysRegion':
@@ -420,7 +457,7 @@ for samp in data_samples:
 optionsList=[]
 shapecutList=[]
 
-def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind})
+def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind, 'sysType':copy(_sysType)})
 def appendSCList(): shapecutList.append(shapecut)
 
 #nominal
@@ -430,6 +467,8 @@ _name = title
 _weight = weightF
 _countHisto = "CountWeighted"
 _countbin = 0
+_sysType = 'nominal'
+
 #shapecut = _cut
 #ie. take count from 'CountWeighted->GetBinContent(1)'
 appendList()
@@ -489,9 +528,9 @@ for syst in systematics:
             #ff[1]='%s_%s'%(sys,Q.lower())
             #print 'old treevar', _treevar
             if not 'UD' in syst:
-                _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q.lower()))
+                _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q))
                 #_treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
-                print '.nominal by','.%s_%s'%(syst,Q.lower())
+                print '.nominal by','.%s_%s'%(syst,Q)
             else:
                 _treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
                 #_treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD',Q)))
@@ -506,6 +545,8 @@ for syst in systematics:
                 _treevar = treevar
         elif cr == True:
             _treevar = treevar
+
+        _sysType = 'shape'
         #append
         appendList()
         #appendSCList()
@@ -626,6 +667,7 @@ for weightF_sys in weightF_systematics:
         shapecut = shapecut_first
         _treevar = treevar
         _name = title
+        _sysType = 'weight'
         appendList()
         appendSCList()
 
@@ -781,9 +823,12 @@ if addBlindingCut:
 
 if rebin_active:
     print "background_samples: ",background_samples
-    if Custom_BDT_bins and str(anType) == 'BDT':
-        mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
-    mc_hMaker.calc_rebin(background_samples)
+    if BDTmin and str(anType) == 'BDT':
+        mc_hMaker.BDTmin = BDTmin
+    #old
+    #if Custom_BDT_bins and str(anType) == 'BDT':
+    #    mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
+    mc_hMaker.calc_rebin(background_samples, 1000, 0.35, True)
     #transfer rebinning info to data maker
     data_hMaker.norebin_nBins = copy(mc_hMaker.norebin_nBins)
     data_hMaker.rebin_nBins = copy(mc_hMaker.rebin_nBins)
@@ -810,10 +855,10 @@ print '\n\t...fetching histos...\n'
 
 inputs=[]
 for job in all_samples:
-    #inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
-    #inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
-    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
-#    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None)))
+#new
+    inputs.append((mc_hMaker,"get_histos_from_tree_dc",(job,True, None, shapecutList)))
+#old
+#    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
 
 
 # multiprocess=0
@@ -868,13 +913,13 @@ if signal_inject:
         sig_hMaker.mybinning = deepcopy(mc_hMaker.mybinning)
 #sys.exit()
 
-print 'Get the signal histo'
-print '====================\n'
-if signal_inject:
-    for job in signal_inject:
-        htree = sig_hMaker.get_histos_from_tree(job)
-        hDummy.Add(htree[0].values()[0],1)
-        del htree
+#print 'Get the signal histo'
+#print '====================\n'
+#if signal_inject:
+#    for job in signal_inject:
+#        htree = sig_hMaker.get_histos_from_tree(job)
+#        hDummy.Add(htree[0].values()[0],1)
+#        del htree
 
 print 'Get the data histo'
 print '==================\n'
@@ -1015,27 +1060,28 @@ if not ignore_stats:
     print 'Make the statistical shapes'
     print '===========================\n'
     if not binstat:
-        for Q in UD:
-            final_histos['%s_%s'%(systematicsnaming['stats'],Q)] = {}
-        for job,hist in final_histos['nominal'].items():
-            errorsum=0
-            for j in range(hist.GetNbinsX()+1):
-                errorsum=errorsum+(hist.GetBinError(j))**2
-            errorsum=sqrt(errorsum)
-            total=hist.Integral()
-            for Q in UD:
-                final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job] = hist.Clone()
-                for j in range(hist.GetNbinsX()+1):
-                    if Q == 'Up':
-                        if rescaleSqrtN and total:
-                            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)/total*errorsum))
-                        else:
-                            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)))
-                    if Q == 'Down':
-                        if rescaleSqrtN and total:
-                            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)/total*errorsum))
-                        else:
-                            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
+        pass
+    #    for Q in UD:
+    #        final_histos['%s_%s'%(systematicsnaming['stats'],Q)] = {}
+    #    for job,hist in final_histos['nominal'].items():
+    #        errorsum=0
+    #        for j in range(hist.GetNbinsX()+1):
+    #            errorsum=errorsum+(hist.GetBinError(j))**2
+    #        errorsum=sqrt(errorsum)
+    #        total=hist.Integral()
+    #        for Q in UD:
+    #            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job] = hist.Clone()
+    #            for j in range(hist.GetNbinsX()+1):
+    #                if Q == 'Up':
+    #                    if rescaleSqrtN and total:
+    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)/total*errorsum))
+    #                    else:
+    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)))
+    #                if Q == 'Down':
+    #                    if rescaleSqrtN and total:
+    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)/total*errorsum))
+    #                    else:
+    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
     else:
         print "Running Statistical uncertainty"
         threshold =  0.5 #stat error / sqrt(value). It was 0.5
@@ -1197,14 +1243,15 @@ if not ignore_stats:
                             f.write('\t-')
                     f.write('\n')
     else:
-        for c in setup:
-            f.write('%s_%s_%s\tshape'%(systematicsnaming['stats'],Dict[c],Datacardbin))
-            for it in range(0,columns):
-                if it == setup.index(c):
-                    f.write('\t1.0')
-                else:
-                    f.write('\t-')
-            f.write('\n')
+        pass
+    #    for c in setup:
+    #        f.write('%s_%s_%s\tshape'%(systematicsnaming['stats'],Dict[c],Datacardbin))
+    #        for it in range(0,columns):
+    #            if it == setup.index(c):
+    #                f.write('\t1.0')
+    #            else:
+    #                f.write('\t-')
+    #        f.write('\n')
 # UEPS systematics
 for weightF_sys in weightF_systematics:
     f.write('%s\tshape' %(systematicsnaming[weightF_sys]))

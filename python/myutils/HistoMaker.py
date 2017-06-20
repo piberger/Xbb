@@ -50,6 +50,363 @@ class HistoMaker:
         print ""
         print "Done Creating HistoMaker"
         print "========================\n"
+    def get_histos_from_tree_dc(self,job,quick=True, subcut_ = None, replacement_cut = None):
+        '''Function that produce the trees from a HistoMaker, optimised for dc (in case of lot of sys). This concerns only MC.'''
+
+
+
+        if self.lumi == 0:
+            lumi = self.config.get('Plot_general','lumi')
+            #print("You're trying to plot with no lumi, I will use ",lumi)
+            self.lumi = lumi
+
+        hTreeList=[]
+
+        #get the conversion rate in case of BDT plots
+        TrainFlag = eval(self.config.get('Analysis','TrainFlag'))
+
+        # #Remove EventForTraining in order to run the MVA directly from the PREP step
+
+        if not 'PSI' in self.config.get('Configuration','whereToLaunch'):
+#            BDT_add_cut='((evt%2) == 0 || Alt$(isData,0))'
+            if 'ZJets_amc' in job.name:
+                print 'No training cut for the sample', job.name
+                BDT_add_cut='1'
+            else:
+                BDT_add_cut='((evt%2) == 0 || isData)'
+        else:
+            print 'Adding training cut'
+            UseTrainSample = eval(self.config.get('Analysis','UseTrainSample'))
+            if UseTrainSample:
+                BDT_add_cut='((evt%2) == 0 || isData)'
+            else:
+                if 'ZJets_amc' in job.name:
+                    print 'No evt%2 cut for sample', job.name
+                    BDT_add_cut='1'
+                else:
+                    BDT_add_cut='!((evt%2) == 0 || isData)'
+
+        plot_path = self.config.get('Directories','plotpath')
+        addOverFlow=eval(self.config.get('Plot_general','addOverFlow'))
+
+        # get all Histos at once
+        addCut = '1' #'(%s)&&(%s)'%(self.tc.minCut, job.subcut) #debug!!
+        print 'subcut_ is', subcut_
+        if subcut_:
+            addCut = subcut_
+        print 'addCut is', addCut
+
+        # get the filenames for the root files to be read into the tree, and fill the count histograms
+        rootFileNames = self.tc.get_tree(job, addCut)
+
+        #read options to prepare histo and TTreeFormula
+        DrawInfoDicList = []
+        #keys are var, cut, weight, htree, type
+#        hTreeList=[]
+        #varList=[]
+#        cutList=[]
+#        weightList=[]
+#        sysTypeList=[]
+
+        index_ = 0
+        for options in self.optionsList:
+
+            index_ += 1
+            DrawInfoDic = {}
+
+            DrawInfoDic['type'] = options['sysType']
+            #sysTypeList.append(options['sysType'])
+
+            if self.optionsList.index(options) == 0:
+                print 'This is the nominal histo, going to save him separatly'
+
+            name=job.name
+            if self.GroupDict is None:
+                group=job.group
+            else:
+                group=self.GroupDict[job.name]
+            treeVar=options['var']
+            DrawInfoDic['var'] = treeVar
+            name=options['name']
+            if self._rebin or self.calc_rebin_flag:
+                nBins = self.nBins
+            else:
+                nBins = int(options['nBins'])
+            xMin=float(options['xMin'])
+            xMax=float(options['xMax'])
+            weightF=options['weight']
+            #Include weight per sample (specialweight)
+            if 'PSI' in self.config.get('Configuration','whereToLaunch'):
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
+            else:
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
+
+            #weightList.append(weightF)
+            DrawInfoDic['weight'] = weightF
+
+            if 'countHisto' in options.keys() and 'countbin' in options.keys():
+                count=getattr(self.tc,options['countHisto'])[options['countbin']]
+            else:
+                count=getattr(self.tc,"CountWeighted")[0]
+
+            treeCut='%s & %s'%(options['cut'],addCut)
+            if replacement_cut:
+                if type(replacement_cut) is str:
+                    treeCut='%s & %s'%(replacement_cut,addCut)
+                elif type(replacement_cut) is list:
+                    treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
+                else:
+                    print '@ERROR: replacement_cut is neither list or string. Aborting'
+                    sys.exit()
+
+            hTree = ROOT.TH1F('%s_%s_%i'%(name,job.name,index_),'%s'%name,nBins,xMin,xMax)
+
+            hTree.Sumw2()
+            hTree.SetTitle(job.name)
+
+            DrawInfoDic['htree'] = hTree
+            #hTreeList.append(hTree)
+
+
+            drawoption = ''
+            #print 'treeVar: %s'%(treeVar)
+            #print 'weightF: %s'%(weightF)
+            #print 'BDT_add_cut: %s'%(BDT_add_cut)
+            #print 'treeCut: %s'%(treeCut)
+
+#            print("START DRAWING")
+            if job.type != 'DATA':
+              #if CuttedTree and CuttedTree.GetEntries():
+                if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
+                    drawoption = '(%s)*(%s & %s)'%(weightF,BDT_add_cut,treeCut)
+                    print "I'm appling: ",BDT_add_cut
+                    #cutList.append('(%s & %s)'%(BDT_add_cut,treeCut))
+                    DrawInfoDic['cut'] = '(%s & %s)'%(BDT_add_cut,treeCut)
+                else:
+                    drawoption = '(%s)*(%s)'%(weightF,treeCut)
+                    #cutList.append('(%s)'%(treeCut))
+                    DrawInfoDic['cut'] = '(%s)'%(treeCut)
+                #Not Drawing yet
+                ###ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
+                ###TD = ROOT.treedraw()
+                ####print 'drawoptions are', drawoption
+                ###hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
+                ###full=True
+
+            DrawInfoDicList.append(DrawInfoDic)
+
+        ###
+        ##Prepare loop on the TTree
+        ###
+
+        # in case of a list of files, read them as a TChain
+        if type(rootFileNames) is list:
+            CuttedTree = ROOT.TChain(job.tree)
+            for rootFileName in rootFileNames:
+                status = CuttedTree.Add(rootFileName + '/' + job.tree, 0)
+                if status != 1:
+                    print ('ERROR: in HistoMaker.py, cannot add file to chain:'+rootFileName)
+            input = None
+        # otherwise as a TFile for backwards compatibility
+        else:
+            input = ROOT.TFile.Open(rootFileNames,'read')
+            #Not: no subcut is needed since  done in caching
+            #if job.subsample:
+            #    addCut += '& (%s)' %(job.subcut)
+            CuttedTree = input.Get(job.tree)
+            CuttedTree.SetCacheSize(0)
+        #print 'CuttedTree.GetEntries()',CuttedTree.GetEntries()
+
+        ##Check if branch exists (for debugging purpose)
+        #if CuttedTree.GetEntries() > 0:
+        #    bl = CuttedTree.GetListOfBranches()
+        #    Bfound = False
+        #    for b in bl:
+        #        print 'branch name is', b.GetName()
+        #        if b.GetName() == 'genWeight':
+        #            Bfound = True
+        #    if not Bfound:
+        #        print 'Warning: branch genWeight doesnt exist in sample', job.name
+
+        if CuttedTree.GetEntries() > 0:
+            DrawFormulaNom_var    = ROOT.TTreeFormula('DrawFormulaNom_var',    DrawInfoDicList[0]['var'] ,  CuttedTree)
+            DrawFormulaNom_cut    = ROOT.TTreeFormula('DrawFormulaNom_cut',    DrawInfoDicList[0]['cut'] ,  CuttedTree)
+            DrawFormulaNom_weight = ROOT.TTreeFormula('DrawFormulaNom_weight', DrawInfoDicList[0]['weight'],CuttedTree)
+            #print 'nominal var is', DrawInfoDicList[0]['var']
+            #print 'nominal cut is', DrawInfoDicList[0]['cut']
+            #print 'nominal weight is', DrawInfoDicList[0]['weight']
+
+        ###
+        #Define formulas for systematics
+        ###
+        DrawFormulaDicList = []
+        for DrawInfoDic in DrawInfoDicList:
+            DrawFormulaDic = {}
+            if CuttedTree.GetEntries() > 0:
+                index_ = DrawInfoDicList.index(DrawInfoDic)#such that the formula's have different name
+                if DrawInfoDic['type'] == 'nominal':
+                    pass
+                elif DrawInfoDic['type'] == 'weight':
+                    #plot of weight sys. Only Up/Down weights are needed here
+                    #print'weight formula is', DrawInfoDic['weight']
+                    DrawFormulaDic['weight'] = ROOT.TTreeFormula("weightFormula_%i"%index_, DrawInfoDic['weight'],CuttedTree)
+                elif DrawInfoDic['type'] == 'shape':
+                    #plot of shape sys. Only var and cut are needed here
+                    #print'var formula is', DrawInfoDic['var']
+                    DrawFormulaDic['var'] = ROOT.TTreeFormula("varFormula_%i"%index_, DrawInfoDic['var'] ,CuttedTree)
+                    #print'cut formula is', DrawInfoDic['cut']
+                    DrawFormulaDic['cut'] = ROOT.TTreeFormula("cutFormula_%i"%index_, DrawInfoDic['cut'] ,CuttedTree)
+                else:
+                    print '@ERROR: type should be either nominal, weight or shape. Aborting'
+                    sys.exit()
+            #copy type and histo
+            DrawFormulaDic['type'] =  DrawInfoDic['type']
+            DrawFormulaDic['htree'] = DrawInfoDic['htree']
+
+            DrawFormulaDicList.append(DrawFormulaDic)
+
+        if CuttedTree.GetEntries() > 0:
+            #! start the loop over variables (descriebed in options)
+            First_iter = True
+
+            nEntries = CuttedTree.GetEntries()
+            i = 0
+            oldTreeNum = -1
+            #for entry in range(0,nEntries):
+            for event in CuttedTree:
+                #if entry > 1000: break
+                #print'================'
+                #print 'entry is', entry
+                #print'================'
+
+                CuttedTree.LoadTree(i)
+                treeNum = CuttedTree.GetTreeNumber()
+                #update the leaves
+                if treeNum != oldTreeNum:
+                    #nominal
+                    DrawFormulaNom_var.UpdateFormulaLeaves()
+                    DrawFormulaNom_cut.UpdateFormulaLeaves()
+                    DrawFormulaNom_weight.UpdateFormulaLeaves()
+
+                    for DrawFormulaDic in DrawFormulaDicList:
+                        #update all the formula for the ploting
+                        if DrawFormulaDic['type'] == 'nominal':
+                            pass
+                        elif DrawFormulaDic['type'] == 'weight':
+                            DrawFormulaDic['weight'].UpdateFormulaLeaves()
+                        elif DrawFormulaDic['type'] == 'shape':
+                            DrawFormulaDic['var'].UpdateFormulaLeaves()
+                            DrawFormulaDic['cut'].UpdateFormulaLeaves()
+                    oldTreeNum = treeNum
+
+                DrawFormulaNom_var.GetNdata()
+                DrawFormulaNom_cut.GetNdata()
+                DrawFormulaNom_weight.GetNdata()
+
+                var = DrawFormulaNom_var.EvalInstance()
+                cut = DrawFormulaNom_cut.EvalInstance()
+                weight = DrawFormulaNom_weight.EvalInstance()
+
+                #print ''
+                #print 'nominal outcomes are'
+                #print 'var:', var
+                #print 'cut:', cut
+                #print 'weight:', weight
+                #print ''
+                #Fill Nominal Histo
+                DrawFormulaDicList[0]['htree'].Fill(var, weight*cut)
+
+                var2    = None
+                cut2    = None
+                weight2 = None
+                #loop over all different sys, fill the histos
+                for DrawFormulaDic in DrawFormulaDicList:
+                    #update all the formula for the ploting
+                    if DrawFormulaDic['type'] == 'nominal':
+                       continue
+                    elif DrawFormulaDic['type'] == 'weight':
+                        var2    = var
+                        cut2    = cut
+                        DrawFormulaDic['weight'].GetNdata()
+                        weight2 = DrawFormulaDic['weight'].EvalInstance()
+                    elif DrawFormulaDic['type'] == 'shape':
+                        DrawFormulaDic['cut'].GetNdata()
+                        DrawFormulaDic['var'].GetNdata()
+                        var2    = DrawFormulaDic['var'].EvalInstance()
+                        cut2    = DrawFormulaDic['cut'].EvalInstance()
+                        weight2 = weight
+                    DrawFormulaDic['htree'].Fill(var2, weight2*cut2)
+
+                i += 1
+            #####
+            #Rescaling the histograms
+
+        for DrawFormulaDic in DrawFormulaDicList:
+            hTree = DrawFormulaDic['htree']
+            if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:
+                if TrainFlag:
+                    if 'ZJets_amc' in job.name:
+                        print 'No rescale applied for the sample', job.name
+                        MC_rescale_factor = 1.
+                    else:
+                        MC_rescale_factor=2. ##FIXME## only dataset used for training must be rescaled!!
+                else:
+                    MC_rescale_factor = 1.
+
+                if 'LHE_weights_scale_wgt[0+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,0,self.lumi, count)*MC_rescale_factor
+                elif 'LHE_weights_scale_wgt[1+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,1,self.lumi, count)*MC_rescale_factor
+                elif 'LHE_weights_scale_wgt[2+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,2,self.lumi, count)*MC_rescale_factor
+                elif 'LHE_weights_scale_wgt[3+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,3,self.lumi, count)*MC_rescale_factor
+                else:
+                    ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)*MC_rescale_factor
+            else:
+                if 'LHE_weights_scale_wgt[0+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,0,self.lumi, count)
+                elif 'LHE_weights_scale_wgt[1+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,1,self.lumi, count)
+                elif 'LHE_weights_scale_wgt[2+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,2,self.lumi, count)
+                elif 'LHE_weights_scale_wgt[3+2]' in weightF:
+                    ScaleFactor = self.tc.get_scale_LHE(job,self.config,3,self.lumi, count)
+                else:
+                    ScaleFactor = self.tc.get_scale(job,self.config,self.lumi, count)
+            if ScaleFactor != 0:
+                hTree.Scale(ScaleFactor)
+            integral = hTree.Integral()
+            # !! Brute force correction for histograms with negative integral (problems with datacard) !!
+            if integral<0:
+                hTree.Scale(-0.001)
+            if addOverFlow:
+                uFlow = hTree.GetBinContent(0)+hTree.GetBinContent(1)
+                oFlow = hTree.GetBinContent(hTree.GetNbinsX()+1)+hTree.GetBinContent(hTree.GetNbinsX())
+                uFlowErr = ROOT.TMath.Sqrt(ROOT.TMath.Power(hTree.GetBinError(0),2)+ROOT.TMath.Power(hTree.GetBinError(1),2))
+                oFlowErr = ROOT.TMath.Sqrt(ROOT.TMath.Power(hTree.GetBinError(hTree.GetNbinsX()),2)+ROOT.TMath.Power(hTree.GetBinError(hTree.GetNbinsX()+1),2))
+                hTree.SetBinContent(1,uFlow)
+                hTree.SetBinContent(hTree.GetNbinsX(),oFlow)
+                hTree.SetBinError(1,uFlowErr)
+                hTree.SetBinError(hTree.GetNbinsX(),oFlowErr)
+            hTree.SetDirectory(0)
+            gDict = {}
+            if self._rebin:
+                gDict[group] = self.mybinning.rebin(hTree)
+                del hTree
+            else:
+                #print 'not rebinning %s'%job.name
+                gDict[group] = hTree
+#            print("STOP %s"%treeVar)
+            hTreeList.append(gDict)
+        First_iter = False
+#        print "get_histos_from_tree DONE for ",job.name, "var", options['var'], " in ", str(time.time() - start_time)," s."
+
+        if CuttedTree: CuttedTree.IsA().Destructor(CuttedTree)
+        del CuttedTree
+        return hTreeList
 
     def get_histos_from_tree(self,job,quick=True, subcut_ = None, replacement_cut = None):
         start_time = time.time()
@@ -58,7 +415,6 @@ class HistoMaker:
         print "THE SAMPLE IS ",job.name
         print "=============================================================\n"
 
-        '''Function that produce the trees from a HistoMaker'''
          
         #print "Begin to extract the histos from trees (get_histos_from_tree)"
         #print "=============================================================\n"
@@ -189,10 +545,9 @@ class HistoMaker:
 
 #            print("START DRAWING")
             if job.type != 'DATA':
-              if CuttedTree and CuttedTree.GetEntries():
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
                     drawoption = '(%s)*(%s & %s)'%(weightF,BDT_add_cut,treeCut)
-                    print "I'm appling: ",BDT_add_cut
+                    #print "I'm appling: ",BDT_add_cut
                     #drawoption = 'sign(genWeight)*(%s)*(%s & %s)'%(weightF,treeCut,BDT_add_cut)
                     #print drawoption
                 else: 
@@ -319,7 +674,7 @@ class HistoMaker:
 #            print("STOP %s"%treeVar)
             hTreeList.append(gDict)
             First_iter = False
-            print "get_histos_from_tree DONE for ",job.name, "var", options['var'], " in ", str(time.time() - start_time)," s."
+            #print "get_histos_from_tree DONE for ",job.name, "var", options['var'], " in ", str(time.time() - start_time)," s."
             #if self.optionsList.index(options) == 0:
             #    c = ROOT.TCanvas('c','c')
             #    c.cd()
@@ -356,7 +711,7 @@ class HistoMaker:
         elif not self._rebin and not self.value:
             return False
 
-    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.35):
+    def calc_rebin(self, bg_list, nBins_start=1000, tolerance=0.35, dc_step = False):
         #print "START calc_rebin"
         self.calc_rebin_flag = True
         self.norebin_nBins = copy(self.nBins)
@@ -367,7 +722,11 @@ class HistoMaker:
         print '\n\t...calculating rebinning...'
         for job in bg_list:
             #print "job",job
-            htree = self.get_histos_from_tree(job)[0].values()[0]
+            if dc_step:
+                htree = self.get_histos_from_tree_dc(job)[0].values()[0]
+            else:
+                print 'WTF???????????????'
+                htree = self.get_histos_from_tree(job)[0].values()[0]
             print "Integral",job,htree.Integral()
             if not i:
                 totalBG = copy(htree)
