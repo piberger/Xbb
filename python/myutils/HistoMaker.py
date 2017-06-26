@@ -53,6 +53,9 @@ class HistoMaker:
     def get_histos_from_tree_dc(self,job,quick=True, subcut_ = None, replacement_cut = None):
         '''Function that produce the trees from a HistoMaker, optimised for dc (in case of lot of sys). This concerns only MC.'''
 
+        print "=============================================================\n"
+        print "THE SAMPLE IS ",job.name
+        print "=============================================================\n"
 
 
         if self.lumi == 0:
@@ -181,7 +184,7 @@ class HistoMaker:
               #if CuttedTree and CuttedTree.GetEntries():
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
                     drawoption = '(%s)*(%s & %s)'%(weightF,BDT_add_cut,treeCut)
-                    print "I'm appling: ",BDT_add_cut
+                    #print "I'm appling: ",BDT_add_cut
                     #cutList.append('(%s & %s)'%(BDT_add_cut,treeCut))
                     DrawInfoDic['cut'] = '(%s & %s)'%(BDT_add_cut,treeCut)
                 else:
@@ -408,7 +411,7 @@ class HistoMaker:
         del CuttedTree
         return hTreeList
 
-    def get_histos_from_tree(self,job,quick=True, subcut_ = None, replacement_cut = None):
+    def get_histos_from_tree(self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False):
         start_time = time.time()
 
         print "=============================================================\n"
@@ -458,7 +461,7 @@ class HistoMaker:
         print 'subcut_ is', subcut_
         if subcut_:
             addCut = subcut_
-        print 'addCut is', addCut
+        #print 'addCut is', addCut
 
         # get the filenames for the root files to be read into the tree, and fill the count histograms
         rootFileNames = self.tc.get_tree(job, addCut)
@@ -486,6 +489,7 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
+            print 'nomOnly is', nomOnly
             if self.optionsList.index(options) == 0:
                 print 'This is the nominal histo, going to save him separatly'
             start_time = time.time()
@@ -682,6 +686,7 @@ class HistoMaker:
             #    c.SaveAs('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/TESTDC/'+group+hTree.GetName()+job.name+'.root')
             #    c.SaveAs('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/TESTDC/'+group+hTree.GetName()+job.name+'.C')
             #    break
+            if nomOnly: break
 
         if CuttedTree: CuttedTree.IsA().Destructor(CuttedTree)
         del CuttedTree
@@ -723,10 +728,15 @@ class HistoMaker:
         for job in bg_list:
             #print "job",job
             if dc_step:
-                htree = self.get_histos_from_tree_dc(job)[0].values()[0]
+                #htree = self.get_histos_from_tree_dc(job)[0].values()[0]
+                #self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False
+                #htree = self.get_histos_from_tree(job)[0].values()[0]
+                htree = self.get_histos_from_tree(job, True, None, None, True)[0].values()[0]
             else:
-                print 'WTF???????????????'
-                htree = self.get_histos_from_tree(job)[0].values()[0]
+                #self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False
+                #htree = self.get_histos_from_tree(job)[0].values()[0]
+                #htree = self.get_histos_from_tree()[0].values()[0]
+                htree = self.get_histos_from_tree(job, True, None, None, True)[0].values()[0]
             print "Integral",job,htree.Integral()
             if not i:
                 totalBG = copy(htree)
@@ -759,32 +769,6 @@ class HistoMaker:
         print 'upper bin is %s'%binR
         print "END loop from right"
 
-        ##Custom bins will be applied if this is true. Rebinning from left is not needed (big lower bin should have enough stats).
-        #if self.Custom_BDT_bins:
-        #    pass
-        #    #def RebinCustomBin(l,xmin):
-        #    #    import copy
-        #    #    lr = copy.copy(l)
-        #    #    lr.reverse()
-
-        #    #    for i in lr[1:]:
-        #    #        if i < xmin:
-        #    #            lr[lr.index(i)] = xmin
-        #    #            break
-        #    #        else:
-        #    #            lr.remove(i)
-
-        #    #    lf = lr
-        #    #    lf.reverse()
-        #    #    if lf[0] != l[0]:
-        #    #        lf = [l[0]] + lf
-        #    #    return lf
-        #    #if self.Custom_BDT_bins[-2] > totalBG.GetBinLowEdge(binR):
-        #    #    print '@ERROR: highest BDT bins doesn\'t satifie rebinning condition when using variable size bins, please change the bin size accordinly.Aborting'
-        #    #    print 'binR x-range should be', totalBG.GetBinLowEdge(binR)
-        #    #    sys.exit()
-        #    #self.mybinning = Rebinner(len(self.Custom_BDT_bins)-1,array('d',self.Custom_BDT_bins),True, True)
-        #else:
         #---- from left
 
         rel=1.0

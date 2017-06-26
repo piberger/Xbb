@@ -198,6 +198,8 @@ print 'opts.settings is', opts.settings
 sample_to_merge_ = None
 # reads n files, writes single file. disabled if set to -1
 mergeCachingPart = -1
+split = False
+merge = False
 if opts.settings:
     if 'CACHING' in opts.settings:
         sample_to_merge_ = '__'.join(opts.settings[opts.settings.find('CACHING')+7:].split('__')[1:])
@@ -209,12 +211,20 @@ if opts.settings:
     if 'MERGECACHING' in opts.settings:
         mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
         print '@INFO: Partially merged caching: this is part', mergeCachingPart
+    if 'SPLIT' in opts.settings:
+        split_number = int(opts.settings[opts.settings.find('SPLIT')+5:].split('__')[0].split('_')[-1])
+        print '@INFO: goind to split the dc step. The split number of this job is', split_number
+        split = True
+    if 'MERGE' in opts.settings:
+        print '@INFO: going to merge all the files produced during the split step'
+        merge = True
     #if 'SPLITSAMPLE' in opts.settings:
     #    splitSample= int(opts.settings[opts.settings.find('CACHING')+11:].split('__')[0].split('_')[-1])
     #    print '@INFO: will only do the dc step for the following sample', mergeCachingPart
 
 
 ###
+#sys.exit()
 
 print "Using",('dc:%s'%var,'var')
 print name
@@ -333,6 +343,7 @@ print 'signal_inject is',signal_inject
 add_signal_as_bkg=config.get('LimitGeneral','add_signal_as_bkg')
 if not add_signal_as_bkg == 'None':
     setup.append(add_signal_as_bkg)
+
 #----------------------------------------------------------------------------
 
 #--Setup--------------------------------------------------------------------
@@ -428,16 +439,61 @@ print 'Get the sample list'
 print '===================\n'
 backgrounds = eval(config.get('dc:%s'%var,'background'))
 
-all_samples = info.get_samples(signals+backgrounds+additionals)
+#How to split the MC background
+split_factor = eval(config.get('LimitGeneral','split_factor'))
+#split_factor = 0
+#should go from 0 to split_factor+1. If split_number = split_factor+1, no MC is used for the computation but just the data
+#split_number = 0
+
+split_samples = []
+
+MC_samples = signals+backgrounds+additionals
+
+print 'Befor split selection, MC_samples are:', MC_samples
+
+#only a fraction of the MC samples are computed
+if split:
+    #compute how many samples should be added in the group
+    NSamples = len(MC_samples)
+    k = (NSamples - (NSamples%split_factor))/split_factor
+    print 'k is', k
+    counter_ = 0
+    for sample_ in MC_samples[split_number*k:]:
+        counter_ +=1
+        if counter_ > k: break
+        split_samples.append(sample_)
+    MC_samples = split_samples
+    print 'MC_samples are', MC_samples
+
+
+
+#all_samples = info.get_samples(signals+backgrounds+additionals)
+#To prepare Histomaker
+all_samples_HM = info.get_samples(signals+backgrounds+additionals)
+all_samples = info.get_samples(MC_samples)
 print 'workspace_datacard-all_samples:',[job.name for job in all_samples]
 
 signal_samples = info.get_samples(signals) 
 print 'signal samples:',[job.name for job in signal_samples]
 
 background_samples = info.get_samples(backgrounds) 
+
 data_sample_names = eval(config.get('dc:%s'%var,'data'))
+
+
 print 'data_sample_names are', data_sample_names
+
+
 data_samples = info.get_samples(data_sample_names)
+
+split_data = False
+if split and split_number != split_factor+3:
+    data_samples = []
+elif split:
+    print '@INFO: this split job is taking care of the data'
+    split_data = True
+
+
 print 'data_samples are', data_samples
 
 print 'The signal sample list is\n'
@@ -452,6 +508,23 @@ print 'The data samples are'
 for samp in data_samples:
     print samp
     print '' 
+
+#clean setup to contain only samples from split
+setup_copy = copy(setup)
+#print 'before cleaning, setup is', setup_copy
+if split:
+    for c in setup:
+        found = False
+        for mc_sample in all_samples:
+#            print 'sample name is', mc_sample.name
+#            print 'corresponding dic is', GroupDict[mc_sample.name]
+            if GroupDict[mc_sample.name] == c:
+                found = True
+                break
+        if not found: setup_copy.remove(c)
+    setup = setup_copy
+#print 'after cleaning, setup is', setup
+#sys.exit()
 #-------------------------------------------------------------------------------------------------
 
 optionsList=[]
@@ -784,122 +857,226 @@ print 'all branches to keep are', all_keep_list
 print 'length is', len(all_keep_list)
 #sys.exit()
 
+if split:
+
+    print 'Check if split dc was already performed'
+    print '=========================================\n'
+
+    DCtype = 'TH'
+    dc_dir = outpath+'vhbb_TH_'+ROOToutname
+    if not os.path.exists(dc_dir):
+        os.makedirs(dc_dir)
+
+    if os.path.exists(dc_dir+'/'+ROOToutname+'_%i.root'%split_number):
+        print 'The .root file has already been produced for this dc. Aborting'
+        sys.exit()
 
 print 'Preparations for Histograms (HistoMakeri)'
 print '=========================================\n'
 
-mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccut)#sys should never be removed in dc
-data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccutdata)
-##before
-#mc_hMaker =   HistoMaker(all_samples ,path,config,optionsList     ,GroupDict, None, False, sample_to_merge_)
-#data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None    , None, False, sample_to_merge_)
-
-if sample_to_merge_ or opts.mergeplot:
-    print "@INFO: Done splitcachingdc. Bye !"
-    sys.exit()
-
-
-print 'Calculate luminosity'
-print '====================\n'
-#Calculate lumi
-lumi = 0.
-nData = 0
-for job in data_samples:
-    nData += 1
-    lumi += float(job.lumi)
-
-if nData > 1:
-    lumi = lumi/float(nData)
-
-mc_hMaker.lumi = lumi
-data_hMaker.lumi = lumi
-
-if addBlindingCut:
-    for i in range(len(mc_hMaker.optionsList)):
-        mc_hMaker.optionsList[i]['cut'] += ' & %s' %addBlindingCut
-    for i in range(len(data_hMaker.optionsList)):
-        data_hMaker.optionsList[i]['cut'] += ' & %s' %addBlindingCut
-
-
-if rebin_active:
-    print "background_samples: ",background_samples
-    if BDTmin and str(anType) == 'BDT':
-        mc_hMaker.BDTmin = BDTmin
-    #old
-    #if Custom_BDT_bins and str(anType) == 'BDT':
-    #    mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
-    mc_hMaker.calc_rebin(background_samples, 1000, 0.35, True)
-    #transfer rebinning info to data maker
-    data_hMaker.norebin_nBins = copy(mc_hMaker.norebin_nBins)
-    data_hMaker.rebin_nBins = copy(mc_hMaker.rebin_nBins)
-    data_hMaker.nBins = copy(mc_hMaker.nBins)
-    data_hMaker._rebin = copy(mc_hMaker._rebin)
-    data_hMaker.mybinning = deepcopy(mc_hMaker.mybinning)
-
+#merge = True
 all_histos = {}
 data_histos = {}
+final_histos_merge = {}
+if merge:
+    #print 'Will merge the split dc'
 
-print '\n\t...fetching histos...\n'
+    print 'Get the data histo'
+    print '==================\n'
 
-### ORIGINAL ###
-#for job in all_samples:
-#    print '\t- %s'%job
-#    if not GroupDict[job.name] in sys_cut_include:
-#        # manual overwrite
-#        if addBlindingCut:
-#            all_histos[job.name] = mc_hMaker.get_histos_from_tree(job,treecut+'& %s'%addBlindingCut)
-#        else:
-#            all_histos[job.name] = mc_hMaker.get_histos_from_tree(job,treecut)
-#    else:
-#        all_histos[job.name] = mc_hMaker.get_histos_from_tree(job)
+    #data_histos = {}
 
-inputs=[]
-for job in all_samples:
-#new
-    inputs.append((mc_hMaker,"get_histos_from_tree_dc",(job,True, None, shapecutList)))
-#old
-#    inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
+    #GroupDic = {}
+    #hTreeList = []
 
+    #Browse all the root files in the directory
+    DCtype = 'TH'
+    dc_dir = outpath+'vhbb_TH_'+ROOToutname
+    if not os.path.exists(dc_dir):
+        print '@ERROR: the directory were dc .root file are stored doesn t exist. Aborting'
+        print 'The path is', outpath+'vhbb_TH_'+ROOToutname
 
-# multiprocess=0
-# if('pisa' in config.get('Configuration','whereToLaunch')):
-multiprocess=int(config.get('Configuration','nprocesses'))
-outputs = []
-if multiprocess>1:
-    from multiprocessing import Pool
-    from myutils import GlobalFunction
-    p = Pool(multiprocess)
-    print 'launching get_histos_from_tree with ',multiprocess,' processes'
-    outputs = p.map(GlobalFunction, inputs)
+    AllHisoDic = {}
+    #Read all the root files and save histo in dic
+    for root, dirs, filenames in os.walk(dc_dir):
+        for f in filenames:
+            no_ducplicates = []
+            if '.root' in f:
+                print 'root file is', f
+                split_file = ROOT.TFile(dc_dir+'/'+f)
+                split_file.cd(Datacardbin)
+                hist_list = ROOT.gDirectory.GetListOfKeys()
+                #print 'List of keys is'
+                #hist_list.ls()
+                #sys.exit()
+
+                for hist in hist_list:
+                    hname = hist.GetName()
+                    if not hname in no_ducplicates:
+                        no_ducplicates.append(hname)
+                    else: continue
+
+                    htree = copy(ROOT.gDirectory.Get(hname))
+                    print 'hname is', hname
+                    if hname in AllHisoDic:
+                        AllHisoDic[hname].Add(htree)
+                    else:
+                        AllHisoDic[hname] = htree
+    print 'AllHisoDic is', AllHisoDic
+
+    #reorder the AllHisoDic in final_histos_merge
+    Dict_inv = {v: k for k, v in Dict.items()}
+    for key in AllHisoDic:
+
+        if key.split('CMS')[0] == 'data_obs': continue
+        sample_name = Dict_inv[key.split('CMS')[0]]
+        if len(key.split('CMS')) == 2:
+            sys_name = 'CMS'+key.split('CMS')[1]
+        else:
+            sys_name = 'nominal'
+        if not sys_name in final_histos_merge:
+            nuisDic = {}
+            nuisDic[sample_name] = AllHisoDic[key]
+            final_histos_merge[sys_name] = nuisDic
+        else:
+            final_histos_merge[sys_name][sample_name] = AllHisoDic[key]
+
+    print 'final_histos_merge is ', final_histos_merge
+
+    ##Fill  hTreeListData
+    #hTreeDicData = {}
+    ##Fill hTreeList
+    ##Nominal
+    #hTreeDic = {}
+    #for c in setup:
+    #    hTreeDic[c] = AllHisoDic[Dict[c]]
+    #hTreeList.append(hTreeDic)
+
+    data_histos['DATA'] = AllHisoDic['data_obs']
+    #for job in data_samples:
+    #    print '\t- %s'%job
+    #    data_histos[job.name] = AllHisoDic['data_obs']
+
 else:
-    print 'launching get_histos_from_tree with ',multiprocess,' processes'
-    for input_ in inputs:
-        outputs.append(getattr(input_[0],input_[1])(*input_[2])) #ie. mc_hMaker.get_histos_from_tree(job)
 
-print "job.name and all_histos[job.name]:"
-for i,job in enumerate(all_samples):
-    all_histos[job.name] = outputs[i]
+    mc_hMaker   = HistoMaker(samples=all_samples_HM,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccut)#sys should never be removed in dc
+    data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccutdata)
+    #
+    #mc_hMaker   = HistoMaker(samples=all_samples,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccut)#sys should never be removed in dc
+    #data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccutdata)
+    ##before
+    #mc_hMaker =   HistoMaker(all_samples ,path,config,optionsList     ,GroupDict, None, False, sample_to_merge_)
+    #data_hMaker = HistoMaker(data_samples,path,config,[optionsList[0]], None    , None, False, sample_to_merge_)
+
+    if sample_to_merge_ or opts.mergeplot:
+        print "@INFO: Done splitcachingdc. Bye !"
+        sys.exit()
 
 
-print 'data_samples are', data_samples
-for job in data_samples:
-    print '\t- %s'%job
-    data_histos[job.name] = data_hMaker.get_histos_from_tree(job)[0]['DATA']
+    print 'Calculate luminosity'
+    print '====================\n'
+    #Calculate lumi
+    lumi = 0.
+    nData = 0
+    for job in data_samples:
+        nData += 1
+        lumi += float(job.lumi)
+
+    if nData > 1:
+        lumi = lumi/float(nData)
+
+    mc_hMaker.lumi = lumi
+    data_hMaker.lumi = lumi
+
+    if addBlindingCut:
+        for i in range(len(mc_hMaker.optionsList)):
+            mc_hMaker.optionsList[i]['cut'] += ' & %s' %addBlindingCut
+        for i in range(len(data_hMaker.optionsList)):
+            data_hMaker.optionsList[i]['cut'] += ' & %s' %addBlindingCut
+
+
+    if rebin_active:
+        print "background_samples: ",background_samples
+        if BDTmin and str(anType) == 'BDT':
+            mc_hMaker.BDTmin = BDTmin
+        #old
+        #if Custom_BDT_bins and str(anType) == 'BDT':
+        #    mc_hMaker.Custom_BDT_bins = Custom_BDT_bins
+        mc_hMaker.calc_rebin(background_samples, 1000, 0.35, True)
+        #transfer rebinning info to data maker
+        data_hMaker.norebin_nBins = copy(mc_hMaker.norebin_nBins)
+        data_hMaker.rebin_nBins = copy(mc_hMaker.rebin_nBins)
+        data_hMaker.nBins = copy(mc_hMaker.nBins)
+        data_hMaker._rebin = copy(mc_hMaker._rebin)
+        data_hMaker.mybinning = deepcopy(mc_hMaker.mybinning)
+
+    #all_histos = {}
+    #data_histos = {}
+
+    print '\n\t...fetching histos...\n'
+
+    ### ORIGINAL ###
+    #for job in all_samples:
+    #    print '\t- %s'%job
+    #    if not GroupDict[job.name] in sys_cut_include:
+    #        # manual overwrite
+    #        if addBlindingCut:
+    #            all_histos[job.name] = mc_hMaker.get_histos_from_tree(job,treecut+'& %s'%addBlindingCut)
+    #        else:
+    #            all_histos[job.name] = mc_hMaker.get_histos_from_tree(job,treecut)
+    #    else:
+    #        all_histos[job.name] = mc_hMaker.get_histos_from_tree(job)
+
+    inputs=[]
+    for job in all_samples:
+    #new
+    #    inputs.append((mc_hMaker,"get_histos_from_tree_dc",(job,True, None, shapecutList)))
+    #old
+        inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
+
+
+    # multiprocess=0
+    # if('pisa' in config.get('Configuration','whereToLaunch')):
+    multiprocess=int(config.get('Configuration','nprocesses'))
+    outputs = []
+    if multiprocess>1:
+        from multiprocessing import Pool
+        from myutils import GlobalFunction
+        p = Pool(multiprocess)
+        print 'launching get_histos_from_tree with ',multiprocess,' processes'
+        outputs = p.map(GlobalFunction, inputs)
+    else:
+        print 'launching get_histos_from_tree with ',multiprocess,' processes'
+        for input_ in inputs:
+            outputs.append(getattr(input_[0],input_[1])(*input_[2])) #ie. mc_hMaker.get_histos_from_tree(job)
+
+    print "job.name and all_histos[job.name]:"
+    for i,job in enumerate(all_samples):
+        all_histos[job.name] = outputs[i]
+
+
+    print 'data_samples are', data_samples
+    for job in data_samples:
+        print '\t- %s'%job
+        data_histos[job.name] = data_hMaker.get_histos_from_tree(job)[0]['DATA']
+
+#sys.exit()
 
 print '\t> done <\n'
 
 print 'Get the bkg histo'
 print '=================\n'
 i=0
-for job in background_samples: 
-    print job.name
-    htree = all_histos[job.name][0].values()[0]
-    if not i: 
-        hDummy = copy(htree) 
-    else: 
-        hDummy.Add(htree,1) 
-    del htree 
-    i+=1
+#?
+#for job in background_samples:
+#    print job.name
+#    htree = all_histos[job.name][0].values()[0]
+#    if not i:
+#        hDummy = copy(htree)
+#    else:
+#        hDummy.Add(htree,1)
+#    del htree
+#    i+=1
 #?
 if signal_inject:
     signal_inject = info.get_samples([signal_inject])
@@ -924,13 +1101,16 @@ if signal_inject:
 print 'Get the data histo'
 print '==================\n'
 nData = 0
-print 'datahistos is', data_histos
+print 'data histos is', data_histos
 for job in data_histos:
-    if nData == 0:
-        theData = data_histos[job]
-        nData = 1
+    if merge:
+        theData = data_histos['DATA']
     else:
-        theData.Add(data_histos[job])
+        if nData == 0:
+            theData = data_histos[job]
+            nData = 1
+        else:
+            theData.Add(data_histos[job])
 
 
 print 'END DEBUG'
@@ -938,20 +1118,42 @@ print 'END DEBUG'
 
 #-- Write Files-----------------------------------------------------------------------------------
 # generate the TH outfile:
+
 print 'Start writing the files'
 print '=======================\n'
 
 print 'Creating output file'
 print '====================\n'
-outfile = ROOT.TFile(outpath+'vhbb_TH_'+ROOToutname+'.root', 'RECREATE')
-outfile.mkdir(Datacardbin,Datacardbin)
-outfile.cd(Datacardbin)
-# generate the Workspace:
-WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
-print 'WS initialized'
-disc= ROOT.RooRealVar(name,name,xMin,xMax)
-obs = ROOT.RooArgList(disc)
-#
+
+if split:
+    dc_dir = outpath+'vhbb_TH_'+ROOToutname
+    #if not os.path.exists(dc_dir):
+    #    os.makedirs(dc_dir)
+
+    #if os.path.exists(dc_dir+'/'+ROOToutname+'_%i.root'%split_number):
+    #    print 'The .root file has already been produced for this dc. Aborting'
+    #    sys.exit()
+    outfile = ROOT.TFile(dc_dir+'/'+ROOToutname+'_%i.root'%split_number, 'RECREATE')
+    outfile.mkdir(Datacardbin,Datacardbin)
+    outfile.cd(Datacardbin)
+    # generate the Workspace:
+    WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
+    print 'WS initialized'
+    disc= ROOT.RooRealVar(name,name,xMin,xMax)
+    obs = ROOT.RooArgList(disc)
+    #
+
+else:
+    outfile = ROOT.TFile(outpath+'vhbb_TH_'+ROOToutname+'.root', 'RECREATE')
+    outfile.mkdir(Datacardbin,Datacardbin)
+    outfile.cd(Datacardbin)
+    # generate the Workspace:
+    WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
+    print 'WS initialized'
+    disc= ROOT.RooRealVar(name,name,xMin,xMax)
+    obs = ROOT.RooArgList(disc)
+    #
+
 ROOT.gROOT.SetStyle("Plain")
 
 #order and add all together
@@ -959,153 +1161,159 @@ final_histos = {}
 
 print '\n\t--> Ordering and Adding Histos\n'
 
-print 'workspace_datacard-all_samples:',[all_histos['%s'%job][0] for job in all_samples]
+#print 'workspace_datacard-all_samples:',[all_histos['%s'%job][0] for job in all_samples]
 
-jobnames = [job.name for job in all_samples]
-
-#NOMINAL:
-final_histos['nominal'] = HistoMaker.orderandadd([all_histos['%s'%job][0] for job in all_samples],setup)
-
-#SYSTEMATICS:
-ind = 1
-#print 'systematics is', systematics
-
-print 'all_histos[job.name]',all_histos[job.name]
-print 'len(all_histos[job.name])',len(all_histos[job.name])
-
-print 'add UD sys'
-print '==========\n'
-for syst in systematics:
-    for Q in UD:
-        final_histos['%s_%s'%(systematicsnaming[syst],Q)] = HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
-        ind+=1
-print 'add weight sys'
-print '==============\n'
-for weightF_sys in weightF_systematics: 
-    for Q in UD:
-        final_histos['%s_%s'%(systematicsnaming[weightF_sys],Q)]= HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
-        ind+=1
-#print 'add lhe sys'
-#print '==============\n'
-#if len(lhe_muF)==2:
-#    for Q in UD:
-#        for group in sys_lhe_affecting.keys():
-#            histos = []
-#            for job in all_samples:
-#                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
-#                    print "XXX"
-#                    histos.append(all_histos[job.name][ind])
-#            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muF'],group,Q)]= HistoMaker.orderandadd(histos,setup)
-#        ind+=1
-#
-#if len(lhe_muR)==2:
-#    for Q in UD:
-#        for group in sys_lhe_affecting.keys():
-#            histos = []
-#            for job in all_samples:
-#                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
-#                    print "XXX"
-#                    histos.append(all_histos[job.name][ind])
-#            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muR'],group,Q)]= HistoMaker.orderandadd(histos,setup)
-#        ind+=1
+#jobnames = [job.name for job in all_samples]
 
 
+if merge: final_histos = final_histos_merge
+elif not split or (split and not split_data):
+    #NOMINAL:
+    final_histos['nominal'] = HistoMaker.orderandadd([all_histos['%s'%job][0] for job in all_samples],setup)
 
-if change_shapes:
-    for key in change_shapes:
-        syst,val=change_shapes[key].split('*')
-        final_histos[syst][key].Scale(float(val))
-        print 'scaled %s times %s val'%(syst,val)
+    #SYSTEMATICS:
+    ind = 1
+    #print 'systematics is', systematics
 
+    print 'all_histos[job.name]',all_histos[job.name]
+    print 'len(all_histos[job.name])',len(all_histos[job.name])
 
-def get_alternate_shape(hNominal,hAlternate):
-    hVar = hAlternate.Clone()
-    hNom = hNominal.Clone()
-    hAlt = hNom.Clone()
-    hNom.Add(hVar,-1.)
-    hAlt.Add(hNom)
-    for bin in range(0,hNominal.GetNbinsX()+1):
-        if hAlt.GetBinContent(bin) < 0.: hAlt.SetBinContent(bin,0.)
-    return hVar,hAlt
-
-def get_alternate_shapes(all_histos,asample_dict,all_samples):
-    alternate_shapes_up = []
-    alternate_shapes_down = []
-    for job in all_samples:
-        nominal = all_histos[job.name][0]
-        if job.name in asample_dict:
-            print "EEE"
-            alternate = copy(all_histos[asample_dict[job.name]][0])
-            hUp, hDown = get_alternate_shape(nominal[nominal.keys()[0]],alternate[alternate.keys()[0]])
-            alternate_shapes_up.append({nominal.keys()[0]:hUp})
-            alternate_shapes_down.append({nominal.keys()[0]:hDown})
-        else:
-            print "RRR"
-            newh=nominal[nominal.keys()[0]].Clone('%s_%s_Up'%(nominal[nominal.keys()[0]].GetName(),'model'))
-            alternate_shapes_up.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
-            alternate_shapes_down.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
-    return alternate_shapes_up, alternate_shapes_down
-        
-if addSample_sys: 
-    print 'Adding the samples systematics'
-    print '==============================\n'
-    aUp, aDown = get_alternate_shapes(all_histos,addSample_sys,all_samples)
-    final_histos['%s_Up'%(systematicsnaming['model'])]= HistoMaker.orderandadd(aUp,setup)
-    del aUp
-    final_histos['%s_Down'%(systematicsnaming['model'])]= HistoMaker.orderandadd(aDown,setup)
-
-
-if not ignore_stats:
-    #make statistical shapes:
-    print 'Make the statistical shapes'
-    print '===========================\n'
-    if not binstat:
-        pass
+    print 'add UD sys'
+    print '==========\n'
+    for syst in systematics:
+        for Q in UD:
+            final_histos['%s_%s'%(systematicsnaming[syst],Q)] = HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
+            ind+=1
+    print 'add weight sys'
+    print '==============\n'
+    for weightF_sys in weightF_systematics:
+        for Q in UD:
+            final_histos['%s_%s'%(systematicsnaming[weightF_sys],Q)]= HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
+            ind+=1
+    #print 'add lhe sys'
+    #print '==============\n'
+    #if len(lhe_muF)==2:
     #    for Q in UD:
-    #        final_histos['%s_%s'%(systematicsnaming['stats'],Q)] = {}
-    #    for job,hist in final_histos['nominal'].items():
-    #        errorsum=0
-    #        for j in range(hist.GetNbinsX()+1):
-    #            errorsum=errorsum+(hist.GetBinError(j))**2
-    #        errorsum=sqrt(errorsum)
-    #        total=hist.Integral()
-    #        for Q in UD:
-    #            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job] = hist.Clone()
-    #            for j in range(hist.GetNbinsX()+1):
-    #                if Q == 'Up':
-    #                    if rescaleSqrtN and total:
-    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)/total*errorsum))
-    #                    else:
-    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)))
-    #                if Q == 'Down':
-    #                    if rescaleSqrtN and total:
-    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)/total*errorsum))
-    #                    else:
-    #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
-    else:
-        print "Running Statistical uncertainty"
-        threshold =  0.5 #stat error / sqrt(value). It was 0.5
-        print "threshold",threshold
-        binsBelowThreshold = {}
-        for bin in range(1,nBins+1):
-            for Q in UD:
-                final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)] = {}
-            for job,hist in final_histos['nominal'].items():
-                if not job in binsBelowThreshold.keys(): binsBelowThreshold[job] = []
-                print "binsBelowThreshold",binsBelowThreshold
-                print "hist.GetBinContent(bin)",hist.GetBinContent(bin)
-                print "hist.GetBinError(bin)",hist.GetBinError(bin)
-                if hist.GetBinContent(bin) > 0.:
-                    if hist.GetBinError(bin)/sqrt(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) >= 1.:
-                        binsBelowThreshold[job].append(bin)
-                    elif hist.GetBinError(bin)/(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) < 1.:
-                        binsBelowThreshold[job].append(bin)
-                for Q in UD:
-                    final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job] = hist.Clone()
-                    if Q == 'Up':
-                        final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job].SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)+hist.GetBinError(bin)))
-                    if Q == 'Down':
-                        final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job].SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)-hist.GetBinError(bin)))
+    #        for group in sys_lhe_affecting.keys():
+    #            histos = []
+    #            for job in all_samples:
+    #                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
+    #                    print "XXX"
+    #                    histos.append(all_histos[job.name][ind])
+    #            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muF'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+    #        ind+=1
+    #
+    #if len(lhe_muR)==2:
+    #    for Q in UD:
+    #        for group in sys_lhe_affecting.keys():
+    #            histos = []
+    #            for job in all_samples:
+    #                if Dict[GroupDict[job.name]] in sys_lhe_affecting[group]:
+    #                    print "XXX"
+    #                    histos.append(all_histos[job.name][ind])
+    #            final_histos['%s_%s_%s'%(systematicsnaming['lhe_muR'],group,Q)]= HistoMaker.orderandadd(histos,setup)
+    #        ind+=1
+
+
+
+    if change_shapes:
+        for key in change_shapes:
+            syst,val=change_shapes[key].split('*')
+            final_histos[syst][key].Scale(float(val))
+            print 'scaled %s times %s val'%(syst,val)
+
+
+    def get_alternate_shape(hNominal,hAlternate):
+        hVar = hAlternate.Clone()
+        hNom = hNominal.Clone()
+        hAlt = hNom.Clone()
+        hNom.Add(hVar,-1.)
+        hAlt.Add(hNom)
+        for bin in range(0,hNominal.GetNbinsX()+1):
+            if hAlt.GetBinContent(bin) < 0.: hAlt.SetBinContent(bin,0.)
+        return hVar,hAlt
+
+    def get_alternate_shapes(all_histos,asample_dict,all_samples):
+        alternate_shapes_up = []
+        alternate_shapes_down = []
+        for job in all_samples:
+            nominal = all_histos[job.name][0]
+            if job.name in asample_dict:
+                print "EEE"
+                alternate = copy(all_histos[asample_dict[job.name]][0])
+                hUp, hDown = get_alternate_shape(nominal[nominal.keys()[0]],alternate[alternate.keys()[0]])
+                alternate_shapes_up.append({nominal.keys()[0]:hUp})
+                alternate_shapes_down.append({nominal.keys()[0]:hDown})
+            else:
+                print "RRR"
+                newh=nominal[nominal.keys()[0]].Clone('%s_%s_Up'%(nominal[nominal.keys()[0]].GetName(),'model'))
+                alternate_shapes_up.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
+                alternate_shapes_down.append({nominal.keys()[0]:nominal[nominal.keys()[0]].Clone()})
+        return alternate_shapes_up, alternate_shapes_down
+
+    if addSample_sys:
+        print 'Adding the samples systematics'
+        print '==============================\n'
+        aUp, aDown = get_alternate_shapes(all_histos,addSample_sys,all_samples)
+        final_histos['%s_Up'%(systematicsnaming['model'])]= HistoMaker.orderandadd(aUp,setup)
+        del aUp
+        final_histos['%s_Down'%(systematicsnaming['model'])]= HistoMaker.orderandadd(aDown,setup)
+
+if not split_data:
+    if not ignore_stats:
+        #make statistical shapes:
+        print 'Make the statistical shapes'
+        print '===========================\n'
+        if not binstat:
+            pass
+        #    for Q in UD:
+        #        final_histos['%s_%s'%(systematicsnaming['stats'],Q)] = {}
+        #    for job,hist in final_histos['nominal'].items():
+        #        errorsum=0
+        #        for j in range(hist.GetNbinsX()+1):
+        #            errorsum=errorsum+(hist.GetBinError(j))**2
+        #        errorsum=sqrt(errorsum)
+        #        total=hist.Integral()
+        #        for Q in UD:
+        #            final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job] = hist.Clone()
+        #            for j in range(hist.GetNbinsX()+1):
+        #                if Q == 'Up':
+        #                    if rescaleSqrtN and total:
+        #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)/total*errorsum))
+        #                    else:
+        #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)+hist.GetBinError(j)))
+        #                if Q == 'Down':
+        #                    if rescaleSqrtN and total:
+        #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)/total*errorsum))
+        #                    else:
+        #                        final_histos['%s_%s'%(systematicsnaming['stats'],Q)][job].SetBinContent(j,max(1.E-6,hist.GetBinContent(j)-hist.GetBinError(j)))
+        else:
+            print "Running Statistical uncertainty"
+            threshold =  0.5 #stat error / sqrt(value). It was 0.5
+            print "threshold",threshold
+            binsBelowThreshold = {}
+            for bin in range(1,nBins+1):
+                if not merge:
+                    for Q in UD:
+                        final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)] = {}
+                for job,hist in final_histos['nominal'].items():
+                    if not job in binsBelowThreshold.keys(): binsBelowThreshold[job] = []
+                    print "binsBelowThreshold",binsBelowThreshold
+                    print "hist.GetBinContent(bin)",hist.GetBinContent(bin)
+                    print "hist.GetBinError(bin)",hist.GetBinError(bin)
+                    if hist.GetBinContent(bin) > 0.:
+                        if hist.GetBinError(bin)/sqrt(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) >= 1.:
+                            binsBelowThreshold[job].append(bin)
+                        elif hist.GetBinError(bin)/(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) < 1.:
+                            binsBelowThreshold[job].append(bin)
+                    if not merge:
+                        for Q in UD:
+                            final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job] = hist.Clone()
+                            if Q == 'Up':
+                                final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job].SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)+hist.GetBinError(bin)))
+                            if Q == 'Down':
+                                final_histos['%s_bin%s_%s'%(systematicsnaming['stats'],bin,Q)][job].SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)-hist.GetBinError(bin)))
+
 
 
 #print "binsBelowThreshold:",binsBelowThreshold
@@ -1118,8 +1326,8 @@ for key in final_histos:
         if 'nominal' == key:
             hist.SetName('%s'%(Dict[job]))
             hist.Write()
-            rooDataHist = ROOT.RooDataHist('%s' %(Dict[job]),'%s'%(Dict[job]),obs, hist)
-            getattr(WS,'import')(rooDataHist)
+            #rooDataHist = ROOT.RooDataHist('%s' %(Dict[job]),'%s'%(Dict[job]),obs, hist)
+            #getattr(WS,'import')(rooDataHist)
         for Q in UD:
             if Q in key:
                 theSyst = key.replace('_%s'%Q,'')
@@ -1133,17 +1341,19 @@ for key in final_histos:
                 nameSyst = theSyst
             hist.SetName('%s%s%s' %(Dict[job],nameSyst,Q))
             hist.Write()
-            rooDataHist = ROOT.RooDataHist('%s%s%s' %(Dict[job],nameSyst,Q),'%s%s%s'%(Dict[job],nameSyst,Q),obs, hist)
-            getattr(WS,'import')(rooDataHist)
+            #rooDataHist = ROOT.RooDataHist('%s%s%s' %(Dict[job],nameSyst,Q),'%s%s%s'%(Dict[job],nameSyst,Q),obs, hist)
+            #getattr(WS,'import')(rooDataHist)
 
-if toy or signal_inject: 
-    hDummy.SetName('data_obs')
-    hDummy.Write()
-    rooDataHist = ROOT.RooDataHist('data_obs','data_obs',obs, hDummy)
-else:
-    theData.SetName('data_obs')
-    theData.Write()
-    rooDataHist = ROOT.RooDataHist('data_obs','data_obs',obs, theData)
+
+if not split or (split and split_data):
+    if toy or signal_inject:
+        hDummy.SetName('data_obs')
+        hDummy.Write()
+        rooDataHist = ROOT.RooDataHist('data_obs','data_obs',obs, hDummy)
+    else:
+        theData.SetName('data_obs')
+        theData.Write()
+        rooDataHist = ROOT.RooDataHist('data_obs','data_obs',obs, theData)
 
 getattr(WS,'import')(rooDataHist)
 
@@ -1152,21 +1362,22 @@ WS.writeToFile(outpath+'vhbb_WS_'+ROOToutname+'.root')
 # now we have a Dict final_histos with sets of all grouped MCs for all systematics:
 # nominal, ($SYS_Up/Down)*4, weightF_sys_Up/Down, stats_Up/Down
 
-print '\n\t >>> PRINTOUT PRETTY TABLE <<<\n'
-#header
-printout = ''
-printout += '%-25s'%'Process'
-printout += ':'
-for item, val in final_histos['nominal'].items():
-    printout += '%-12s'%item
-print printout+'\n'
-for key in final_histos:
+if not split_data:
+    print '\n\t >>> PRINTOUT PRETTY TABLE <<<\n'
+    #header
     printout = ''
-    printout += '%-25s'%key
+    printout += '%-25s'%'Process'
     printout += ':'
-    for item, val in final_histos[key].items():
-        printout += '%-12s'%str('%0.5f'%val.Integral())
-    print printout
+    for item, val in final_histos['nominal'].items():
+        printout += '%-12s'%item
+    print printout+'\n'
+    for key in final_histos:
+        printout = ''
+        printout += '%-25s'%key
+        printout += ':'
+        for item, val in final_histos[key].items():
+            printout += '%-12s'%str('%0.5f'%val.Integral())
+        print printout
 
 #-----------------------------------------------------------------------------------------------------------
 
@@ -1178,8 +1389,16 @@ DCprocessseparatordict = {'WS':':','TH':'/'}
 DCtype = 'TH'
 
 columns=len(setup)
-fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
-f = open(fileName,'w')
+#fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
+
+if split:
+    dc_dir = outpath+'vhbb_TH_'+ROOToutname
+    print 'the filname is', dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
+    fileName = dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
+    f = open(fileName,'w')
+else:
+    fileName = outpath+'vhbb_dc_%s_%s.txt'%(DCtype,ROOToutname)
+    f = open(fileName,'w')
 f.write('imax\t1\tnumber of channels\n')
 f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(columns-1))
 f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
@@ -1188,7 +1407,8 @@ f.write('bin\t%s\n\n'%Datacardbin)
 if toy or signal_inject:
     f.write('observation\t%s\n\n'%(hDummy.Integral()))
 else:
-    f.write('observation\t%s\n\n'%(theData.Integral()))
+    if not split or (split and split_data):
+        f.write('observation\t%s\n\n'%(theData.Integral()))
 # datacard bin
 f.write('bin\t')
 for c in range(0,columns): f.write('\t%s'%Datacardbin)

@@ -742,7 +742,7 @@ elif opts.task == 'splitsubcaching':
              repDict['queue'] = 'all.q'
              training(additional_)
 
-if opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars
 
@@ -1159,11 +1159,20 @@ if opts.task == 'trainReg':
     submit('trainReg',repDict)
 
 
-elif opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+elif opts.task == 'dc' or opts.task == 'mergesyscachingdc'  or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     repDict['queue'] = 'all.q'
     for item in DC_vars:
         # item here contains the dc name
-        submit(item,repDict)
+        if opts.task == 'mergesyscachingdcsplit':
+            split_factor = eval(config.get('LimitGeneral','split_factor'))
+            for i in range(0,split_factor+4):
+                 repDict['additional'] = 'SPLIT'+'_'+str(i)
+                 submit(item,repDict)
+        elif opts.task == 'mergesyscachingdcmerge':
+            repDict['additional'] = 'MERGE'
+            submit(item,repDict)
+        else:
+            submit(item,repDict)
 
 
 elif opts.task == 'prep':
