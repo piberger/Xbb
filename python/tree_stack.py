@@ -182,7 +182,7 @@ def doPlot():
     #Prepare cached files in the temporary (tmpSamples) folder.
     #def __init__(self, samples, path, config, optionsList, GroupDict=None, filelist=None, mergeplot=False, sample_to_merge=None, mergecaching=False):
 
-    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot,remove_sys=remove_sys_)
+    Plotter=HistoMaker(samples=mcsamples+datasamples, path=path, config=config, optionsList=options, GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=None, dccut=None,remove_sys=remove_sys_)
     if len(filelist)>0 or opts.mergeplot:
         print('ONLY CACHING PERFORMED, EXITING');
         sys.exit(1)
