@@ -302,11 +302,21 @@ class StackMaker:
         datatitle='Data'
         addFlag = ''
         print 'self.datanames is', self.datanames
-        if 'Muon' in self.datanames and 'Electron' in self.datanames:
+        isZee = False
+        isZmm = False
+        for data_ in self.datanames:
+            print 'data_ is', data_
+            if 'DoubleEG' in data_:
+                isZee = True
+                print 'isZee is True'
+            if 'DoubleMuon' in data_:
+                isZmm = True
+                print 'isZmm is True'
+        if ('Zee' in self.datanames and 'Zmm' in self.datanames) or (isZee and isZmm):
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Electron' in self.datanames:
+        elif 'Zee' in self.datanames or isZee:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Muon' in self.datanames:
+        elif 'Zmm' in self.datanames or isZmm:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'
@@ -314,8 +324,20 @@ class StackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in self.datanames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        elif 'Wtn' in self.datanames:
-            addFlag = 'W(#tau#nu)H(b#bar{b})'
+        #if 'Muon' in self.datanames and 'Electron' in self.datanames:
+        #    addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
+        #elif 'Electron' in self.datanames:
+        #    addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
+        #elif 'Muon' in self.datanames:
+        #    addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
+        #elif 'Znn' in self.datanames:
+        #    addFlag = 'Z(#nu#nu)H(b#bar{b})'
+        #elif 'Wmn' in self.datanames:
+        #    addFlag = 'W(#mu#nu)H(b#bar{b})'
+        #elif 'Wen' in self.datanames:
+        #    addFlag = 'W(e#nu)H(b#bar{b})'
+        #elif 'Wtn' in self.datanames:
+        #    addFlag = 'W(#tau#nu)H(b#bar{b})'
 
         for i in range(0,len(self.datas)):
             print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbinsX()
@@ -666,11 +688,23 @@ class StackMaker:
         d1 = ROOT.TH1F('noData','noData',self.nBins,self.xMin,self.xMax)
         datatitle='Data'
         addFlag = ''
-        if 'Zee' in self.datanames and 'Zmm' in self.datanames:
+        print 'asdf yeah man'
+        print 'datanames is', self.datanames
+        isZee = False
+        isZmm = False
+        for data_ in self.datanames:
+            print 'data_ is', data_
+            if 'DoubleEG' in data_:
+                isZee = True
+                print 'isZee is True'
+            if 'DoubleMuon' in data_:
+                isZmm = True
+                print 'isZmm is True'
+        if ('Zee' in self.datanames and 'Zmm' in self.datanames) or (isZee and isZmm):
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Zee' in self.datanames:
+        elif 'Zee' in self.datanames or isZee:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Zmm' in self.datanames:
+        elif 'Zmm' in self.datanames or isZmm:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'
