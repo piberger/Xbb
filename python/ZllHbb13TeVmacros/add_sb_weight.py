@@ -7,15 +7,16 @@ import numpy
 
 
 # The path to the signal region shapes file.
-SIGNAL_SHAPES_PATH = 'vhbb_TH_Znn_13TeV_Signal.root'
+#SIGNAL_SHAPES_PATH = 'vhbb_TH_Znn_13TeV_Signal.root'
+SIGNAL_SHAPES_PATH = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_26_06_2017_newMVAid_BDTmin_0p2_split_copy/remove1/vhbb_TH_ZeeBDT_highpt.root'
 # The name of the signal region bin in the signal region shapes file.
-SIGNAL_SHAPES_BIN = 'Znn_13TeV_Signal'
+SIGNAL_SHAPES_BIN = 'ZeeBDT_highpt'
 # The path to the mlfit.root file.
-MLFIT_PATH = 'mlfit.root'
+MLFIT_PATH = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_26_06_2017_newMVAid_BDTmin_0p2_split_copy/remove1/mlfit.root'
 # The name of the signal region bin in the mlfit.root file.
-MLFIT_BIN = 'Znn_SR'
+MLFIT_BIN = 'Zee_BDT_highpt'
 # The name of the branch containing the nominal BDT score.
-BDT_BRANCH = 'BDT_Znn_HighPt.Nominal'
+BDT_BRANCH = 'ZllBDT_lowptCMVA.Nominal'
 
 
 def get_shape_bin_edges(shapes_path, datacard_bin):
@@ -36,6 +37,7 @@ def get_shape_bin_edges(shapes_path, datacard_bin):
     shapes_file = ROOT.TFile.Open(shapes_path)
     shapes_file.cd(datacard_bin)
     shapes = ROOT.gDirectory.GetListOfKeys()
+    #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
     # Since the nominal and varied shapes share the same binning,
     # take any of the histograms found in the shapes file.
     shape = ROOT.gDirectory.Get(shapes[0].GetName())
@@ -44,6 +46,8 @@ def get_shape_bin_edges(shapes_path, datacard_bin):
         dtype=numpy.float64,
     )
     shapes_file.Close()
+    #print 'bin_edges is', bin_edges
+    #sys.exit()
     return bin_edges
 
 
@@ -77,6 +81,12 @@ def get_total_postfit_shapes(mlfit_path, datacard_bin, bin_edges):
     for i in xrange(1, signal_postfit.GetNbinsX() + 1):
         signal_postfit.SetBinContent(i, total_signal.GetBinContent(i))
         background_postfit.SetBinContent(i, total_background.GetBinContent(i))
+    for s in signal_postfit:
+        print 's is', s
+    for b in background_postfit:
+        print 'b is', b
+    #print 'signal_postfit', signal_postfit
+    #print 'background_postfit', background_postfit
     return signal_postfit, background_postfit
 
 
