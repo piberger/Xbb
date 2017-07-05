@@ -8,7 +8,7 @@ import numpy
 
 # The path to the signal region shapes file.
 #SIGNAL_SHAPES_PATH = 'vhbb_TH_Znn_13TeV_Signal.root'
-SIGNAL_SHAPES_PATH = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_26_06_2017_newMVAid_BDTmin_0p2_split_copy/remove1/vhbb_TH_ZeeBDT_highpt.root'
+SIGNAL_SHAPES_PATH = '/mnt/t3nfs01/data01/shome/gaperrin/vhbb/cmssw_7_4_7/src/higgsanalysis/combinedlimit/v24/dc_vh_26_06_2017_newmvaid_bdtmin_0p2_split_copy/remove1/vhbb_TH_ZeeBDT_highpt.root'
 # The name of the signal region bin in the signal region shapes file.
 SIGNAL_SHAPES_BIN = 'ZeeBDT_highpt'
 # The path to the mlfit.root file.
@@ -17,6 +17,46 @@ MLFIT_PATH = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnaly
 MLFIT_BIN = 'Zee_BDT_highpt'
 # The name of the branch containing the nominal BDT score.
 BDT_BRANCH = 'ZllBDT_lowptCMVA.Nominal'
+
+
+PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_26_06_2017_newMVAid_BDTmin_0p2_split_copy/remove1/'
+
+
+# Adding all the bin, dc and branch information in a dictionnary. Allows to fill multiple branches in one single loop. Keys of the histo are dc/mlfit_BIN (they are identical for Zll).
+#Order to fill the dic: [BDT_BRANCH, SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN, MLFIT_BIN]
+DC_INFO_DIC = {
+        'ZeeBDT_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_ZeeBDT_highpt.root','ZeeBDT_highpt','Zee_BDT_highpt'],
+        'ZuuBDT_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_ZuuBDT_highpt.root','ZuuBDT_highpt','Zuu_BDT_highpt'],
+        'ZeeBDT_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_ZeeBDT_lowpt.root', 'ZeeBDT_lowpt', 'Zee_BDT_lowpt'],
+        'ZuuBDT_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_ZuuBDT_lowpt.root', 'ZuuBDT_lowpt', 'Zuu_BDT_lowpt']
+        }
+
+#
+DC_INFO_DIC['MLFIT_PATH'] = PATH_ALL_DC+'/mlfit.root'
+
+
+def get_shape_bin_edges_dic(dc_info_dic):
+    bin_edges_dic = {}
+    for key in dc_info_dic:
+        if key == 'MLFIT_PATH': continue
+        bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic[key][1], dc_info_dic[key][2])
+
+    for key in dc_info_dic:
+        if key == 'MLFIT_PATH': continue
+        dc_info_dic[key].append(bin_edges_dic[key])
+
+def get_total_postfit_shapes_dic(dc_info_dic):
+    signal_postfit_dic = {}
+    background_postfit_dic = {}
+
+    for key in dc_info_dic:
+        if key == 'MLFIT_PATH': continue
+        signal_postfit_dic[key], background_postfit_dic[key] = get_total_postfit_shapes(dc_info_dic['MLFIT_PATH'],dc_info_dic[key][3], dc_info_dic[key][4])
+
+    for key in dc_info_dic:
+        if key == 'MLFIT_PATH': continue
+        DC_INFO_DIC[key].append(signal_postfit_dic[key])
+        DC_INFO_DIC[key].append(background_postfit_dic[key])
 
 
 def get_shape_bin_edges(shapes_path, datacard_bin):
@@ -35,6 +75,8 @@ def get_shape_bin_edges(shapes_path, datacard_bin):
         The array of bin edges.
     """
     shapes_file = ROOT.TFile.Open(shapes_path)
+    #print 'list of keys'
+    ROOT.gDirectory.GetListOfKeys().ls()
     shapes_file.cd(datacard_bin)
     shapes = ROOT.gDirectory.GetListOfKeys()
     #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
@@ -69,6 +111,8 @@ def get_total_postfit_shapes(mlfit_path, datacard_bin, bin_edges):
     signal_postfit, background_postfit : tuple of ROOT.TH1F
         The rebinned signal and background postfit shapes.
     """
+    print 'mlfit_path is', mlfit_path
+    print 'datacard_bin is', datacard_bin
     mlfit_file = ROOT.TFile.Open(mlfit_path)
     mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
     total_signal = ROOT.gDirectory.Get('total_signal')
@@ -157,13 +201,18 @@ def add_sb_weight(src, dst, bdt_branch, signal_postfit, background_postfit):
 
 
 def main():
-    """Example usage:
-    python add_sb_weight.py ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8.root ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8_new.root
-    """
-    logging.basicConfig(format='[%(name)s] %(levelname)s - %(message)s', level=logging.INFO)
-    bin_edges = get_shape_bin_edges(SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN)
-    signal_postfit, background_postfit = get_total_postfit_shapes(MLFIT_PATH, MLFIT_BIN, bin_edges)
-    add_sb_weight(sys.argv[1], sys.argv[2], BDT_BRANCH, signal_postfit, background_postfit)
+    print 'DC_INFO_DIC before function is', DC_INFO_DIC
+    get_shape_bin_edges_dic(DC_INFO_DIC)
+    print 'DC_INFO_DIC after bin edge function is', DC_INFO_DIC
+    get_total_postfit_shapes_dic(DC_INFO_DIC)
+    print 'DC_INFO_DIC after postfit shape funciton is', DC_INFO_DIC
+    #"""Example usage:
+    #python add_sb_weight.py ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8.root ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8_new.root
+    #"""
+    #logging.basicConfig(format='[%(name)s] %(levelname)s - %(message)s', level=logging.INFO)
+    #bin_edges = get_shape_bin_edges(SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN)
+    #signal_postfit, background_postfit = get_total_postfit_shapes(MLFIT_PATH, MLFIT_BIN, bin_edges)
+    #add_sb_weight(sys.argv[1], sys.argv[2], BDT_BRANCH, signal_postfit, background_postfit)
 
 
 if __name__ == '__main__':
