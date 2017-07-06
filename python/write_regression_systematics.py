@@ -188,6 +188,8 @@ if addSBweight:
         bin_edges_dic = {}
         for key in dc_info_dic:
             if key == 'MLFIT_PATH': continue
+            #bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic['MLFIT_PATH'], dc_info_dic[key][3])
+            #bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic['MLFIT_PATH'], dc_info_dic[key][3])
             bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic[key][1], dc_info_dic[key][2])
     
         for key in dc_info_dic:
@@ -206,7 +208,6 @@ if addSBweight:
             if key == 'MLFIT_PATH': continue
             dc_info_dic[key].append(signal_postfit_dic[key])
             dc_info_dic[key].append(background_postfit_dic[key])
-    
     
     def get_shape_bin_edges(shapes_path, datacard_bin):
         """Return an array of the bin edges used by the input shapes.
@@ -241,6 +242,43 @@ if addSBweight:
         #sys.exit()
         return bin_edges
     
+    #def get_shape_bin_edges(mlfit_path, datacard_bin):
+    #    """Return an array of the bin edges used by the input shapes.
+    #
+    #    Parameters
+    #    ----------
+    #    shapes_path : path
+    #        The path to the shapes file.
+    #    datacard_bin : string
+    #        The name of the datacard bin containing the shapes.
+    #
+    #    Returns
+    #    -------
+    #    bin_edges : numpy.array
+    #        The array of bin edges.
+    #    """
+    #    #mlfit_file = ROOT.TFile.Open(mlfit_path)
+    #    #mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
+    #    #shape = ROOT.gDirectory.Get('total_background')
+    #    ##total_signal = ROOT.gDirectory.Get('total_background')
+
+    #    #shapes_file = ROOT.TFile.Open(shapes_path)
+    #    #print 'list of keys'
+    #    #ROOT.gDirectory.GetListOfKeys().ls()
+    #    #shapes_file.cd(datacard_bin)
+    #    #shapes = ROOT.gDirectory.GetListOfKeys()
+    #    #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
+    #    ## Since the nominal and varied shapes share the same binning,
+    #    ## take any of the histograms found in the shapes file.
+    #    #shape = ROOT.gDirectory.Get(shapes[0].GetName())
+    #    bin_edges = np.array(
+    #        [shape.GetXaxis().GetBinLowEdge(i) for i in xrange(1, shape.GetNbinsX() + 1)],
+    #        dtype=np.float64,
+    #    )
+    #    mlfit_file.Close()
+    #    print 'bin_edges is', bin_edges
+    #    return bin_edges
+
     
     def get_total_postfit_shapes(mlfit_path, datacard_bin, bin_edges):
         """Retrun the rebinned the postfit shapes for the total
@@ -263,10 +301,15 @@ if addSBweight:
         print 'mlfit_path is', mlfit_path
         print 'datacard_bin is', datacard_bin
         mlfit_file = ROOT.TFile.Open(mlfit_path)
-        mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
+        mlfit_file.cd('shapes_prefit/{}'.format(datacard_bin))
         total_signal = ROOT.gDirectory.Get('total_signal')
-        total_background = ROOT.gDirectory.Get('total_background')
         total_signal.SetDirectory(0)
+        mlfit_file.cd('../..')
+        #
+        mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
+        #total_signal = ROOT.gDirectory.Get('total_signal')
+        total_background = ROOT.gDirectory.Get('total_background')
+        #total_signal.SetDirectory(0)
         total_background.SetDirectory(0)
         mlfit_file.Close()
         signal_postfit = ROOT.TH1F('signal_postfit', '', len(bin_edges) - 1, bin_edges)
@@ -2367,11 +2410,11 @@ for job in info:
                         #sys.exit()
                         s = dc_info_dic[key][5].GetBinContent(bin_index)
                         b = dc_info_dic[key][6].GetBinContent(bin_index)
-                        #if 'ZeeBDT_highpt' in key: 
-                        #    print 'bdt_score is', bdt_score
-                        #    print 'bin index is', bin_index
-                        #    print 's is', s
-                        #    print 'b is', b
+                        if 'ZeeBDT_highpt' in key:
+                            print 'bdt_score is', bdt_score
+                            print 'bin index is', bin_index
+                            print 's is', s
+                            print 'b is', b
                         #s = signal_postfit.GetBinContent(bin_index)
                         #b = background_postfit.GetBinContent(bin_index)
                         sb_weight_dic[key][0] = s / (s + b) if b > 0 else 0
