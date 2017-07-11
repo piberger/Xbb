@@ -286,10 +286,14 @@ class StackMaker:
             self.histos[i].SetLineColor(1)
             allStack.Add(self.histos[i])
 
-        datas_nbins = self.datas[i].GetXaxis().GetNbins()
-        datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
-        datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
-
+        try:
+            datas_nbins = self.datas[i].GetXaxis().GetNbins()
+            datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
+            datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
+        except:
+            datas_nbins = 0
+            datas_xMin = 0
+            datas_xMax = 0
         print 'data_nbins:', datas_nbins
         print 'datas_xMin:', datas_xMin
         print 'datas_xMax:', datas_xMax
@@ -486,12 +490,16 @@ class StackMaker:
         chiScore = d1.Chi2Test( allMC , "UWCHI2/NDF")
         print ksScore
         print chiScore
-        ratio.SetStats(0)
-        ratio.GetXaxis().SetTitle(self.xAxis)
-        ratioError = ROOT.TGraphErrors(error)
-        ratioError.SetFillColor(ROOT.kGray+3)
-        ratioError.SetFillStyle(3013)
-        ratio.Draw("E1")
+        try:
+            ratio.SetStats(0)
+            ratio.GetXaxis().SetTitle(self.xAxis)
+            ratioError = ROOT.TGraphErrors(error)
+            ratioError.SetFillColor(ROOT.kGray+3)
+            ratioError.SetFillStyle(3013)
+            ratio.Draw("E1")
+        except Exception as e:
+            print "ERROR with ratio histogram!", e
+        
         if self.doFit:
             fitData = ROOT.TF1("fData", "gaus",0.7, 1.3)
             fitMC = ROOT.TF1("fMC", "gaus",0.7, 1.3)
@@ -520,16 +528,25 @@ class StackMaker:
                 r_err[key].SetLineWidth(self.ratio_band[key].GetLineWidth())
                 r_err[key].SetLineColor(self.ratio_band[key].GetLineColor())
 
-        if not self.AddErrors:
-            l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
-        else:
-            l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
+        try:
+            if not self.AddErrors:
+                l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+            else:
+                l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
+        except:
+            pass
 
         l2.Draw()
 
-        ratioError.Draw('SAME2')
-        ratio.Draw("E1SAME")
-        ratio.SetTitle("")
+        try:
+            ratioError.Draw('SAME2')
+        except:
+            pass
+        try:
+            ratio.Draw("E1SAME")
+            ratio.SetTitle("")
+        except:
+            pass
         m_one_line = ROOT.TLine(self.xMin,1,self.xMax,1)
         m_one_line.SetLineStyle(ROOT.kSolid)
         m_one_line.Draw("Same")

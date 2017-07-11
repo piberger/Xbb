@@ -190,7 +190,7 @@ class MultiCache:
     def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False, mergeCachingPart = -1):
         
         # DEBUG
-        #forceReDo = True
+        forceReDo = True
 
         start_time = time.time()
         print("Caching the sample")
@@ -231,6 +231,7 @@ class MultiCache:
             for inputFile in filelist:
                 try:
                     subfolder = inputFile.split('/')[-4]
+                    #print (subfolder)
                     filename = inputFile.split('/')[-1]
                     filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
                     hash = hashlib.sha224(filename).hexdigest()
@@ -253,7 +254,7 @@ class MultiCache:
             regionDict[region]['outputfileExists'] = self.file_valid(regionDict[region]['outputfileName'])
 
         # skip if ALL of the files exist
-        if all([regionDict[region]['outputfileExists'] for region in self.regions]):
+        if all([regionDict[region]['outputfileExists'] for region in self.regions]) and not forceReDo:
             print ('-'*60)
             print (' all cache files exist! => skipped')
             print ('-'*60)
@@ -268,7 +269,7 @@ class MultiCache:
         # open OUTPUT files
         try:
             for region in self.regions:
-                if not regionDict[region]['outputfileExists']:
+                if not regionDict[region]['outputfileExists'] or forceReDo:
                     regionDict[region]['tmpfile'] = ROOT.TFile.Open(regionDict[region]['tmpfileName'], 'recreate') # if forceReDo else 'create')
                 else:
                     regionDict[region]['tmpfile'] = None
@@ -374,7 +375,7 @@ class MultiCache:
         # ----------------------------------------------------------------------------------------------------------
         if not treeEmpty:
             time1 = time.time()
-
+            
             subcutExists = sample.subcut and sample.subcut.strip() != "1"
 
             # remove branches from tree
@@ -415,8 +416,16 @@ class MultiCache:
             self.regionsSkipped = [x for x in self.regions if not regionDict[x]['tmpfile']]
 
             for region in self.regionsToProcess:
-                regionDict[region]['cutFormula'] = ROOT.TTreeFormula("cutFormula_"+region, regionDict[region]['cut'], tree)
-                regionDict[region]['subcutFormula'] = ROOT.TTreeFormula("subcutFormula_"+region, sample.subcut if subcutExists else '1', tree)
+                cutFormula = regionDict[region]['cut'].strip()
+                if len(cutFormula) < 1 or cutFormula == '()':
+                    cutFormula = '1'
+                subcutFormula = sample.subcut.strip() if subcutExists else '1'
+                if len(subcutFormula) < 1:
+                    subcutFormula = '1'
+                print ("CUT:", cutFormula)
+                print ("SUBCUT:", subcutFormula)
+                regionDict[region]['cutFormula'] = ROOT.TTreeFormula("cutFormula_"+region, cutFormula, tree)
+                regionDict[region]['subcutFormula'] = ROOT.TTreeFormula("subcutFormula_"+region, subcutFormula, tree)
                 regionDict[region]['cutTree'] = tree.CloneTree(0)
                 regionDict[region]['cutTree'].SetDirectory(regionDict[region]['tmpfile'])
                 regionDict[region]['filledEntries'] = 0
@@ -454,6 +463,7 @@ class MultiCache:
                     if s:
                         n2 = regionDict[region]['subcutFormula'].GetNdata()
                         s2 = regionDict[region]['subcutFormula'].EvalInstance()
+
                         if s and s2:
                            regionDict[region]['cutTree'].Fill() 
                            regionDict[region]['filledEntries'] += 1

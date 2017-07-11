@@ -141,12 +141,23 @@ class ParseInfo:
 
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
-                subnames = eval((config.get(sample, 'subnames')))
+                
+                try:
+                    subnames = eval((config.get(sample, 'subnames')))
+                except:
+                    subnames = [''] 
                 subcuts = eval((config.get(sample, 'subcuts')))
                 subgroups = eval((config.get(sample,'sampleGroup')))
                 if sampleType != 'DATA':
                     subxsecs = eval((config.get(sample, 'xSec')))
                     subsfs = eval((config.get(sample, 'SF')))
+                try:
+                    subspecialweights = eval((config.get(sample, 'specialweight')))
+                    #print 'specialweights=', subspecialweights
+                    if len(subspecialweights) < 2:
+                        subspecialweights = []
+                except:
+                    subspecialweights = []
                 newsamples = []
                 for i,cut in enumerate(subcuts):
                     newsubsample = copy(newsample)
@@ -157,7 +168,11 @@ class ParseInfo:
                     if sampleType != 'DATA':
                         newsubsample.sf = float(subsfs[i])
                         newsubsample.xsec = float(subxsecs[i])
+                    if len(subspecialweights) == len(subcuts):
+                        newsubsample.specialweight = subspecialweights[i] 
                     newsamples.append(newsubsample)
+                    #print 'newsubsample:', newsubsample
+
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
             else:

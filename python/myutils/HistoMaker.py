@@ -153,25 +153,35 @@ class HistoMaker:
             else:
                 #weightF="("+weightF+")"
                 weightF="("+weightF+")*(" + job.specialweight +")"
-
+            print 'weightF=', weightF
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
             else:
-                count=getattr(self.tc,"CountWeighted")[0]
+                try:
+                    count=getattr(self.tc,"CountWeighted")[0]
+                except:
+                    print "Histomaker::161 !!!!!!! CountWeighted does not exist"
+                    count=getattr(self.tc,"Count")[0]
 
+            # OLD
             #if cutOverWrite:
             #    treeCut= str(1)
             #else:
             #    treeCut='%s'%(options['cut'])
-            treeCut='%s & %s'%(options['cut'],addCut)
-            if replacement_cut:
-                if type(replacement_cut) is str:
-                    treeCut='%s & %s'%(replacement_cut,addCut)
-                elif type(replacement_cut) is list:
-                    treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
-                else:
-                    print '@ERROR: replacement_cut is neither list or string. Aborting'
-                    sys.exit()
+
+            #treeCut='%s & %s'%(options['cut'],addCut)
+            #if replacement_cut:
+            #    if type(replacement_cut) is str:
+            #        treeCut='%s & %s'%(replacement_cut,addCut)
+            #    elif type(replacement_cut) is list:
+            #        treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
+            #    else:
+            #        print '@ERROR: replacement_cut is neither list or string. Aborting'
+            #        sys.exit()
+           
+            
+            # NEW!
+            treeCut = '&&'.join(['(%s)'%x for x in [job.addtreecut, job.subcut, addCut, options['cut']] if x and len(x.strip()) > 0 and x.strip() != '1'])
             
             hTree = ROOT.TH1F('%s'%name,'%s'%name,nBins,xMin,xMax)
 
@@ -184,7 +194,7 @@ class HistoMaker:
             print 'treeVar: %s'%(treeVar)
             print 'weightF: %s'%(weightF)
             print 'BDT_add_cut: %s'%(BDT_add_cut)
-            print 'treeCut: %s'%(treeCut)
+            print '\x1b[35mtreeCut: %s\x1b[0m'%(treeCut)
 
 #            print("START DRAWING")
             if job.type != 'DATA':
@@ -235,7 +245,7 @@ class HistoMaker:
                         veto = ("(%s <%s || %s > %s)" %(treeVar,lowLimitBlindingMass,treeVar,highLimitBlindingMass))
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),veto +'&'+' %(cut)s'%options, "goff,e")
                     else:
-                        CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
+                        CuttedTree.Draw('%s>>%s' %(treeVar,name),'(%s)*(%s)' %(treeCut,weightF), "goff,e")
                 else:
                     CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
                 full = True
