@@ -51,12 +51,14 @@ parser.add_option("-P", "--postfit", dest="postfit", default="",
 
 print opts
 
-def rebinHist(hist,nbin, xmin, xmax):
+def rebinHist(hist,nbin, xmin, xmax, scale=1):
     '''The postfit plots stored in the mlfit.root don't have the proper bin size. A rebinning is therefor necessary.'''
     h_new = ROOT.TH1F(hist.GetName(), hist.GetName(), nbin, xmin, xmax)
     for b in range(0,nbin+2):
         h_new.SetBinContent(b, hist.GetBinContent(b))
         h_new.SetBinError(b, hist.GetBinError(b))
+        #print 'bin content is', hist.GetBinContent(b)
+    h_new.Scale(scale)
     return h_new
 
 
@@ -115,13 +117,15 @@ def drawFromDC():
     #log = eval(config.get('Plot:%s'%region,'log'))
 
     if 'Zee' in opts.bin or 'Zuu' in opts.bin:
-        setup = ['Zbb','Zb','Z_udscg','TT','VV2b','VVlight','ST','qqZHbb','ggZHbb']
+        #VH
         #setup = ['ggZHbb', 'qqZHbb','Zbb','Zb','Z_udscg','TT','VV2b','VVlight','ST']
+        #VV
+        setup = ['VV2b','ggZHbb','qqZHbb','Z_udscg','Zb','Zbb','TT','VVlight','ST']
         channel = 'ZllHbb'
         if 'Zee' in opts.bin: lep_channel = 'Zee'
         elif 'Zuu' in opts.bin: lep_channel = 'Zuu'
         #region_dic = {'BDT':'SIG','CRZlight':'Zlf','CRZb':'Zhf','CRttbar':'TT'}
-        region_dic = {'BDT':'BDT','CRZlight':'CRZlight','CRZb':'CRZb','CRttbar':'CRttbar'}
+        region_dic = {'BDT':'BDT','CRZlight':'CRZlight','CRZb':'CRZb','CRttbar':'CRttbar','ZeeMass_lowpt':'ZeeMass_lowpt','ZeeMass_highpt':'ZeeMass_highpt','ZuuMass_lowpt':'ZuuMass_lowpt','ZuuMass_highpt':'ZuuMass_highpt','ZeeMassVV_lowpt':'ZeeMassVV_lowpt','ZeeMassVV_highpt':'ZeeMassVV_highpt','ZuuMassVV_lowpt':'ZuuMassVV_lowpt','ZuuMassVV_highpt':'ZuuMassVV_highpt'}
         region_name =  [region_dic[key] for key in region_dic if (key in opts.bin)]
         region_name = region_name[0]
         print 'region_name is', region_name
@@ -162,7 +166,7 @@ def drawFromDC():
     shapesUp = [[] for _ in range(0,len(setup))]
     shapesDown = [[] for _ in range(0,len(setup))]
     #signalList = ['ggZHbb', 'qqZHbb']
-    signalList = []
+    #signalList = []
 
     sigCount = 0
     #Overlay ={}
@@ -186,13 +190,15 @@ def drawFromDC():
     folder_found = False
     for dir in ROOT.gDirectory.GetListOfKeys():
         dirinfo = dir.GetName().split('_')
-        #print 'dir name is', dir.GetName().split('_')
+        print 'dir name is', dir.GetName().split('_')
         ##if not (dirinfo[0] == channel and dirinfo[2] == lep_channel and dirinfo[3] == region_name and dirinfo[4] == pt_region_name):
-        #print 'lep_channel is', lep_channel
-        #print 'region_name is', region_name
-        #print 'pt_region_name is', pt_region_name
+        print 'lep_channel is', lep_channel
+        print 'region_name is', region_name
+        print 'pt_region_name is', pt_region_name
         if not (dirinfo[0] == lep_channel and dirinfo[1] == region_name and dirinfo[2] ==  pt_region_name):
-            continue
+            #for VV
+            if not (dirinfo[2] == region_name.split('_')[0] and dirinfo[3] ==  pt_region_name):
+                continue
         folder_found = True
         dirname = dir.GetName()
         #signal, use prefit
@@ -208,29 +214,50 @@ def drawFromDC():
                         hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax)
                         histos.append(hist)
                         typs.append(s)
-                        print 's is', s
-                        print 'signalList is', signalList
-                        if s in signalList:
-                            hist.SetTitle(s)
-                            Overlay.append(hist)
-                            print 'the Histogram title is', hist.GetTitle()
+                        #print 's is', s
+                        #print 'signalList is', signalList
+                        #if s in signalList:
+                        #    hist.SetTitle(s)
+                        #    Overlay.append(hist)
+                        #    print 'the Histogram title is', hist.GetTitle()
             else:
-                ROOT.gDirectory.cd('/shapes_fit_s')
+                #SF_ZJets = [0.95188, 0.94404, 1.0463]
+                #SF_TTbar = 1.0373
+                #;Vpt high
+                #SF_ZJets = [1.1235, 0.91368, 1.2435]
+                #SF_TTbar = 1.0601
+                #Start be getting the SF
+                print 'Gonna apply SF'
+                scale = 1
+                if 'low' in opts.dc:
+                    if 'TT' in s:       scale = 1.0373
+                    if 'Z_udscg' in s:  scale = 0.95188
+                    if 'Zb' in s:       scale = 0.94404
+                    if 'Zbb' in s  :    scale = 1.0463
+                elif 'high' in opts.dc:
+                    if 'TT' in s:       scale = 1.0601
+                    if 'Z_udscg' in s:  scale = 1.1235
+                    if 'Zb' in s:       scale = 0.91368
+                    if 'Zbb' in s:      scale = 1.2435
+                else:
+                    pass
+                    #ROOT.gDirectory.cd('/shapes_fit_s')
+                ROOT.gDirectory.cd('/shapes_prefit')
                 ROOT.gDirectory.cd(dirname)
                 found = False
                 for subdir in ROOT.gDirectory.GetListOfKeys():
-                    #print 'subdir name is', subdir.GetName()
+                    print 'subdir name is', subdir.GetName()
                     if subdir.GetName() == Dict[s]:
                         found = True
-                        hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax)
+                        hist = rebinHist(gDirectory.Get(subdir.GetName()).Clone(), nbin, xmin, xmax, scale)
                         histos.append(hist)
                         typs.append(s)
                         print 's is', s
-                        print 'signalList is', signalList
-                        if s in signalList:
-                            hist.SetTitle(s)
-                            Overlay.append(hist)
-                            print 'the Histogram title is', hist.GetTitle()
+                        #print 'signalList is', signalList
+                        #if s in signalList:
+                        #    hist.SetTitle(s)
+                        #    Overlay.append(hist)
+                        #    print 'the Histogram title is', hist.GetTitle()
               #take prefit distr. for signal
 
 
@@ -289,6 +316,8 @@ def drawFromDC():
     print '\nOVERLAY!!!', Overlay
 
     #Add all the histos and overlay to the stackmaker such that they can be ploted
+    #print 'before Stack, histos are', histos
+    #sys.exit()
     Stack.histos = histos
     Stack.typs = typs
     Stack.overlay = Overlay

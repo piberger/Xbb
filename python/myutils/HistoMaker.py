@@ -50,7 +50,7 @@ class HistoMaker:
         print ""
         print "Done Creating HistoMaker"
         print "========================\n"
-    def get_histos_from_tree_dc(self,job,quick=True, subcut_ = None, replacement_cut = None):
+    def get_histos_from_tree_dc(self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False):
         '''Function that produce the trees from a HistoMaker, optimised for dc (in case of lot of sys). This concerns only MC.'''
 
         print "=============================================================\n"
@@ -138,6 +138,8 @@ class HistoMaker:
             xMin=float(options['xMin'])
             xMax=float(options['xMax'])
             weightF=options['weight']
+            SBweight=options['SBweight']
+            print 'SBweight is', SBweight
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
                 weightF="("+weightF+")"
@@ -199,6 +201,7 @@ class HistoMaker:
                 ###full=True
 
             DrawInfoDicList.append(DrawInfoDic)
+            if nomOnly: break
 
         ###
         ##Prepare loop on the TTree
@@ -507,6 +510,9 @@ class HistoMaker:
             xMin=float(options['xMin'])
             xMax=float(options['xMax'])
             weightF=options['weight']
+            SBweight=options['SBweight']
+            print 'SBweight is', SBweight
+
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
                 weightF="("+weightF+")"
@@ -573,13 +579,23 @@ class HistoMaker:
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True
             elif job.type == 'DATA':
+
+                if not SBweight == None:
+                    treeCutData = '('+treeCut+')*('+SBweight+')'
+                else:
+                    treeCutData = treeCut
+                print 'treeCutData is', treeCutData
+
                 if options['blind']:
                     lowLimitBlindingMass    = 90
                     highLimitBlindingMass   = 140
                     lowLimitBlindingBDT     = 0.4
                     lowLimitBlindingDR      = 0.8
                     highLimitBlindingDR     = 1.6
+
                     if 'mass' in treeVar:
+                        print '@ERROR: removed cut on the mass'
+                        sys.exit()
                         lowLimitBlindingMass =hTree.GetBinLowEdge(hTree.FindBin(lowLimitBlindingMass))
                         highLimitBlindingMass =hTree.GetBinLowEdge(hTree.FindBin(highLimitBlindingMass))+ hTree.GetBinWidth(hTree.GetBin(highLimitBlindingMass))
                         veto = ("(%s <%s || %s > %s)" %(treeVar,lowLimitBlindingMass,treeVar,highLimitBlindingMass))
@@ -595,9 +611,9 @@ class HistoMaker:
                         veto = ("(%s <%s || %s > %s)" %(treeVar,lowLimitBlindingMass,treeVar,highLimitBlindingMass))
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),veto +'&'+' %(cut)s'%options, "goff,e")
                     else:
-                        CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
+                        CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCutData, "goff,e")
                 else:
-                    CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCut, "goff,e")
+                    CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCutData, "goff,e")
                 full = True
             # if full:
                 # hTree = ROOT.gDirectory.Get(name)
@@ -731,6 +747,7 @@ class HistoMaker:
                 #htree = self.get_histos_from_tree_dc(job)[0].values()[0]
                 #self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False
                 #htree = self.get_histos_from_tree(job)[0].values()[0]
+                #htree = self.get_histos_from_tree_dc(job, True, None, None, True)[0].values()[0]
                 htree = self.get_histos_from_tree(job, True, None, None, True)[0].values()[0]
             else:
                 #self,job,quick=True, subcut_ = None, replacement_cut = None, nomOnly = False

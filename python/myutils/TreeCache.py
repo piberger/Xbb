@@ -9,12 +9,12 @@ import math
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, branch_to_keep=None, do_onlypart_n= False, dccut = None):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, branch_to_keep=None, do_onlypart_n= False, dccut = None, remove_sys=None):
         ROOT.gROOT.SetBatch(True)
         self.verbose = False
         self.path = path
         self.config = config
-        #self.remove_sys = remove_sys
+        self.remove_sys = remove_sys
         self.do_onlypart_n = do_onlypart_n
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
@@ -203,6 +203,7 @@ class TreeCache:
             # check for existence of the individual tree files
             filelistCopied = []
             for inputFile in filelist:
+                print ('inputFile is', inputFile)
                 try:
                     subfolder = inputFile.split('/')[-4]
                     filename = inputFile.split('/')[-1]
@@ -462,10 +463,10 @@ class TreeCache:
 
                 subcutExists = sample.subcut and sample.subcut.strip() != "1"
 
-                ## remove branches from tree
-                #if self.remove_sys:
-                #    tree.SetBranchStatus("*Down",0)
-                #    tree.SetBranchStatus("*Up",0)
+                # remove branches from tree
+                if self.remove_sys:
+                    tree.SetBranchStatus("*Down",0)
+                    tree.SetBranchStatus("*Up",0)
                     
                 removeBranches = []
                 remove_useless_branch = False
@@ -845,10 +846,9 @@ class TreeCache:
             self.__hashDict[theName]=theHash
 
     def get_tree(self, sample, cut):
-        print (self.__hashDict)
+        #print (self.__hashDict)
         inputHashes = self.__hashDict[sample.name]
         print('input file %s/tmp_\x1b[32m%r\x1b[0m.root'%(self.__cachedPath, inputHashes))
-
         #fill all Count* histos as lists, like self.CountWeighted = [123.23]
         inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
         #print ('inputHashesList is', inputHashesList)
@@ -1033,7 +1033,7 @@ class TreeCache:
         count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
     def get_scale(self, sample, config, lumi = None, count=1):

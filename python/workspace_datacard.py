@@ -215,7 +215,7 @@ if opts.settings:
         split_number = int(opts.settings[opts.settings.find('SPLIT')+5:].split('__')[0].split('_')[-1])
         print '@INFO: goind to split the dc step. The split number of this job is', split_number
         split = True
-    if 'MERGE' in opts.settings:
+    if 'DCMERGE' in opts.settings:
         print '@INFO: going to merge all the files produced during the split step'
         merge = True
     #if 'SPLITSAMPLE' in opts.settings:
@@ -258,7 +258,7 @@ if str(anType) == 'BDT':
     systematics = eval(config.get('LimitGeneral','sys_BDT'))
 #    if config.has_option('LimitGeneral','sys_lhe_muF_BDT'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_BDT'))
 #    if config.has_option('LimitGeneral','sys_lhe_muR_BDT'): lhe_muR = eval(config.get('LimitGeneral','sys_lhe_muR_BDT'))
-elif str(anType) == 'Mjj':
+elif str(anType) == 'Mjj' or str(anType) == 'mjj':
     mjj = True
     systematics = eval(config.get('LimitGeneral','sys_Mjj'))
 #    if config.has_option('LimitGeneral','sys_lhe_muF_Mjj'): lhe_muF = eval(config.get('LimitGeneral','sys_lhe_muF_Mjj'))
@@ -286,6 +286,12 @@ if config.has_option('LimitGeneral','sys_lhe_affecting'): sys_lhe_affecting = ev
 
 # weightF:
 weightF = config.get('Weights','weightF')
+SBweight = None
+if mjj:
+    SBweight = config.get('dc:%s'%var,'SBweight')
+    weightF ='('+weightF+')*('+SBweight+')'
+    print 'after adding SBweight, weightF is',  weightF
+
 # rescale stat shapes by sqrtN
 rescaleSqrtN=eval(config.get('LimitGeneral','rescaleSqrtN'))
 # get nominal cutstring:
@@ -452,7 +458,18 @@ MC_samples = signals+backgrounds+additionals
 print 'Befor split selection, MC_samples are:', MC_samples
 
 #only a fraction of the MC samples are computed
-if split:
+
+
+lastMCsample = False
+if split and split_number == split_factor+2:
+    lastMCsample = True
+
+split_data = False
+if split and split_number == split_factor+3:
+    split_data = True
+
+
+if split and not split_data:
     #compute how many samples should be added in the group
     NSamples = len(MC_samples)
     k = (NSamples - (NSamples%split_factor))/split_factor
@@ -460,11 +477,14 @@ if split:
     counter_ = 0
     for sample_ in MC_samples[split_number*k:]:
         counter_ +=1
-        if counter_ > k: break
+        if counter_ > k and not lastMCsample : break
         split_samples.append(sample_)
     MC_samples = split_samples
-    print 'MC_samples are', MC_samples
 
+if split and split_data:
+    MC_samples = []
+
+print 'MC_samples are', MC_samples
 
 
 #all_samples = info.get_samples(signals+backgrounds+additionals)
@@ -486,12 +506,17 @@ print 'data_sample_names are', data_sample_names
 
 data_samples = info.get_samples(data_sample_names)
 
-split_data = False
-if split and split_number != split_factor+3:
+if split  and not split_data:
     data_samples = []
 elif split:
     print '@INFO: this split job is taking care of the data'
-    split_data = True
+
+#split_data = False
+#if split and split_number != split_factor+3:
+#    data_samples = []
+#elif split:
+#    print '@INFO: this split job is taking care of the data'
+#    split_data = True
 
 
 print 'data_samples are', data_samples
@@ -511,7 +536,7 @@ for samp in data_samples:
 
 #clean setup to contain only samples from split
 setup_copy = copy(setup)
-#print 'before cleaning, setup is', setup_copy
+print 'before cleaning, setup is', setup_copy
 if split:
     for c in setup:
         found = False
@@ -530,7 +555,7 @@ if split:
 optionsList=[]
 shapecutList=[]
 
-def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind, 'sysType':copy(_sysType)})
+def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind, 'sysType':copy(_sysType),'SBweight':copy(SBweight)})
 def appendSCList(): shapecutList.append(shapecut)
 
 #nominal
@@ -598,24 +623,30 @@ for syst in systematics:
             print '_weight is', _weight
         #replace tree variable
         if bdt == True:
-            #ff[1]='%s_%s'%(sys,Q.lower())
-            #print 'old treevar', _treevar
             if not 'UD' in syst:
-                _treevar = treevar.replace('.nominal','.%s_%s'%(syst,Q))
-                #_treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q.lower()))
+                print 'treevar was', _treevar
+                #ver3
+                _treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q))
                 print '.nominal by','.%s_%s'%(syst,Q)
             else:
                 _treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
-                #_treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD',Q)))
                 print '.nominal by','.%s'%(syst.replace('UD',Q))
             #print 'treevar after replacement', _treevar
         elif mjj == True:
-            if syst == 'JER':
-                _treevar = treevar.replace('_reg_mass','_reg_corrJER%s_mass'%Q)
-            elif syst == 'JES':
-                _treevar = treevar.replace('_reg_mass','_reg_corrJEC%s_mass'%Q)
+            if not 'UD' in syst:
+                print 'treevar was', _treevar
+                _treevar = treevar.replace('_reg_mass','_reg_mass_corr%s%s'%(syst,Q))
+                print '_reg_mass','_reg_mass_corr%s%s'%(syst,Q)
             else:
-                _treevar = treevar
+                print '@ERROR: Why is there UD in sys ? Abort'
+                sys.exit()
+                #_treevar = treevar.replace('_reg_mass','%s'%(syst.replace('UD',Q)))
+
+            #    _treevar = treevar.replace('_reg_mass','_reg_corrJER%s_mass'%Q)
+            #elif syst == 'JES':
+            #    _treevar = treevar.replace('_reg_mass','_reg_corrJEC%s_mass'%Q)
+            #else:
+            #    _treevar = treevar
         elif cr == True:
             _treevar = treevar
 
@@ -625,6 +656,7 @@ for syst in systematics:
         #appendSCList()
         #print 'new tree cut is', _cut
 
+#rmv_sys are all the cut NOT affected by the shape sys
 print 'rmv_sys is', rmv_sys
 shapecut_first = ''
 for opt in optionsList:
@@ -736,6 +768,8 @@ for weightF_sys in weightF_systematics:
         #shapecut = sysnomcut
         #_cut = "1"
         #shapecut = "1"
+        if not SBweight == None:
+            _weight ='('+_weight+')*('+SBweight+')'
         _cut = shapecut_first
         shapecut = shapecut_first
         _treevar = treevar
@@ -958,7 +992,6 @@ if merge:
     #    data_histos[job.name] = AllHisoDic['data_obs']
 
 else:
-
     mc_hMaker   = HistoMaker(samples=all_samples_HM,  path=path, config=config, optionsList=optionsList     , GroupDict=GroupDict, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccut)#sys should never be removed in dc
     data_hMaker = HistoMaker(samples=data_samples, path=path, config=config, optionsList=[optionsList[0]], GroupDict=None     , filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=sample_to_merge_, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=all_keep_list, dccut = dccutdata)
     #
@@ -1030,7 +1063,7 @@ else:
     inputs=[]
     for job in all_samples:
     #new
-    #    inputs.append((mc_hMaker,"get_histos_from_tree_dc",(job,True, None, shapecutList)))
+        #inputs.append((mc_hMaker,"get_histos_from_tree_dc",(job,True, None, shapecutList)))
     #old
         inputs.append((mc_hMaker,"get_histos_from_tree",(job,True, None, shapecutList)))
 
@@ -1137,8 +1170,8 @@ if split:
     outfile.mkdir(Datacardbin,Datacardbin)
     outfile.cd(Datacardbin)
     # generate the Workspace:
-    WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
-    print 'WS initialized'
+    #WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
+    #print 'WS initialized'
     disc= ROOT.RooRealVar(name,name,xMin,xMax)
     obs = ROOT.RooArgList(disc)
     #
@@ -1148,8 +1181,8 @@ else:
     outfile.mkdir(Datacardbin,Datacardbin)
     outfile.cd(Datacardbin)
     # generate the Workspace:
-    WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
-    print 'WS initialized'
+    #WS = ROOT.RooWorkspace('%s'%Datacardbin,'%s'%Datacardbin) #Zee
+    #print 'WS initialized'
     disc= ROOT.RooRealVar(name,name,xMin,xMax)
     obs = ROOT.RooArgList(disc)
     #
@@ -1330,11 +1363,21 @@ for key in final_histos:
             #getattr(WS,'import')(rooDataHist)
         for Q in UD:
             if Q in key:
-                theSyst = key.replace('_%s'%Q,'')
+                if key.endswith('_%s'%Q):
+                    theSyst = ''.join(key.rsplit('_%s'%Q,1))
+                elif key.endswith('%s'%Q):
+                    theSyst = ''.join(key.rsplit('%s'%Q,1))
+                #else:
+                #    print '@ERROR: sys does not end by Up/Down. Aborting'
+                #    print 'sys is',  key
+                #    sys.exit()
             else:
                 continue
             if systematicsnaming['stats'] in key:
-                nameSyst = '%s_%s_%s' %(theSyst,Dict[job],Datacardbin)
+                if merge:
+                    nameSyst = theSyst
+                else:
+                    nameSyst = '%s_%s_%s' %(theSyst,Dict[job],Datacardbin)
             elif systematicsnaming['model'] in key:
                 nameSyst = '%s_%s' %(theSyst,Dict[job])
             else:
@@ -1355,9 +1398,9 @@ if not split or (split and split_data):
         theData.Write()
         rooDataHist = ROOT.RooDataHist('data_obs','data_obs',obs, theData)
 
-getattr(WS,'import')(rooDataHist)
+#getattr(WS,'import')(rooDataHist)
 
-WS.writeToFile(outpath+'vhbb_WS_'+ROOToutname+'.root')
+#WS.writeToFile(outpath+'vhbb_WS_'+ROOToutname+'.root')
 
 # now we have a Dict final_histos with sets of all grouped MCs for all systematics:
 # nominal, ($SYS_Up/Down)*4, weightF_sys_Up/Down, stats_Up/Down
@@ -1422,7 +1465,7 @@ f.write('process\t')
 #VH
 for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
 #VV
-#for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
 f.write('\n')
 # datacard yields
 f.write('rate\t')

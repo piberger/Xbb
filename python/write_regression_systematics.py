@@ -170,29 +170,31 @@ if addSBweight:
     # Adding all the bin, dc and branch information in a dictionnary. Allows to fill multiple branches in one single loop. Keys of the histo are dc/mlfit_BIN (they are identical for Zll).
     #Order to fill the dic: [BDT_BRANCH, SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN, MLFIT_BIN]
 
-    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_26_06_2017_newMVAid_BDTmin_0p2_split_copy/remove1/'
-    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VZ/'
-    PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/ZllZbb_Datacards_Minus08to1_JECfix_7_3/'
-
-    #DC_INFO_DIC = {
-    #        'ZeeBDT_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_ZeeBDT_highpt.root','ZeeBDT_highpt','Zee_BDT_highpt'],
-    #        'ZuuBDT_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_ZuuBDT_highpt.root','ZuuBDT_highpt','Zuu_BDT_highpt'],
-    #        'ZeeBDT_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_ZeeBDT_lowpt.root', 'ZeeBDT_lowpt', 'Zee_BDT_lowpt'],
-    #        'ZuuBDT_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_ZuuBDT_lowpt.root', 'ZuuBDT_lowpt', 'Zuu_BDT_lowpt']
-    #        }
-
-    ##
+    #For VH
+    PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_Datacards_02to1_oldJEC/'
 
     DC_INFO_DIC = {
-            'ZeeBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
-            'ZuuBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zuu_HighPt.root','ZuuHighPt_13TeV','ZllHbb_ch3_Zmm_SIG_high'],
-            'ZeeBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zee_LowPt.root', 'ZeeLowPt_13TeV', 'ZllHbb_ch2_Zee_SIG_low'],
-            'ZuuBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zuu_LowPt.root', 'ZuuLowPt_13TeV', 'ZllHbb_ch1_Zmm_SIG_low']
+            'ZeeBDTVH_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
+            'ZuuBDTVH_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zuu_HighPt.root','ZuuHighPt_13TeV','ZllHbb_ch3_Zmm_SIG_high'],
+            'ZeeBDTVH_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zee_LowPt.root', 'ZeeLowPt_13TeV', 'ZllHbb_ch2_Zee_SIG_low'],
+            'ZuuBDTVH_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zuu_LowPt.root', 'ZuuLowPt_13TeV', 'ZllHbb_ch1_Zmm_SIG_low']
             }
 
-    ##
-    #DC_INFO_DIC['MLFIT_PATH'] = PATH_ALL_DC+'/mlfit.root'
-    DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VZ/mlfitmlfitunblindrUltraSimple.root'
+    ###
+    DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VH/mlfitmlfitunblindrUltraSimple.root'
+
+    ##For VV
+    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/ZllZbb_Datacards_Minus08to1_JECfix_7_3/'
+
+    #DC_INFO_DIC = {
+    #        'ZeeBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
+    #        'ZuuBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zuu_HighPt.root','ZuuHighPt_13TeV','ZllHbb_ch3_Zmm_SIG_high'],
+    #        'ZeeBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zee_LowPt.root', 'ZeeLowPt_13TeV', 'ZllHbb_ch2_Zee_SIG_low'],
+    #        'ZuuBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zuu_LowPt.root', 'ZuuLowPt_13TeV', 'ZllHbb_ch1_Zmm_SIG_low']
+    #        }
+
+    ###
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VZ/mlfitmlfitunblindrUltraSimple.root'
 
     #dc_info_dic = DC_INFO_DIC
     
@@ -979,7 +981,7 @@ for job in info:
             tree.SetBranchStatus("bTagWeightCMVAV2_Moriond*",0)
 
         if addSBweight:
-            tree.SetBranchStatus('sb_weight*', 0)
+            #tree.SetBranchStatus('sb_weight*', 0)
             bdt_buffer = {}
             leaf_index = {}
             #dc_info_dic = DC_INFO_DIC
