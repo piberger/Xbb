@@ -190,7 +190,7 @@ class MultiCache:
     def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False, mergeCachingPart = -1):
         
         # DEBUG
-        forceReDo = True
+        #forceReDo = True
 
         start_time = time.time()
         print("Caching the sample")
