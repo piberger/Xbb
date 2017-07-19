@@ -740,7 +740,7 @@ class TreeCache:
                 mergeList = [unmergedFiles[x:x+sample.mergeCachingSize] for x in xrange(0, len(unmergedFiles), sample.mergeCachingSize)]
 
                 # compare filenames from cached files with expectation from mergeList
-                print ('%s (%s): %d/%d'%(sample.FullName, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
+                print ('%s %s (%s): %d/%d'%(sample.FullName, sample.group, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
 
                 for i,mergeListPart in enumerate(mergeList):
                     found = False

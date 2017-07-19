@@ -287,11 +287,12 @@ class MultiCache:
             print ('reading inputfile',inputfile)
 
         treeEmpty = True
+        readAsTChain = True
         # ----------------------------------------------------------------------------------------------------------
         #  READ INPUT files
         # ----------------------------------------------------------------------------------------------------------
         # list -> TChain
-        if ';' in inputfile:
+        if readAsTChain:
             tree = ROOT.TChain(sample.tree)
             histograms = {}
             time1=time.time()
@@ -351,24 +352,24 @@ class MultiCache:
             #    histogram.SetDirectory(output)
 
         # single input file -> read it as TFile
-        else:
-            print ("I am reading")
-            input = ROOT.TFile.Open(inputfile,'read')
-            input.Print()
-            print ("I read the tree")
-            tree = input.Get(sample.tree)
-            assert type(tree) is ROOT.TTree
-            treeEmpty = False
-            input.cd()
+        #else:
+        #    print ("I am reading")
+        #    input = ROOT.TFile.Open(inputfile,'read')
+        #    input.Print()
+        #    print ("I read the tree")
+        #    tree = input.Get(sample.tree)
+        #    assert type(tree) is ROOT.TTree
+        #    treeEmpty = False
+        #    input.cd()
 
-            obj = ROOT.TObject
-            for key in ROOT.gDirectory.GetListOfKeys():
-                input.cd()
-                obj = key.ReadObj()
-                if obj.GetName() == 'tree':
-                    continue
-                output.cd()
-                obj.Write(key.GetName())
+        #    obj = ROOT.TObject
+        #    for key in ROOT.gDirectory.GetListOfKeys():
+        #        input.cd()
+        #        obj = key.ReadObj()
+        #        if obj.GetName() == 'tree':
+        #            continue
+        #        output.cd()
+        #        obj.Write(key.GetName())
 
         # ----------------------------------------------------------------------------------------------------------
         #  CUTS
