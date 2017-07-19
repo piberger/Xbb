@@ -82,7 +82,7 @@ class TreeCache:
         else:
             #remove repetition and (1) (the latter would keep all the events)
             for cut in self._cutList:
-                if not cut in effective_cuts and not cut == "(1)":
+                if not cut in effective_cuts:
                     effective_cuts.append(cut)
             self._cutList = effective_cuts
             self.minCut = '||'.join(self._cutList)
@@ -725,7 +725,8 @@ class TreeCache:
             #stop if a file is missing
             file_missing = False
             for sample in self.__sampleList:
-                theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
+                hashString = '%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)
+                theHash = hashlib.sha224(hashString).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
 
@@ -749,6 +750,7 @@ class TreeCache:
                             found = True
                             break
                     if not found:
+                        print ('hash string:', hashString)
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
                         if not self.do_onlypart_n:
                             file_missing = True
