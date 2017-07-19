@@ -79,14 +79,27 @@ def getExtWeights(config, extParts):
     sysOutMountedPath = sysOut.replace(t3proto,'').replace('root://t3dcachedb03.psi.ch:1094','')
     extPartCounts = {}
     for extPart in extParts:
-        fileMask = "{path}/{sample}/{tree}.root".format(path=sysOutMountedPath, sample=extPart, tree='*')
-        #print fileMask
-        extPartFiles = glob.glob(fileMask)
-        #print extPart,"=>",len(extPartFiles),"files"
         extPartCounts[extPart] = 0
-        for extPartFile in extPartFiles:
-            extPartCounts[extPart] += countEvents(t3proto + '/' + extPartFile)
-            #root://t3dcachedb03.psi.ch:1094
+        
+        # first look for a merged file
+        fileMaskMerged = "{path}/Gbb.heppy.{sample}.root".format(path=sysOutMountedPath, sample=extPart)
+        extPartFilesMerged = glob.glob(fileMaskMerged)
+        if len(extPartFilesMerged) > 0:
+            if len(extPartFilesMerged) > 1:
+                print 'WARNING: multiple merged files found!!', extPartFilesMerged
+            for extPartFile in extPartFilesMerged:
+                extPartCounts[extPart] += countEvents(t3proto + '/' + extPartFile)
+        else:
+            # if no merged file is available, compute the weights from the split parts
+            fileMask = "{path}/{sample}/{tree}.root".format(path=sysOutMountedPath, sample=extPart, tree='*')
+            #print fileMask
+            extPartFiles = glob.glob(fileMask)
+            #print extPart,"=>",len(extPartFiles),"files"
+            extPartCounts[extPart] = 0
+            for extPartFile in extPartFiles:
+                extPartCounts[extPart] += countEvents(t3proto + '/' + extPartFile)
+                #root://t3dcachedb03.psi.ch:1094
+    
     # get total count
     totalCount = sum([n for sampleName,n in extPartCounts.iteritems()])
 
@@ -191,12 +204,12 @@ def runInParallel(func, arglist):
 ##runInParallel(arglist)
 #runInParallel(getStichWeight,arglist)
 
-arglist = [
-    ('VPT0'  ,ZlljetsHTbinned, ZLLBjets,VPT0   +"&&"+DYBJets,),
-    ('VPT100',ZlljetsHTbinned, ZLLBjets,VPT200 +"&&"+DYBJets,),
-    ('VPT200',ZlljetsHTbinned, ZLLBjets,VPT100 +"&&"+DYBJets,),
-        ]
-runInParallel(getStichWeight,arglist)
+#arglist = [
+#    ('VPT0'  ,ZlljetsHTbinned, ZLLBjets,VPT0   +"&&"+DYBJets,),
+#    ('VPT100',ZlljetsHTbinned, ZLLBjets,VPT200 +"&&"+DYBJets,),
+#    ('VPT200',ZlljetsHTbinned, ZLLBjets,VPT100 +"&&"+DYBJets,),
+#        ]
+#runInParallel(getStichWeight,arglist)
 
 #arglist = [
 ##    (config, ZLLjetsHT0,),
@@ -233,37 +246,41 @@ runInParallel(getStichWeight,arglist)
 #print 'Weights for HT 1200 are', getStichWeight(ZLLjetsHT1200, ZLLBjets, HT1200+"&&"+DYBJets)
 #print 'Weights for HT 2500 are', getStichWeight(ZLLjetsHT2500, ZLLBjets, HT2500+"&&"+DYBJets)
 
+computeExtWeights = True
 
-#for section in config.sections():
-#    #try:
-#    #    sampleName = config.get(section, 'sampleName')
-#    #except:
-#    sampleName = section
-#    sampleNameShort = sampleName
-#    if '_ext' in sampleName:
-#        sampleNameShort = sampleName.split('_ext')[0]
-#    elif '_backup' in sampleName:
-#        sampleNameShort = sampleName.split('_backup')[0]
-#    if sampleNameShort in sampleDict:
-#        sampleDict[sampleNameShort].append(sampleName)
-#    else:
-#        sampleDict[sampleNameShort] = [sampleName]
-#    if verify:
-#        extweight = 0
-#        try:
-#            extweight = float(config.get(section, 'extweight'))
-#        except:
-#            pass
-#        sampleWeights[sampleNameShort] = float(sampleWeights[sampleNameShort]) + extweight if sampleNameShort in sampleWeights else extweight
-#
-#if verify:
-#    for sampleNameShort,totalWeight in sampleWeights.iteritems():
-#        if sampleNameShort in sampleDict and len(sampleDict[sampleNameShort])>1:
-#            print sampleNameShort,":",totalWeight
-#else:
-#    for sample,extParts in sampleDict.iteritems():
-#        if len(extParts) > 1:
-#            print '-'*80
-#            print sample,":"
-#            getExtWeights(config,extParts)
-#
+if computeExtWeights:
+    for section in config.sections():
+        #try:
+        #    sampleName = config.get(section, 'sampleName')
+        #except:
+        sampleName = section
+        sampleNameShort = '_'.join(sampleName.split('_')[0:7]).strip()
+        if '_ext' in sampleName:
+            sampleNameShort = sampleNameShort.split('_ext')[0]
+        elif '_backup' in sampleName:
+            sampleNameShort = sampleNameShort.split('_backup')[0]
+       
+        if sampleNameShort in sampleDict:
+            sampleDict[sampleNameShort].append(sampleName)
+        else:
+            sampleDict[sampleNameShort] = [sampleName]
+                
+        if verify:
+            extweight = 0
+            try:
+                extweight = float(config.get(section, 'extweight'))
+            except:
+                pass
+            sampleWeights[sampleNameShort] = float(sampleWeights[sampleNameShort]) + extweight if sampleNameShort in sampleWeights else extweight
+
+    if verify:
+        for sampleNameShort,totalWeight in sampleWeights.iteritems():
+            if sampleNameShort in sampleDict and len(sampleDict[sampleNameShort])>1:
+                print sampleNameShort,":",totalWeight
+    else:
+        for sample,extParts in sampleDict.iteritems():
+            if len(extParts) > 1:
+                print '-'*80
+                print sample,":"
+                getExtWeights(config,extParts)
+
