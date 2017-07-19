@@ -24,15 +24,14 @@ import time
 #------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, sampleTextFileName, treeName = 'tree'):
+    def __init__(self, sampleTextFileName, treeName='tree', limitFiles=-1):
         
         self.verbose = True 
         self.status = 0
         self.treeName = treeName
         self.formulas = {}
         self.oldTreeNum = -1
-        self.limitFiles = -1
-        
+        self.limitFiles = int(limitFiles) 
         self.timeStart = time.time()
         self.timeETA = 0
 
@@ -63,6 +62,8 @@ class SampleTree(object):
                 
                 if self.verbose:
                     print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+                if rootFileName.strip().startswith('/store/'):
+                    rootFileName = '/pnfs/psi.ch/cms/trivcat' + rootFileName.strip()
                 # check root file existence
                 if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
                     obj = None

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from myutils import sampleTree.SampleTree as SampleTree
+from myutils.sampleTree import SampleTree as SampleTree
 import ROOT
 import argparse
 import os
@@ -60,12 +60,14 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-S', action='store', dest='sample', help='sample textfile(s) with dataset names')
-    parser.add_argument('-v', action='store', dest='variable', default='(nJet>0)*Max$(Jet_pt)', help='variable to computer the efficiency differentially of')
+    parser.add_argument('-v', action='store', dest='variable', default='Max$(Jet_pt)', help='variable to compute the efficiency of (differentially)')
     parser.add_argument('-r', action='store', dest='range', default='0,1000,100', help='min,max,nbins of variable to create histogram')
     parser.add_argument('-o', action='store', dest='output', default='trigeff.root', help='output .root file')
-    parser.add_argument('-l', action='store', dest='loose', default='HLT_BIT_HLT_PFJet400_v', help='loose cut')
-    parser.add_argument('-t', action='store', dest='tight', default='HLT_BIT_HLT_PFJet500_v', help='loose cut')
+    parser.add_argument('-l', action='store', dest='loose', default='(nJet>0)&&HLT_BIT_HLT_PFJet60_v', help='loose cut')
+    parser.add_argument('-t', action='store', dest='tight', default='(nJet>0)&&HLT_BIT_HLT_PFJet140_v', help='tight cut')
     args = parser.parse_args()
+
+    print ('ARGS:', args)
 
     # read samples
     sampleTree = SampleTree(args.sample)
