@@ -81,7 +81,8 @@ RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lo
               ('Zee_CRZb_incl_new','Zhf_Zee_new'),('Zuu_CRZb_incl_new','Zhf_Zuu_new'),('Zll_CRZb_inclPhi2p3','Zhf_Zll_Phi2p3'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZlightPhi2p3','Zlf_Zll_Phi2p3'),('Zll_CRZlightPhi2p5','Zlf_Zll_Phi2p5'),('BasicCuts_low','BasicCuts_low'),('BasicCuts_high','BasicCuts_high'),
               ('Zll_BasicCuts','ZBasicCuts_Zll'),\
               ('ZeeBDT_lowpt','ZSR_Zee_lowpt'),('ZeeBDT_highpt','ZSR_Zee_highpt'),('ZuuBDT_lowpt','ZSR_Zuu_lowpt'),('ZuuBDT_highpt','ZSR_Zuu_highpt'),\
-              ('ZllBDT__','ZSR_Zll'),('ZllBDT_lowpt__','ZSR_Zll_lowpt'),('ZllBDT_highpt__','ZSR_Zll_highpt')
+              ('ZllBDT__','ZSR_Zll'),('ZllBDT_lowpt__','ZSR_Zll_lowpt'),('ZllBDT_highpt__','ZSR_Zll_highpt'),\
+              ('all','all'),('nivf2','nivf2'),('HTL400','HLT400'),('HTL400nivf2','HTL400nivf2')\
               ]
 
 MakeSubFolders(_input, RegionList)
