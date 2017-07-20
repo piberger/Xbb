@@ -10,45 +10,52 @@ import time
 #------------------------------------------------------------------------------
 # calculate efficiency of HLT
 #------------------------------------------------------------------------------
-class TriggerEfficiencies(object):
+class EfficiencyCalculator(object):
 
     def __init__(self, sampleTree = None):
         self.sampleTree = sampleTree
 
-    def calculateEfficiency(self, variable, range=[0, 1000, 100], tightCut='1', looseCut='1', outputFileName='trigeff.root'):
+    def calculateEfficiency(self, definitions, outputFileName='trigeff.root'):
        
         # add formulas for cuts
-        self.sampleTree.addFormula('variable', variable)
-        self.sampleTree.addFormula('tight', tightCut)
-        self.sampleTree.addFormula('loose', looseCut)
-
-        # prepare output file and histograms
         outputFile = ROOT.TFile(outputFileName,'recreate')
-        histogramPassLoose = ROOT.TH1D('histogramPassLoose','passed cut: ' + looseCut, range[2], range[0], range[1])
-        histogramPassTight = ROOT.TH1D('histogramPassTight','passed cut: ' + tightCut, range[2], range[0], range[1])
-        histogramEfficiency = ROOT.TH1D('histogramEfficiency','Trigger efficiency', range[2], range[0], range[1])
-        histogramPassLoose.Sumw2()
-        histogramPassTight.Sumw2()
+        for histogramDefinition in definitions:
+            histogramName = histogramDefinition['name']
+            self.sampleTree.addFormula(histogramName + '__variable', histogramDefinition['variable'])
+            self.sampleTree.addFormula(histogramName + '__tight', histogramDefinition['tight'])
+            self.sampleTree.addFormula(histogramName + '__loose', histogramDefinition['loose'])
+        
+            range = histogramDefinition['range']
+            
+            # prepare output file and histograms
+            histogramDefinition['histogram_loose'] = ROOT.TH1D('histogramPassLoose_'+histogramName,'passed cut: ' + histogramDefinition['loose'], range[2], range[0], range[1])
+            histogramDefinition['histogram_tight'] = ROOT.TH1D('histogramPassTight_'+histogramName,'passed cut: ' + histogramDefinition['tight'], range[2], range[0], range[1])
+            histogramDefinition['histogram_efficiency'] = ROOT.TH1D('histogramEfficiency_'+histogramName,'Trigger efficiency', range[2], range[0], range[1])
+            histogramDefinition['histogram_loose'].Sumw2()
+            histogramDefinition['histogram_tight'].Sumw2()
 
         if self.sampleTree:
             # count events passing the loose/tight cuts
             nEntry = 0
             for event in self.sampleTree:
-                passLoose = self.sampleTree.evaluate('loose')
-                passTight = self.sampleTree.evaluate('tight')
-                var = self.sampleTree.evaluate('variable')
-                if passLoose:
-                    histogramPassLoose.Fill(var)
-                if passTight:
-                    histogramPassTight.Fill(var)
-                nEntry += 1
-            
+                for histogramDefinition in definitions:
+                    passLoose = self.sampleTree.evaluate(histogramDefinition['name'] + '__loose')
+                    passTight = self.sampleTree.evaluate(histogramDefinition['name'] + '__tight')
+                    var = self.sampleTree.evaluate(histogramDefinition['name'] + '__variable')
+                    if passLoose:
+                        histogramDefinition['histogram_loose'].Fill(var, passLoose)
+                    if passTight:
+                        histogramDefinition['histogram_tight'].Fill(var, passTight)
+                    nEntry += 1
+
             # calculate efficiency
             # divide histograms with binomial errors
-            histogramEfficiency.Divide(histogramPassTight, histogramPassLoose, 1, 1, "B")
+            for histogramDefinition in definitions:
+                histogramDefinition['histogram_efficiency'].Divide(histogramDefinition['histogram_tight'], histogramDefinition['histogram_loose'], 1, 1, "B")
 
         outputFile.Write()
         outputFile.Close()
+
 
 #------------------------------------------------------------------------------
 # main
@@ -60,26 +67,45 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-S', action='store', dest='sample', help='sample textfile(s) with dataset names')
-    parser.add_argument('-v', action='store', dest='variable', default='Max$(Jet_pt)', help='variable to compute the efficiency of (differentially)')
-    parser.add_argument('-r', action='store', dest='range', default='0,1000,100', help='min,max,nbins of variable to create histogram')
+    parser.add_argument('-m', action='store', dest='limit', help='limit', default='0')
+    #parser.add_argument('-v', action='store', dest='variable', default='Max$(Jet_pt)', help='variable to compute the efficiency of (differentially)')
+    #parser.add_argument('-r', action='store', dest='range', default='0,1000,100', help='min,max,nbins of variable to create histogram')
     parser.add_argument('-o', action='store', dest='output', default='trigeff.root', help='output .root file')
-    parser.add_argument('-l', action='store', dest='loose', default='(nJet>0)&&HLT_BIT_HLT_PFJet60_v', help='loose cut')
-    parser.add_argument('-t', action='store', dest='tight', default='(nJet>0)&&HLT_BIT_HLT_PFJet140_v', help='tight cut')
+    #parser.add_argument('-l', action='store', dest='loose', default='((nJet>0)&&HLT_BIT_HLT_PFJet80_v)*HLT_BIT_HLT_PFJet80_v_Prescale', help='loose cut')
+    #parser.add_argument('-t', action='store', dest='tight', default='((nJet>0)&&HLT_BIT_HLT_PFJet140_v)*HLT_BIT_HLT_PFJet140_v_Prescale', help='tight cut')
     args = parser.parse_args()
-
+    
+    limitTrees = int(args.limit)
     print ('ARGS:', args)
 
     # read samples
-    sampleTree = SampleTree(args.sample)
+    sampleTree = SampleTree(args.sample, limitFiles=limitTrees)
     if not sampleTree:
         print ('creating sample tree failed!')
         exit(0)
+    
+    # trigger efficiency histograms
+    triggerEfficiencyHistograms = [
+            {
+                'name': 'HLT_PFJet140',
+                'range': [0, 1000, 100],
+                'loose': '((nJet>0)&&HLT_BIT_HLT_PFJet80_v)*HLT_BIT_HLT_PFJet80_v_Prescale',
+                'tight': '((nJet>0)&&HLT_BIT_HLT_PFJet140_v)*HLT_BIT_HLT_PFJet140_v_Prescale',
+                'variable': 'Max$(Jet_pt)'
+            },
+            {
+                'name': 'HLT_PFJet500',
+                'range': [0, 1000, 100],
+                'loose': '((nJet>0)&&HLT_BIT_HLT_PFJet400_v)*HLT_BIT_HLT_PFJet400_v_Prescale',
+                'tight': '((nJet>0)&&HLT_BIT_HLT_PFJet500_v)*HLT_BIT_HLT_PFJet500_v_Prescale',
+                'variable': 'Max$(Jet_pt)'
+            },
 
+   ]
+    
     # calculate efficiency
-    triggerEfficienciesCalculator = TriggerEfficiencies(sampleTree)
-    r = [x.strip() for x in args.range.split(',')]    
-    histogramRange = [float(r[0]), float(r[1]), int(r[2])]
-    triggerEfficienciesCalculator.calculateEfficiency(variable=args.variable, range=histogramRange, tightCut=args.tight, looseCut=args.loose, outputFileName=args.output)
+    triggerEfficienciesCalculator = EfficiencyCalculator(sampleTree)
+    triggerEfficienciesCalculator.calculateEfficiency(definitions=triggerEfficiencyHistograms, outputFileName=args.output)
 
     print ("done. Knowing the efficiency you triggered with fills you with determination.")
 
