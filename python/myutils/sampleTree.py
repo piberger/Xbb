@@ -21,6 +21,7 @@ import time
 #
 # for event in sampleTree: 
 #     print 'pt cut:', sampleTree.evaluate('ptCut')
+#     print 'pt:', event.pt
 #------------------------------------------------------------------------------
 class SampleTree(object):
 
@@ -64,6 +65,7 @@ class SampleTree(object):
                     print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
                 if rootFileName.strip().startswith('/store/'):
                     rootFileName = '/pnfs/psi.ch/cms/trivcat' + rootFileName.strip()
+
                 # check root file existence
                 if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
                     obj = None

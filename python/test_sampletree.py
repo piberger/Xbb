@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import ROOT
-import argparse
-import os
-import sys
-import time
 
 from myutils.sampleTree import SampleTree as SampleTree
 
