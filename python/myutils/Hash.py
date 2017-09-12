@@ -1,6 +1,5 @@
 from __future__ import print_function
 import hashlib
-import ROOT
 
 class Hash(object):
 
@@ -19,7 +18,6 @@ class Hash(object):
 
         # including branchnames
         if branches:
-            #branchNames = ','.join(sorted(branches))
             branchNames = ','.join(sorted(branches))
             self.hashKey = '%s_<%s>' % (self.hash, branchNames)
             self.hash = hashlib.sha224(self.hashKey).hexdigest()
