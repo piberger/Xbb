@@ -67,7 +67,7 @@ class SampleTree(object):
                 # check root file existence
                 if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
                     obj = None
-                    rootFileName = 'root://t3dcachedb03.psi.ch:1094/' + rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()
+                    rootFileName = self.sanitizeRootFileName(rootFileName)
                     input = ROOT.TFile.Open(rootFileName,'read')
                     if input and not input.IsZombie():
 
@@ -139,6 +139,7 @@ class SampleTree(object):
             # update TTreeFormula's
             for formulaName, treeFormula in self.formulas.iteritems():
                 treeFormula.UpdateFormulaLeaves()
+        return self.tree
 
     def __iter__(self):
         self.treeIterator = self.tree.__iter__()
@@ -158,3 +159,13 @@ class SampleTree(object):
     def getETA(self):
         # return ETA in seconds
         return self.timeETA
+
+    def GetListOfBranches(self):
+        return self.tree.GetListOfBranches()
+
+    def sanitizeRootFileName(self, rawFileName):
+        isRemote = '/pnfs/' in rawFileName
+        if isRemote:
+            return 'root://t3dcachedb03.psi.ch:1094/' + rawFileName.replace('root://t3dcachedb03.psi.ch:1094/', '').strip()
+        else:
+            return rawFileName.strip()
