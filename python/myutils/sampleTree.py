@@ -13,7 +13,8 @@ import time
 # histograms together. Provides an iterator which handles the updating of
 # TTreeFormulas automatically when the tree number changes.
 #
-# create:  sampleTree = SampleTree('path/to/indexfile.txt')
+# create: (A)  sampleTree = SampleTree('path/to/indexfile.txt')
+# create: (B)  sampleTree = SampleTree(['path/to/file1.root', 'path/to/file2.root'])
 #
 # add formula: sampleTree.addFormula('ptCut','pt>100')
 #
@@ -25,9 +26,25 @@ import time
 #------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, sampleTextFileName, treeName='tree', limitFiles=-1):
-        
-        self.verbose = True 
+    def __init__(self, samples, treeName='tree', limitFiles=-1):
+        self.verbose = True
+
+        if type(samples) == list:
+            sampleFileNames = samples
+        else:
+            sampleTextFileName = samples
+            if os.path.isfile(sampleTextFileName):
+                self.sampleTextFileName = sampleTextFileName
+                if self.verbose:
+                    print('open samples .txt file: %s' % self.sampleTextFileName)
+            else:
+                print("\x1b[31mERROR: file not found: %s \x1b[0m" % sampleTextFileName)
+                status = 0
+                return
+
+            with open(self.sampleTextFileName, 'r') as sampleTextFile:
+                sampleFileNames = sampleTextFile.readlines()
+
         self.status = 0
         self.treeName = treeName
         self.formulas = {}
@@ -35,85 +52,78 @@ class SampleTree(object):
         self.limitFiles = int(limitFiles) 
         self.timeStart = time.time()
         self.timeETA = 0
+        self.outputTrees = []
 
         self.regionDict = {
             'default': {'file': 0}
         }
 
         # check existence of sample .txt file which contains list of .root files
-        self.sampleTextFileName = '' 
-        if os.path.isfile(sampleTextFileName):
-            self.sampleTextFileName = sampleTextFileName
-        else:
-            print ("\x1b[31mERROR: file not found: %s \x1b[0m"%sampleTextFileName)
-            status = 0
-            return
+        self.sampleTextFileName = ''
 
         # add all .root files to chain and add count histograms
         self.chainedFiles = []
         self.brokenFiles = []
         self.histograms = {}
         self.tree = ROOT.TChain(self.treeName)
-        if self.verbose:
-            print ('open samples .txt file: %s'%self.sampleTextFileName)
-        with open(self.sampleTextFileName, 'r') as sampleTextFile:
 
-            # check all .root files listed in the sample .txt file
-            for rootFileName in sampleTextFile:
-                
-                if self.verbose:
-                    print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
-                if rootFileName.strip().startswith('/store/'):
-                    rootFileName = '/pnfs/psi.ch/cms/trivcat' + rootFileName.strip()
+        # check all .root files listed in the sample .txt file
+        for rootFileName in sampleFileNames:
 
-                # check root file existence
-                if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
-                    obj = None
-                    rootFileName = self.sanitizeRootFileName(rootFileName)
-                    input = ROOT.TFile.Open(rootFileName,'read')
-                    if input and not input.IsZombie():
+            if self.verbose:
+                print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+            if rootFileName.strip().startswith('/store/'):
+                rootFileName = '/pnfs/psi.ch/cms/trivcat' + rootFileName.strip()
 
-                        # add count histograms, since they are not in the tchain
-                        for key in input.GetListOfKeys():
-                            obj = key.ReadObj()
-                            if obj.GetName() == self.treeName:
-                                continue
-                            for region, regionInfo in self.regionDict.iteritems():
-                                histogramName = obj.GetName()+region
+            # check root file existence
+            if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
+                obj = None
+                rootFileName = self.sanitizeRootFileName(rootFileName)
+                input = ROOT.TFile.Open(rootFileName,'read')
+                if input and not input.IsZombie():
 
-                                if histogramName in self.histograms:
-                                    if self.histograms[histogramName]:
-                                        self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
-                                    else:
-                                        print ("ERROR: histogram object was None!!!")
+                    # add count histograms, since they are not in the tchain
+                    for key in input.GetListOfKeys():
+                        obj = key.ReadObj()
+                        if obj.GetName() == self.treeName:
+                            continue
+                        for region, regionInfo in self.regionDict.iteritems():
+                            histogramName = obj.GetName()+region
+
+                            if histogramName in self.histograms:
+                                if self.histograms[histogramName]:
+                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
                                 else:
-                                    self.histograms[histogramName] = obj.Clone(obj.GetName())
-                                    self.histograms[histogramName].SetDirectory(regionInfo['file'])
-                        input.Close()
+                                    print ("ERROR: histogram object was None!!!")
+                            else:
+                                self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                self.histograms[histogramName].SetDirectory(regionInfo['file'])
+                    input.Close()
 
-                        # add file to chain
-                        chainTree = '%s/%s'%(rootFileName, self.treeName)
-                        if self.verbose:
-                            print ('chaining '+chainTree)
-                        statusCode = self.tree.Add(chainTree)
+                    # add file to chain
+                    chainTree = '%s/%s'%(rootFileName, self.treeName)
+                    if self.verbose:
+                        print ('chaining '+chainTree)
+                    statusCode = self.tree.Add(chainTree)
 
-                        # check for errors in chaining the file
-                        if statusCode != 1:
-                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
-                            raise Exception("TChain method Add failure")
-                        elif not self.tree:
-                            print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
-                        else:
-                            self.treeEmpty = False
-                            self.chainedFiles.append(rootFileName)
-                            if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
-                                print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
-                                break
+                    # check for errors in chaining the file
+                    if statusCode != 1:
+                        print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
+                        raise Exception("TChain method Add failure")
+                    elif not self.tree:
+                        print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
                     else:
-                        print ('ERROR: file is damaged: %s'%rootFileName)
-                        self.brokenFiles.append(rootFileName)
+                        self.treeEmpty = False
+                        self.chainedFiles.append(rootFileName)
+                        if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
+                            print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
+                            break
                 else:
-                    print ('ERROR: file is missing: %s'%rootFileName)
+                    print ('ERROR: file is damaged: %s'%rootFileName)
+                    self.brokenFiles.append(rootFileName)
+            else:
+                print ('ERROR: file is missing: %s'%rootFileName)
+
         if self.verbose:
             print ('INFO: # files chained: %d'%len(self.chainedFiles))
             print ('INFO: # files broken : %d'%len(self.brokenFiles))
@@ -171,3 +181,49 @@ class SampleTree(object):
             return 'root://t3dcachedb03.psi.ch:1094/' + rawFileName.replace('root://t3dcachedb03.psi.ch:1094/', '').strip()
         else:
             return rawFileName.strip()
+
+    def addOutputTree(self, outputFileName, cut, hash):
+        outputTree = {
+            'tree': self.tree.CloneTree(0),
+            'fileName': outputFileName,
+            'file': ROOT.TFile.Open(outputFileName, 'recreate'),
+            'cut': cut,
+            'hash': hash,
+            'passed': 0,
+        }
+        self.addFormula(hash, cut)
+        outputTree['tree'].SetDirectory(outputTree['file'])
+
+        # copy count histograms to output files
+        outputTree['histograms'] = {}
+        for histogramName, histogram in self.histograms.iteritems():
+            outputTree['histograms'][histogramName] = histogram.Clone(histogram.GetName())
+            outputTree['histograms'][histogramName].SetDirectory(outputTree['file'])
+
+        self.outputTrees.append(outputTree)
+
+    def process(self):
+        if self.verbose:
+            print ('OUTPUT TREES:')
+            for outputTree in self.outputTrees:
+                print (' > ', outputTree['fileName'], ' <== ', outputTree['hash'], ' cut: ', outputTree['cut'])
+            print ('FORMULAS:')
+            for formulaName, formula in self.formulas.iteritems():
+                print (' > ', formulaName, ' ==> ', formula)
+
+        # loop over all events and write to output branches
+        for event in self:
+            for outputTree in self.outputTrees:
+                if self.evaluate(outputTree['hash']):
+                    outputTree['tree'].Fill()
+                    outputTree['passed'] += 1
+
+        # write files
+        for outputTree in self.outputTrees:
+            outputTree['file'].Write()
+            outputTree['file'].Close()
+
+        if self.verbose:
+            print ('OUTPUT TREES:')
+            for outputTree in self.outputTrees:
+                print (' > ', outputTree['fileName'], ' passed: ', outputTree['passed'], ' cut: ', outputTree['cut'])
