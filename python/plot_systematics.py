@@ -22,7 +22,9 @@ xMax=1
 masses = ['125']
 #channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_highpt']
 
-channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
+#channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
+#vhbb_TH_ZuuMass_highpt.root
+channels = ['ZuuMass_highpt']
 #channels = ['ZeeBDT_lowpt']
 #channels = ['Zee_CRZlight_lowpt']
 #channels = ['Zuu_CRZlight_lowpt']
@@ -57,7 +59,9 @@ channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017/'
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_newMVAid/'
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_BDTmin_0p2/'
-path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
+#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_M/Limits/'
+path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -131,18 +135,20 @@ for mass in masses:
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
-
-            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_06_06_2017/'
+            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
 
             input_ = '%svhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
 
             #'ZeeMass_lowpt':'ZeeMass_lowpt',if not 'ZeeBDT_lowpt' in input_: continue
-            if not ('ZeeMassVV_highpt' in input_ or 'ZeeMass_highpt' in input_): continue
+            #if not ('ZeeMassVV_highpt' in input_ or 'ZeeMass_highpt' in input_): continue
+            if not ('ZuuMassVV_highpt' in input_ or 'ZuuMass_highpt' in input_): continue
 
             input = TFile.Open(input_,'read')
+            print 'open', input
         if mode == 'Mjj':
             input = TFile.Open(path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root','read')
+            print 'open', path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root'
 
         print 'The MCs are'
         for MC in MCs:

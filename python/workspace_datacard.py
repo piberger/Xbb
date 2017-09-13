@@ -287,10 +287,16 @@ if config.has_option('LimitGeneral','sys_lhe_affecting'): sys_lhe_affecting = ev
 # weightF:
 weightF = config.get('Weights','weightF')
 SBweight = None
+print 'before adding SBweight, weightF is',  weightF
 if mjj:
-    SBweight = config.get('dc:%s'%var,'SBweight')
-    weightF ='('+weightF+')*('+SBweight+')'
-    print 'after adding SBweight, weightF is',  weightF
+    print 'Passed mJJ'
+    if config.has_option('dc:%s'%var,'SBweight'):
+        print 'passed config'
+        SBweight = config.get('dc:%s'%var,'SBweight')
+        weightF ='('+weightF+')*('+SBweight+')'
+        print 'after adding SBweight, weightF is',  weightF
+    else:
+        print 'NOT Passed config'
 
 # rescale stat shapes by sqrtN
 rescaleSqrtN=eval(config.get('LimitGeneral','rescaleSqrtN'))
@@ -369,6 +375,17 @@ elif 'ATLAS' in ROOToutname:
     pt_region = 'HighPt'
 elif 'MJJ' in ROOToutname:
     pt_region = 'HighPt' 
+elif 'Mass' in ROOToutname:
+    if 'Vptbin0' in ROOToutname:
+        pt_region = 'bin0'
+    if 'Vptbin1' in ROOToutname:
+        pt_region = 'bin1'
+    if 'Vptbin2' in ROOToutname:
+        pt_region = 'bin2'
+    if 'Vptbin150To200' in ROOToutname:
+        pt_region = 'bin150To200'
+    if 'Vptbin200ToInf' in ROOToutname:
+        pt_region = 'bin200ToInf'
 else:
     print "Unknown Pt region"
     pt_region = 'NoSysRegion'
@@ -1463,9 +1480,9 @@ f.write('\n')
 f.write('process\t')
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
 #VH
-for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
 #VV
-#for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
+for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
 f.write('\n')
 # datacard yields
 f.write('rate\t')

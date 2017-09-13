@@ -171,7 +171,8 @@ if addSBweight:
     #Order to fill the dic: [BDT_BRANCH, SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN, MLFIT_BIN]
 
     #For VH
-    PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_Datacards_02to1_oldJEC/'
+    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_Datacards_02to1_oldJEC/'
+    PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/ZllHbb_Datacards_Minus08to1_JECfix_7_3/'
 
     DC_INFO_DIC = {
             'ZeeBDTVH_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
@@ -181,7 +182,9 @@ if addSBweight:
             }
 
     ###
-    DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VH/mlfitmlfitunblindrUltraSimple.root'
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VH/mlfitmlfitunblindrUltraSimple.root'
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/ZllHbb_Datacards_Minus08to1_JECfix_7_3/'
+    DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/mlfit.root'
 
     ##For VV
     #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/ZllZbb_Datacards_Minus08to1_JECfix_7_3/'
@@ -239,20 +242,24 @@ if addSBweight:
             The array of bin edges.
         """
         shapes_file = ROOT.TFile.Open(shapes_path)
+        print 'tfile path is', shapes_path
         print 'list of keys'
-        ROOT.gDirectory.GetListOfKeys().ls()
-        shapes_file.cd(datacard_bin)
+        #ROOT.gDirectory.GetListOfKeys().ls()
+        print 'gonnad cd', datacard_bin
+        print shapes_file.cd(datacard_bin)
         shapes = ROOT.gDirectory.GetListOfKeys()
         #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
         # Since the nominal and varied shapes share the same binning,
         # take any of the histograms found in the shapes file.
+        print 'debug0'
         shape = ROOT.gDirectory.Get(shapes[0].GetName())
+        print 'debug'
         bin_edges = np.array(
             [shape.GetXaxis().GetBinLowEdge(i) for i in xrange(1, shape.GetNbinsX() + 1)],
             dtype=np.float64,
         )
         shapes_file.Close()
-        #print 'bin_edges is', bin_edges
+        print 'bin_edges for datacard_bin is', bin_edges
         #sys.exit()
         return bin_edges
     
@@ -328,13 +335,22 @@ if addSBweight:
         mlfit_file.Close()
         signal_postfit = ROOT.TH1F('signal_postfit', '', len(bin_edges) - 1, bin_edges)
         background_postfit = signal_postfit.Clone('background_postfit')
-        for i in xrange(1, signal_postfit.GetNbinsX() + 1):
+        for i in xrange(1, signal_postfit.GetNbinsX() + 2):
             signal_postfit.SetBinContent(i, total_signal.GetBinContent(i))
             background_postfit.SetBinContent(i, total_background.GetBinContent(i))
         for s in signal_postfit:
             print 's is', s
         for b in background_postfit:
             print 'b is', b
+
+        first_iter = True
+        for s, b in zip(signal_postfit,background_postfit):
+            if first_iter:
+                first_iter = False
+                continue
+            print 'S/(S+B) weight is', s/(s+b)
+
+
         #print 'signal_postfit', signal_postfit
         #print 'background_postfit', background_postfit
         return signal_postfit, background_postfit
@@ -2424,11 +2440,11 @@ for job in info:
                         #sys.exit()
                         s = dc_info_dic[key][5].GetBinContent(bin_index)
                         b = dc_info_dic[key][6].GetBinContent(bin_index)
-                        if 'ZeeBDT_highpt' in key:
-                            print 'bdt_score is', bdt_score
-                            print 'bin index is', bin_index
-                            print 's is', s
-                            print 'b is', b
+                        #if 'ZeeBDT_highpt' in key:
+                        #    print 'bdt_score is', bdt_score
+                        #    print 'bin index is', bin_index
+                        #    print 's is', s
+                        #    print 'b is', b
                         #s = signal_postfit.GetBinContent(bin_index)
                         #b = background_postfit.GetBinContent(bin_index)
                         sb_weight_dic[key][0] = s / (s + b) if b > 0 else 0

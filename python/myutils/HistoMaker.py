@@ -138,7 +138,9 @@ class HistoMaker:
             xMin=float(options['xMin'])
             xMax=float(options['xMax'])
             weightF=options['weight']
-            SBweight=options['SBweight']
+            if 'SBweight' in options:
+                SBweight=options['SBweight']
+            else: SBweight = None
             print 'SBweight is', SBweight
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
@@ -510,7 +512,9 @@ class HistoMaker:
             xMin=float(options['xMin'])
             xMax=float(options['xMax'])
             weightF=options['weight']
-            SBweight=options['SBweight']
+            if 'SBweight' in options:
+                SBweight=options['SBweight']
+            else: SBweight = None
             print 'SBweight is', SBweight
 
             #Include weight per sample (specialweight)

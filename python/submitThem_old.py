@@ -1176,7 +1176,7 @@ elif opts.task == 'dc' or opts.task == 'mergesyscachingdc'  or opts.task == 'mer
         if opts.task == 'mergesyscachingdcsplit':
             split_factor = eval(config.get('LimitGeneral','split_factor'))
             for i in range(0,split_factor+4):
-                 #if i <= 61: continue
+                 #if i != 34: continue
                  repDict['additional'] = 'SPLIT'+'_'+str(i)
                  submit(item,repDict)
         elif opts.task == 'mergesyscachingdcmerge':
