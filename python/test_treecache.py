@@ -57,3 +57,7 @@ else:
         if i>100:
             break
         print ('V_pt:', event.V_pt)
+
+    print ('delete cache now!')
+    tc.deleteCachedFiles()
+    tc2.deleteCachedFiles()

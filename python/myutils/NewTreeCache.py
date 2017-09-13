@@ -2,6 +2,7 @@ from __future__ import print_function
 import glob
 from Hash import Hash
 from sampleTree import SampleTree as SampleTree
+import subprocess
 
 #------------------------------------------------------------------------------
 # TreeCache
@@ -30,6 +31,10 @@ from sampleTree import SampleTree as SampleTree
 #    sampleTreeBkg = SampleTree('test/bkg.txt')
 #    tc.setSampleTree(sampleTreeBkg)
 #    tc.cache()
+#    tc2.setSampleTree(sampleTreeBkg)
+#    tc2.cache()
+#    tc3.setSampleTree(sampleTreeBkg)
+#    tc3.cache()
 #    sampleTreeBkg.process()
 #
 # one can add many different cuts to process at the same time with multiple
@@ -56,6 +61,7 @@ class TreeCache:
         self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
+        self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
 
     # minimum common cut, sorted and cleaned. warning: may not contain spaces in e.g. string comparisons
     def findMinimumCut(self, cutList):
@@ -67,7 +73,7 @@ class TreeCache:
 
     # file, where skimmed tree is written to
     def getOutputFileName(self):
-        return '{outputFolder}/tmp_{hash}_{part}of{parts}.root'.format(
+        return self.outputFileNameFormat.format(
             outputFolder = self.outputFolder,
             hash = self.hash,
             part = self.cachePart if self.cachePart > 0 else 1,
@@ -76,7 +82,7 @@ class TreeCache:
 
     # check existence of files with skimmed trees
     def findCachedFileNames(self):
-        cachedFilesMask = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'.format(
+        cachedFilesMask = self.outputFileNameFormat.format(
             outputFolder = self.outputFolder,
             hash = self.hash,
             part = '*',
@@ -102,6 +108,15 @@ class TreeCache:
         self.isCachedChecked = True
         return True
 
+    def isCachedAndValid(self):
+        if self.isCached():
+            # check file integrity
+            for fileName in self.cachedFileNames:
+                pass
+        else:
+            return False
+
+
     # set input sampleTree object
     def setSampleTree(self, sampleTree):
         self.sampleTree = sampleTree
@@ -114,8 +129,6 @@ class TreeCache:
             self.sampleTree.addOutputTree(outputFileName, self.minCut, self.hash)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
-
-
         else:
             print ('\x1b[31mERROR: no sample tree!:', self.identification, '\x1b[0m')
 
@@ -127,3 +140,23 @@ class TreeCache:
         if self.isCachedChecked:
             self.sampleTree = SampleTree(self.cachedFileNames)
         return self.sampleTree
+
+    # delete file
+    def deleteFile(self, rawFileName):
+        if self.debug:
+            print ('DELETE:', rawFileName)
+        xrootdFileName = SampleTree.getXrootdFileName(rawFileName)
+        if '://' not in xrootdFileName:
+            command = 'rm %s' % (xrootdFileName)
+        else:
+            command = 'gfal-rm %s' % (xrootdFileName)
+
+        returnCode = subprocess.call([command], shell=True)
+        if self.debug:
+            print(command, ' => ', returnCode)
+
+    # delete cached files
+    def deleteCachedFiles(self):
+        self.findCachedFileNames()
+        for fileName in self.cachedFileNames:
+            self.deleteFile(fileName)
