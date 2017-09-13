@@ -35,7 +35,10 @@ tc2 = TreeCache.TreeCache(
 isCached = tc.isCached() and tc2.isCached()
 print ('is cached? ', isCached)
 
-if not isCached:
+isCachedAndValid = tc.isCachedAndValid() and tc2.isCachedAndValid()
+print ('is cached and valid? ', isCachedAndValid)
+
+if not isCachedAndValid:
 
     sampleTreeBkg = SampleTree('test/bkg.txt')
 

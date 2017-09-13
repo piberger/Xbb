@@ -2,6 +2,7 @@ from __future__ import print_function
 import glob
 from Hash import Hash
 from sampleTree import SampleTree as SampleTree
+import ROOT
 import subprocess
 
 #------------------------------------------------------------------------------
@@ -108,14 +109,28 @@ class TreeCache:
         self.isCachedChecked = True
         return True
 
+    def checkFileValidity(self, rawFileName):
+        xrootdFileName = SampleTree.getXrootdFileName(rawFileName)
+        f = ROOT.TFile.Open(xrootdFileName, 'read')
+        if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
+            print ('\x1b[31mWARNING: broken file:', rawFileName, ' => redo caching!\x1b[0m')
+            if f:
+                f.Close()
+            self.deleteFile(rawFileName)
+            return False
+        if f:
+            f.Close()
+        return True
+
     def isCachedAndValid(self):
+        valid = True
         if self.isCached():
             # check file integrity
             for fileName in self.cachedFileNames:
-                pass
+                valid = valid and self.checkFileValidity(fileName)
         else:
-            return False
-
+            valid = False
+        return valid
 
     # set input sampleTree object
     def setSampleTree(self, sampleTree):
