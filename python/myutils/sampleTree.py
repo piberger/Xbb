@@ -26,6 +26,9 @@ import time
 #------------------------------------------------------------------------------
 class SampleTree(object):
 
+    xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
+    pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
+
     def __init__(self, samples, treeName='tree', limitFiles=-1):
         self.verbose = True
 
@@ -72,13 +75,11 @@ class SampleTree(object):
 
             if self.verbose:
                 print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
-            if rootFileName.strip().startswith('/store/'):
-                rootFileName = '/pnfs/psi.ch/cms/trivcat' + rootFileName.strip()
 
             # check root file existence
-            if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','').strip()):
+            if os.path.isfile(SampleTree.getLocalFileName(rootFileName)):
                 obj = None
-                rootFileName = self.sanitizeRootFileName(rootFileName)
+                rootFileName = SampleTree.getXrootdFileName(rootFileName)
                 input = ROOT.TFile.Open(rootFileName,'read')
                 if input and not input.IsZombie():
 
@@ -175,12 +176,24 @@ class SampleTree(object):
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
 
-    def sanitizeRootFileName(self, rawFileName):
-        isRemote = '/pnfs/' in rawFileName
+    @staticmethod
+    def getXrootdFileName(rawFileName):
+        xrootdFileName = rawFileName.strip()
+        if xrootdFileName.startswith('/store/'):
+            xrootdFileName = SampleTree.pnfsStoragePath + xrootdFileName.strip()
+        isRemote = '/pnfs/' in xrootdFileName
         if isRemote:
-            return 'root://t3dcachedb03.psi.ch:1094/' + rawFileName.replace('root://t3dcachedb03.psi.ch:1094/', '').strip()
+            return SampleTree.xrootdRedirector + xrootdFileName.replace(SampleTree.xrootdRedirector, '').strip()
         else:
-            return rawFileName.strip()
+            return xrootdFileName.strip()
+
+    @staticmethod
+    def getLocalFileName(rawFileName):
+        localFileName = rawFileName.strip()
+        localFileName.replace(SampleTree.xrootdRedirector, '')
+        if localFileName.startswith('/store/'):
+            localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
+        return localFileName
 
     def addOutputTree(self, outputFileName, cut, hash):
         outputTree = {
