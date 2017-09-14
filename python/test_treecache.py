@@ -14,13 +14,13 @@ def test_mincut():
 
 test_mincut()
 
-
+user='berger_p2'
 tc = TreeCache.TreeCache(
     sample='ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
     cutList='V_pt>100',
-    inputFolder='/scratch/p/',
-    tmpFolder='/scratch/p/tmp/',
-    outputFolder='/scratch/p/cache/',
+    inputFolder='/scratch/' + user + '/',
+    tmpFolder='/scratch/' + user + '/tmp/',
+    outputFolder='/scratch/' + user + '/cache/',
     debug=True
 )
 
@@ -28,9 +28,9 @@ tc = TreeCache.TreeCache(
 tc2 = TreeCache.TreeCache(
     sample='ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
     cutList='V_pt>80&&V_pt<90',
-    inputFolder='/scratch/p/',
-    tmpFolder='/scratch/p/tmp/',
-    outputFolder='/scratch/p/cache/',
+    inputFolder='/scratch/' + user + '/',
+    tmpFolder='/scratch/' + user + '/tmp/',
+    outputFolder='/scratch/' + user + '/cache/',
     debug=True
 )
 
@@ -38,9 +38,9 @@ tc2 = TreeCache.TreeCache(
 tc3 = TreeCache.TreeCache(
     sample='ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
     cutList='V_pt>80&&V_pt<90',
-    inputFolder='/scratch/p/',
-    tmpFolder='/scratch/p/tmp/',
-    outputFolder='/scratch/p/cache/',
+    inputFolder='/scratch/' + user + '/',
+    tmpFolder='/scratch/' + user + '/tmp/',
+    outputFolder='/scratch/' + user + '/cache/',
     branches=['V_pt', 'Vtype', 'Vtype_new'],
     debug=True
 )
