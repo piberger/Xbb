@@ -4,8 +4,9 @@ from Hash import Hash
 from sampleTree import SampleTree as SampleTree
 import ROOT
 import subprocess
+import os
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # TreeCache
 #
 # cache for ROOT trees (abstracted by sampleTree class!) with specific cuts or
@@ -46,16 +47,18 @@ import subprocess
 # has to run:
 #    sampleTreeBkg.process()
 # to write the files
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, outputFolder = 'tmp/', cachePart=-1, cacheParts=-1, debug=False):
+    def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, tmpFolder = 'tmp/', outputFolder = 'cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
         self.sample = sample
         self.minCut = self.findMinimumCut(cutList)
         self.inputFolder = inputFolder
+        self.tmpFolder = tmpFolder
         self.outputFolder = outputFolder
         self.cachedFileNames = []
-        self.hash = Hash(sample=sample, minCut=self.minCut, debug=False).get()
+        self.branches = branches
+        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFiles=splitFiles, debug=False).get()
         self.cachePart = cachePart
         self.cacheParts = cacheParts if cacheParts > 1 else 1
         self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.cacheParts)
@@ -63,6 +66,7 @@ class TreeCache:
         self.sampleTree = None
         self.isCachedChecked = False
         self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
+        self.tmpFiles = []
 
     # minimum common cut, sorted and cleaned. warning: may not contain spaces in e.g. string comparisons
     def findMinimumCut(self, cutList):
@@ -73,6 +77,15 @@ class TreeCache:
         return '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
 
     # file, where skimmed tree is written to
+    def getTmpFileName(self):
+        return self.outputFileNameFormat.format(
+            outputFolder = self.tmpFolder,
+            hash = self.hash,
+            part = self.cachePart if self.cachePart > 0 else 1,
+            parts = '%d'%self.cacheParts
+        )
+
+    # file, where skimmed tree is moved to after it has been written completely
     def getOutputFileName(self):
         return self.outputFileNameFormat.format(
             outputFolder = self.outputFolder,
@@ -87,7 +100,7 @@ class TreeCache:
             outputFolder = self.outputFolder,
             hash = self.hash,
             part = '*',
-            parts = '%d'%self.cacheParts
+            parts = '*'
         )
         self.cachedFileNames = glob.glob(cachedFilesMask)
         if self.debug:
@@ -99,16 +112,16 @@ class TreeCache:
             print ('\x1b[0m')
 
     # isCached == all files containing the skimmed tree found!
-    # todo: check file integrity
     def isCached(self):
         self.findCachedFileNames()
-        if len(self.cachedFileNames) != self.cacheParts:
+        if (len(self.cachedFileNames) != self.cacheParts and self.cacheParts > 1) or len(self.cachedFileNames) == 0:
             if self.debug:
                 print ('\x1b[32mDEBUG: not cached:', self.identification, '\x1b[0m')
             return False
         self.isCachedChecked = True
         return True
 
+    # check if an existing file can be opened without errors by ROOT
     def checkFileValidity(self, rawFileName):
         xrootdFileName = SampleTree.getXrootdFileName(rawFileName)
         f = ROOT.TFile.Open(xrootdFileName, 'read')
@@ -122,6 +135,7 @@ class TreeCache:
             f.Close()
         return True
 
+    # check if all cached files are valid
     def isCachedAndValid(self):
         valid = True
         if self.isCached():
@@ -135,13 +149,15 @@ class TreeCache:
     # set input sampleTree object
     def setSampleTree(self, sampleTree):
         self.sampleTree = sampleTree
+        return self
 
     # this prepares the caching by telling the sampleTree object what to write during processing of the file
     # note: does not run the caching by itself! needs an additional sampleTree.process()
     def cache(self):
         if self.sampleTree:
-            outputFileName = self.getOutputFileName()
-            self.sampleTree.addOutputTree(outputFileName, self.minCut, self.hash)
+            outputFileName = self.getTmpFileName()
+            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.minCut, hash=self.hash, branches=self.branches)
+            self.tmpFiles.append(outputFileName)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
         else:
@@ -175,3 +191,38 @@ class TreeCache:
         self.findCachedFileNames()
         for fileName in self.cachedFileNames:
             self.deleteFile(fileName)
+
+    # move files from temporary to final location
+    def moveFilesToFinalLocation(self):
+        success = True
+
+        try:
+            xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
+            if '://' not in xrootdFileName:
+                command = 'mkdir %s' % (xrootdFileName)
+            else:
+                command = 'gfal-mkdir %s' % (xrootdFileName)
+
+            returnCode = subprocess.call([command], shell=True)
+            if self.debug:
+                print(command, ' => ', returnCode)
+        except Exception as e:
+            print ('Exception during mkdir:',e)
+
+        for tmpFileName in self.tmpFiles:
+            outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
+            print ('copy ', tmpFileName, ' to ', outputFileName)
+            self.deleteFile(outputFileName)
+            command = 'xrdcp -d 1 ' + SampleTree.getXrootdFileName(tmpFileName) + ' ' + SampleTree.getXrootdFileName(outputFileName)
+            print('the command is', command)
+            returnCode = subprocess.call([command], shell=True)
+            if returnCode != 0:
+                success = False
+                print('\x1b[31mERROR: XRDCP failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
+                                                                                                outputfile=outputFileName))
+            else:
+                # delete temporary file if copy was successful
+                self.deleteFile(tmpFileName)
+        return success
+
+

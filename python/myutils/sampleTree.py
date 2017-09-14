@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import ROOT
-import argparse
 import os
-import sys
+import math
 import time
 
 #------------------------------------------------------------------------------
@@ -29,9 +28,10 @@ class SampleTree(object):
     xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1):
+    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1):
         self.verbose = True
 
+        # get list of sample root files
         if type(samples) == list:
             sampleFileNames = samples
         else:
@@ -42,12 +42,27 @@ class SampleTree(object):
                     print('open samples .txt file: %s' % self.sampleTextFileName)
             else:
                 print("\x1b[31mERROR: file not found: %s \x1b[0m" % sampleTextFileName)
-                status = 0
                 return
 
             with open(self.sampleTextFileName, 'r') as sampleTextFile:
                 sampleFileNames = sampleTextFile.readlines()
 
+        # process only partial sample root file list
+        self.splitFiles = splitFiles
+        self.splitFilesPart = splitFilesPart
+        if self.splitFiles > 0 and len(sampleFileNames) > self.splitFiles:
+            numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
+            if self.splitFilesPart > 0 and self.splitFilesPart <= numParts:
+                sampleFileNames = sampleFileNames[(self.splitFilesPart-1)*self.splitFiles:(self.splitFilesPart*self.splitFiles)]
+            else:
+                print("\x1b[31mERROR: wrong part number ", self.splitFilesPart, " for: %s \x1b[0m" % sampleTextFileName)
+                return
+            if self.verbose:
+                print ("INFO: reading part ", self.splitFilesPart, " of ", numParts)
+        else:
+            self.splitFilesPart = 1
+
+        self.sampleFileNames = sampleFileNames
         self.status = 0
         self.treeName = treeName
         self.formulas = {}
@@ -195,17 +210,24 @@ class SampleTree(object):
             localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
         return localFileName
 
-    def addOutputTree(self, outputFileName, cut, hash):
+    def addOutputTree(self, outputFileName, cut, hash, branches=None):
         outputTree = {
             'tree': self.tree.CloneTree(0),
             'fileName': outputFileName,
             'file': ROOT.TFile.Open(outputFileName, 'recreate'),
             'cut': cut,
             'hash': hash,
+            'branches': branches,
             'passed': 0,
         }
         self.addFormula(hash, cut)
         outputTree['tree'].SetDirectory(outputTree['file'])
+        if branches:
+            outputTree['tree'].SetBranchStatus("*", 0)
+            for branch in branches:
+                outputTree['tree'].SetBranchStatus(branch, 1)
+            if self.verbose:
+                print ("enabled ", len(branches), " branches:", branches)
 
         # copy count histograms to output files
         outputTree['histograms'] = {}
@@ -214,6 +236,9 @@ class SampleTree(object):
             outputTree['histograms'][histogramName].SetDirectory(outputTree['file'])
 
         self.outputTrees.append(outputTree)
+
+    def SetBranchStatus(self, branchName, branchStatus):
+        self.tree.SetBranchStatus(branchName, branchStatus)
 
     def process(self):
         if self.verbose:
@@ -240,3 +265,23 @@ class SampleTree(object):
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:
                 print (' > ', outputTree['fileName'], ' passed: ', outputTree['passed'], ' cut: ', outputTree['cut'])
+
+    @staticmethod
+    def countSampleFiles(samples):
+        # get list of sample root files
+        if type(samples) == list:
+            return len(samples)
+        else:
+            sampleTextFileName = samples
+            if os.path.isfile(sampleTextFileName):
+                with open(sampleTextFileName, 'r') as sampleTextFile:
+                    sampleFileNames = sampleTextFile.readlines()
+                return len(sampleFileNames)
+            else:
+                print ('ERROR: sample list text file does not exist:', sampleTextFileName)
+        return -1
+
+    def getNumSampleFiles(self):
+        return len(self.sampleFileNames)
+
+
