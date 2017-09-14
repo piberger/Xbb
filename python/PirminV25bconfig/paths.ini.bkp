@@ -26,7 +26,7 @@ Wdir = /mnt/t3nfs01/data01/shome/<!Configuration|user!>/VHbb/CMSSW_7_4_3/src/
 vhbbpath = <!Directories|Wdir!>/Xbb
 t3userfolder = root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>
 
-samplepath = <!Directories|t3userfolder!>/VHbb/ZllHbb13TeV_V25/ 
+samplepath = <!Directories|t3userfolder!>/VHbb/ZllHbb13TeV_V25/
 samplefiles = <!Directories|Wdir!>/Xbb/python/<!Configuration|config_name!>/V25_iter8_files
 samplesinfo = <!Directories|vhbbpath!>/python/<!Configuration|config_name!>/samples_nosplit.ini
 

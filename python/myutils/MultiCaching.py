@@ -30,7 +30,7 @@ class MultiCache:
             print("\x1b[32;5m %s \x1b[0m" %open('%s/data/vhbb.txt' %config.get('Directories','vhbbpath')).read())
             print("\x1b[31;5;1m\n\t>>> %s: Please set your TMPDIR and try again... <<<\n\x1b[0m" %os.getlogin())
             sys.exit(-1)
-        
+
         if os.path.exists("../../interface/VHbbNameSpace_h.so"):
             print ('ROOT.gROOT.LoadMacro("../../interface/VHbbNameSpace_h.so")')
             ROOT.gROOT.LoadMacro("../../interface/VHbbNameSpace_h.so")
@@ -41,15 +41,15 @@ class MultiCache:
 
         if config.has_option('Directories','tmpSamples'):
             self.__cachedPath = config.get('Directories','tmpSamples')
-        
+
         self.__hashDict = {}
 
         # samples info
         samplesinfo = config.get('Directories','samplesinfo')
-        info = ParseInfo(samplesinfo, self.path) #creates a list of Samples by reading the info in samples_nosplit.cfg and the conentent of the path. 
-        
+        info = ParseInfo(samplesinfo, self.path) #creates a list of Samples by reading the info in samples_nosplit.cfg and the conentent of the path.
+
         # MC background
-        mc = eval(config.get('Plot_general','samples'))       
+        mc = eval(config.get('Plot_general','samples'))
 
         # check if data samples are the same for all regions (required!)
         dataSamplesPerRegion = []
@@ -92,7 +92,7 @@ class MultiCache:
             print ("\x1b[32mERROR: these regions can't be cached together because mc signal samples differ!!! \x1b[0m")
             print (mcSignalSamplesPerRegion)
             exit(-3)
-        
+
         # MC signal
         if isSignalPerRegion[0]:
             if len(mcSignalSamplesPerRegion)<1:
@@ -100,15 +100,15 @@ class MultiCache:
                 exit(-5)
             section = 'Plot:%s'%self.regions[0]
             mc.append(config.get(section, 'Signal'))
-        
-        total_lumi = eval(config.get('Plot_general','lumi')) 
+
+        total_lumi = eval(config.get('Plot_general','lumi'))
         print ('-'*60)
         print (" (%d) MC:   %r"%(len(mc),mc))
         print (" (%d) DATA: %r"%(len(data),data))
-        print ('-'*60) 
-        datasamples = info.get_samples(data) 
-        mcsamples = info.get_samples(mc) 
-        sampleList = mcsamples + datasamples 
+        print ('-'*60)
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        sampleList = mcsamples + datasamples
 
         self.__sampleList = sampleList
         self.sample_to_merge = sample_to_merge
@@ -172,7 +172,7 @@ class MultiCache:
         return [cut]
 
     def _minimum_cut(self, cutList):
-        
+
      #  if config.has_option('Cuts',region):
      #       cut = config.get('Cuts',region)
      #   else:
@@ -185,10 +185,10 @@ class MultiCache:
         mcut = '(%s)'%cut.replace(' ','')
         if mcut not in cuts:
             cuts.append(mcut)
-     return '||'.join(cuts) 
-    
+     return '||'.join(cuts)
+
     def _trim_tree(self, sample, filelist, mergeplot = False, forceReDo = False, mergeCachingPart = -1):
-        
+
         # DEBUG
         #forceReDo = True
 
@@ -213,7 +213,7 @@ class MultiCache:
             regionDict[region]['hashString'] = '%s_%s_split%d' %(sample, regionDict[region]['cut'], sample.mergeCachingSize)
             regionDict[region]['hash'] = hashlib.sha224(regionDict[region]['hashString']).hexdigest()
             regionDict[region]['tmpfileName'] = '%s/tmp_%s_%d.root'%(self.__tmpPath, regionDict[region]['hash'], mergeCachingPart)
-            regionDict[region]['outputfileName'] = '%s/tmp_%s_%d.root'%(self.__cachedPath, regionDict[region]['hash'], mergeCachingPart) 
+            regionDict[region]['outputfileName'] = '%s/tmp_%s_%d.root'%(self.__cachedPath, regionDict[region]['hash'], mergeCachingPart)
 
         # filelist
         print ("#files:", len(filelist))
@@ -222,8 +222,8 @@ class MultiCache:
             print (regionDict)
             print ("FILES:", filelist, mergeCachingPart)
             print ('-'*60)
-        
-        
+
+
         # check for existence of the individual tree INPUT files
         inputfile = ''
         if filelist and mergeCachingPart > -1:
@@ -243,8 +243,8 @@ class MultiCache:
                     print ('Exception:'+str(e))
                     print ('ERROR occured for "'+inputFile+'"')
             inputfile = ';'.join(filelistCopied)
-        
-        if self.verbose: 
+
+        if self.verbose:
             print ("inputfiles:",inputfiles)
 
         #------------------------------------------------------------------------------------------------------------
@@ -258,14 +258,14 @@ class MultiCache:
             print ('-'*60)
             print (' all cache files exist! => skipped')
             print ('-'*60)
-            return True 
+            return True
 
         print("==================================================================")
         print ('The cuts are ')
         for region in self.regions:
             print ("  %s\t\t%s"%(region, regionDict[region]['cut']))
         print("==================================================================\n")
-       
+
         # open OUTPUT files
         try:
             for region in self.regions:
@@ -279,8 +279,8 @@ class MultiCache:
             print ('EXCEPTION',e)
             ## in case there are problems go to the next dataset [probably another process is working on this dataset]
             if len(filelist) == 0: return (theName,theHash)
-            else: 
-                print('PROBLEM WITH FILE!!',tmpfile) 
+            else:
+                print('PROBLEM WITH FILE!!',tmpfile)
         if ';' in inputfile:
             print ('reading inputfiles...')
         else:
@@ -344,7 +344,7 @@ class MultiCache:
             print ('adding %d files to chain took %f seconds.'%(nFilesChained, time2-time1))
             assert nFilesChained > 0
             input = None
-            
+
             if self.verbose:
                 print ("HISTOGRAMS: %r"%histograms)
             #output.cd()
@@ -384,7 +384,7 @@ class MultiCache:
                 print ('INFO: useless branches will be removed!')
                 tree.SetBranchStatus("*Down",0)
                 tree.SetBranchStatus("*Up",0)
-                
+
                 removeBranches = []
                 try:
                     removeBranches += eval(self.config.get('Branches','useless_after_sys'))
@@ -411,7 +411,7 @@ class MultiCache:
             time2 = time.time()
             if self.verbose:
                 print ('DEBUG: tree=',tree)
-          
+
             # only process regions for which OUTPUT file is not existing
             self.regionsToProcess = [x for x in self.regions if regionDict[x]['tmpfile']]
             self.regionsSkipped = [x for x in self.regions if not regionDict[x]['tmpfile']]
@@ -442,14 +442,14 @@ class MultiCache:
             s2 = 0
             oldTreeNum = -1
             totalEntries = 0
-           
+
             timeLoopStart = time.time()
             # loop over all events in tree/tchain
             for event in tree:
                 tree.LoadTree(i)
 
                 # if file changes in chain, UpdateFormulaLeaves() has to be called
-                treeNum = tree.GetTreeNumber()                        
+                treeNum = tree.GetTreeNumber()
                 if treeNum != oldTreeNum:
                     for region in self.regionsToProcess:
                         regionDict[region]['cutFormula'].UpdateFormulaLeaves()
@@ -466,12 +466,12 @@ class MultiCache:
                         s2 = regionDict[region]['subcutFormula'].EvalInstance()
 
                         if s and s2:
-                           regionDict[region]['cutTree'].Fill() 
+                           regionDict[region]['cutTree'].Fill()
                            regionDict[region]['filledEntries'] += 1
                            passed = 1
                 totalEntries += 1
                 i += 1
-                
+
                 # output status
                 if i % 10000 == 0:
                     timeNow = time.time()
@@ -484,16 +484,16 @@ class MultiCache:
                             print (' %s\t\t\t%d'%(region, regionDict[region]['filledEntries']))
                     sys.stdout.flush()
 
-            
+
             time3 = time.time()
             print ('cut done in ' + str(time3-time2) + ' s' + ' events: ' + str(totalEntries))
             print ('-------------------------------------------------------------------------')
-            print ('  region\t\t\tentries\tpercent\tfile') 
+            print ('  region\t\t\tentries\tpercent\tfile')
             for region in self.regionsToProcess:
                 outputFileNameShort = regionDict[region]['outputfileName'].split('/')[-1]
                 print ("  %s\t\t%d\t%1.3f\t%s"%(region, regionDict[region]['filledEntries'], (100.0* regionDict[region]['filledEntries']/totalEntries) if totalEntries>0 else 0, outputFileNameShort))
             print ('-------------------------------------------------------------------------')
-            
+
             if len(self.regionsSkipped) > 0:
                 print ('skipped:')
                 for region in self.regionsSkipped:
@@ -548,7 +548,7 @@ class MultiCache:
         file_dummy = file
         file_dummy = file_dummy.replace('root://t3dcachedb03.psi.ch:1094/','')
         file_dummy = file_dummy.replace('srm://t3se01.psi.ch:8443/srm/managerv2?SFN=','')
-         
+
         if self.verbose:
             print ('The command is', 'os.path.isfile(',file_dummy,')', os.path.isfile(file_dummy))
 
@@ -556,9 +556,9 @@ class MultiCache:
             if self.verbose:
                 print(file_dummy, 'exists.')
             f = ROOT.TFile.Open(file,'read')
-           
+
             if not f or (f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie()):
-                if f: 
+                if f:
                     print ('f.GetNkeys()',f.GetNkeys(),'f.TestBit(ROOT.TFile.kRecovered)',f.TestBit(ROOT.TFile.kRecovered),'f.IsZombie()',f.IsZombie())
                 print ('File', file_dummy, 'already exists but is buggy, gonna delete and rewrite it.')
                 del_protocol = file.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
@@ -595,20 +595,20 @@ if __name__ == "__main__":
     # to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
     if opts.filelist.startswith('base64:'):
         opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
-    
+
     # config
     vhbbPlotDef=opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
     opts.config.append(vhbbPlotDef)#adds it to the config list
     config = BetterConfigParser()
     config.read(opts.config)
-    
-    # input/output files 
+
+    # input/output files
     path = config.get('Directories','plottingSamples')
     filelist = filter(None,opts.filelist.replace(' ', '').split(';'))
     mergeCachingPart = int(opts.settings[opts.settings.find('CACHING')+7:].split('__')[0].split('_')[-1])
     sampleToMerge = '__'.join(opts.settings[opts.settings.find('CACHING')+7:].split('__')[1:])
     samples = None
-    mc = MultiCache(regions=opts.region, sampleList=samples, path=path, config=config, filelist=filelist, sample_to_merge=sampleToMerge, mergeCachingPart=mergeCachingPart) 
+    mc = MultiCache(regions=opts.region, sampleList=samples, path=path, config=config, filelist=filelist, sample_to_merge=sampleToMerge, mergeCachingPart=mergeCachingPart)
 
 
 

@@ -294,7 +294,10 @@ def submit(job,repDict,redirect_to_null=False):
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        else:
+            command = 'qsub  -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
         subprocess.call([command], shell=True)
@@ -345,7 +348,10 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        else:
+            command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     #print "the command is ", command
@@ -376,7 +382,10 @@ def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        else:
+            command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     list_submitted_singlejobs[repDict['name']] = [file,1]
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
@@ -742,7 +751,7 @@ elif opts.task == 'splitsubcaching':
              repDict['queue'] = 'all.q'
              training(additional_)
 
-if opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars
 
@@ -791,10 +800,10 @@ if opts.task == 'mergecaching2':
     samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo,path)
     print info
-    
+
     # get all regions
-    regions = [x.strip() for x in config.get('Plot_general', 'List').split(',')] 
-    
+    regions = [x.strip() for x in config.get('Plot_general', 'List').split(',')]
+
     # determine which regions are compatible to be cached together in one go
     regionsDict = {}
     for region in regions:
@@ -808,7 +817,7 @@ if opts.task == 'mergecaching2':
         else:
             regionsDict[identifier] = [region]
 
-    regionGroups = [y for x,y in regionsDict.iteritems()] 
+    regionGroups = [y for x,y in regionsDict.iteritems()]
     print ("REGION GROUPS:",regionGroups)
 
     # loop over all region group. A region group is defined to have the same data samples.
@@ -820,7 +829,7 @@ if opts.task == 'mergecaching2':
         datasamples = info.get_samples(data)
         mcsamples = info.get_samples(mc)
         samples = mcsamples+datasamples
-        
+
         samplesListToRun = [x for x in samplesList if len(x) > 0]
 
         for sample in samples:
@@ -838,7 +847,7 @@ if opts.task == 'mergecaching2':
                     print "  PART:", counter_local
 
                     repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
-                    jobName = ','.join(regionGroup) 
+                    jobName = ','.join(regionGroup)
 
                     files_sublist_filtered = []
                     for filename in files_sublist:
@@ -1115,7 +1124,8 @@ if opts.task == 'splitcachingdc':
         #get all the samples list
         print 'item is', item 
         signals = eval('['+config.get('dc:%s'%item,'signal')+']')
-        backgrounds = eval(config.get('LimitGeneral','BKG'))
+        #backgrounds = eval(config.get('LimitGeneral','BKG'))
+        backgrounds = eval(config.get('dc:%s'%item,'background'))
         all_samples = info.get_samples(signals+backgrounds)
         data_sample_names = eval(config.get('dc:%s'%item,'data'))
         data_samples = info.get_samples(data_sample_names)
@@ -1159,11 +1169,21 @@ if opts.task == 'trainReg':
     submit('trainReg',repDict)
 
 
-elif opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+elif opts.task == 'dc' or opts.task == 'mergesyscachingdc'  or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     repDict['queue'] = 'all.q'
     for item in DC_vars:
         # item here contains the dc name
-        submit(item,repDict)
+        if opts.task == 'mergesyscachingdcsplit':
+            split_factor = eval(config.get('LimitGeneral','split_factor'))
+            for i in range(0,split_factor+4):
+                 #if i != 34: continue
+                 repDict['additional'] = 'SPLIT'+'_'+str(i)
+                 submit(item,repDict)
+        elif opts.task == 'mergesyscachingdcmerge':
+            repDict['additional'] = 'DCMERGE'
+            submit(item,repDict)
+        else:
+            submit(item,repDict)
 
 
 elif opts.task == 'prep':

@@ -9,7 +9,7 @@ import math
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False, dccut = None):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, branch_to_keep=None, do_onlypart_n= False, dccut = None, remove_sys=None):
         ROOT.gROOT.SetBatch(True)
         self.verbose = False
         self.path = path
@@ -19,6 +19,7 @@ class TreeCache:
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
         self.dccut = None
+        self.branch_to_keep = branch_to_keep
         if dccut:
             self.dccut = dccut
         #! Make the cut lists from inputs
@@ -204,6 +205,7 @@ class TreeCache:
             # check for existence of the individual tree files
             filelistCopied = []
             for inputFile in filelist:
+                print ('inputFile is', inputFile)
                 try:
                     subfolder = inputFile.split('/')[-4]
                     filename = inputFile.split('/')[-1]
@@ -502,6 +504,11 @@ class TreeCache:
                         tree.SetBranchStatus(branch,0)
                     except:
                         pass
+                if self.branch_to_keep:
+                    tree.SetBranchStatus('*',0)
+                    for b in self.branch_to_keep:
+                        tree.SetBranchStatus(b,1)
+
 
                 #time2 = time.time()
                 #print ('DEBUG: tree=',tree)
@@ -515,7 +522,9 @@ class TreeCache:
                 #if len(theCut) < str_limit:
 
                     time2 = time.time()
+                    print ('normal caching')
                     print ('DEBUG: tree=',tree)
+                    print ('theCut is', theCut)
                     cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
                     subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
 
@@ -549,17 +558,19 @@ class TreeCache:
                         totalEntries += 1
                         i += 1
                 else:
-                    cutformula_list =[]
-                    for formula_cut in self._cutList:
-                        if formula_cut == "(1)": continue
-                        formula = ROOT.TTreeFormula("cutFormula%i"%self._cutList.index(formula_cut), formula_cut, tree)
-                        cutformula_list.append(formula)
+                    #cutformula_list =[]
+                    #for formula_cut in self._cutList:
+                    #    if formula_cut == "(1)": continue
+                    #    formula = ROOT.TTreeFormula("cutFormula%i"%self._cutList.index(formula_cut), formula_cut, tree)
+                    #    cutformula_list.append(formula)
 
                     print ('cut_list is', self._cutList)
 
                     #loop over the tree and apply cut
                     time2 = time.time()
+                    print ('caching for dc')
                     print ('DEBUG: tree=',tree)
+                    print ('dccut is', self.dccut)
                     subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
                     dccutFormula = ROOT.TTreeFormula("dccut", self.dccut, tree)
 
@@ -583,8 +594,8 @@ class TreeCache:
                         if treeNum != oldTreeNum:
                             dccutFormula.UpdateFormulaLeaves()
                             subcutFormula.UpdateFormulaLeaves()
-                            for formula in cutformula_list:
-                                formula.UpdateFormulaLeaves()
+                            #for formula in cutformula_list:
+                            #    formula.UpdateFormulaLeaves()
                             oldTreeNum = treeNum
 
                         pass_cut = False
@@ -843,10 +854,9 @@ class TreeCache:
             self.__hashDict[theName]=theHash
 
     def get_tree(self, sample, cut):
-        print (self.__hashDict)
+        #print (self.__hashDict)
         inputHashes = self.__hashDict[sample.name]
         print('input file %s/tmp_\x1b[32m%r\x1b[0m.root'%(self.__cachedPath, inputHashes))
-
         #fill all Count* histos as lists, like self.CountWeighted = [123.23]
         inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
         #print ('inputHashesList is', inputHashesList)
@@ -1012,7 +1022,12 @@ class TreeCache:
                 rootFile.Close()
             else:
                 print ('\x1b[31mERROR: zombie: {file}\x1b[0m'.format(file=rootFileName))
-                raise Exception("root file with weight histogram is zombie")
+                del_protocol = rootFileName.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+                if '/scratch/' in  del_protocol: command = 'rm %s' %(del_protocol)
+                else: command = 'gfal-rm %s' %(del_protocol)
+                subprocess.call([command], shell=True)
+                print(command)
+                raise Exception("root file with weight histogram is zombie. Deleting the file.")
         return weightHistogram
 
     def get_scale_training(self, sample, config, lumi = None, count=1):
@@ -1030,7 +1045,7 @@ class TreeCache:
             count = self.get_weight_histogram(self.__hashDict[sample.name], 'Count').GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
     def get_scale(self, sample, config, lumi = None, count=1):

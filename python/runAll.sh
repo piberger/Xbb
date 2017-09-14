@@ -228,6 +228,13 @@ elif [ $task = "mergesyscachingdc" ]; then
     echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True"
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True
 
+elif [ $task = "mergesyscachingdcsplit" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True --settings $bdt_params"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True --settings $bdt_params
+elif [ $task = "mergesyscachingdcmerge" ]; then
+    echo "python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True --settings $bdt_params"
+    python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --mergecachingplot True --settings $bdt_params
+
 elif [ $task = "checksingleprep" ] || [ $task = "checksinglesys" ] || [ $task = "checksingleeval" ] || [ $task = "checksingleplot" ]; then
     if [[ $region ]]; then
         echo "./myutils/check_singlestep.py --region $region ${config_filenames[@]} --task $task  --sample $sample --filelist ...(${#filelist} char)"

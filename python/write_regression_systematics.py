@@ -153,12 +153,211 @@ try:
 except:
    addTTW= False
 print "I shall add the TT weight, milord !",addTTW
+#
+try:
+   addSBweight= config.get('Analysis', 'addSBweight').lower().strip() == 'true'
+except:
+   addSBweight= False
+print "I shall add the s/(s+b) weight, milord !"
 
 
 namelist=opts.names.split(',')
 
 #load info
 info = ParseInfo(samplesinfo,pathIN)
+
+if addSBweight:
+    # Adding all the bin, dc and branch information in a dictionnary. Allows to fill multiple branches in one single loop. Keys of the histo are dc/mlfit_BIN (they are identical for Zll).
+    #Order to fill the dic: [BDT_BRANCH, SIGNAL_SHAPES_PATH, SIGNAL_SHAPES_BIN, MLFIT_BIN]
+
+    #For VH
+    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_Datacards_02to1_oldJEC/'
+    PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/ZllHbb_Datacards_Minus08to1_JECfix_7_3/'
+
+    DC_INFO_DIC = {
+            'ZeeBDTVH_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
+            'ZuuBDTVH_highpt':['ZllBDT_highptCMVA.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zuu_HighPt.root','ZuuHighPt_13TeV','ZllHbb_ch3_Zmm_SIG_high'],
+            'ZeeBDTVH_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zee_LowPt.root', 'ZeeLowPt_13TeV', 'ZllHbb_ch2_Zee_SIG_low'],
+            'ZuuBDTVH_lowpt': ['ZllBDT_lowptCMVA.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zuu_LowPt.root', 'ZuuLowPt_13TeV', 'ZllHbb_ch1_Zmm_SIG_low']
+            }
+
+    ###
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VH/mlfitmlfitunblindrUltraSimple.root'
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/ZllHbb_Datacards_Minus08to1_JECfix_7_3/'
+    DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/VH_combo_7_12/mlfit.root'
+
+    ##For VV
+    #PATH_ALL_DC = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/ZllZbb_Datacards_Minus08to1_JECfix_7_3/'
+
+    #DC_INFO_DIC = {
+    #        'ZeeBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zee_HighPt.root', 'ZeeHighPt_13TeV','ZllHbb_ch4_Zee_SIG_high'],
+    #        'ZuuBDT_highpt':['ZllBDTVV_highpt.Nominal',PATH_ALL_DC+'vhbb_TH_BDT_Zuu_HighPt.root','ZuuHighPt_13TeV','ZllHbb_ch3_Zmm_SIG_high'],
+    #        'ZeeBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zee_LowPt.root', 'ZeeLowPt_13TeV', 'ZllHbb_ch2_Zee_SIG_low'],
+    #        'ZuuBDT_lowpt': ['ZllBDTVV_lowpt.Nominal', PATH_ALL_DC+'vhbb_TH_BDT_Zuu_LowPt.root', 'ZuuLowPt_13TeV', 'ZllHbb_ch1_Zmm_SIG_low']
+    #        }
+
+    ###
+    #DC_INFO_DIC['MLFIT_PATH'] = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/combo200617/VZ/mlfitmlfitunblindrUltraSimple.root'
+
+    #dc_info_dic = DC_INFO_DIC
+    
+    def get_shape_bin_edges_dic(dc_info_dic):
+        bin_edges_dic = {}
+        for key in dc_info_dic:
+            if key == 'MLFIT_PATH': continue
+            #bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic['MLFIT_PATH'], dc_info_dic[key][3])
+            #bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic['MLFIT_PATH'], dc_info_dic[key][3])
+            bin_edges_dic[key] = get_shape_bin_edges(dc_info_dic[key][1], dc_info_dic[key][2])
+    
+        for key in dc_info_dic:
+            if key == 'MLFIT_PATH': continue
+            dc_info_dic[key].append(bin_edges_dic[key])
+    
+    def get_total_postfit_shapes_dic(dc_info_dic):
+        signal_postfit_dic = {}
+        background_postfit_dic = {}
+    
+        for key in dc_info_dic:
+            if key == 'MLFIT_PATH': continue
+            signal_postfit_dic[key], background_postfit_dic[key] = get_total_postfit_shapes(dc_info_dic['MLFIT_PATH'],dc_info_dic[key][3], dc_info_dic[key][4])
+    
+        for key in dc_info_dic:
+            if key == 'MLFIT_PATH': continue
+            dc_info_dic[key].append(signal_postfit_dic[key])
+            dc_info_dic[key].append(background_postfit_dic[key])
+    
+    def get_shape_bin_edges(shapes_path, datacard_bin):
+        """Return an array of the bin edges used by the input shapes.
+    
+        Parameters
+        ----------
+        shapes_path : path
+            The path to the shapes file.
+        datacard_bin : string
+            The name of the datacard bin containing the shapes.
+    
+        Returns
+        -------
+        bin_edges : numpy.array
+            The array of bin edges.
+        """
+        shapes_file = ROOT.TFile.Open(shapes_path)
+        print 'tfile path is', shapes_path
+        print 'list of keys'
+        #ROOT.gDirectory.GetListOfKeys().ls()
+        print 'gonnad cd', datacard_bin
+        print shapes_file.cd(datacard_bin)
+        shapes = ROOT.gDirectory.GetListOfKeys()
+        #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
+        # Since the nominal and varied shapes share the same binning,
+        # take any of the histograms found in the shapes file.
+        print 'debug0'
+        shape = ROOT.gDirectory.Get(shapes[0].GetName())
+        print 'debug'
+        bin_edges = np.array(
+            [shape.GetXaxis().GetBinLowEdge(i) for i in xrange(1, shape.GetNbinsX() + 1)],
+            dtype=np.float64,
+        )
+        shapes_file.Close()
+        print 'bin_edges for datacard_bin is', bin_edges
+        #sys.exit()
+        return bin_edges
+    
+    #def get_shape_bin_edges(mlfit_path, datacard_bin):
+    #    """Return an array of the bin edges used by the input shapes.
+    #
+    #    Parameters
+    #    ----------
+    #    shapes_path : path
+    #        The path to the shapes file.
+    #    datacard_bin : string
+    #        The name of the datacard bin containing the shapes.
+    #
+    #    Returns
+    #    -------
+    #    bin_edges : numpy.array
+    #        The array of bin edges.
+    #    """
+    #    #mlfit_file = ROOT.TFile.Open(mlfit_path)
+    #    #mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
+    #    #shape = ROOT.gDirectory.Get('total_background')
+    #    ##total_signal = ROOT.gDirectory.Get('total_background')
+
+    #    #shapes_file = ROOT.TFile.Open(shapes_path)
+    #    #print 'list of keys'
+    #    #ROOT.gDirectory.GetListOfKeys().ls()
+    #    #shapes_file.cd(datacard_bin)
+    #    #shapes = ROOT.gDirectory.GetListOfKeys()
+    #    #print 'list of Keys is', ROOT.gDirectory.GetListOfKeys().ls()
+    #    ## Since the nominal and varied shapes share the same binning,
+    #    ## take any of the histograms found in the shapes file.
+    #    #shape = ROOT.gDirectory.Get(shapes[0].GetName())
+    #    bin_edges = np.array(
+    #        [shape.GetXaxis().GetBinLowEdge(i) for i in xrange(1, shape.GetNbinsX() + 1)],
+    #        dtype=np.float64,
+    #    )
+    #    mlfit_file.Close()
+    #    print 'bin_edges is', bin_edges
+    #    return bin_edges
+
+    
+    def get_total_postfit_shapes(mlfit_path, datacard_bin, bin_edges):
+        """Retrun the rebinned the postfit shapes for the total
+        signal and total background from an mlfit.root file.
+    
+        Parameters
+        ----------
+        mlfit_path : path
+            The path to the mlfit.root file.
+        datacard_bin : string
+            The name of the datacard bin containing the shapes.
+        bin_edges : numpy.array of float
+            An array of bin low edge values used to rebin the postfit shapes.
+    
+        Returns
+        -------
+        signal_postfit, background_postfit : tuple of ROOT.TH1F
+            The rebinned signal and background postfit shapes.
+        """
+        print 'mlfit_path is', mlfit_path
+        print 'datacard_bin is', datacard_bin
+        mlfit_file = ROOT.TFile.Open(mlfit_path)
+        mlfit_file.cd('shapes_prefit/{}'.format(datacard_bin))
+        total_signal = ROOT.gDirectory.Get('total_signal')
+        total_signal.SetDirectory(0)
+        mlfit_file.cd('../..')
+        #
+        mlfit_file.cd('shapes_fit_s/{}'.format(datacard_bin))
+        #total_signal = ROOT.gDirectory.Get('total_signal')
+        total_background = ROOT.gDirectory.Get('total_background')
+        #total_signal.SetDirectory(0)
+        total_background.SetDirectory(0)
+        mlfit_file.Close()
+        signal_postfit = ROOT.TH1F('signal_postfit', '', len(bin_edges) - 1, bin_edges)
+        background_postfit = signal_postfit.Clone('background_postfit')
+        for i in xrange(1, signal_postfit.GetNbinsX() + 2):
+            signal_postfit.SetBinContent(i, total_signal.GetBinContent(i))
+            background_postfit.SetBinContent(i, total_background.GetBinContent(i))
+        for s in signal_postfit:
+            print 's is', s
+        for b in background_postfit:
+            print 'b is', b
+
+        first_iter = True
+        for s, b in zip(signal_postfit,background_postfit):
+            if first_iter:
+                first_iter = False
+                continue
+            print 'S/(S+B) weight is', s/(s+b)
+
+
+        #print 'signal_postfit', signal_postfit
+        #print 'background_postfit', background_postfit
+        return signal_postfit, background_postfit
+
+    get_shape_bin_edges_dic(DC_INFO_DIC)
+    get_total_postfit_shapes_dic(DC_INFO_DIC)
+    dc_info_dic = DC_INFO_DIC
 
 
 def isInside(map_,eta,phi):
@@ -498,9 +697,40 @@ def csvReshape(sh, pt, eta, csv, flav):
     return sh.reshape(float(eta), float(pt), float(csv), int(flav))
 
 def computeSF(weight_SF):
+    '''Combines SF of each leg to compute final event SF'''
     weight_SF[0] = (weight[0][0]*weight[1][0])
     weight_SF[1] = ( (weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1]) )
     weight_SF[2] = ( (weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1]) )
+
+def computeSF_region(weight_SF_LowEta, weight_SF_HighEta, lep1_eta, lep2_eta, etacut):
+    '''Extact the systematics corresponding to computeSF function in different region of eta'''
+    if abs(lep1_eta) < etacut and abs(lep2_eta) < etacut:
+        #assign sys
+        weight_SF_LowEta[0] = ((weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1]))
+        weight_SF_LowEta[1] = ((weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1]))
+        #sys are nom value
+        weight_SF_HighEta[0] = (weight[0][0]*weight[1][0])
+        weight_SF_HighEta[1] = (weight[0][0]*weight[1][0])
+
+    elif abs(lep1_eta) > etacut and abs(lep2_eta) > etacut:
+        #sys are nom value
+        weight_SF_LowEta[0] =  (weight[0][0]*weight[1][0])
+        weight_SF_LowEta[1] =  (weight[0][0]*weight[1][0])
+        #assign sys
+        weight_SF_HighEta[0] = ((weight[0][0]-weight[0][1])*(weight[1][0]-weight[1][1])) 
+        weight_SF_HighEta[1] = ((weight[0][0]+weight[0][1])*(weight[1][0]+weight[1][1])) 
+
+    elif abs(lep1_eta) < etacut and abs(lep2_eta) > etacut:
+        weight_SF_LowEta[0] =  ((weight[0][0]-weight[0][1])*weight[1][0])
+        weight_SF_LowEta[1] =  ((weight[0][0]+weight[0][1])*weight[1][0])
+        weight_SF_HighEta[0] = ((weight[0][0])*(weight[1][0]-weight[1][1])) 
+        weight_SF_HighEta[1] = ((weight[0][0])*(weight[1][0]+weight[1][1])) 
+
+    elif abs(lep1_eta) > etacut and abs(lep2_eta) < etacut:
+        weight_SF_LowEta[0] =  ((weight[0][0])*(weight[1][0]-weight[1][1])) 
+        weight_SF_LowEta[1] =  ((weight[0][0])*(weight[1][0]+weight[1][1])) 
+        weight_SF_HighEta[0] = ((weight[0][0]-weight[0][1])*weight[1][0])
+        weight_SF_HighEta[1] = ((weight[0][0]+weight[0][1])*weight[1][0])
 
 def computeSF_leg(leg):
     #leg is the leg index, can be 0 or 1
@@ -669,7 +899,7 @@ for job in info:
         print "Writing: ",tmpfile
         print 'outputFile',outputFile
         print ''
-        
+
         # continue if some of the files are not there
         if not input or input.IsZombie():
             print 'file does not exist ==> SKIPPED!'
@@ -702,6 +932,17 @@ for job in info:
         HNoReg = ROOT.H()
         HaddJetsdR08 = ROOT.H()
         HaddJetsdR08NoReg = ROOT.H()
+
+        if applyLepSF and job.type != 'DATA':
+            tree.SetBranchStatus('weight_SF_LooseID',0)
+            tree.SetBranchStatus('weight_SF_LooseISO',0)
+            tree.SetBranchStatus('weight_SF_LooseIDnISO',0)
+            tree.SetBranchStatus('weight_SF_LooseIDnISO_B',0)
+            tree.SetBranchStatus('weight_SF_LooseIDnISO_E',0)
+            tree.SetBranchStatus('weight_SF_TRK',0)
+            tree.SetBranchStatus('weight_SF_Lepton',0)
+            tree.SetBranchStatus('eTrigSFWeight_doubleEle80x',0)
+            tree.SetBranchStatus('muTrigSFWeight_doublemu',0)
 
         #Jet structure (to apply CSV weight)
         # For new regresssion zerop the branches out before cloning new tree
@@ -754,11 +995,44 @@ for job in info:
 
         if applyBTagweights:
             tree.SetBranchStatus("bTagWeightCMVAV2_Moriond*",0)
-        
 
+        if addSBweight:
+            #tree.SetBranchStatus('sb_weight*', 0)
+            bdt_buffer = {}
+            leaf_index = {}
+            #dc_info_dic = DC_INFO_DIC
+            for key in dc_info_dic:
+                if key == 'MLFIT_PATH': continue
+                bdt_branch = dc_info_dic[key][0]
+                if '.' in bdt_branch:
+                    branch_name, leaf_name = bdt_branch.split('.')
+                    branch = tree.GetBranch(branch_name)
+                    n_leaves = branch.GetNleaves()
+                    leaf_index[bdt_branch] = [leaf.GetName() for leaf in branch.GetListOfLeaves()].index(leaf_name)
+                    bdt_buffer[bdt_branch] = np.zeros(n_leaves, dtype=np.float32)
+                else:
+                    branch_name = bdt_branch
+                    leaf_index[bdt_branch] = None
+                    bdt_buffer[bdt_branch] = np.zeros(1, dtype=np.float32)
+                    print 'problem'
+                    sys.exit()
+                tree.SetBranchAddress(branch_name, bdt_buffer[bdt_branch])
+        
        # tree.SetBranchStatus('H',0)
         output.cd()
         newtree = tree.CloneTree(0)
+
+        if addSBweight:
+            sb_weight_dic = {} 
+            for key in dc_info_dic:
+                if key == 'MLFIT_PATH': continue
+                sb_weight_dic[key] = np.zeros(1, dtype=np.float64)
+                #sb_weight = numpy.zeros(1, dtype=numpy.float64)
+                newtree.Branch('sb_weight_%s'%key, sb_weight_dic[key], 'sb_weight_%s/D'%key)
+                #newtree.Branch('sb_weight', sb_weight, 'sb_weight/D')
+            # Cache the Fill method for faster filling.
+            #fill_newtree = tree_new.Fill
+
 
 
 
@@ -1086,7 +1360,7 @@ for job in info:
             hJ0 = ROOT.TLorentzVector()
             hJ1 = ROOT.TLorentzVector()
 
-            
+
 
             VarList = ['HCMVAV2_reg_mass','HCMVAV2_reg_pt','HCMVAV2_reg_eta','HCMVAV2_reg_phi','hJetCMVAV2_pt_reg_0','hJetCMVAV2_pt_reg_1','hJetCMVAV2_pt_reg']
 
@@ -1181,6 +1455,16 @@ for job in info:
             weight_SF_LooseIDnISO = array('f',[0]*3)
             weight_SF_LooseIDnISO[0], weight_SF_LooseIDnISO[1], weight_SF_LooseIDnISO[2] = 1,0,0
             newtree.Branch('weight_SF_LooseIDnISO',weight_SF_LooseIDnISO,'weight_SF_LooseIDnISO[3]/F')
+            #Split MVAID sys in barrel or endcap
+            #Barrel
+            weight_SF_LooseIDnISO_B = array('f',[0]*2)
+            weight_SF_LooseIDnISO_B[0], weight_SF_LooseIDnISO_B[1] = 0,0
+            newtree.Branch('weight_SF_LooseIDnISO_B',weight_SF_LooseIDnISO_B,'weight_SF_LooseIDnISO_B[2]/F')
+            #Endcap
+            weight_SF_LooseIDnISO_E = array('f',[0]*2)
+            weight_SF_LooseIDnISO_E[0], weight_SF_LooseIDnISO_E[1] = 0,0
+            newtree.Branch('weight_SF_LooseIDnISO_E',weight_SF_LooseIDnISO_E,'weight_SF_LooseIDnISO_E[2]/F')
+
             #Tracker
             weight_SF_TRK= array('f',[0]*3)
             weight_SF_TRK[0], weight_SF_TRK[1], weight_SF_TRK[2] = 1,0,0
@@ -1280,6 +1564,7 @@ for job in info:
                 TTW = array('f',[0])
                 TTW[0] = 1
                 newtree.Branch('TTW',TTW,'TTW/F')
+
 
         if addBranches:
 
@@ -1754,6 +2039,8 @@ for job in info:
                     weight_SF_LooseID[0], weight_SF_LooseID[1],  weight_SF_LooseID[2] = 1.,0.,0.
                     weight_SF_LooseISO[0], weight_SF_LooseISO[1],  weight_SF_LooseISO[2] = 1.,0.,0.
                     weight_SF_LooseIDnISO[0], weight_SF_LooseIDnISO[1],  weight_SF_LooseIDnISO[2] = 1.,0.,0.
+                    weight_SF_LooseIDnISO_B[0], weight_SF_LooseIDnISO_B[1] = 0.,0.
+                    weight_SF_LooseIDnISO_E[0], weight_SF_LooseIDnISO_E[1] = 0.,0.
                     weight_SF_TRK[0], weight_SF_TRK[1],  weight_SF_TRK[2] = 1.,0.,0.
                     weight_SF_Lepton[0], weight_SF_Lepton[1], weight_SF_Lepton[2] = 1.,0.,0.
                     eTrigSFWeight_doubleEle80x[0], eTrigSFWeight_doubleEle80x[1], eTrigSFWeight_doubleEle80x[2] = 1.,0.,0.
@@ -1911,6 +2198,7 @@ for job in info:
                             #IDISO
                             if j.find('EIDISO_ZH_out') != -1:
                                 computeSF(weight_SF_LooseIDnISO)
+                                computeSF_region(weight_SF_LooseIDnISO_B, weight_SF_LooseIDnISO_E, tree.vLeptons_new_eta[0], tree.vLeptons_new_eta[1], 1.566)
                             #TRK
                             elif j.find('ScaleFactor_etracker_80x') != -1:
                                 computeSF(weight_SF_TRK)
@@ -2086,6 +2374,89 @@ for job in info:
                             sf_top2 = math.exp(0.0615 - 0.0005*tree.GenTop_pt[1])
                             TTW[0] = math.sqrt(sf_top1*sf_top2)
 
+                if addSBweight:
+
+                    """Add a branch named "sb_weight" which contains the per-event S/(S+B) weight
+                    for the events' corresponding bin in the signal region BDT score distribution.
+                    This is to be applied to all MC and data.
+                    """
+
+                    
+                    ##logger = logging.getLogger('add_sb_weight')
+                    # Copy any count and weight histograms.
+                    # Get input and output tree
+                    ##infile = ROOT.TFile.Open(src)
+                    ##outfile = ROOT.TFile.Open(dst, 'recreate')
+                    ##for key in infile.GetListOfKeys():
+                    ##    if key.GetName() == 'tree':
+                    ##        continue
+                    ##    obj = key.ReadObj()
+                    ##    obj.Write()
+                    ##tree = infile.Get('tree')
+                    # Reset the branch in case it already exists.
+                    ##tree.SetBranchStatus('sb_weight*', 0)
+                    # Set the BDT branch address for faster reading, making
+                    # sure that Xbb-style leaflists are handled properly.
+                    ##bdt_buffer = {}
+                    ##leaf_index = {}
+                    ##for key in dc_info_dic:
+                    ##    if key == 'MLFIT_PATH': continue
+                    ##    bdt_branch = dc_info_dic[key][0]
+                    ##    if '.' in bdt_branch:
+                    ##        branch_name, leaf_name = bdt_branch.split('.')
+                    ##        branch = tree.GetBranch(branch_name)
+                    ##        n_leaves = branch.GetNleaves()
+                    ##        leaf_index[bdt_branch] = [leaf.GetName() for leaf in branch.GetListOfLeaves()].index(leaf_name)
+                    ##        bdt_buffer[bdt_branch] = numpy.zeros(n_leaves, dtype=numpy.float32)
+                    ##    else:
+                    ##        branch_name = bdt_branch
+                    ##        leaf_index[bdt_branch] = None
+                    ##        bdt_buffer[bdt_branch] = numpy.zeros(1, dtype=numpy.float32)
+                    ##        print 'problem'
+                    ##        sys.exit()
+                    ##    tree.SetBranchAddress(branch_name, bdt_buffer[bdt_branch])
+                    ### Clone the original tree and add the new branch.
+                    #tree_new = tree.CloneTree(0)
+                    ##sb_weight_dic = {} 
+                    ##for key in dc_info_dic:
+                    ##    if key == 'MLFIT_PATH': continue
+                    ##    sb_weight_dic[key] = numpy.zeros(1, dtype=numpy.float64)
+                    ##    #sb_weight = numpy.zeros(1, dtype=numpy.float64)
+                    ##    newtree.Branch('sb_weight_%s'%key, sb_weight_dic[key], 'sb_weight_%s/D'%key)
+                    ##    #newtree.Branch('sb_weight', sb_weight, 'sb_weight/D')
+                    ### Cache the Fill method for faster filling.
+                    ##fill_newtree = tree_new.Fill
+                    ##for i, event in enumerate(tree, start=1):
+                    for key in dc_info_dic:
+                        if key == 'MLFIT_PATH': continue
+                        bdt_branch = dc_info_dic[key][0]
+                        # Find the BDT bin containing the event. If the event is
+                        # found in the underflow bin, use the first bin instead.
+                        bdt_score = bdt_buffer[bdt_branch][0] if leaf_index[bdt_branch] is None else bdt_buffer[bdt_branch][leaf_index[bdt_branch]]
+                        #print 'bdt buffer', bdt_buffer[bdt_branch]
+                        bin_index = dc_info_dic[key][5].FindBin(bdt_score) or 1
+                        #bin_index = signal_postfit.FindBin(bdt_score) or 1
+                        # Calculate the S/(S+B) weight for the event.
+                        #dc_info_dic[key][5].SaveAs('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/checkhisto.root')
+                        #sys.exit()
+                        s = dc_info_dic[key][5].GetBinContent(bin_index)
+                        b = dc_info_dic[key][6].GetBinContent(bin_index)
+                        #if 'ZeeBDT_highpt' in key:
+                        #    print 'bdt_score is', bdt_score
+                        #    print 'bin index is', bin_index
+                        #    print 's is', s
+                        #    print 'b is', b
+                        #s = signal_postfit.GetBinContent(bin_index)
+                        #b = background_postfit.GetBinContent(bin_index)
+                        sb_weight_dic[key][0] = s / (s + b) if b > 0 else 0
+                        #fill_newtree()
+                        #if i % 1000 == 0 or sb_weight_dic[key][0] > 10:
+                        #    print 'i is', i
+                        #    logger.info('Processing Entry #%s: BDT Score = %s, S/(S+B) = %s', i, bdt_score, sb_weight_dic[key])
+                    #newtree.Write()
+                    #outfile.Close()
+                    #infile.Close()
+
                 if AddSpecialWeight and job.type != 'DATA':
                     DY_specialWeight[0] = 1
                     if not job.specialweight:
@@ -2094,7 +2465,7 @@ for job in info:
                         specialWeight = ROOT.TTreeFormula('specialWeight',job.specialweight, tree)
                         specialWeight_ = specialWeight.EvalInstance()
                         DY_specialWeight[0] = specialWeight_
-                
+
                 newtree.Fill()
 
         print 'Exit loop'
@@ -2140,7 +2511,7 @@ for job in info:
                     print 'TERREMOTO AND TRAGEDIA: THE MERGED FILE IS CORRUPTED!!! ERROR: exiting'
                     print outputFile
                     print f, f.IsZombie(), f.TestBit(ROOT.TFile.kRecovered), f.GetNkeys()
-                    
+
                     sys.exit(1)
 
                 command = 'rm '+tmpfile

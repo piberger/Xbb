@@ -121,6 +121,8 @@ verify = len(sys.argv) > 2 and sys.argv[2]=='verify'
 #Specialweight
 ##############
 
+ZLLIncl = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext2"]
+
 ZLLjetsHT0       = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
 #ZLLjetsHT70      = ["DYJetsToLL_M-50_HT-70to100_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 ZLLjetsHT100     = ["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
@@ -235,6 +237,10 @@ def runInParallel(func, arglist):
 #    (config, ZH,)
 #        ]
 #runInParallel(getExtWeights, arglist)
+
+print'yeah baby'
+arglist = [(config, ZLLIncl,)]
+runInParallel(getExtWeights, arglist)
 
 #print 'Weights for HT 0 are',    getStichWeight(ZLLjetsHT0   , ZLLBjets, HT0   +"&&"+DYBJets)
 #print 'Weights for HT 70 are',   getStichWeight(ZLLjetsHT70  , ZLLBjets, HT70  +"&&"+DYBJets)
