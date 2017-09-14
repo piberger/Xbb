@@ -162,6 +162,7 @@ class TreeCache:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
         else:
             print ('\x1b[31mERROR: no sample tree!:', self.identification, '\x1b[0m')
+        return self
 
     # return sample tree class of cached samples if all files found
     def getTree(self):
