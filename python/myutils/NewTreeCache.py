@@ -225,5 +225,3 @@ class TreeCache:
                 # delete temporary file if copy was successful
                 self.deleteFile(tmpFileName)
         return success
-
-

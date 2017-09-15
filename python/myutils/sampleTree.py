@@ -93,7 +93,6 @@ class SampleTree(object):
 
             # check root file existence
             if os.path.isfile(SampleTree.getLocalFileName(rootFileName)):
-                obj = None
                 rootFileName = SampleTree.getXrootdFileName(rootFileName)
                 input = ROOT.TFile.Open(rootFileName,'read')
                 if input and not input.IsZombie():
@@ -103,17 +102,16 @@ class SampleTree(object):
                         obj = key.ReadObj()
                         if obj.GetName() == self.treeName:
                             continue
-                        for region, regionInfo in self.regionDict.iteritems():
-                            histogramName = obj.GetName()+region
+                        histogramName = obj.GetName()
 
-                            if histogramName in self.histograms:
-                                if self.histograms[histogramName]:
-                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
-                                else:
-                                    print ("ERROR: histogram object was None!!!")
+                        if histogramName in self.histograms:
+                            if self.histograms[histogramName]:
+                                self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
                             else:
-                                self.histograms[histogramName] = obj.Clone(obj.GetName())
-                                self.histograms[histogramName].SetDirectory(regionInfo['file'])
+                                print ("ERROR: histogram object was None!!!")
+                        else:
+                            self.histograms[histogramName] = obj.Clone(obj.GetName())
+                            self.histograms[histogramName].SetDirectory(0)
                     input.Close()
 
                     # add file to chain
@@ -284,4 +282,31 @@ class SampleTree(object):
     def getNumSampleFiles(self):
         return len(self.sampleFileNames)
 
+
+    def getScale(self, sample):
+        try:
+            sample.xsec = sample.xsec[0]
+        except:
+            pass
+
+        try:
+            posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
+            negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
+            count = posWeight - negWeight
+        except:
+            if self.verbose:
+                print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+            try:
+                count = self.histograms['Count'].GetBinContent(1)
+            except Exception as e:
+                print ("EXCEPTION:", e)
+                print ("ERROR: no weight histograms found in sampleTree => terminate")
+                print ("HISTOGRAMS:", self.histograms)
+                exit(0)
+        lumi = float(sample.lumi)
+        theScale = lumi * sample.xsec * sample.sf / float(count)
+
+        if self.verbose:
+            print("sampleTree.getScale(): sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        return theScale
 
