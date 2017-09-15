@@ -156,12 +156,13 @@ class TreeCache:
     def cache(self):
         if self.sampleTree:
             outputFileName = self.getTmpFileName()
-            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.minCut, hash=self.hash, branches=self.branches)
+            callbacks = {'afterWrite': self.moveFilesToFinalLocation}
+            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.minCut, hash=self.hash, branches=self.branches, callbacks=callbacks)
             self.tmpFiles.append(outputFileName)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
         else:
-            print ('\x1b[31mERROR: no sample tree!:', self.identification, '\x1b[0m')
+            print ('\x1b[31mERROR: no sample tree connected!:', self.identification, ' set the sampleTree first with "setSampleTree(sampleTree)" \x1b[0m')
         return self
 
     # return sample tree class of cached samples if all files found

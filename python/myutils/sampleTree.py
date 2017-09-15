@@ -208,7 +208,7 @@ class SampleTree(object):
             localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
         return localFileName
 
-    def addOutputTree(self, outputFileName, cut, hash, branches=None):
+    def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None):
         outputTree = {
             'tree': self.tree.CloneTree(0),
             'fileName': outputFileName,
@@ -216,6 +216,7 @@ class SampleTree(object):
             'cut': cut,
             'hash': hash,
             'branches': branches,
+            'callbacks': callbacks,
             'passed': 0,
         }
         self.addFormula(hash, cut)
@@ -258,6 +259,11 @@ class SampleTree(object):
         for outputTree in self.outputTrees:
             outputTree['file'].Write()
             outputTree['file'].Close()
+
+        # callbacks after having written file
+        for outputTree in self.outputTrees:
+            if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
+                outputTree['callbacks']['afterWrite']()
 
         if self.verbose:
             print ('OUTPUT TREES:')
