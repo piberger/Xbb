@@ -12,10 +12,11 @@ import os
 # configuration
 # ----------------------------------------------------------------------------------------------------------------------
 testConfiguration = 'TestZll2016config/'
-backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1']
+backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1', 'HT200to400ZJets_udscg', 'HT200to400ZJets_1b', 'HT200to400ZJets_2b']
 signalSampleNames = ['ZH_HToBB_ZToLL_M125_pow_ext1']
 samplesToCache = [
     'DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1',
+    'DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8',
     'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
 ]
 TrainCut = '!((evt%2)==0||isData)'

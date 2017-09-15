@@ -16,7 +16,7 @@ if os.path.exists("../interface/DrawFunctions_C.so"):
 # ----------------------------------------------------------------------------------------------------------------------
 testConfiguration = 'TestZll2016config/'
 mvaName = 'ZllBDTVV_highpt'
-backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1']
+backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1', 'HT200to400ZJets_udscg', 'HT200to400ZJets_1b', 'HT200to400ZJets_2b']
 signalSampleNames = ['ZH_HToBB_ZToLL_M125_pow_ext1']
 TrainCut = '!((evt%2)==0||isData)'
 EvalCut = '((evt%2)==0||isData)'

@@ -30,6 +30,7 @@ class SampleTree(object):
 
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1):
         self.verbose = True
+        self.monitorPerformance = True
 
         # get list of sample root files
         if type(samples) == list:
@@ -248,17 +249,31 @@ class SampleTree(object):
             for formulaName, formula in self.formulas.iteritems():
                 print (' > ', formulaName, ' ==> ', formula)
 
+        self.tree.SetCacheSize(100000000)
+        self.tree.AddBranchToCache('*', ROOT.kTRUE)
+        self.tree.StopCacheLearningPhase()
+
+        #ps = None
+        #if self.monitorPerformance:
+        #    ps = ROOT.TTreePerfStats("ioperf", self.tree)
+
         # loop over all events and write to output branches
         for event in self:
             for outputTree in self.outputTrees:
                 if self.evaluate(outputTree['hash']):
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
+        print('INFO: end of processing')
 
         # write files
         for outputTree in self.outputTrees:
             outputTree['file'].Write()
             outputTree['file'].Close()
+        print('INFO: files written')
+
+        #if self.monitorPerformance and ps:
+        #    ps.Print()
+        #    ps.SaveAs("tree_perf.root")
 
         # callbacks after having written file
         for outputTree in self.outputTrees:
