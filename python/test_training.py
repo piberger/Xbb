@@ -3,125 +3,105 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 from myutils import NewTreeCache as TreeCache
-from myutils.sampleTree import SampleTree as SampleTree
-from myutils import BetterConfigParser, mvainfo, ParseInfo
+from myutils import BetterConfigParser, ParseInfo
 
 import os
-
-user = os.popen('whoami').read().strip('\n').strip('\r')
-testConfiguration = 'TestZll2016config/'
 
 if os.path.exists("../interface/DrawFunctions_C.so"):
     print 'ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")'
     ROOT.gROOT.LoadMacro("../interface/DrawFunctions_C.so")
 
-#load config
+# ----------------------------------------------------------------------------------------------------------------------
+# configuration
+# ----------------------------------------------------------------------------------------------------------------------
+testConfiguration = 'TestZll2016config/'
+mvaName = 'ZllBDTVV_highpt'
+backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1']
+signalSampleNames = ['ZH_HToBB_ZToLL_M125_pow_ext1']
+TrainCut = '!((evt%2)==0||isData)'
+EvalCut = '((evt%2)==0||isData)'
+
+# ----------------------------------------------------------------------------------------------------------------------
+# output file
+# ----------------------------------------------------------------------------------------------------------------------
+trainingOutputFile = ROOT.TFile.Open('test_training.root', "RECREATE")
+
+# ----------------------------------------------------------------------------------------------------------------------
+# load config
+# ----------------------------------------------------------------------------------------------------------------------
 config = BetterConfigParser()
 config.read(testConfiguration + '/paths.ini')
 config.read(testConfiguration + '/general.ini')
 config.read(testConfiguration + '/samples_nosplit.ini')
 config.read(testConfiguration + '/training.ini')
 
-
 factoryname = config.get('factory', 'factoryname')
-trainingOutputFile = ROOT.TFile.Open('test_training.root', "RECREATE")
 factorysettings = config.get('factory', 'factorysettings')
-
-samplesPath = '/scratch/{user}/'.format(user=user)
+samplesPath = config.get('Directories', 'MVAin')
 samplesinfo = testConfiguration + '/samples_nosplit.ini'
 info = ParseInfo(samplesinfo, samplesPath)
 
 sampleFilesFolder = config.get('Directories', 'samplefiles')
 
-mvaName = 'ZllBDTVV_highpt'
 treeVarSet = config.get(mvaName, 'treeVarSet')
 MVAtype = config.get(mvaName, 'MVAtype')
+MVAsettings=config.get(mvaName,'MVAsettings')
 
 VHbbNameSpace = config.get('VHbbNameSpace', 'library')
 ROOT.gSystem.Load(VHbbNameSpace)
 
 # variables
-# TreeVar Array
 MVA_Vars = {}
 MVA_Vars['Nominal'] = config.get(treeVarSet, 'Nominal')
 MVA_Vars['Nominal'] = MVA_Vars['Nominal'].split(' ')
 
+samples = {
+    'BKG': info.get_samples(backgroundSampleNames),
+    'SIG': info.get_samples(signalSampleNames),
+}
+
+cachedPath = config.get('Directories', 'tmpSamples')
+tmpPath = config.get('Directories', 'scratch')
+
+globalRescale = 2.0
+
+# ----------------------------------------------------------------------------------------------------------------------
+# create TMVA factory
+# ----------------------------------------------------------------------------------------------------------------------
 factory = ROOT.TMVA.Factory(factoryname, trainingOutputFile, factorysettings)
 
-samples = {}
-samples['BKG'] = info.get_samples(['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1'])
-samples['SIG'] = info.get_samples(['ZH_HToBB_ZToLL_M125_pow_ext1'])
+# ----------------------------------------------------------------------------------------------------------------------
+# add sig/bkg x training/eval trees
+# ----------------------------------------------------------------------------------------------------------------------
+for addTreeFcn, samples in [
+            [factory.AddBackgroundTree, samples['BKG']],
+            [factory.AddSignalTree, samples['SIG']]
+        ]:
+    for sample in samples:
+        for additionalCut in [TrainCut, EvalCut]:
+            tc = TreeCache.TreeCache(
+                    sample=sample.name,
+                    cutList=('(%s)&&(%s)'%(sample.subcut, additionalCut)) if additionalCut else sample.subcut,
+                    inputFolder=samplesPath,
+                    tmpFolder=tmpPath,
+                    outputFolder=cachedPath,
+                    debug=True
+                )
+            sampleTree = tc.getTree()
+            treeScale = sampleTree.getScale(sample) * globalRescale
+            addTreeFcn(sampleTree.tree, treeScale, ROOT.TMVA.Types.kTraining if additionalCut == TrainCut else ROOT.TMVA.Types.kTesting)
 
-
-TrainCut = '!((evt%2)==0||isData)'
-EvalCut = '((evt%2)==0||isData)'
-
-for sample in samples['BKG']:
-    print sample.name, "\x1b[31m", sample.subcut, "\x1b[0m"
-    print " =>", sample.identifier
-
-    # training tree
-    tc = TreeCache.TreeCache(
-            sample=sample.name,
-            cutList=('(%s)&&(%s)'%(sample.subcut, TrainCut)) if TrainCut else sample.subcut,
-            inputFolder='/scratch/' + user + '/',
-            tmpFolder='/scratch/' + user + '/tmp/',
-            outputFolder='/scratch/' + user + '/cache/',
-            debug=True
-        )
-    factory.AddBackgroundTree(tc.getTree().tree, 1.0, ROOT.TMVA.Types.kTraining)
-
-    # training tree
-    tc = TreeCache.TreeCache(
-        sample=sample.name,
-        cutList=('(%s)&&(%s)' % (sample.subcut, EvalCut)) if EvalCut else sample.subcut,
-        inputFolder='/scratch/' + user + '/',
-        tmpFolder='/scratch/' + user + '/tmp/',
-        outputFolder='/scratch/' + user + '/cache/',
-        debug=True
-    )
-    factory.AddBackgroundTree(tc.getTree().tree, 1.0, ROOT.TMVA.Types.kTesting)
-
-
-for sample in samples['SIG']:
-    print sample.name, "\x1b[31m", sample.subcut, "\x1b[0m"
-    print " SIGNAL =>", sample.identifier
-
-    # training tree
-    tc = TreeCache.TreeCache(
-            sample=sample.name,
-            cutList=('(%s)&&(%s)'%(sample.subcut, TrainCut)) if TrainCut else sample.subcut,
-            inputFolder='/scratch/' + user + '/',
-            tmpFolder='/scratch/' + user + '/tmp/',
-            outputFolder='/scratch/' + user + '/cache/',
-            debug=True
-        )
-    factory.AddSignalTree(tc.getTree().tree, 1.0, ROOT.TMVA.Types.kTraining)
-
-    # training tree
-    tc = TreeCache.TreeCache(
-        sample=sample.name,
-        cutList=('(%s)&&(%s)' % (sample.subcut, EvalCut)) if EvalCut else sample.subcut,
-        inputFolder='/scratch/' + user + '/',
-        tmpFolder='/scratch/' + user + '/tmp/',
-        outputFolder='/scratch/' + user + '/cache/',
-        debug=True
-    )
-    factory.AddSignalTree(tc.getTree().tree, 1.0, ROOT.TMVA.Types.kTesting)
-
-# print 'add the variables'
 for var in MVA_Vars['Nominal']:
-    factory.AddVariable(var,'D') # add the variables
+    factory.AddVariable(var, 'D')
 
-
-#Execute TMVA
+# ----------------------------------------------------------------------------------------------------------------------
+# Execute TMVA
+# ----------------------------------------------------------------------------------------------------------------------
 factory.Verbose()
-print 'Execute TMVA: factory.BookMethod(%s, %s)'%(MVAtype, mvaName)
-factory.BookMethod(MVAtype, mvaName, '')
-print 'Execute TMVA: TrainMethod'
-#my_methodBase_bdt.TrainAllMethod()
+print 'Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(MVAtype, mvaName, MVAsettings)
+factory.BookMethod(MVAtype, mvaName, MVAsettings)
+print 'Execute TMVA: TrainAllMethods'
 factory.TrainAllMethods()
-#factory.TrainAllMethods()
 print 'Execute TMVA: TestAllMethods'
 factory.TestAllMethods()
 print 'Execute TMVA: EvaluateAllMethods'
