@@ -557,7 +557,6 @@ class HistoMaker:
             print 'BDT_add_cut: %s'%(BDT_add_cut)
             print 'treeCut: %s'%(treeCut)
 
-#            print("START DRAWING")
             if job.type != 'DATA':
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
                     drawoption = '(%s)*(%s & %s)'%(weightF,BDT_add_cut,treeCut)
@@ -573,12 +572,21 @@ class HistoMaker:
                 #    pdb.set_trace()
                 #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
                 #treeVar = '1'
-                ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
+                #ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
                 #from ROOT import TreeDraw
-                TD = ROOT.treedraw()
+                #TD = ROOT.treedraw()
                 print 'drawoptions are', drawoption
-                hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
-                #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
+                #Make sure sample used for sample systematics are used/skiped
+                sample_sys_dic = options['sample_sys_dic']
+                if job.name in sample_sys_dic and not sample_sys_dic[job.name]:
+                    print 'sample', job.name, ' will not be ploted'
+                    print 'job.name is', job.name
+                    print 'sample_sys_dic is', sample_sys_dic
+                else:
+                    print 'sample', job.name, ' will be ploted'
+                    #hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
+                    #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
+                    nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
                 #if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True

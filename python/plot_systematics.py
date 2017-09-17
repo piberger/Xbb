@@ -24,7 +24,8 @@ masses = ['125']
 
 #channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
 #vhbb_TH_ZuuMass_highpt.root
-channels = ['ZuuMass_highpt']
+#channels = ['ZuuMass_highpt']
+channels = ['ZeeBDT_lowpt']
 #channels = ['ZeeBDT_lowpt']
 #channels = ['Zee_CRZlight_lowpt']
 #channels = ['Zuu_CRZlight_lowpt']
@@ -61,7 +62,8 @@ channels = ['ZuuMass_highpt']
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_BDTmin_0p2/'
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_M/Limits/'
-path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
+path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -80,7 +82,7 @@ setup = eval(config.get('LimitGeneral','setup'))
 Dict = eval(config.get('LimitGeneral','Dict'))
 MCs = [Dict[s] for s in setup]
 
-sys_BDT= eval(config.get('LimitGeneral','sys_BDT'))
+sys_BDT= ['CUETP8M1']+eval(config.get('LimitGeneral','sys_BDT'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_HighPt'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_LowPt'))
@@ -135,14 +137,14 @@ for mass in masses:
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
-            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
+            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
 
             input_ = '%svhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
 
             #'ZeeMass_lowpt':'ZeeMass_lowpt',if not 'ZeeBDT_lowpt' in input_: continue
             #if not ('ZeeMassVV_highpt' in input_ or 'ZeeMass_highpt' in input_): continue
-            if not ('ZuuMassVV_highpt' in input_ or 'ZuuMass_highpt' in input_): continue
+            #if not ('ZuuMassVV_highpt' in input_ or 'ZuuMass_highpt' in input_): continue
 
             input = TFile.Open(input_,'read')
             print 'open', input
