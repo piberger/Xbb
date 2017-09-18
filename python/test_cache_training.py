@@ -12,13 +12,7 @@ import os
 # configuration
 # ----------------------------------------------------------------------------------------------------------------------
 testConfiguration = 'TestZll2016config/'
-backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1', 'HT200to400ZJets_udscg', 'HT200to400ZJets_1b', 'HT200to400ZJets_2b']
-signalSampleNames = ['ZH_HToBB_ZToLL_M125_pow_ext1']
-samplesToCache = [
-    'DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1',
-    'DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8',
-    'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
-]
+mvaName = 'ZllBDT_highpt'
 TrainCut = '!((evt%2)==0||isData)'
 EvalCut = '((evt%2)==0||isData)'
 
@@ -32,6 +26,8 @@ if os.path.exists("../interface/DrawFunctions_C.so"):
 config = BetterConfigParser()
 config.read(testConfiguration + '/paths.ini')
 config.read(testConfiguration + '/general.ini')
+config.read(testConfiguration + '/training.ini')
+config.read(testConfiguration + '/cuts.ini')
 config.read(testConfiguration + '/samples_nosplit.ini')
 
 samplesPath = config.get('Directories', 'MVAin')
@@ -43,7 +39,29 @@ tmpPath = config.get('Directories', 'scratch')
 
 sampleFilesFolder = config.get('Directories', 'samplefiles')
 
+backgroundSampleNames = eval(config.get(mvaName, 'backgrounds'))
+signalSampleNames = eval(config.get(mvaName, 'signals'))
+
 samples = info.get_samples(backgroundSampleNames + signalSampleNames)
+
+treeCutName = config.get(mvaName, 'treeCut')
+treeCut = config.get('Cuts', treeCutName)
+
+
+
+#samplesToCache = [
+#    'DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1',
+#    'DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8',
+#    'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
+#]
+samplesToCache = []
+for sample in samples:
+    if sample.identifier not in samplesToCache:
+        samplesToCache.append(sample.identifier)
+
+print "--samples to cache------"
+for sampleToCache in samplesToCache:
+    print " > ",sampleToCache
 
 # ----------------------------------------------------------------------------------------------------------------------
 # cache samples
@@ -59,14 +77,20 @@ for sampleToCache in samplesToCache:
     for sample in samples:
 
         if sample.identifier == sampleToCache:
-            print sample.name, "\x1b[31m", sample.subcut, "\x1b[0m"
-            print " =>", sample.identifier
+            for additionalCut in [TrainCut, EvalCut]:
 
-            for additionalCut in [TrainCut, EvalCut, None]:
+                # cuts
+                sampleCuts = [sample.subcut]
+                if additionalCut:
+                    sampleCuts.append(additionalCut)
+                if treeCut:
+                    sampleCuts.append(treeCut)
+                cutList = '&&'.join(['(%s)'%x for x in sorted(sampleCuts)])
+
                 treeCaches.append(
                     TreeCache.TreeCache(
                         sample=sample.name,
-                        cutList=('(%s)&&(%s)'%(sample.subcut, additionalCut)) if additionalCut else sample.subcut,
+                        cutList=cutList,
                         inputFolder=samplesPath,
                         tmpFolder=tmpPath,
                         outputFolder=cachedPath,

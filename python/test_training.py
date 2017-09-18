@@ -15,9 +15,7 @@ if os.path.exists("../interface/DrawFunctions_C.so"):
 # configuration
 # ----------------------------------------------------------------------------------------------------------------------
 testConfiguration = 'TestZll2016config/'
-mvaName = 'ZllBDTVV_highpt'
-backgroundSampleNames = ['HT100to200ZJets_udscg_ext1', 'HT100to200ZJets_1b_ext1', 'HT100to200ZJets_2b_ext1', 'HT200to400ZJets_udscg', 'HT200to400ZJets_1b', 'HT200to400ZJets_2b']
-signalSampleNames = ['ZH_HToBB_ZToLL_M125_pow_ext1']
+mvaName = 'ZllBDT_highpt'
 TrainCut = '!((evt%2)==0||isData)'
 EvalCut = '((evt%2)==0||isData)'
 
@@ -32,8 +30,9 @@ trainingOutputFile = ROOT.TFile.Open('test_training.root', "RECREATE")
 config = BetterConfigParser()
 config.read(testConfiguration + '/paths.ini')
 config.read(testConfiguration + '/general.ini')
-config.read(testConfiguration + '/samples_nosplit.ini')
 config.read(testConfiguration + '/training.ini')
+config.read(testConfiguration + '/cuts.ini')
+config.read(testConfiguration + '/samples_nosplit.ini')
 
 factoryname = config.get('factory', 'factoryname')
 factorysettings = config.get('factory', 'factorysettings')
@@ -55,6 +54,9 @@ MVA_Vars = {}
 MVA_Vars['Nominal'] = config.get(treeVarSet, 'Nominal')
 MVA_Vars['Nominal'] = MVA_Vars['Nominal'].split(' ')
 
+# samples
+backgroundSampleNames = eval(config.get(mvaName, 'backgrounds'))
+signalSampleNames = eval(config.get(mvaName, 'signals'))
 samples = {
     'BKG': info.get_samples(backgroundSampleNames),
     'SIG': info.get_samples(signalSampleNames),
@@ -62,6 +64,9 @@ samples = {
 
 cachedPath = config.get('Directories', 'tmpSamples')
 tmpPath = config.get('Directories', 'scratch')
+
+treeCutName = config.get(mvaName, 'treeCut')
+treeCut = config.get('Cuts', treeCutName)
 
 globalRescale = 2.0
 
@@ -79,9 +84,17 @@ for addTreeFcn, samples in [
         ]:
     for sample in samples:
         for additionalCut in [TrainCut, EvalCut]:
+            # cuts
+            sampleCuts = [sample.subcut]
+            if additionalCut:
+                sampleCuts.append(additionalCut)
+            if treeCut:
+                sampleCuts.append(treeCut)
+            cutList = '&&'.join(['(%s)'%x for x in sorted(sampleCuts)])
+
             tc = TreeCache.TreeCache(
                     sample=sample.name,
-                    cutList=('(%s)&&(%s)'%(sample.subcut, additionalCut)) if additionalCut else sample.subcut,
+                    cutList=cutList,
                     inputFolder=samplesPath,
                     tmpFolder=tmpPath,
                     outputFolder=cachedPath,
