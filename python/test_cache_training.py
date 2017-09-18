@@ -47,13 +47,6 @@ samples = info.get_samples(backgroundSampleNames + signalSampleNames)
 treeCutName = config.get(mvaName, 'treeCut')
 treeCut = config.get('Cuts', treeCutName)
 
-
-
-#samplesToCache = [
-#    'DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1',
-#    'DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8',
-#    'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1',
-#]
 samplesToCache = []
 for sample in samples:
     if sample.identifier not in samplesToCache:
@@ -63,20 +56,24 @@ print "--samples to cache------"
 for sampleToCache in samplesToCache:
     print " > ",sampleToCache
 
+
 # ----------------------------------------------------------------------------------------------------------------------
 # cache samples
 # ----------------------------------------------------------------------------------------------------------------------
 # for this test run caching for all samples sequentially
 for sampleToCache in samplesToCache:
-
-    sampleFilesListFileName = sampleFilesFolder + sampleToCache + '.txt'
-    sampleTree = SampleTree(sampleFilesListFileName)
-
+    print '*'*80
+    print ' ', sampleToCache
+    print '*'*80
     # prepare caches for training and evaluation samples
     treeCaches = []
+    sampleTree = None
     for sample in samples:
 
         if sample.identifier == sampleToCache:
+            # for the first sample which comes from this files, load the tree
+            if not sampleTree:
+                sampleTree = SampleTree({'name': sample.identifier, 'folder': samplesPath})
             for additionalCut in [TrainCut, EvalCut]:
 
                 # cuts

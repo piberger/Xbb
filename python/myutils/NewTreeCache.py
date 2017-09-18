@@ -96,14 +96,16 @@ class TreeCache:
 
     # check existence of files with skimmed trees
     def findCachedFileNames(self):
-        cachedFilesMask = self.outputFileNameFormat.format(
+        cachedFilesMaskRaw = self.outputFileNameFormat.format(
             outputFolder = self.outputFolder,
             hash = self.hash,
             part = '*',
             parts = '*'
         )
+        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
         if self.debug:
+            print ('DEBUG: search files:', cachedFilesMask)
             print ('\x1b[32mDEBUG: found files:')
             for fileName in self.cachedFileNames:
                 print (' > ', fileName)

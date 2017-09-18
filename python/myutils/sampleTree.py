@@ -4,6 +4,7 @@ import ROOT
 import os
 import math
 import time
+import glob
 
 #------------------------------------------------------------------------------
 # sample tree class
@@ -26,6 +27,7 @@ import time
 class SampleTree(object):
 
     xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
+    moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1):
@@ -35,6 +37,12 @@ class SampleTree(object):
         # get list of sample root files
         if type(samples) == list:
             sampleFileNames = samples
+        elif type(samples) == dict:
+            sampleName = samples['name']
+            sampleFolder = samples['folder']
+            if self.verbose:
+                print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
+            sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
         else:
             sampleTextFileName = samples
             if os.path.isfile(sampleTextFileName):
@@ -47,7 +55,8 @@ class SampleTree(object):
 
             with open(self.sampleTextFileName, 'r') as sampleTextFile:
                 sampleFileNames = sampleTextFile.readlines()
-
+        
+        #print ("FILES:", sampleFileNames)
         # process only partial sample root file list
         self.splitFiles = splitFiles
         self.splitFilesPart = splitFilesPart
@@ -91,9 +100,9 @@ class SampleTree(object):
 
             if self.verbose:
                 print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
-
+            
             # check root file existence
-            if os.path.isfile(SampleTree.getLocalFileName(rootFileName)):
+            if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
                 rootFileName = SampleTree.getXrootdFileName(rootFileName)
                 input = ROOT.TFile.Open(rootFileName,'read')
                 if input and not input.IsZombie():
@@ -142,6 +151,9 @@ class SampleTree(object):
         if self.verbose:
             print ('INFO: # files chained: %d'%len(self.chainedFiles))
             print ('INFO: # files broken : %d'%len(self.brokenFiles))
+        
+        if self.tree:
+            self.tree.SetCacheSize(100*1024*1024)
 
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
@@ -197,6 +209,9 @@ class SampleTree(object):
             xrootdFileName = SampleTree.pnfsStoragePath + xrootdFileName.strip()
         isRemote = '/pnfs/' in xrootdFileName
         if isRemote:
+            xrootdFileName = xrootdFileName.replace(SampleTree.xrootdRedirector, '')
+            for red in SampleTree.moreXrootdRedirectors:
+                xrootdFileName = xrootdFileName.replace(red, '')
             return SampleTree.xrootdRedirector + xrootdFileName.replace(SampleTree.xrootdRedirector, '').strip()
         else:
             return xrootdFileName.strip()
@@ -204,7 +219,9 @@ class SampleTree(object):
     @staticmethod
     def getLocalFileName(rawFileName):
         localFileName = rawFileName.strip()
-        localFileName.replace(SampleTree.xrootdRedirector, '')
+        localFileName = localFileName.replace(SampleTree.xrootdRedirector, '')
+        for red in SampleTree.moreXrootdRedirectors:
+            localFileName = localFileName.replace(red, '')
         if localFileName.startswith('/store/'):
             localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
         return localFileName
@@ -253,10 +270,6 @@ class SampleTree(object):
         self.tree.AddBranchToCache('*', ROOT.kTRUE)
         self.tree.StopCacheLearningPhase()
 
-        #ps = None
-        #if self.monitorPerformance:
-        #    ps = ROOT.TTreePerfStats("ioperf", self.tree)
-
         # loop over all events and write to output branches
         for event in self:
             for outputTree in self.outputTrees:
@@ -270,11 +283,7 @@ class SampleTree(object):
             outputTree['file'].Write()
             outputTree['file'].Close()
         print('INFO: files written')
-
-        #if self.monitorPerformance and ps:
-        #    ps.Print()
-        #    ps.SaveAs("tree_perf.root")
-
+        
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
