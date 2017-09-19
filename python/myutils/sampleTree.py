@@ -170,10 +170,13 @@ class SampleTree(object):
                 fraction = 1.0*treeNum/len(self.chainedFiles)
                 passedTime = time.time() - self.timeStart
                 self.timeETA = (1.0-fraction)/fraction * passedTime if fraction > 0 else 0
+
             # output status
             if self.verbose:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
-                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %1.1f min)'%(treeNum, percentage, self.getETA()/60.0))
+                if treeNum == 0:
+                    print ('INFO: time ', time.ctime())
+                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min)'%(treeNum, percentage, self.getETA()))
             self.oldTreeNum = treeNum
             # update TTreeFormula's
             for formulaName, treeFormula in self.formulas.iteritems():
@@ -197,7 +200,7 @@ class SampleTree(object):
     
     def getETA(self):
         # return ETA in seconds
-        return self.timeETA
+        return '%1.1f'%(self.timeETA/60.0) if self.timeETA > 0 else '?'
 
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
@@ -276,7 +279,7 @@ class SampleTree(object):
                 if self.evaluate(outputTree['hash']):
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
-        print('INFO: end of processing')
+        print('INFO: end of processing. time ', time.ctime())
 
         # write files
         for outputTree in self.outputTrees:
@@ -289,6 +292,7 @@ class SampleTree(object):
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
                 outputTree['callbacks']['afterWrite']()
 
+        print('INFO: done. time ', time.ctime())
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:

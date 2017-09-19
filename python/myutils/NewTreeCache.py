@@ -68,6 +68,8 @@ class TreeCache:
         self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
         self.tmpFiles = []
 
+        self.createFolders()
+
     # minimum common cut, sorted and cleaned. warning: may not contain spaces in e.g. string comparisons
     def findMinimumCut(self, cutList):
         if type(cutList) == list:
@@ -106,12 +108,12 @@ class TreeCache:
         self.cachedFileNames = glob.glob(cachedFilesMask)
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)
-            print ('\x1b[32mDEBUG: found files:')
+            print ('\x1b[32mDEBUG: files:')
             for fileName in self.cachedFileNames:
                 print (' > ', fileName)
             if len(self.cachedFileNames) < 1:
                 print ('none!')
-            print ('\x1b[0m')
+            print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
 
     # isCached == all files containing the skimmed tree found!
     def isCached(self):
@@ -196,22 +198,41 @@ class TreeCache:
         for fileName in self.cachedFileNames:
             self.deleteFile(fileName)
 
+    # create folders
+    def createFolders(self):
+        
+        tmpfolderLocal = SampleTree.getLocalFileName(self.tmpFolder)
+        if not os.path.isdir(tmpfolderLocal):
+            try:
+                xrootdFileName = SampleTree.getXrootdFileName(self.tmpFolder)
+                if '://' not in xrootdFileName:
+                    command = 'mkdir %s' % (xrootdFileName)
+                else:
+                    command = 'gfal-mkdir %s' % (xrootdFileName)
+                returnCode = subprocess.call([command], shell=True)
+                if self.debug:
+                    print(command, ' => ', returnCode)
+            except:
+                pass
+        outputFolderLocal = SampleTree.getLocalFileName(self.outputFolder)
+
+        if not os.path.isdir(tmpfolderLocal):
+            try:
+                xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
+                if '://' not in xrootdFileName:
+                    command = 'mkdir %s' % (xrootdFileName)
+                else:
+                    command = 'gfal-mkdir %s' % (xrootdFileName)
+
+                returnCode = subprocess.call([command], shell=True)
+                if self.debug:
+                    print(command, ' => ', returnCode)
+            except Exception as e:
+                print ('Exception during mkdir:',e)
+
     # move files from temporary to final location
     def moveFilesToFinalLocation(self):
         success = True
-
-        try:
-            xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
-            if '://' not in xrootdFileName:
-                command = 'mkdir %s' % (xrootdFileName)
-            else:
-                command = 'gfal-mkdir %s' % (xrootdFileName)
-
-            returnCode = subprocess.call([command], shell=True)
-            if self.debug:
-                print(command, ' => ', returnCode)
-        except Exception as e:
-            print ('Exception during mkdir:',e)
 
         for tmpFileName in self.tmpFiles:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
