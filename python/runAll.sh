@@ -43,6 +43,25 @@ fi
 echo "Task: $task"
 echo
 
+
+#-------------------------------------------------
+# parse named input arguments
+# todo: pass everything as named argument
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --trainingRegions=*)
+      trainingRegions="${1#*=}"
+      ;;
+    --sampleIdentifier=*)
+      sampleIdentifier="${1#*=}"
+      ;;
+    *)
+      ;;
+  esac
+  shift
+done
+
+
 #-------------------------------------------------
 # Setup Environment
 
@@ -172,6 +191,12 @@ elif [ $task = "syseval" ]; then
 elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
+
+elif [ $task = "cachetraining" ]; then
+    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
