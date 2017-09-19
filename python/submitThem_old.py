@@ -293,14 +293,27 @@ def submit(job,repDict,redirect_to_null=False):
         repDict['name'] = '"%s"' %logo[nJob].strip()
     else:
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+
+    # run script
+    runScript = 'runAll.sh %(job)s %(en)s '%(repDict)
+    runScript += opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+    if 'arguments' in repDict:
+        for argument, value in repDict['arguments'].iteritems():
+            runScript += ' --{argument}={value} '.format(argument=argument, value=value)
+
+    # submit script
     if run_locally == 'False':
+
+        logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
+        qsubOptions = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s' %(repDict) 
+
         if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
-            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
-        else:
-            command = 'qsub  -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+            qsubOptions += ' -l h_vmem=6g '
+
+        command = 'qsub {options} -o {logfile} {runscript}'.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
+
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-        subprocess.call([command], shell=True)
     else:
         waiting_time_before_retry = 60
         number_symultaneous_process = 2
@@ -312,12 +325,22 @@ def submit(job,repDict,redirect_to_null=False):
             os.system('sleep '+str(waiting_time_before_retry))
             counter = int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))
 
-        command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'sh ' + runScript
+
         if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
         else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s_%(additional)s.out' %(repDict) + ' &'
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-        subprocess.call([command], shell=True)
+    
+    # run command
+
+    if opts.interactive:
+        print "the real command is:\x1b[34m",command,"\x1b[0m"
+        print "(press ENTER to run it and continue)"
+        answer = raw_input().strip()
+        if answer == 'no' or answer == 'skip':
+            return
+    subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="nosample"):
@@ -750,6 +773,41 @@ elif opts.task == 'splitsubcaching':
              additional_ = 'CACHING'+'__'+str(sample)
              repDict['queue'] = 'all.q'
              training(additional_)
+
+if opts.task.startswith('cachetraining'):
+    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
+    allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
+    print "backgrounds:"
+    for sampleName in sorted(allBackgrounds):
+        print " >", sampleName
+    print "signals:"
+    for sampleName in sorted(allSignals):
+        print " >", sampleName
+    
+    # get samples info
+    info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
+    samples = info.get_samples(allBackgrounds + allSignals)
+
+    # find all sample identifiers that have to be cached
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
+    print "sample identifiers: (",len(sampleIdentifiers),")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs
+    for sampleIdentifier in sampleIdentifiers:
+        jobDict = repDict.copy()
+        jobDict.update({
+                'arguments':
+                    {
+                    'trainingRegions': ','.join(trainingRegions),
+                    'sampleIdentifier': sampleIdentifier,
+                    }
+                })
+        jobName = 'training_cache_{sample}'.format(sample=sampleIdentifier)
+        submit(jobName, jobDict)
+
 
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
