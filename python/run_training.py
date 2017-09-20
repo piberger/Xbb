@@ -24,6 +24,7 @@ class MvaTrainingHelper(object):
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
         self.MVAtype = config.get(mvaName, 'MVAtype')
         self.MVAsettings = config.get(mvaName,'MVAsettings')
+        self.mvaName = mvaName
 
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
@@ -116,17 +117,17 @@ class MvaTrainingHelper(object):
         # ----------------------------------------------------------------------------------------------------------------------
         # Execute TMVA
         # ----------------------------------------------------------------------------------------------------------------------
-        factory.Verbose()
-        print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(MVAtype, mvaName, MVAsettings))
-        factory.BookMethod(MVAtype, mvaName, MVAsettings)
+        self.factory.Verbose()
+        print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
+        self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
         print ('Execute TMVA: TrainAllMethods')
-        factory.TrainAllMethods()
+        self.factory.TrainAllMethods()
         print ('Execute TMVA: TestAllMethods')
-        factory.TestAllMethods()
+        self.factory.TestAllMethods()
         print ('Execute TMVA: EvaluateAllMethods')
-        factory.EvaluateAllMethods()
+        self.factory.EvaluateAllMethods()
         print ('Execute TMVA: output.Write')
-        trainingOutputFile.Close()
+        self.trainingOutputFile.Close()
 
 # read arguments
 argv = sys.argv

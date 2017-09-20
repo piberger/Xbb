@@ -787,8 +787,10 @@ if opts.task.startswith('cachetraining'):
     info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
     samples = info.get_samples(allBackgrounds + allSignals)
 
-    # find all sample identifiers that have to be cached
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    print "STC:", samplesToCache
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
     print "sample identifiers: (",len(sampleIdentifiers),")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -815,7 +817,7 @@ if opts.task.startswith('cachetraining'):
                         'splitFiles': splitFiles,
                         }
                     })
-            jobName = 'training_cache_{sample}'.format(sample=sampleIdentifier)
+            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=splitFilesPart)
             submit(jobName, jobDict)
 
 if opts.task.startswith('runtraining'):
