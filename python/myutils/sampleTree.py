@@ -30,7 +30,7 @@ class SampleTree(object):
     moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1):
+    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1, countOnly=False):
         self.verbose = True
         self.monitorPerformance = True
 
@@ -61,16 +61,17 @@ class SampleTree(object):
         self.splitFiles = splitFiles
         self.splitFilesPart = splitFilesPart
         if self.splitFiles > 0 and len(sampleFileNames) > self.splitFiles:
-            numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
-            if self.splitFilesPart > 0 and self.splitFilesPart <= numParts:
+            self.numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
+            if self.splitFilesPart > 0 and self.splitFilesPart <= self.numParts:
                 sampleFileNames = sampleFileNames[(self.splitFilesPart-1)*self.splitFiles:(self.splitFilesPart*self.splitFiles)]
             else:
                 print("\x1b[31mERROR: wrong part number ", self.splitFilesPart, " for: %s \x1b[0m" % sampleTextFileName)
                 return
             if self.verbose:
-                print ("INFO: reading part ", self.splitFilesPart, " of ", numParts)
+                print ("INFO: reading part ", self.splitFilesPart, " of ", self.numParts)
         else:
             self.splitFilesPart = 1
+            self.numParts = 1
 
         self.sampleFileNames = sampleFileNames
         self.status = 0
@@ -93,67 +94,72 @@ class SampleTree(object):
         self.chainedFiles = []
         self.brokenFiles = []
         self.histograms = {}
-        self.tree = ROOT.TChain(self.treeName)
 
-        # check all .root files listed in the sample .txt file
-        for rootFileName in sampleFileNames:
+        if not countOnly:
+            self.tree = ROOT.TChain(self.treeName)
+
+            # check all .root files listed in the sample .txt file
+            for rootFileName in sampleFileNames:
+
+                if self.verbose:
+                    print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+                
+                # check root file existence
+                if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
+                    rootFileName = SampleTree.getXrootdFileName(rootFileName)
+                    input = ROOT.TFile.Open(rootFileName,'read')
+                    if input and not input.IsZombie():
+
+                        # add count histograms, since they are not in the tchain
+                        for key in input.GetListOfKeys():
+                            obj = key.ReadObj()
+                            if obj.GetName() == self.treeName:
+                                continue
+                            histogramName = obj.GetName()
+
+                            if histogramName in self.histograms:
+                                if self.histograms[histogramName]:
+                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                else:
+                                    print ("ERROR: histogram object was None!!!")
+                            else:
+                                self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                self.histograms[histogramName].SetDirectory(0)
+                        input.Close()
+
+                        # add file to chain
+                        chainTree = '%s/%s'%(rootFileName, self.treeName)
+                        if self.verbose:
+                            print ('chaining '+chainTree)
+                        statusCode = self.tree.Add(chainTree)
+
+                        # check for errors in chaining the file
+                        if statusCode != 1:
+                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
+                            raise Exception("TChain method Add failure")
+                        elif not self.tree:
+                            print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
+                        else:
+                            self.treeEmpty = False
+                            self.chainedFiles.append(rootFileName)
+                            if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
+                                print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
+                                break
+                    else:
+                        print ('ERROR: file is damaged: %s'%rootFileName)
+                        self.brokenFiles.append(rootFileName)
+                else:
+                    print ('ERROR: file is missing: %s'%rootFileName)
 
             if self.verbose:
-                print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+                print ('INFO: # files chained: %d'%len(self.chainedFiles))
+                print ('INFO: # files broken : %d'%len(self.brokenFiles))
             
-            # check root file existence
-            if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
-                rootFileName = SampleTree.getXrootdFileName(rootFileName)
-                input = ROOT.TFile.Open(rootFileName,'read')
-                if input and not input.IsZombie():
-
-                    # add count histograms, since they are not in the tchain
-                    for key in input.GetListOfKeys():
-                        obj = key.ReadObj()
-                        if obj.GetName() == self.treeName:
-                            continue
-                        histogramName = obj.GetName()
-
-                        if histogramName in self.histograms:
-                            if self.histograms[histogramName]:
-                                self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
-                            else:
-                                print ("ERROR: histogram object was None!!!")
-                        else:
-                            self.histograms[histogramName] = obj.Clone(obj.GetName())
-                            self.histograms[histogramName].SetDirectory(0)
-                    input.Close()
-
-                    # add file to chain
-                    chainTree = '%s/%s'%(rootFileName, self.treeName)
-                    if self.verbose:
-                        print ('chaining '+chainTree)
-                    statusCode = self.tree.Add(chainTree)
-
-                    # check for errors in chaining the file
-                    if statusCode != 1:
-                        print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
-                        raise Exception("TChain method Add failure")
-                    elif not self.tree:
-                        print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
-                    else:
-                        self.treeEmpty = False
-                        self.chainedFiles.append(rootFileName)
-                        if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
-                            print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
-                            break
-                else:
-                    print ('ERROR: file is damaged: %s'%rootFileName)
-                    self.brokenFiles.append(rootFileName)
-            else:
-                print ('ERROR: file is missing: %s'%rootFileName)
-
-        if self.verbose:
-            print ('INFO: # files chained: %d'%len(self.chainedFiles))
-            print ('INFO: # files broken : %d'%len(self.brokenFiles))
-        
-        if self.tree:
-            self.tree.SetCacheSize(100*1024*1024)
+            if self.tree:
+                self.tree.SetCacheSize(100*1024*1024)
+    
+    def getNumberOfParts(self):
+        return self.numParts
 
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 

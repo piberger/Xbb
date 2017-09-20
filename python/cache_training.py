@@ -12,14 +12,14 @@ import os,sys
 
 class CacheTraining(object):
 
-    def __init__(self, config, sampleIdentifier, trainingRegions):
+    def __init__(self, config, sampleIdentifier, trainingRegions, cacheParts=1, cachePart=1, splitFiles=-1):
         self.config = config
-        self.sampleIdentifiers = sampleIdentifier if type(sampleIdentifier) == list else [sampleIdentifier]
+        self.sampleIdentifier = sampleIdentifier
         self.trainingRegions = trainingRegions
 
         self.sampleTree = None
         self.samplesPath = self.config.get('Directories', 'MVAin')
-        self.samplesDefinitions = config.get('Directories','samplesinfo') 
+        self.samplesDefinitions = self.config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
 
         self.cachedPath = self.config.get('Directories', 'tmpSamples')
@@ -35,9 +35,13 @@ class CacheTraining(object):
             treeCutName = config.get(trainingRegion, 'treeCut')
             treeCut = config.get('Cuts', treeCutName)
             self.trainingRegionsDict[trainingRegion] = {'cut': treeCut}
-    
-        self.TrainCut = '!((evt%2)==0||isData)'
-        self.EvalCut = '((evt%2)==0||isData)'
+
+        self.TrainCut = config.get('Cuts', 'TrainCut') 
+        self.EvalCut = config.get('Cuts', 'EvalCut')
+
+        self.cacheParts = cacheParts
+        self.cachePart = cachePart
+        self.splitFiles = splitFiles
     
     def printInfo(self):
         print ("REGION:".ljust(24),"CUT:")
@@ -49,7 +53,7 @@ class CacheTraining(object):
         # cache samples
         # ----------------------------------------------------------------------------------------------------------------------
         # for this test run caching for all samples sequentially
-        for sampleToCache in self.sampleIdentifiers:
+        for sampleToCache in [self.sampleIdentifier]:
             print ('*'*80)
             print (' ',sampleToCache)
             print ('*'*80)
@@ -82,14 +86,17 @@ class CacheTraining(object):
                             inputFolder=self.samplesPath,
                             tmpFolder=self.tmpPath,
                             outputFolder=self.cachedPath,
+                            cacheParts=self.cacheParts,
+                            cachePart=self.cachePart,
+                            splitFiles=self.splitFiles,
                             debug=True
                         )
 
-                        # check if sample is already cached
-                        if not tc.isCached():
+                        # check if this part of the sample is already cached
+                        if not tc.partIsCached():
                             # for the first sample which comes from this files, load the tree
                             if not self.sampleTree:
-                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath})
+                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFiles=self.splitFiles, splitFilesPart=self.cachePart)
                             treeCaches.append(tc.setSampleTree(self.sampleTree).cache())
 
             if len(treeCaches) > 0:
@@ -109,6 +116,12 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
                       help="sample identifier (no subsample!)")
+parser.add_option("-n","--cacheParts", dest="cacheParts", default='',
+                      help="number of parts")
+parser.add_option("-i","--cachePart", dest="cachePart", default='',
+                      help="number of part to cache")
+parser.add_option("-p","--splitFiles", dest="splitFiles", default='',
+                      help="number of files per part")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
@@ -122,7 +135,10 @@ config.read(opts.config)
 
 # initialize
 trainingRegions = opts.trainingRegions.split(',')
-ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions)
+cacheParts = int(opts.cacheParts) if len(opts.cacheParts) > 0 else 1
+cachePart = int(opts.cachePart) if len(opts.cachePart) > 0 else 1
+splitFiles = int(opts.splitFiles) if len(opts.splitFiles) > 0 else -1
+ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions, cachePart=cachePart, cacheParts=cacheParts, splitFiles=splitFiles)
 ct.printInfo()
 
 # run training

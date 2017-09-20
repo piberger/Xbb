@@ -61,6 +61,7 @@ class TreeCache:
         self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFiles=splitFiles, debug=False).get()
         self.cachePart = cachePart
         self.cacheParts = cacheParts if cacheParts > 1 else 1
+        self.splitFiles = splitFiles
         self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.cacheParts)
         self.debug = debug
         self.sampleTree = None
@@ -114,6 +115,16 @@ class TreeCache:
             if len(self.cachedFileNames) < 1:
                 print ('none!')
             print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
+
+    def partIsCached(self):
+        cachedFilesMaskRaw = self.outputFileNameFormat.format(
+            outputFolder = self.outputFolder,
+            hash = self.hash,
+            part = self.cachePart,
+            parts = '*'
+        )
+        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
+        return (len(glob.glob(cachedFilesMask))>0)
 
     # isCached == all files containing the skimmed tree found!
     def isCached(self):
