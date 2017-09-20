@@ -9,6 +9,7 @@ import hashlib
 import signal
 import zlib
 import base64
+from myutils.sampleTree import SampleTree as SampleTree
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -303,11 +304,10 @@ def submit(job,repDict,redirect_to_null=False):
 
     # submit script
     if run_locally == 'False':
-
         logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
         qsubOptions = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s' %(repDict) 
 
-        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+        if opts.task in ['mergesyscachingdcsplit', 'singleeval']:
             qsubOptions += ' -l h_vmem=6g '
 
         command = 'qsub {options} -o {logfile} {runscript}'.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
@@ -325,18 +325,16 @@ def submit(job,repDict,redirect_to_null=False):
             os.system('sleep '+str(waiting_time_before_retry))
             counter = int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))
 
-        command = 'sh ' + runScript
+        command = 'sh {runscript}'.format(runscript=runScript)
 
         if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
         else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s_%(additional)s.out' %(repDict) + ' &'
         print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-    
-    # run command
 
+    # run command
     if opts.interactive:
-        print "the real command is:\x1b[34m",command,"\x1b[0m"
-        print "(press ENTER to run it and continue)"
+        print "the real command is:\x1b[34m",command,"\x1b[0m\n(press ENTER to run it and continue)"
         answer = raw_input().strip()
         if answer == 'no' or answer == 'skip':
             return
@@ -797,17 +795,39 @@ if opts.task.startswith('cachetraining'):
     
     # submit jobs
     for sampleIdentifier in sampleIdentifiers:
-        jobDict = repDict.copy()
-        jobDict.update({
-                'arguments':
-                    {
-                    'trainingRegions': ','.join(trainingRegions),
-                    'sampleIdentifier': sampleIdentifier,
-                    }
-                })
-        jobName = 'training_cache_{sample}'.format(sample=sampleIdentifier)
-        submit(jobName, jobDict)
 
+        # number of files to process per job 
+        splitFiles = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+
+        nParts = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
+        print "DEBUG: split after ",splitFiles," files => number of parts = ",nParts
+        
+        # submit all the single parts
+        for splitFilesPart in range(1, nParts+1):
+            jobDict = repDict.copy()
+            jobDict.update({
+                    'arguments':
+                        {
+                        'trainingRegions': ','.join(trainingRegions),
+                        'sampleIdentifier': sampleIdentifier,
+                        'cachePart': splitFilesPart,
+                        'cacheParts': nParts,
+                        'splitFiles': splitFiles,
+                        }
+                    })
+            jobName = 'training_cache_{sample}'.format(sample=sampleIdentifier)
+            submit(jobName, jobDict)
+
+if opts.task.startswith('runtraining'):
+    # training regions
+    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+
+    # separate job for all training regions
+    for trainingRegion in trainingRegions:
+        jobDict = repDict.copy()
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}})
+        jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
+        submit(jobName, jobDict)
 
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]

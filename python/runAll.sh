@@ -55,6 +55,15 @@ while [ $# -gt 0 ]; do
     --sampleIdentifier=*)
       sampleIdentifier="${1#*=}"
       ;;
+    --splitFiles=*)
+      splitFiles="${1#*=}"
+      ;;
+    --cachePart=*)
+      cachePart="${1#*=}"
+      ;;
+    --cacheParts=*)
+      cacheParts="${1#*=}"
+      ;;
     *)
       ;;
   esac
@@ -193,7 +202,12 @@ elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "cachetraining" ]; then
-    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} ${config_filenames[@]}"
+    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFile ${splitFiles} --cacheParts ${cacheParts} --cachePart ${cachePart} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "runtraining" ]; then
+    runCommand="python ./run_training.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 
