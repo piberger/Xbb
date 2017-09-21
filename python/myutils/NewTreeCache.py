@@ -52,7 +52,8 @@ class TreeCache:
 
     def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, tmpFolder = 'tmp/', outputFolder = 'cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
         self.sample = sample
-        self.minCut = self.findMinimumCut(cutList)
+        self.cutList = cutList
+        self.minCut = SampleTree.findMinimumCut(self.cutList)
         self.inputFolder = inputFolder
         self.tmpFolder = tmpFolder
         self.outputFolder = outputFolder
@@ -70,14 +71,6 @@ class TreeCache:
         self.tmpFiles = []
 
         self.createFolders()
-
-    # minimum common cut, sorted and cleaned. warning: may not contain spaces in e.g. string comparisons
-    def findMinimumCut(self, cutList):
-        if type(cutList) == list:
-            cuts = cutList
-        else:
-            cuts = [cutList]
-        return '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
 
     # file, where skimmed tree is written to
     def getTmpFileName(self):
@@ -172,7 +165,7 @@ class TreeCache:
         if self.sampleTree:
             outputFileName = self.getTmpFileName()
             callbacks = {'afterWrite': self.moveFilesToFinalLocation}
-            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.minCut, hash=self.hash, branches=self.branches, callbacks=callbacks)
+            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.cutList, hash=self.hash, branches=self.branches, callbacks=callbacks)
             self.tmpFiles.append(outputFileName)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
@@ -227,7 +220,7 @@ class TreeCache:
                 pass
         outputFolderLocal = SampleTree.getLocalFileName(self.outputFolder)
 
-        if not os.path.isdir(tmpfolderLocal):
+        if not os.path.isdir(outputFolderLocal):
             try:
                 xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
                 if '://' not in xrootdFileName:

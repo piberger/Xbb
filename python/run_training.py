@@ -13,6 +13,7 @@ import os,sys
 class MvaTrainingHelper(object):
 
     def __init__(self, config, mvaName):
+        self.config = config
         self.factoryname = config.get('factory', 'factoryname')
         self.factorysettings = config.get('factory', 'factorysettings')
         self.samplesPath = config.get('Directories', 'MVAin')
@@ -128,6 +129,26 @@ class MvaTrainingHelper(object):
         self.factory.EvaluateAllMethods()
         print ('Execute TMVA: output.Write')
         self.trainingOutputFile.Close()
+        return self()
+
+    def printInfo(self):
+        #WRITE INFOFILE
+        MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
+        infofile = open(MVAdir+self.factoryname+'_'+self.MVAname+'.info','w')
+        print '@DEBUG: output infofile name'
+        print infofile
+
+        info=mvainfo(self.MVAname)
+        info.factoryname=self.factoryname
+        info.factorysettings=self.factorysettings
+        info.MVAtype=self.MVAtype
+        info.MVAsettings=self.MVAsettings
+        info.weightfilepath=MVAdir
+        info.path=self.samplesPath
+        info.varset=self.treeVarSet
+        info.vars=self.MVA_Vars['Nominal']
+        pickle.dump(info,infofile)
+        infofile.close()
 
 # read arguments
 argv = sys.argv
@@ -157,4 +178,5 @@ if len(trainingRegions) > 1:
 for trainingRegion in trainingRegions:
     th = MvaTrainingHelper(config=config, mvaName=trainingRegion)
     th.prepare().run()
+    th.printInfo()
 

@@ -81,6 +81,7 @@ class SampleTree(object):
         self.limitFiles = int(limitFiles) 
         self.timeStart = time.time()
         self.timeETA = 0
+        self.eventsRead = 0
         self.outputTrees = []
 
         self.regionDict = {
@@ -155,6 +156,9 @@ class SampleTree(object):
                 print ('INFO: # files chained: %d'%len(self.chainedFiles))
                 print ('INFO: # files broken : %d'%len(self.brokenFiles))
             
+            if len(self.chainedFiles) < 1:
+                self.tree = None
+
             if self.tree:
                 self.tree.SetCacheSize(100*1024*1024)
     
@@ -166,23 +170,26 @@ class SampleTree(object):
 
     def next(self):
         self.treeIterator.next()
+        self.eventsRead += 1
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
             # update ETA estimates
             if treeNum == 0:
                 self.timeStart = time.time()
+                perfStats = '?'
             else:
                 fraction = 1.0*treeNum/len(self.chainedFiles)
                 passedTime = time.time() - self.timeStart
                 self.timeETA = (1.0-fraction)/fraction * passedTime if fraction > 0 else 0
+                perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
 
             # output status
             if self.verbose:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
-                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min)'%(treeNum, percentage, self.getETA()))
+                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
             self.oldTreeNum = treeNum
             # update TTreeFormula's
             for formulaName, treeFormula in self.formulas.iteritems():
@@ -195,6 +202,7 @@ class SampleTree(object):
 
     def evaluate(self, formulaName):
         if formulaName in self.formulas:
+            #print ("eval:", formulaName, self.formulas[formulaName])
             if self.formulas[formulaName].GetNdata() > 0:
                 return self.formulas[formulaName].EvalInstance()
             else:
@@ -241,12 +249,20 @@ class SampleTree(object):
             'fileName': outputFileName,
             'file': ROOT.TFile.Open(outputFileName, 'recreate'),
             'cut': cut,
+            'cutSequence': [],
             'hash': hash,
             'branches': branches,
             'callbacks': callbacks,
             'passed': 0,
         }
-        self.addFormula(hash, cut)
+
+        cutList = cut if type(cut) == list else [cut]
+        for i, cutString in enumerate(cutList):
+            formulaName = cutString.replace(' ','')
+            if formulaName not in self.formulas:
+                self.addFormula(formulaName, cutString)
+            outputTree['cutSequence'].append(formulaName)
+ 
         outputTree['tree'].SetDirectory(outputTree['file'])
         if branches:
             outputTree['tree'].SetBranchStatus("*", 0)
@@ -282,7 +298,14 @@ class SampleTree(object):
         # loop over all events and write to output branches
         for event in self:
             for outputTree in self.outputTrees:
-                if self.evaluate(outputTree['hash']):
+
+                # evaluate all cuts of the sequence and abort early if one is not satisfied
+                passedCut = True
+                for cutFormulaName in outputTree['cutSequence']:
+                    passedCut = passedCut and self.evaluate(cutFormulaName)
+                    if not passedCut:
+                        break
+                if passedCut:
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
         print('INFO: end of processing. time ', time.ctime())
@@ -350,3 +373,11 @@ class SampleTree(object):
             print("sampleTree.getScale(): sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
+    # make AND of all cuts and return a single cut string. warning: cuts may not contain spaces in e.g. string comparisons
+    @staticmethod
+    def findMinimumCut(cutList):
+        if type(cutList) == list:
+            cuts = cutList
+        else:
+            cuts = [cutList]
+        return '&&'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])

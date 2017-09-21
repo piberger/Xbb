@@ -831,6 +831,45 @@ if opts.task.startswith('runtraining'):
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
+if opts.task.startswith('cacheplot'):
+    regions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    sampleNames = eval(config.get('Plot_general', 'samples')) 
+
+    # get samples info
+    info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+    samples = info.get_samples(sampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    print "sample identifiers: (",len(sampleIdentifiers),")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+
+        # number of files to process per job 
+        splitFiles = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        nParts = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
+        print "DEBUG: split after ",splitFiles," files => number of parts = ",nParts
+        
+        # submit all the single parts
+        for splitFilesPart in range(1, nParts+1):
+            jobDict = repDict.copy()
+            jobDict.update({
+                    'arguments':
+                        {
+                        'regions': ','.join(regions),
+                        'sampleIdentifier': sampleIdentifier,
+                        'cachePart': splitFilesPart,
+                        'cacheParts': nParts,
+                        'splitFiles': splitFiles,
+                        }
+                    })
+            jobName = 'plot_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=splitFilesPart)
+            submit(jobName, jobDict)
+
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars

@@ -52,6 +52,9 @@ while [ $# -gt 0 ]; do
     --trainingRegions=*)
       trainingRegions="${1#*=}"
       ;;
+    --regions=*)
+      regions="${1#*=}"
+      ;;
     --sampleIdentifier=*)
       sampleIdentifier="${1#*=}"
       ;;
@@ -208,6 +211,11 @@ elif [ $task = "cachetraining" ]; then
 
 elif [ $task = "runtraining" ]; then
     runCommand="python ./run_training.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "cacheplot" ]; then
+    runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFile ${splitFiles} --cacheParts ${cacheParts} --cachePart ${cachePart} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 
