@@ -256,6 +256,8 @@ class SampleTree(object):
             'passed': 0,
         }
 
+        if not outputTree['tree']:
+            print ("ERROR: output tree broken, input tree:", self.tree)
         cutList = cut if type(cut) == list else [cut]
         for i, cutString in enumerate(cutList):
             formulaName = cutString.replace(' ','')

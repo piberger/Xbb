@@ -834,10 +834,11 @@ if opts.task.startswith('runtraining'):
 if opts.task.startswith('cacheplot'):
     regions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
     sampleNames = eval(config.get('Plot_general', 'samples')) 
+    dataSampleNames = eval(config.get('Plot_general', 'Data')) 
 
     # get samples info
     info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
-    samples = info.get_samples(sampleNames)
+    samples = info.get_samples(sampleNames + dataSampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
@@ -869,6 +870,21 @@ if opts.task.startswith('cacheplot'):
                     })
             jobName = 'plot_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=splitFilesPart)
             submit(jobName, jobDict)
+
+if opts.task.startswith('runplot'):
+    regions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+
+    # submit all the plot regions as separate jobs
+    for region in regions:
+        jobDict = repDict.copy()
+        jobDict.update({
+                'arguments':
+                    {
+                    'regions': region,
+                    }
+                })
+        jobName = 'plot_run_{region}'.format(region=region)
+        submit(jobName, jobDict)
 
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
