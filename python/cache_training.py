@@ -42,6 +42,9 @@ class CacheTraining(object):
         self.cacheParts = cacheParts
         self.cachePart = cachePart
         self.splitFiles = splitFiles
+        
+        VHbbNameSpace=config.get('VHbbNameSpace','library')
+        ROOT.gSystem.Load(VHbbNameSpace)
     
     def printInfo(self):
         print ("REGION:".ljust(24),"CUT:")
@@ -52,7 +55,6 @@ class CacheTraining(object):
         # ----------------------------------------------------------------------------------------------------------------------
         # cache samples
         # ----------------------------------------------------------------------------------------------------------------------
-        # for this test run caching for all samples sequentially
         for sampleToCache in [self.sampleIdentifier]:
             print ('*'*80)
             print (' ',sampleToCache)
@@ -77,12 +79,11 @@ class CacheTraining(object):
                             sampleCuts.append(additionalCut)
                         if trainingRegionInfo['cut']:
                             sampleCuts.append(trainingRegionInfo['cut'])
-                        cutList = '&&'.join(['(%s)'%x for x in sorted(sampleCuts)])
 
                         # add cache object
                         tc = TreeCache.TreeCache(
                             sample=sample.name,
-                            cutList=cutList,
+                            cutList=sampleCuts,
                             inputFolder=self.samplesPath,
                             tmpFolder=self.tmpPath,
                             outputFolder=self.cachedPath,

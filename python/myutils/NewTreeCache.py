@@ -2,6 +2,7 @@ from __future__ import print_function
 import glob
 from Hash import Hash
 from sampleTree import SampleTree as SampleTree
+from samplesclass import Sample
 import ROOT
 import subprocess
 import os
@@ -51,7 +52,16 @@ import os
 class TreeCache:
 
     def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, tmpFolder = 'tmp/', outputFolder = 'cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
-        self.sample = sample
+        if isinstance(sample, Sample):
+            # sample passed as Sample object
+            # count number of chunks the cached data is split into
+            splitFiles = sample.mergeCachingSize 
+            cacheParts = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
+            self.sample = sample.name
+            print ("INFO: use sample=", sample.name, " #parts = ", cacheParts)
+        else:
+            # sample passed as string
+            self.sample = sample
         self.cutList = cutList
         self.minCut = SampleTree.findMinimumCut(self.cutList)
         self.inputFolder = inputFolder
