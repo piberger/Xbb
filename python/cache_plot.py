@@ -138,7 +138,7 @@ if __name__ == "__main__":
     parser.add_option("-f","--force", action="store_true", dest="force", default=False,
                           help="force overwriting of already cached files")
     (opts, args) = parser.parse_args(argv)
-    if opts.config =="":
+    if opts.config == "":
             opts.config = "config"
 
     # Import after configure to get help message

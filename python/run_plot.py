@@ -133,8 +133,8 @@ if __name__ == "__main__":
     parser.add_option("-p","--vars", dest="vars", default='',
                           help="plot variables, separated by comma")
     (opts, args) = parser.parse_args(argv)
-    if opts.config =="":
-            opts.config = "config"
+    if opts.config == "":
+            opts.config = ["config"]
 
     # Import after configure to get help message
     from myutils import BetterConfigParser, mvainfo, ParseInfo
