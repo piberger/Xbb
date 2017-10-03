@@ -105,6 +105,7 @@ class NewStackMaker:
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = histoMaker.getHistogram()
         self.histograms.append({
+            'name': sample.name,
             'histogram': sampleHistogram,
             'group': groupName
             })
@@ -243,10 +244,32 @@ class NewStackMaker:
         self.addObject(self.myText("CMS",0.17,0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag,(float(self.lumi/1000.0))),0.17,0.83))
-        except:
+            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.0)),0.17,0.83))
+        except Exception as e:
+            print ("WARNING: exception while adding text: ", e)
             pass
-        #tAddFlag = self.myText(addFlag,0.17,0.78)
+        dataNames = list(set([histogram['name'] for histogram in self.histograms if histogram['group'] == self.dataGroupName]))
+        addFlag = ''
+        isZee = False
+        isZmm = False
+        for data_ in dataNames:
+            if 'DoubleEG' in data_:
+                isZee = True
+            if 'DoubleMuon' in data_:
+                isZmm = True
+        if ('Zee' in dataNames and 'Zmm' in dataNames) or (isZee and isZmm):
+            addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
+        elif 'Zee' in dataNames or isZee:
+            addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
+        elif 'Zmm' in dataNames or isZmm:
+            addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
+        elif 'Znn' in dataNames:
+            addFlag = 'Z(#nu#nu)H(b#bar{b})'
+        elif 'Wmn' in dataNames:
+            addFlag = 'W(#mu#nu)H(b#bar{b})'
+        elif 'Wen' in dataNames:
+            addFlag = 'W(e#nu)H(b#bar{b})'
+        self.addObject(self.myText(addFlag,0.17,0.78))
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
         #    tAddFlag2 = self.myText(self.addFlag2,0.17,0.73)
