@@ -498,16 +498,19 @@ class TreeCache:
                     except:
                         pass
 
+                branchList = tree.GetListOfBranches()
                 for branch in removeBranches:
                     try:
                         #print ('will remove', branch)
-                        tree.SetBranchStatus(branch,0)
+                        if branchList.FindObject(branch):    
+                            tree.SetBranchStatus(branch,0)
                     except:
                         pass
                 if self.branch_to_keep:
                     tree.SetBranchStatus('*',0)
                     for b in self.branch_to_keep:
-                        tree.SetBranchStatus(b,1)
+                        if branchList.FindObject(branch):
+                            tree.SetBranchStatus(b,1)
 
 
                 #time2 = time.time()
