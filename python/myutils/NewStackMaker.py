@@ -216,15 +216,16 @@ class NewStackMaker:
         if self.dataGroupName in groupedHistograms:
             self.legends['left'].AddEntry(groupedHistograms[self.dataGroupName], self.dataTitle, 'P')
         groupNames = list(set([groupName for groupName, groupHistogram in groupedHistograms.iteritems()]))
-        
+        groupNamesOrdered = self.setup + sorted([x for x in groupNames if x not in self.setup])
+
         numLegendEntries = len(groupNames) + 2
-        for itemPosition, (groupName, groupHistogram) in enumerate(groupedHistograms.iteritems()):
+        for itemPosition, groupName in enumerate(groupNamesOrdered): 
             if groupName != self.dataGroupName:
                 legendEntryName = self.typLegendDict[groupName] if groupName in self.typLegendDict else groupName
                 if itemPosition < numLegendEntries/2.-2:
-                    self.legends['left'].AddEntry(groupHistogram, legendEntryName, 'F')
+                    self.legends['left'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
                 else:
-                    self.legends['right'].AddEntry(groupHistogram, legendEntryName, 'F')
+                    self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
         
         if not self.AddErrors:
             self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
@@ -365,5 +366,8 @@ class NewStackMaker:
         # save to file
         outputFileName = outputFolder + 'plot_test_' + self.var + '.png'
         c.SaveAs(outputFileName)
-        print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+        if os.path.isfile(outputFileName):
+            print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+        else:
+            print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
 
