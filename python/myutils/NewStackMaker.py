@@ -1,8 +1,6 @@
 from __future__ import print_function
 import ROOT 
 ROOT.gROOT.SetBatch(True)
-import sys,os
-from BetterConfigParser import BetterConfigParser
 import TdrStyles
 
 from Ratio import getRatio
@@ -30,12 +28,12 @@ class NewStackMaker:
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
         self.blind = eval(self.config.get(self.configSection,'blind'))
         self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
-        self.typLegendDict=eval(config.get('Plot_general','typLegendDict'))
+        self.typLegendDict = eval(config.get('Plot_general','typLegendDict'))
         if setup is None:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
-        
+
         # TODO: move to config file
         if not SignalRegion: 
             if 'ZH' in self.setup:
@@ -77,6 +75,8 @@ class NewStackMaker:
         self.dataTitle = 'Data'
         self.maxRatioUncert = 0.5
         self.lumi = self.config.get('Plot_general','lumi')
+        self.ratioError = None
+        self.ratioPlot = None
         if SignalRegion:
             self.maxRatioUncert = 1000.
 
@@ -86,7 +86,7 @@ class NewStackMaker:
     # draw text
     #------------------------------------------------------------------------------
     @staticmethod
-    def myText(txt="CMS Preliminary",ndcX=0,ndcY=0,size=0.8):
+    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8):
         ROOT.gPad.Update()
         text = ROOT.TLatex()
         text.SetNDC()
@@ -121,7 +121,7 @@ class NewStackMaker:
         TdrStyles.tdrStyle()
 
         # initialize canvas
-        self.canvas = ROOT.TCanvas(self.var,'', 600, 600)
+        self.canvas = ROOT.TCanvas(self.var, '', 600, 600)
         self.canvas.SetFillStyle(4000)
         self.canvas.SetFrameFillStyle(1000)
         self.canvas.SetFrameFillColor(0)
@@ -129,12 +129,12 @@ class NewStackMaker:
         self.canvas.SetBottomMargin(0.12)
        
         self.pads = {}
-        self.pads['oben'] = ROOT.TPad('oben','oben',0,0.3 ,1.0,1.0)
+        self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
         self.pads['oben'].SetBottomMargin(0)
         self.pads['oben'].SetFillStyle(4000)
         self.pads['oben'].SetFrameFillStyle(1000)
         self.pads['oben'].SetFrameFillColor(0)
-        self.pads['unten'] = ROOT.TPad('unten','unten',0,0.0,1.0,0.3)
+        self.pads['unten'] = ROOT.TPad('unten', 'unten', 0, 0.0, 1.0, 0.3)
         self.pads['unten'].SetTopMargin(0.)
         self.pads['unten'].SetBottomMargin(0.35)
         self.pads['unten'].SetFillStyle(4000)
@@ -155,7 +155,7 @@ class NewStackMaker:
         self.pads['unten'].cd()
         ROOT.gPad.SetTicks(1,1)
 
-        self.legends['ratio'] = ROOT.TLegend(0.39, 0.85,0.93,0.97)
+        self.legends['ratio'] = ROOT.TLegend(0.39, 0.85, 0.93, 0.97)
         self.legends['ratio'].SetLineWidth(2)
         self.legends['ratio'].SetBorderSize(0)
         self.legends['ratio'].SetFillColor(0)
@@ -189,12 +189,12 @@ class NewStackMaker:
             self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat. + syst.)","f")
         self.legends['ratio'].Draw() 
         if not self.blind:
-            tKsChi = self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore),0.17,0.895,1.55)
+            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), 0.17, 0.895, 1.55))
             t0 = ROOT.TText()
             t0.SetTextSize(ROOT.gStyle.GetLabelSize()*2.4)
             t0.SetTextFont(ROOT.gStyle.GetLabelFont())
             if not self.log:
-                    t0.DrawTextNDC(0.1059,0.96, "0")
+                t0.DrawTextNDC(0.1059, 0.96, "0")
 
     def drawSampleLegend(self, groupedHistograms, theErrorGraph):
         self.pads['oben'].cd()
@@ -245,7 +245,7 @@ class NewStackMaker:
         self.addObject(self.myText("CMS",0.17,0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag,(float(self.lumi)/1000.0)),0.17,0.83))
+            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17, 0.83))
         except Exception as e:
             print ("WARNING: exception while adding text: ", e)
             pass
@@ -270,7 +270,7 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag,0.17,0.78))
+        self.addObject(self.myText(addFlag, 0.17, 0.78))
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
         #    tAddFlag2 = self.myText(self.addFlag2,0.17,0.73)
@@ -297,13 +297,12 @@ class NewStackMaker:
         groupedHistograms = {}
         histogramGroups = list(set([histogram['group'] for histogram in self.histograms]))
         for histogramGroup in histogramGroups:
-            histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group']==histogramGroup]
-            groupedHistograms[histogramGroup] = self.sumHistograms(histograms=histogramsInGroup, outputName="group_"+histogram['group'])
+            histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group'] == histogramGroup]
+            groupedHistograms[histogramGroup] = self.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
         
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
         colorDict = eval(self.config.get('Plot_general', 'colorDict'))
-        first = True
         for groupName in self.setup[::-1]:
             if groupName in groupedHistograms and groupName != dataGroupName:
                 if groupName in colorDict:
@@ -317,7 +316,7 @@ class NewStackMaker:
             yTitle = 'S/(S+B) weighted entries'
         else:
             yTitle = 'Entries'
-        if not '/' in yTitle:
+        if '/' not in yTitle:
             if allStack and allStack.GetXaxis():
                 if 'GeV' in self.xAxis:
                     yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1)) 

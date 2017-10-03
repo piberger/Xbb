@@ -51,7 +51,7 @@ import os
 # ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, tmpFolder = 'tmp/', outputFolder = 'cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
+    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
@@ -85,28 +85,28 @@ class TreeCache:
     # file, where skimmed tree is written to
     def getTmpFileName(self):
         return self.outputFileNameFormat.format(
-            outputFolder = self.tmpFolder,
-            hash = self.hash,
-            part = self.cachePart if self.cachePart > 0 else 1,
-            parts = '%d'%self.cacheParts
+            outputFolder=self.tmpFolder,
+            hash=self.hash,
+            part=self.cachePart if self.cachePart > 0 else 1,
+            parts='%d'%self.cacheParts
         )
 
     # file, where skimmed tree is moved to after it has been written completely
     def getOutputFileName(self):
         return self.outputFileNameFormat.format(
-            outputFolder = self.outputFolder,
-            hash = self.hash,
-            part = self.cachePart if self.cachePart > 0 else 1,
-            parts = '%d'%self.cacheParts
+            outputFolder=self.outputFolder,
+            hash=self.hash,
+            part=self.cachePart if self.cachePart > 0 else 1,
+            parts='%d'%self.cacheParts
         )
 
     # check existence of files with skimmed trees
     def findCachedFileNames(self):
         cachedFilesMaskRaw = self.outputFileNameFormat.format(
-            outputFolder = self.outputFolder,
-            hash = self.hash,
-            part = '*',
-            parts = '*'
+            outputFolder=self.outputFolder,
+            hash=self.hash,
+            part='*',
+            parts='*'
         )
         cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
@@ -119,15 +119,16 @@ class TreeCache:
                 print ('none!')
             print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
 
+    # check if a single part is cached, (only checks existence of the file, not validity!)
     def partIsCached(self):
         cachedFilesMaskRaw = self.outputFileNameFormat.format(
-            outputFolder = self.outputFolder,
-            hash = self.hash,
-            part = self.cachePart,
-            parts = '*'
+            outputFolder=self.outputFolder,
+            hash=self.hash,
+            part=self.cachePart,
+            parts='*'
         )
         cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
-        return (len(glob.glob(cachedFilesMask))>0)
+        return len(glob.glob(cachedFilesMask)) > 0
 
     # isCached == all files containing the skimmed tree found!
     def isCached(self):

@@ -29,7 +29,6 @@ class NewHistoMaker:
         return self.histogram
 
     def scaleHistogram(self):
-        TrainFlag = False
         if self.sample.type != 'DATA':
             if 'BDT' in self.histogramOptions['treeVar'] or 'bdt' in self.histogramOptions['treeVar'] or 'OPT' in self.histogramOptions['treeVar']:
                 if self.trainFlag:

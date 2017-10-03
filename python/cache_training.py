@@ -6,9 +6,8 @@ ROOT.gROOT.SetBatch(True)
 
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
-from myutils import BetterConfigParser, ParseInfo
 
-import os,sys
+import sys
 
 class CacheTraining(object):
 
@@ -61,7 +60,7 @@ class CacheTraining(object):
             print ('*'*80)
             # prepare caches for training and evaluation samples
             treeCaches = []
-            sampleTree = None
+            self.sampleTree = None
 
             # for all (sub)samples which come from the same files (sampleIdentifier)
             subsamples = [x for x in self.samples if x.identifier == sampleToCache]
@@ -128,7 +127,7 @@ if opts.config =="":
         opts.config = "config"
 
 # Import after configure to get help message
-from myutils import BetterConfigParser, mvainfo, ParseInfo
+from myutils import BetterConfigParser, ParseInfo
 
 # load config
 config = BetterConfigParser()
