@@ -494,7 +494,7 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
-            print 'nomOnly is', nomOnly
+            #print 'nomOnly is', nomOnly
             if self.optionsList.index(options) == 0:
                 print 'This is the nominal histo, going to save him separatly'
             start_time = time.time()
@@ -515,7 +515,7 @@ class HistoMaker:
             if 'SBweight' in options:
                 SBweight=options['SBweight']
             else: SBweight = None
-            print 'SBweight is', SBweight
+            #print 'SBweight is', SBweight
 
             #Include weight per sample (specialweight)
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
@@ -555,10 +555,10 @@ class HistoMaker:
             #print('hTree.name() 1 =',hTree.GetName())
             #print('treeVar 1 =',treeVar)
             drawoption = ''
-            print 'treeVar: %s'%(treeVar)
-            print 'weightF: %s'%(weightF)
-            print 'BDT_add_cut: %s'%(BDT_add_cut)
-            print 'treeCut: %s'%(treeCut)
+            #print 'treeVar: %s'%(treeVar)
+            #print 'weightF: %s'%(weightF)
+            #print 'BDT_add_cut: %s'%(BDT_add_cut)
+            #print 'treeCut: %s'%(treeCut)
 
             if job.type != 'DATA':
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
@@ -578,7 +578,7 @@ class HistoMaker:
                 #ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
                 #from ROOT import TreeDraw
                 #TD = ROOT.treedraw()
-                print 'drawoptions are', drawoption
+                #print 'drawoptions are', drawoption
                 #Make sure sample used for sample systematics are used/skiped
                 sample_sys_dic = options['sample_sys_dic'] if 'sample_sys_dic' in options else {}
                 if job.name in sample_sys_dic and not sample_sys_dic[job.name]:
@@ -881,7 +881,8 @@ class HistoMaker:
             #        custom_rebin.append(b)
             #    self.mybinning = Rebinner(len(custom_rebin) -1 ,custom_rebin),True,self.BDTmin)
         else:
-            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-0.8]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[0.]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
         print '\t > rebinning is set <\n'
@@ -919,7 +920,7 @@ class HistoMaker:
                     printc('magenta','','\t--> added %s to %s Integral: %s Entries: %s Error: %s'%(subsamplename,sample,integral,entries,error))
                     sumintegral += integral
                     nSample += 1
-            print 'The final integral is %s' % sumintegral
+            #print 'The final integral is %s' % sumintegral
         del histo_dicts
         #print "Output dict is", ordered_histo_dict
         return ordered_histo_dict 

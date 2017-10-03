@@ -469,23 +469,24 @@ if config.has_option('LimitGeneral','sample_sys_info'):
     sample_sys_info = eval(config.get('LimitGeneral','sample_sys_info'))
     #Extract list of sys samples
     for key, item in sample_sys_info.iteritems():
-        for sample_type in item:
-            NOMsamplesys = sample_type[0]
-            noNom = False
-            for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
-                print 'nomsample is', nomsample
-                print 'signals+backgrounds are', signals+backgrounds
-                if nomsample not in signals+backgrounds: noNom = True
-            if noNom: continue
-            DOWNsamplesys = sample_type[1]
-            UPsamplesys = sample_type[2]
-            sample_sys_list += DOWNsamplesys
-            sample_sys_list += UPsamplesys
-    additionals += sample_sys_list
+        for item2 in item:
+            for sample_type in item2:
+                NOMsamplesys = sample_type[0]
+                noNom = False
+                for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
+                    print 'nomsample is', nomsample
+                    print 'signals+backgrounds are', signals+backgrounds
+                    if nomsample not in signals+backgrounds: noNom = True
+                if noNom: continue
+                DOWNsamplesys = sample_type[1]
+                UPsamplesys = sample_type[2]
+                sample_sys_list += DOWNsamplesys
+                sample_sys_list += UPsamplesys
+#    additionals += sample_sys_list
 else:
     sample_sys_list = None
-    additionals += []
-print 'additioinals are', additionals
+#    additionals += []
+#print 'additioinals are', additionals
 
 #Create dictonary to "turn of" all the sample systematic (for nominal)
 sample_sys_dic = {}
@@ -834,36 +835,51 @@ for weightF_sys in weightF_systematics:
 
 #sample systematics
 print 'before modif, _sample_sys_dic is', _sample_sys_dic
-for key, item in sample_sys_info.iteritems():
-    _sample_sys_dic = sample_sys_dic
+for key, item in sample_sys_info.iteritems():#loop over the systematics
     _weight = weightF
     _cut = shapecut_first
     shapecut = shapecut_first
     _treevar = treevar
     _name = title
     _sysType = 'sample'
-    _sample_sys_dic = sample_sys_dic
-    for sample_type in item:
-        NOMsamplesys = sample_type[0]
-        for noms in NOMsamplesys:
-            _sample_sys_dic[noms] =  False
-        DOWNsamplesys = sample_type[1]
-        UPsamplesys = sample_type[2]
-#        DOWNandUPsamplesys = DOWNsamplesys + UPsamplesys
-        for upsample, downsample in zip(UPsamplesys, DOWNsamplesys):
-            #Up variation
-            _sample_sys_dic[upsample] = True
-            _sample_sys_dic[downsample] = False
-            appendList()
-            appendSCList()
-            _sample_sys_dic[upsample] = False
-            _sample_sys_dic[downsample] = True
-            appendList()
-            appendSCList()
-            #reset to default
-            _sample_sys_dic = sample_sys_dic
+    #define up and down dictionary
+    _sample_sys_dic_up = copy(sample_sys_dic)
+    _sample_sys_dic_down = copy(sample_sys_dic)
+    for item2 in item:#loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+        for sample_type in item2:
+            NOMsamplesys  = sample_type[0]
+            DOWNsamplesys = sample_type[1]
+            UPsamplesys   = sample_type[2]
+            #Set all the nominal sample to False
+            for noms in NOMsamplesys:
+                _sample_sys_dic_up[noms] =  False
+                _sample_sys_dic_down[noms] =  False
+            #prepare disctionnary for Up and Down variation
+            for upsample, downsample in zip(UPsamplesys, DOWNsamplesys):
+                #Up variation
+                _sample_sys_dic_up[upsample] = True
+                _sample_sys_dic_up[downsample] = False
+                #appendList()
+                #appendSCList()
+                _sample_sys_dic_down[upsample] = False
+                _sample_sys_dic_down[downsample] = True
+                #appendList()
+                #appendSCList()
+                #reset to default
+             #_sample_sys_dic = sample_sys_dic
 
-print 'optionsList is', optionsList
+    #Fill optionsList
+    #Up
+    _sample_sys_dic = _sample_sys_dic_up
+    appendList()
+    appendSCList()
+    #Down
+    _sample_sys_dic = _sample_sys_dic_down
+    appendList()
+    appendSCList()
+
+
+#print 'optionsList is', optionsList
 
 ##lhe_muF
 ##Appends options for each weight (up/down -> len =2 )
@@ -899,16 +915,22 @@ if len(optionsList) != len(shapecutList):
     print '@ERROR: optionsList and shapecutList don\'t have equal size. Aborting'
     sys.exit()
 
+print '=================='
+print 'all sample_sys_dic are:'
+print '=================='
+for op in optionsList:
+    print 'sysType:', op['sysType'], 'sample_sys_dic:', op['sample_sys_dic'], '\n'
+print ''
+
 _countHisto = "CountWeighted"
 _countbin = 0
 
 print '===================\n'
 print 'comparing cut strings'
 for optold, optnew in zip(optionsList,shapecutList):
-    print 'old option is', optold['cut']
-    print 'new option is', optnew
+    #print 'old option is', optold['cut']
+    #print 'new option is', optnew
     optionsList[optionsList.index(optold)]['cut']=optnew
-#sys.exit()
 
 ############
 #List the branches to keep here
@@ -1530,11 +1552,11 @@ columns=len(setup)
 
 if split:
     dc_dir = outpath+'vhbb_TH_'+ROOToutname
-    print 'the filname is', dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
+    #print 'the filname is', dc_dir+'/vhbb_DC_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
     fileName = dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
     f = open(fileName,'w')
 else:
-    fileName = outpath+'vhbb_dc_%s_%s.txt'%(DCtype,ROOToutname)
+    fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
     f = open(fileName,'w')
 f.write('imax\t1\tnumber of channels\n')
 f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(columns-1))
@@ -1555,11 +1577,21 @@ f.write('process\t')
 for c in setup: f.write('\t%s'%Dict[c])
 f.write('\n')
 f.write('process\t')
+#count #of signal processes
+SigProcess = []
+for _sig in signals:
+    if not GroupDict[_sig] in SigProcess: SigProcess.append(GroupDict[_sig])
+    else: continue
+nSig = len(SigProcess)
+#print 'SigProcess is', SigProcess
+#print 'nSig is', nSig
+
+for c in range(1,columns+1): f.write('\t%s'%(c-nSig))
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
 #VH
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
 #VV
-for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
 f.write('\n')
 # datacard yields
 f.write('rate\t')
@@ -1625,19 +1657,20 @@ for weightF_sys in weightF_systematics:
     f.write('\n')
 
 # additional sample systematics
-for key, item in sample_sys_info.iteritems():
+for key, item in sample_sys_info.iteritems():#loop over sys
     f.write('%s\tshape'%(systematicsnaming[key]))
     for it in range(0,columns):
-        for c in setup:
-            if not it == setup.index(c): continue
-            found = False
-            for sample_type in item:
-                if c in [GroupDict[d] for d in sample_type[0]]:
-                    found = True
-                    print 'c is'
-                    print 'sample_type is', sample_type[0]
-            if found: f.write('\t1.0')
-            else: f.write('\t-')
+        found = False
+        for item2 in item:#loop over sample
+            for c in setup:
+                if not it == setup.index(c): continue
+                for sample_type in item2:
+                    if c in [GroupDict[d] for d in sample_type[0]]:
+                        found = True
+                        #print 'c is'
+                        #print 'sample_type is', sample_type[0]
+        if found: f.write('\t1.0')
+        else: f.write('\t-')
     f.write('\n')
 
 #OLD
