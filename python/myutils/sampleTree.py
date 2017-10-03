@@ -43,6 +43,8 @@ class SampleTree(object):
             if self.verbose:
                 print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
             sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
+            if self.verbose:
+                print ("INFO: found ", len(sampleFileNames), " files.")
         else:
             sampleTextFileName = samples
             if os.path.isfile(sampleTextFileName):
@@ -99,17 +101,16 @@ class SampleTree(object):
         if not countOnly:
             self.tree = ROOT.TChain(self.treeName)
 
-            # check all .root files listed in the sample .txt file
+            # loop over all given .root files 
             for rootFileName in sampleFileNames:
 
-                if self.verbose:
-                    print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
-                
                 # check root file existence
                 if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
                     rootFileName = SampleTree.getXrootdFileName(rootFileName)
                     input = ROOT.TFile.Open(rootFileName,'read')
-                    if input and not input.IsZombie():
+
+                    # check file validity
+                    if input and not input.IsZombie() and input.GetNkeys() > 0 and not input.TestBit(ROOT.TFile.kRecovered):
 
                         # add count histograms, since they are not in the tchain
                         for key in input.GetListOfKeys():
@@ -123,6 +124,7 @@ class SampleTree(object):
                                     self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
                                 else:
                                     print ("ERROR: histogram object was None!!!")
+                                    raise Exception("CountHistogramMissing")
                             else:
                                 self.histograms[histogramName] = obj.Clone(obj.GetName())
                                 self.histograms[histogramName].SetDirectory(0)
@@ -131,7 +133,7 @@ class SampleTree(object):
                         # add file to chain
                         chainTree = '%s/%s'%(rootFileName, self.treeName)
                         if self.verbose:
-                            print ('chaining '+chainTree)
+                            print ('DEBUG: chaining '+chainTree)
                         statusCode = self.tree.Add(chainTree)
 
                         # check for errors in chaining the file
@@ -148,13 +150,16 @@ class SampleTree(object):
                                 break
                     else:
                         print ('ERROR: file is damaged: %s'%rootFileName)
+                        if input:
+                            print ('DEBUG: Zombie:', input.IsZombie(), '#keys:', input.GetNkeys(), 'recovered:',input.TestBit(ROOT.TFile.kRecovered))
                         self.brokenFiles.append(rootFileName)
                 else:
                     print ('ERROR: file is missing: %s'%rootFileName)
 
             if self.verbose:
                 print ('INFO: # files chained: %d'%len(self.chainedFiles))
-                print ('INFO: # files broken : %d'%len(self.brokenFiles))
+                if len(self.brokenFiles) > 0:
+                    print ('INFO: # files broken : %d'%len(self.brokenFiles))
             
             if len(self.chainedFiles) < 1:
                 self.tree = None
@@ -165,9 +170,16 @@ class SampleTree(object):
     def getNumberOfParts(self):
         return self.numParts
 
+    #------------------------------------------------------------------------------
+    # add a TTreeFormula connected to the TChain
+    #------------------------------------------------------------------------------
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
 
+    #------------------------------------------------------------------------------
+    # implement iterator for TChain, with updating TTreeFormula objects on tree
+    # switching and show performance statistics during loop
+    #------------------------------------------------------------------------------
     def next(self):
         self.treeIterator.next()
         self.eventsRead += 1
@@ -202,7 +214,6 @@ class SampleTree(object):
 
     def evaluate(self, formulaName):
         if formulaName in self.formulas:
-            #print ("eval:", formulaName, self.formulas[formulaName])
             if self.formulas[formulaName].GetNdata() > 0:
                 return self.formulas[formulaName].EvalInstance()
             else:
@@ -219,6 +230,9 @@ class SampleTree(object):
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
 
+    #------------------------------------------------------------------------------
+    # get file name WITH redirector
+    #------------------------------------------------------------------------------
     @staticmethod
     def getXrootdFileName(rawFileName):
         xrootdFileName = rawFileName.strip()
@@ -233,6 +247,9 @@ class SampleTree(object):
         else:
             return xrootdFileName.strip()
 
+    #------------------------------------------------------------------------------
+    # get file name WITHOUT redirector
+    #------------------------------------------------------------------------------
     @staticmethod
     def getLocalFileName(rawFileName):
         localFileName = rawFileName.strip()
@@ -243,6 +260,9 @@ class SampleTree(object):
             localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
         return localFileName
 
+    #------------------------------------------------------------------------------
+    # add output tree to be written during the process() function 
+    #------------------------------------------------------------------------------
     def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None):
         outputTree = {
             'tree': self.tree.CloneTree(0),
@@ -257,19 +277,32 @@ class SampleTree(object):
         }
 
         if not outputTree['tree']:
-            print ("ERROR: output tree broken, input tree:", self.tree)
+            print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
+            # if input tree has 0 entries, don't copy 0 entries to the output tree, but ALL of them instead! (sic!)
+            outputTree['tree'] = self.tree.CloneTree()
+            if not outputTree['tree']:
+                print ("\x1b[31mERROR: output tree broken, input tree: ", self.tree, " \x1b[0m")
+            else:
+                print ("\x1b[32mINFO: recovered\x1b[0m")
+        
+        # add CUT formulas
         cutList = cut if type(cut) == list else [cut]
         for i, cutString in enumerate(cutList):
             formulaName = cutString.replace(' ','')
             if formulaName not in self.formulas:
                 self.addFormula(formulaName, cutString)
             outputTree['cutSequence'].append(formulaName)
- 
+        
+        # set output file
         outputTree['tree'].SetDirectory(outputTree['file'])
+
+        # only copy specific branches
         if branches:
             outputTree['tree'].SetBranchStatus("*", 0)
+            listOfBranches = self.GetListOfBranches()
             for branch in branches:
-                outputTree['tree'].SetBranchStatus(branch, 1)
+                if listOfBranches.findObject(branch):
+                    outputTree['tree'].SetBranchStatus(branch, 1)
             if self.verbose:
                 print ("enabled ", len(branches), " branches:", branches)
 
@@ -284,6 +317,10 @@ class SampleTree(object):
     def SetBranchStatus(self, branchName, branchStatus):
         self.tree.SetBranchStatus(branchName, branchStatus)
 
+    #------------------------------------------------------------------------------
+    # loop over all entries in the TChain and copy events to output trees, if the
+    # cuts are fulfilled.
+    #------------------------------------------------------------------------------
     def process(self):
         if self.verbose:
             print ('OUTPUT TREES:')
@@ -296,6 +333,46 @@ class SampleTree(object):
         self.tree.SetCacheSize(100000000)
         self.tree.AddBranchToCache('*', ROOT.kTRUE)
         self.tree.StopCacheLearningPhase()
+
+        # enable/disable branches
+        listOfExistingBranches = self.GetListOfBranches()
+        listOfBranchesToKeep = []
+        for outputTree in self.outputTrees:
+            if 'branches' in outputTree and outputTree['branches']:
+                listOfBranchesToKeep += outputTree['branches']
+        listOfBranchesToKeep = list(set(listOfBranchesToKeep))
+
+        # only disable the branches if there is no output tree which wants in have all
+        if '*' not in listOfBranchesToKeep:
+
+            # get the branches which are used implicitly in the cut formulas
+            listOfBranchesNeededForCuts = []
+            for formulaName, formula in self.formulas.iteritems():
+                for formulaLeaf in range(formula.GetNcodes()):
+                    try:
+                        listOfBranchesNeededForCuts.append(formula.GetLeaf(formulaLeaf).GetName())
+                    except:
+                        print ("\x1b[31mERROR: invalid leaf?!?!\x1b[0m")
+            listOfBranchesNeededForCuts = list(set(listOfBranchesNeededForCuts))
+            print ("INFO: list of branches need to be kept for cut formulas:")
+            for branchName in listOfBranchesNeededForCuts:
+                print ("INFO: > {branchName}".format(branchName=branchName))
+
+            print ("INFO: list of branches need to be kept in output trees:")
+            for branchName in listOfBranchesToKeep:
+                print ("INFO: > {branchName}".format(branchName=branchName))
+
+            print ("\x1b[31mINFO: NOT IMPLEMENTED ----> will keep all branches\x1b[0m")
+            # set the branch status
+            #self.tree.SetBranchStatus("*", 0)
+            #for branchName in listOfBranchesNeededForCuts+listOfBranchesToKeep:
+            #    if listOfExistingBranches.FindObject(branchName):
+            #        self.tree.SetBranchStatus(branchName, 1)
+
+        # callbacks before loop
+        for outputTree in self.outputTrees:
+            if outputTree['callbacks'] and 'beforeLoop' in outputTree['callbacks']:
+                outputTree['callbacks']['beforeLoop']()
 
         # loop over all events and write to output branches
         for event in self:
@@ -317,7 +394,7 @@ class SampleTree(object):
             outputTree['file'].Write()
             outputTree['file'].Close()
         print('INFO: files written')
-        
+
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
@@ -346,7 +423,6 @@ class SampleTree(object):
 
     def getNumSampleFiles(self):
         return len(self.sampleFileNames)
-
 
     def getScale(self, sample):
         try:

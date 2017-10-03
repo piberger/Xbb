@@ -64,7 +64,6 @@ class PlotHelper(object):
         print ("INFO: starting plot for region \x1b[34m{region}\x1b[0m, variables:".format(region=region))
         for var in self.vars:
             print ("  > {var}".format(var=var))
-        print ("DATA:", self.dataSamples)
 
         self.histogramStacks = {}
         for var in self.vars:
@@ -78,7 +77,9 @@ class PlotHelper(object):
             if self.config.has_option('Cuts', self.region):
                 sampleCuts.append(self.config.get('Cuts', self.region))
             if self.config.has_option(self.configSection, 'Datacut'):
-                sampleCuts.append(config.get(self.configSection, 'Datacut'))
+                sampleCuts.append(self.config.get(self.configSection, 'Datacut'))
+            if self.addBlindingCut:
+                sampleCuts.append(self.addBlindingCut)
             
             # get sample tree from cache
             tc = TreeCache.TreeCache(
@@ -119,35 +120,36 @@ class PlotHelper(object):
         else:
             return None
 
-# read arguments
-argv = sys.argv
-parser = OptionParser()
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
-                          help="Verbose mode.")
-parser.add_option("-C", "--config", dest="config", default=[], action="append",
-                      help="configuration file")
-parser.add_option("-r","--regions", dest="regions", default='',
-                      help="cut region identifiers, separated by comma")
-parser.add_option("-p","--vars", dest="vars", default='',
-                      help="plot variables, separated by comma")
-(opts, args) = parser.parse_args(argv)
-if opts.config =="":
-        opts.config = "config"
+if __name__ == "__main__":
+    # read arguments
+    argv = sys.argv
+    parser = OptionParser()
+    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
+                              help="Verbose mode.")
+    parser.add_option("-C", "--config", dest="config", default=[], action="append",
+                          help="configuration file")
+    parser.add_option("-r","--regions", dest="regions", default='',
+                          help="cut region identifiers, separated by comma")
+    parser.add_option("-p","--vars", dest="vars", default='',
+                          help="plot variables, separated by comma")
+    (opts, args) = parser.parse_args(argv)
+    if opts.config =="":
+            opts.config = "config"
 
-# Import after configure to get help message
-from myutils import BetterConfigParser, mvainfo, ParseInfo
+    # Import after configure to get help message
+    from myutils import BetterConfigParser, mvainfo, ParseInfo
 
-# load config
-config = BetterConfigParser()
-vhbbPlotDef = opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
-opts.config.append(vhbbPlotDef)
-config.read(opts.config)
+    # load config
+    config = BetterConfigParser()
+    vhbbPlotDef = opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
+    opts.config.append(vhbbPlotDef)
+    config.read(opts.config)
 
-# run plotter
-regions = opts.regions.split(',')
-vars = opts.vars.split(',')
-for region in regions:
-    plotter = PlotHelper(config=config, region=region, vars=vars)
-    plotter.prepare()
-    plotter.run()
+    # run plotter
+    regions = opts.regions.split(',')
+    vars = opts.vars.split(',')
+    for region in regions:
+        plotter = PlotHelper(config=config, region=region, vars=vars)
+        plotter.prepare()
+        plotter.run()
 

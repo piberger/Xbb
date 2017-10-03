@@ -47,6 +47,7 @@ echo
 #-------------------------------------------------
 # parse named input arguments
 # todo: pass everything as named argument
+force="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --trainingRegions=*)
@@ -54,6 +55,9 @@ while [ $# -gt 0 ]; do
       ;;
     --regions=*)
       regions="${1#*=}"
+      ;;
+    --force)
+      force="1"
       ;;
     --vars=*)
       vars="${1#*=}"
@@ -219,6 +223,9 @@ elif [ $task = "runtraining" ]; then
 
 elif [ $task = "cacheplot" ]; then
     runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFile ${splitFiles} --cacheParts ${cacheParts} --cachePart ${cachePart} ${config_filenames[@]}"
+    if [ $force = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
     echo "$runCommand"
     eval "$runCommand"
 

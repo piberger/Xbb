@@ -580,7 +580,7 @@ class HistoMaker:
                 #TD = ROOT.treedraw()
                 print 'drawoptions are', drawoption
                 #Make sure sample used for sample systematics are used/skiped
-                sample_sys_dic = options['sample_sys_dic']
+                sample_sys_dic = options['sample_sys_dic'] if 'sample_sys_dic' in options else {}
                 if job.name in sample_sys_dic and not sample_sys_dic[job.name]:
                     print 'sample', job.name, ' will not be ploted'
                     print 'job.name is', job.name
