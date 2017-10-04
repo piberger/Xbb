@@ -1,0 +1,4 @@
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016F-23Sep2016-v1/170117_165620/0000/tree_1.root
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016F-23Sep2016-v1/170117_165620/0000/tree_2.root
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016F-23Sep2016-v1/170117_165620/0000/tree_3.root
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016F-23Sep2016-v1/170117_165620/0000/tree_4.root

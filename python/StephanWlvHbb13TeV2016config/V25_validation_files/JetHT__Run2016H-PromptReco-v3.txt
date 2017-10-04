@@ -1,0 +1,3 @@
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016H-PromptReco-v3/170117_170202/0000/tree_1.root
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016H-PromptReco-v3/170117_170202/0000/tree_2.root
+/store/user/arizzi/VHBBHeppyE25/JetHT/VHBB_HEPPY_E25_JetHT__Run2016H-PromptReco-v3/170117_170202/0000/tree_4.root

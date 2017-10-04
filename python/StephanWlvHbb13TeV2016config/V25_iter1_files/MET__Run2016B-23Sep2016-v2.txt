@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/V25/MET/VHBB_HEPPY_V25_MET__Run2016B-23Sep2016-v2/170131_075405/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/V25/MET/VHBB_HEPPY_V25_MET__Run2016B-23Sep2016-v2/170131_075405/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/V25/MET/VHBB_HEPPY_V25_MET__Run2016B-23Sep2016-v2/170131_075405/0000/tree_9.root

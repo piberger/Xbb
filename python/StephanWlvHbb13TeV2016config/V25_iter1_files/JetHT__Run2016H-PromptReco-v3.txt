@@ -1,0 +1,12 @@
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_12.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_17.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_23.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_24.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_28.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_33.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_37.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_38.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_41.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_42.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_45.root
+/store/user/cvernier/VHBBHeppyV25/JetHT/VHBB_HEPPY_V25_JetHT__Run2016H-PromptReco-v3/170130_122207/0000/tree_6.root

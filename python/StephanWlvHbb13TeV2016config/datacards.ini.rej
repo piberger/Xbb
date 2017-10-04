@@ -1,0 +1,446 @@
+--- python/GaelZllHbb13TeV2016config/datacards.ini
++++ python/GaelZllHbb13TeV2016config/datacards.ini
+@@ -10,8 +10,8 @@
+
+ ;To do split dc step
+ ;split_factor = 20
+-;split_factor = 60
+-split_factor = 30
++;split_factor = 60
++split_factor = 30
+
+
+ ;HMassRange = 10,80,145
+@@ -35,7 +35,7 @@
+ ;MassRange = 12,60,180
+ Mass = HCMVAV2_reg_mass
+ MassRange = 17,0,255
+-MassRangeVV = 34,0, 255
++MassRangeVV = 34,0, 255
+
+ ;;;;;;
+ ;Variable to plot
+@@ -744,7 +744,7 @@
+ ;
+ ;For Mass s/(s+b) plot
+ ;List: ZeeMass_lowpt,ZeeMass_highpt,ZuuMass_lowpt,ZuuMass_highpt
+-;List: ZeeMassVV_lowpt,ZeeMassVV_highpt,ZuuMassVV_lowpt,ZuuMassVV_highpt
++List: ZeeMassVV_lowpt,ZeeMassVV_highpt,ZuuMassVV_lowpt,ZuuMassVV_highpt
+ ;
+ ;;
+ ;BDT
+@@ -1159,7 +1159,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin0
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin0
+ ;
+ [dc:ZeeMass_Vptbin1]
+@@ -1171,7 +1171,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin1
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin1
+ [dc:ZeeMass_Vptbin2]
+ var = <!LimitGeneral|Mass!>
+@@ -1182,7 +1182,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin2
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin2
+ ;;;
+ ;With mass bands
+@@ -1196,7 +1196,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin0Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin0Band
+ ;
+ [dc:ZeeMassMVA_Vptbin0Band]
+@@ -1208,7 +1208,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMassMVA_Vptbin0Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMassMVA_Vptbin0Band
+ ;
+ [dc:ZeeMass_Vptbin1Band]
+@@ -1220,7 +1220,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin1Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin1Band
+ ;
+ [dc:ZeeMassMVA_Vptbin1Band]
+@@ -1232,7 +1232,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMassMVA_Vptbin1Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMassMVA_Vptbin1Band
+ [dc:ZeeMass_Vptbin2Band]
+ var = <!LimitGeneral|Mass!>
+@@ -1243,7 +1243,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin2Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin2Band
+ ;
+ [dc:ZeeMassMVA_Vptbin2Band]
+@@ -1255,7 +1255,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMassMVA_Vptbin2Band
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMassMVA_Vptbin2Band
+ ;;;
+ [dc:ZeeMass_Vptbin150To200]
+@@ -1267,7 +1267,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin150To200
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin150To200
+ [dc:ZeeMass_Vptbin200ToInf]
+ var = <!LimitGeneral|Mass!>
+@@ -1278,7 +1278,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_Vptbin200ToInf
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeMass_Vptbin200ToInf
+
+ ;MUON REGION
+@@ -1292,7 +1292,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin0
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin0
+ ;
+ [dc:ZuuMass_Vptbin1]
+@@ -1304,7 +1304,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin1
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin1
+ ;
+ [dc:ZuuMass_Vptbin2]
+@@ -1316,7 +1316,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin2
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin2
+ ;;;
+ ;With mass band
+@@ -1329,7 +1329,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin0Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin0Band
+ ;
+ [dc:ZuuMassMVA_Vptbin0Band]
+@@ -1341,7 +1341,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMassMVA_Vptbin0Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMassMVA_Vptbin0Band
+ ;
+ [dc:ZuuMass_Vptbin1Band]
+@@ -1353,7 +1353,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin1Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin1Band
+ ;
+ [dc:ZuuMassMVA_Vptbin1Band]
+@@ -1365,7 +1365,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMassMVA_Vptbin1Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMassMVA_Vptbin1Band
+ ;
+ [dc:ZuuMass_Vptbin2Band]
+@@ -1377,7 +1377,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin2Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin2Band
+ ;
+ [dc:ZuuMassMVA_Vptbin2Band]
+@@ -1389,7 +1389,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMassMVA_Vptbin2Band
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMassMVA_Vptbin2Band
+
+ [dc:ZuuMass_Vptbin150To200]
+@@ -1401,7 +1401,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin150To200
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin150To200
+ [dc:ZuuMass_Vptbin200ToInf]
+ var = <!LimitGeneral|Mass!>
+@@ -1412,7 +1412,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_Vptbin200ToInf
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuMass_Vptbin200ToInf
+
+ ;;;;;;;;;;;;;;
+@@ -1465,7 +1465,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeBDT_lowpt
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeBDT_lowpt
+ ;Mass
+ [dc:ZeeMass_lowpt]
+@@ -1477,23 +1477,10 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_lowpt
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ ;SBweight = sb_weight_ZeeBDTVH_lowpt
+ SBweight = VHbb::SoverSBWeight(ZllBDT_lowptCMVA.Nominal,1)
+ wsVarName = ZeeMass_lowpt
+-[dc:ZeeLowPt_13TeV]
+-var = <!LimitGeneral|Mass!>
+-range = <!LimitGeneral|MassRange!>
+-dcName = ZeeLowPt_13TeV
+-cut = ZeeBDT_lowpt_M
+-signal = <!Datacard|VHsignals!>
+-background = <!Datacard|VHbackgrounds!>
+-dcBin = ZeeLowPt_13TeV
+-data = <!Plot_general|eData!>
+-type= mjj
+-;SBweight = sb_weight_ZeeBDTVH_lowpt
+-;SBweight = VHbb::SoverSBWeight(ZllBDT_lowptCMVA.Nominal,1)
+-wsVarName = ZeeLowPt_13TeV
+
+ ;high pt
+
+@@ -1539,7 +1526,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeBDT_highpt
+ data = <!Plot_general|eData!>
+-type= mjj
++type= mjj
+ wsVarName = ZeeBDT_highpt
+ ;Mass
+ [dc:ZeeMass_highpt]
+@@ -1551,23 +1538,10 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZeeMass_highpt
+ data = <!Plot_general|eData!>
+-type= mjj
+-;SBweight = sb_weight_ZeeBDTVH_highpt
++type= mjj
++;SBweight = sb_weight_ZeeBDTVH_highpt
+ SBweight = VHbb::SoverSBWeight(ZllBDT_highptCMVA.Nominal,3)
+ wsVarName = ZeeMass_highpt
+-[dc:ZeeHighPt_13TeV]
+-var = <!LimitGeneral|Mass!>
+-range = <!LimitGeneral|MassRange!>
+-dcName = ZeeHighPt_13TeV
+-cut = ZeeBDT_highpt_M
+-signal = <!Datacard|VHsignals!>
+-background = <!Datacard|VHbackgrounds!>
+-dcBin = ZeeHighPt_13TeV
+-data = <!Plot_general|eData!>
+-type= mjj
+-;SBweight = sb_weight_ZeeBDTVH_highpt
+-;SBweight = VHbb::SoverSBWeight(ZllBDT_highptCMVA.Nominal,3)
+-wsVarName = ZeeHighPt_13TeV
+
+ ;MUON REGION
+
+@@ -1614,8 +1588,8 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuBDT_lowpt
+ data = <!Plot_general|muData!>
+-;type= BDT
+-type= mjj
++;type= BDT
++type= mjj
+ wsVarName = ZuuBDT_lowpt
+ ;Mass
+ [dc:ZuuMass_lowpt]
+@@ -1627,23 +1601,10 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_lowpt
+ data = <!Plot_general|muData!>
+-type= mjj
+-;SBweight = sb_weight_ZuuBDTVH_lowpt
++type= mjj
++;SBweight = sb_weight_ZuuBDTVH_lowpt
+ SBweight = VHbb::SoverSBWeight(ZllBDT_lowptCMVA.Nominal,2)
+ wsVarName = ZuuMass_lowpt
+-[dc:ZuuLowPt_13TeV]
+-var = <!LimitGeneral|Mass!>
+-range = <!LimitGeneral|MassRange!>
+-dcName = ZuuLowPt_13TeV
+-cut = ZuuBDT_lowpt_M
+-signal = <!Datacard|VHsignals!>
+-background = <!Datacard|VHbackgrounds!>
+-dcBin = ZuuLowPt_13TeV
+-data = <!Plot_general|muData!>
+-type= mjj
+-;SBweight = sb_weight_ZuuBDTVH_lowpt
+-;SBweight = VHbb::SoverSBWeight(ZllBDT_lowptCMVA.Nominal,2)
+-wsVarName = ZuuLowPt_13TeV
+
+ ;high pt
+
+@@ -1689,7 +1650,7 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuBDT_highpt
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ wsVarName = ZuuBDT_highpt
+ ;Mass
+ [dc:ZuuMass_highpt]
+@@ -1701,25 +1662,11 @@
+ background = <!Datacard|VHbackgrounds!>
+ dcBin = ZuuMass_highpt
+ data = <!Plot_general|muData!>
+-type= mjj
++type= mjj
+ ;SBweight = sb_weight_ZuuBDTVH_highpt
+ SBweight = VHbb::SoverSBWeight(ZllBDT_highptCMVA.Nominal,4)
+ wsVarName = ZuuMass_highpt
+
+-[dc:ZuuHighPt_13TeV]
+-var = <!LimitGeneral|Mass!>
+-range = <!LimitGeneral|MassRange!>
+-dcName = ZuuHighPt_13TeV
+-cut = ZuuBDT_highpt_M
+-signal = <!Datacard|VHsignals!>
+-background = <!Datacard|VHbackgrounds!>
+-dcBin = ZuuHighPt_13TeV
+-data = <!Plot_general|muData!>
+-type= mjj
+-;SBweight = sb_weight_ZuuBDTVH_highpt
+-;SBweight = VHbb::SoverSBWeight(ZllBDT_highptCMVA.Nominal,4)
+-wsVarName = ZuuHighPt_13TeV
+-
+ ;;;;
+ ;VV
+ ;;;;
+@@ -1771,8 +1718,8 @@
+ signal = <!Datacard|VVsignals!>
+ dcBin = ZeeMassVV_lowpt
+ data =  <!Plot_general|eData!>
+-type= mjj
+-SBweight = sb_weight_ZeeBDT_lowpt
++type= mjj
++SBweight = sb_weight_ZeeBDT_lowpt
+ wsVarName = ZeeMassVV_lowpt
+ [dc:ZeeBDTVV_highpt]
+ var = <!LimitGeneral|BDTVVhigh!>
+@@ -1795,8 +1742,8 @@
+ signal = <!Datacard|VVsignals!>
+ dcBin = ZeeMassVV_highpt
+ data =  <!Plot_general|eData!>
+-type=mjj
+-SBweight = sb_weight_ZeeBDT_highpt
++type=mjj
++SBweight = sb_weight_ZeeBDT_highpt
+ wsVarName = ZeeMassVV_highpt
+
+ ;MUON
+@@ -1846,8 +1793,8 @@
+ signal = <!Datacard|VVsignals!>
+ dcBin = ZuuMassVV_lowpt
+ data =  <!Plot_general|muData!>
+-type=mjj
+-SBweight = sb_weight_ZuuBDT_lowpt
++type=mjj
++SBweight = sb_weight_ZuuBDT_lowpt
+ wsVarName = ZuuMassVV_lowpt
+ [dc:ZuuBDTVV_highpt]
+ var = <!LimitGeneral|BDTVVhigh!>
+@@ -1870,24 +1817,24 @@
+ signal = <!Datacard|VVsignals!>
+ dcBin = ZuuMassVV_highpt
+ data =  <!Plot_general|muData!>
+-type=mjj
+-SBweight = sb_weight_ZuuBDT_highpt
++type=mjj
++SBweight = sb_weight_ZuuBDT_highpt
+ wsVarName = ZuuMassVV_highpt
+-;;;;;;;;;;
+-;;;;FOR TEST;
+-;;;;;;;;;;;;;
+-;[dc:ZuuHighPt_13TeV]
+-;var = <!LimitGeneral|BDThigh!>
+-;;var = <!LimitGeneral|BDTlow!>
+-;range = <!LimitGeneral|BDTrange!>
+-;dcName = ZuuBDT_highpt
+-;cut = ZuuBDT_highpt
+-;signal = <!Datacard|VHsignals!>
+-;background = <!Datacard|VHbackgrounds!>
+-;dcBin = ZuuBDT_highpt
+-;data = <!Plot_general|muData!>
+-;type= BDT
+-;wsVarName = ZuuBDT_highpt
++;;;;;;;;;
++;;;FOR TEST;
++;;;;;;;;;;;;
++[dc:ZuuHighPt_13TeV]
++var = <!LimitGeneral|BDThigh!>
++;var = <!LimitGeneral|BDTlow!>
++range = <!LimitGeneral|BDTrange!>
++dcName = ZuuBDT_highpt
++cut = ZuuBDT_highpt
++signal = <!Datacard|VHsignals!>
++background = <!Datacard|VHbackgrounds!>
++dcBin = ZuuBDT_highpt
++data = <!Plot_general|muData!>
++type= BDT
++wsVarName = ZuuBDT_highpt
+
+
+ ;;;;;;;;;;
