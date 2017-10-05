@@ -10,6 +10,7 @@ import signal
 import zlib
 import base64
 from myutils.sampleTree import SampleTree as SampleTree
+from myutils.FileList import FileList
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -851,24 +852,28 @@ if opts.task.startswith('cacheplot'):
     for sampleIdentifier in sampleIdentifiers:
 
         # number of files to process per job 
-        splitFiles = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
-        nParts = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
-        print "DEBUG: split after ",splitFiles," files => number of parts = ",nParts
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'plottingSamples')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single parts
-        for splitFilesPart in range(1, nParts+1):
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
+            compressedFileList = FileList.compress(splitFilesChunk)
             jobDict = repDict.copy()
             jobDict.update({
                     'arguments':
                         {
                         'regions': ','.join(regions),
                         'sampleIdentifier': sampleIdentifier,
-                        'cachePart': splitFilesPart,
-                        'cacheParts': nParts,
-                        'splitFiles': splitFiles,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
                         }
                     })
-            jobName = 'plot_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=splitFilesPart)
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'plot_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
             submit(jobName, jobDict)
 
 if opts.task.startswith('runplot'):

@@ -51,14 +51,14 @@ import os
 # ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
+    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None):
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
-            splitFiles = sample.mergeCachingSize 
-            cacheParts = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
+            splitFilesChunkSize = sample.mergeCachingSize 
+            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getNumberOfParts()
             self.sample = sample.name
-            print ("INFO: use sample=", sample.name, " #parts = ", cacheParts)
+            print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
             # sample passed as string
             self.sample = sample
@@ -69,11 +69,11 @@ class TreeCache:
         self.outputFolder = outputFolder
         self.cachedFileNames = []
         self.branches = branches
-        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFiles=splitFiles, debug=False).get()
-        self.cachePart = cachePart
-        self.cacheParts = cacheParts if cacheParts > 1 else 1
-        self.splitFiles = splitFiles
-        self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.cacheParts)
+        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFilesChunkSize=splitFilesChunkSize, debug=False).get()
+        self.chunkNumber = chunkNumber
+        self.splitFilesChunks = splitFilesChunks if splitFilesChunks > 1 else 1
+        self.splitFilesChunkSize = splitFilesChunkSize
+        self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.splitFilesChunks)
         self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
@@ -87,8 +87,8 @@ class TreeCache:
         return self.outputFileNameFormat.format(
             outputFolder=self.tmpFolder,
             hash=self.hash,
-            part=self.cachePart if self.cachePart > 0 else 1,
-            parts='%d'%self.cacheParts
+            part=self.chunkNumber if self.chunkNumber > 0 else 1,
+            parts='%d'%self.splitFilesChunks
         )
 
     # file, where skimmed tree is moved to after it has been written completely
@@ -96,16 +96,16 @@ class TreeCache:
         return self.outputFileNameFormat.format(
             outputFolder=self.outputFolder,
             hash=self.hash,
-            part=self.cachePart if self.cachePart > 0 else 1,
-            parts='%d'%self.cacheParts
+            part=self.chunkNumber if self.chunkNumber > 0 else 1,
+            parts='%d'%self.splitFilesChunks
         )
 
     # check existence of files with skimmed trees
-    def findCachedFileNames(self):
+    def findCachedFileNames(self, chunkNumber=-1):
         cachedFilesMaskRaw = self.outputFileNameFormat.format(
             outputFolder=self.outputFolder,
             hash=self.hash,
-            part='*',
+            part='*' if chunkNumber < 1 else '%d'%chunkNumber,
             parts='*'
         )
         cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
@@ -118,13 +118,14 @@ class TreeCache:
             if len(self.cachedFileNames) < 1:
                 print ('none!')
             print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
+        return self.cachedFileNames
 
     # check if a single part is cached, (only checks existence of the file, not validity!)
     def partIsCached(self):
         cachedFilesMaskRaw = self.outputFileNameFormat.format(
             outputFolder=self.outputFolder,
             hash=self.hash,
-            part=self.cachePart,
+            part=self.chunkNumber,
             parts='*'
         )
         cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
@@ -133,7 +134,7 @@ class TreeCache:
     # isCached == all files containing the skimmed tree found!
     def isCached(self):
         self.findCachedFileNames()
-        if (len(self.cachedFileNames) != self.cacheParts and self.cacheParts > 1) or len(self.cachedFileNames) == 0:
+        if (len(self.cachedFileNames) != self.splitFilesChunks and self.splitFilesChunks > 1) or len(self.cachedFileNames) == 0:
             if self.debug:
                 print ('\x1b[32mDEBUG: not cached:', self.identification, '\x1b[0m')
             return False
@@ -208,9 +209,9 @@ class TreeCache:
             print(command, ' => ', returnCode)
 
     # delete cached files
-    def deleteCachedFiles(self):
-        self.findCachedFileNames()
-        for fileName in self.cachedFileNames:
+    def deleteCachedFiles(self, chunkNumber=-1):
+        cachedFileNames = self.findCachedFileNames(chunkNumber=chunkNumber)
+        for fileName in cachedFileNames:
             self.deleteFile(fileName)
 
     # create folders

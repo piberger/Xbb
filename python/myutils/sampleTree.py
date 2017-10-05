@@ -30,52 +30,29 @@ class SampleTree(object):
     moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1, countOnly=False):
+    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False):
         self.verbose = True
         self.monitorPerformance = True
+        self.samples = samples
 
-        # get list of sample root files
-        if type(samples) == list:
-            sampleFileNames = samples
-        elif type(samples) == dict:
-            sampleName = samples['name']
-            sampleFolder = samples['folder']
-            if self.verbose:
-                print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
-            sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
-            if self.verbose:
-                print ("INFO: found ", len(sampleFileNames), " files.")
-        else:
-            sampleTextFileName = samples
-            if os.path.isfile(sampleTextFileName):
-                self.sampleTextFileName = sampleTextFileName
-                if self.verbose:
-                    print('open samples .txt file: %s' % self.sampleTextFileName)
-            else:
-                print("\x1b[31mERROR: file not found: %s \x1b[0m" % sampleTextFileName)
-                return
-
-            with open(self.sampleTextFileName, 'r') as sampleTextFile:
-                sampleFileNames = sampleTextFile.readlines()
-        
-        #print ("FILES:", sampleFileNames)
         # process only partial sample root file list
-        self.splitFiles = splitFiles
-        self.splitFilesPart = splitFilesPart
-        if self.splitFiles > 0 and len(sampleFileNames) > self.splitFiles:
-            self.numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
-            if self.splitFilesPart > 0 and self.splitFilesPart <= self.numParts:
-                sampleFileNames = sampleFileNames[(self.splitFilesPart-1)*self.splitFiles:(self.splitFilesPart*self.splitFiles)]
+        self.splitFilesChunkSize = splitFilesChunkSize
+        self.chunkNumber = chunkNumber
+       
+        # get list of sample root files to process
+        sampleFileNamesParts = self.getSampleFileNameChunks()
+        if self.chunkNumber > 0 and self.chunkNumber <= self.numParts:
+            if len(sampleFileNamesParts) == self.numParts:
+                chunkIndex = self.chunkNumber - 1
+                self.sampleFileNames = sampleFileNamesParts[chunkIndex]
             else:
-                print("\x1b[31mERROR: wrong part number ", self.splitFilesPart, " for: %s \x1b[0m" % sampleTextFileName)
-                return
-            if self.verbose:
-                print ("INFO: reading part ", self.splitFilesPart, " of ", self.numParts)
+                raise Exception("InvalidNumberOfSplitParts")
         else:
-            self.splitFilesPart = 1
-            self.numParts = 1
+            print("\x1b[31mERROR: wrong chunk number ", self.chunkNumber, " for: %s \x1b[0m" % sampleTextFileName)
+            raise Exception("InvalidChunkNumber")
+        if self.verbose:
+            print ("INFO: reading part ", self.chunkNumber, " of ", self.numParts)
 
-        self.sampleFileNames = sampleFileNames
         self.status = 0
         self.treeName = treeName
         self.formulas = {}
@@ -102,7 +79,7 @@ class SampleTree(object):
             self.tree = ROOT.TChain(self.treeName)
 
             # loop over all given .root files 
-            for rootFileName in sampleFileNames:
+            for rootFileName in self.sampleFileNames:
 
                 # check root file existence
                 if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
@@ -165,8 +142,62 @@ class SampleTree(object):
                 self.tree = None
 
             if self.tree:
-                self.tree.SetCacheSize(100*1024*1024)
-    
+                self.tree.SetCacheSize(50*1024*1024)
+
+    #------------------------------------------------------------------------------
+    # return full list of sample root files 
+    #------------------------------------------------------------------------------
+    def getAllSampleFileNames(self): 
+        # given argument is list -> this is already the list of root files
+        if type(self.samples) == list:
+            sampleFileNames = self.samples
+        # given argument is name and folder -> glob
+        elif type(self.samples) == dict:
+            sampleName = self.samples['name']
+            sampleFolder = self.samples['folder']
+            if self.verbose:
+                print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
+            sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
+            if self.verbose:
+                print ("INFO: found ", len(sampleFileNames), " files.")
+        # given argument is a single file name -> read this .txt file 
+        else:
+            sampleTextFileName = self.samples
+            if os.path.isfile(sampleTextFileName):
+                self.sampleTextFileName = sampleTextFileName
+                if self.verbose:
+                    print('open samples .txt file: %s' % self.sampleTextFileName)
+            else:
+                print("\x1b[31mERROR: file not found: %s \x1b[0m" % sampleTextFileName)
+                return
+
+            with open(self.sampleTextFileName, 'r') as sampleTextFile:
+                sampleFileNames = sampleTextFile.readlines()
+        return sampleFileNames
+
+    #------------------------------------------------------------------------------
+    # return lists of sample root files, split into chunks with certain size  
+    #------------------------------------------------------------------------------
+    def getSampleFileNameChunks(self):
+        sampleFileNames = self.getAllSampleFileNames()
+        if self.splitFilesChunkSize > 0 and len(sampleFileNames) > self.splitFilesChunkSize:
+            self.numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFilesChunkSize))
+            sampleFileNamesParts = [sampleFileNames[i:i + self.splitFilesChunkSize] for i in xrange(0, len(sampleFileNames), self.splitFilesChunkSize)]
+        else:
+            self.numParts = 1
+            sampleFileNamesParts = [sampleFileNames]
+        return sampleFileNamesParts
+
+    #------------------------------------------------------------------------------
+    # return lists of sample root files for a single chunk  
+    #------------------------------------------------------------------------------
+    def getSampleFileNameChunk(self, chunkNumber):
+        chunks = self.getSampleFileNameChunks()
+        if chunkNumber > 0 and chunkNumber <= len(chunks):
+            return chunks[chunkNumber-1]
+        else:
+            print("\x1b[31mERROR: invalid chunk number {n} \x1b[0m".format(n=chunkNumber))
+
     def getNumberOfParts(self):
         return self.numParts
 
@@ -328,9 +359,9 @@ class SampleTree(object):
                 print (' > ', outputTree['fileName'], ' <== ', outputTree['hash'], ' cut: ', outputTree['cut'])
             print ('FORMULAS:')
             for formulaName, formula in self.formulas.iteritems():
-                print (' > ', formulaName, ' ==> ', formula)
+                print (' > \x1b[35m', formulaName, '\x1b[0m ==> ', formula)
 
-        self.tree.SetCacheSize(100000000)
+        self.tree.SetCacheSize(50*1024*1024)
         self.tree.AddBranchToCache('*', ROOT.kTRUE)
         self.tree.StopCacheLearningPhase()
 
@@ -352,7 +383,7 @@ class SampleTree(object):
                     try:
                         listOfBranchesNeededForCuts.append(formula.GetLeaf(formulaLeaf).GetName())
                     except:
-                        print ("\x1b[31mERROR: invalid leaf?!?!\x1b[0m")
+                        print ("\x1b[31mWARNING: invalid leaf?!?! (not used for now)\x1b[0m")
             listOfBranchesNeededForCuts = list(set(listOfBranchesNeededForCuts))
             print ("INFO: list of branches need to be kept for cut formulas:")
             for branchName in listOfBranchesNeededForCuts:
@@ -376,12 +407,19 @@ class SampleTree(object):
 
         # loop over all events and write to output branches
         for event in self:
+
+            # evaluate all formulas
+            formulaResults = {}
+            for formulaName, formula in self.formulas.iteritems():
+                formulaResults[formulaName] = self.evaluate(formulaName)
+            
+            # evaluate cuts for all output trees
             for outputTree in self.outputTrees:
 
                 # evaluate all cuts of the sequence and abort early if one is not satisfied
                 passedCut = True
                 for cutFormulaName in outputTree['cutSequence']:
-                    passedCut = passedCut and self.evaluate(cutFormulaName)
+                    passedCut = passedCut and formulaResults[cutFormulaName]
                     if not passedCut:
                         break
                 if passedCut:

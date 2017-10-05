@@ -3,12 +3,12 @@ import hashlib
 
 class Hash(object):
 
-    def __init__(self, sample, minCut = '1', subCut = None, branches = None, splitFiles = -1, debug = False):
+    def __init__(self, sample, minCut = '1', subCut = None, branches = None, splitFilesChunkSize = -1, debug = False):
         
         # basic cut(+part) hash
         self.hashKey = '%s_%s' % (sample, minCut)
-        if splitFiles > 0:
-            self.hashKey += '_split%d' % (splitFiles)
+        if splitFilesChunkSize > 0:
+            self.hashKey += '_split%d' % (splitFilesChunkSize)
         self.hash = hashlib.sha224(self.hashKey).hexdigest()
 
         # including subcut

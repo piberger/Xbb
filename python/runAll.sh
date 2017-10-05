@@ -65,14 +65,17 @@ while [ $# -gt 0 ]; do
     --sampleIdentifier=*)
       sampleIdentifier="${1#*=}"
       ;;
-    --splitFiles=*)
-      splitFiles="${1#*=}"
+    --splitFilesChunkSize=*)
+      splitFilesChunkSize="${1#*=}"
       ;;
-    --cachePart=*)
-      cachePart="${1#*=}"
+    --chunkNumber=*)
+      chunkNumber="${1#*=}"
       ;;
-    --cacheParts=*)
-      cacheParts="${1#*=}"
+    --splitFilesChunks=*)
+      splitFilesChunks="${1#*=}"
+      ;;
+    --fileList=*)
+      fileList="${1#*=}"
       ;;
     *)
       ;;
@@ -222,10 +225,14 @@ elif [ $task = "runtraining" ]; then
     eval "$runCommand"
 
 elif [ $task = "cacheplot" ]; then
-    runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFile ${splitFiles} --cacheParts ${cacheParts} --cachePart ${cachePart} ${config_filenames[@]}"
+    runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
     if [ $force = "1" ]; then
         runCommand="${runCommand} --force"
     fi
+    runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 
