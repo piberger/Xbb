@@ -1,3 +1,0 @@
-/store/user/arizzi/VHBBHeppyV25/SingleMuon/VHBB_HEPPY_V25_SingleMuon__Run2016F-23Sep2016-v1/170130_115838/0000/tree_6.root
-/store/user/arizzi/VHBBHeppyV25/SingleMuon/VHBB_HEPPY_V25_SingleMuon__Run2016F-23Sep2016-v1/170130_115838/0000/tree_7.root
-/store/user/arizzi/VHBBHeppyV25/SingleMuon/VHBB_HEPPY_V25_SingleMuon__Run2016F-23Sep2016-v1/170130_115838/0000/tree_9.root

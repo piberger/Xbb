@@ -1,1 +1,0 @@
-/store/group/phys_higgs/hbb/ntuples/V25/MET/VHBB_HEPPY_V25_MET__Run2016H-PromptReco-v3/170130_124341/0000/tree_21.root
