@@ -503,13 +503,15 @@ class TreeCache:
                     try:
                         #print ('will remove', branch)
                         if branchList.FindObject(branch):    
+                            print ('will remove', branch)
                             tree.SetBranchStatus(branch,0)
                     except:
                         pass
                 if self.branch_to_keep:
                     tree.SetBranchStatus('*',0)
                     for b in self.branch_to_keep:
-                        if branchList.FindObject(branch):
+                        if branchList.FindObject(b):
+                            print ('use branch:', b)
                             tree.SetBranchStatus(b,1)
 
 
