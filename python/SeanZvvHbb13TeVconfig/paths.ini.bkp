@@ -32,17 +32,17 @@ vhbbpath= <!Directories|Wdir!>/Xbb
 ;!! specifies the .cfg files with the Samples information
 samplesinfo:  /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/SeanZvvHbb13TeVconfig/samples_nosplit.ini
 ;!! where you want to store the logfiles from job submissions
-logpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SPREP_Zvv_Data/Logs/
+logpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Zvv//SPREP_Zvv_Data/Logs/
 
 ;!! from which samples to plot and where to save the plots
 plottingSamples: <!Directories|PREPout!>
 ;plottingSamples: <!Directories|SYSout!>
 ;plottingSamples: <!Directories|MVAout!>
 
-plotpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SPREP_Zvv_Data/Plots/
+plotpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Zvv//SPREP_Zvv_Data/Plots/
 
 ;basedir for tagged folder structure
-tagDir: <!Directories|vhbbpath!>/python/logs_v25_Wlv/
+tagDir: <!Directories|vhbbpath!>/python/logs_v25_Zvv/
 
 ;#!! cached files
 ;caching without removing useless branches
@@ -51,7 +51,7 @@ tmpSamples =  DUMMY
 #!! from which samples to make the DCs and where to save the DCs
 dcSamples: <!Directories|MVAout!>/
 
-limits: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SPREP_Zvv_Data/Limits/
+limits: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Zvv//SPREP_Zvv_Data/Limits/
 
 t3userfolder = root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>
 
