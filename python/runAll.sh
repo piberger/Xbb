@@ -215,7 +215,7 @@ elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
 
 elif [ $task = "cachetraining" ]; then
-    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFile ${splitFiles} --cacheParts ${cacheParts} --cachePart ${cachePart} ${config_filenames[@]}"
+    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 

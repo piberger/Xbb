@@ -308,7 +308,7 @@ def submit(job,repDict,redirect_to_null=False):
         logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
         qsubOptions = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s' %(repDict) 
 
-        if opts.task in ['mergesyscachingdcsplit', 'singleeval']:
+        if opts.task in ['mergesyscachingdcsplit', 'singleeval', 'cacheplot', 'cachetraining']:
             qsubOptions += ' -l h_vmem=6g '
 
         command = 'qsub {options} -o {logfile} {runscript}'.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
@@ -790,35 +790,37 @@ if opts.task.startswith('cachetraining'):
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    print "STC:", samplesToCache
     sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
     print "sample identifiers: (",len(sampleIdentifiers),")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
-    # submit jobs
+    # submit separate jobs for all samples
     for sampleIdentifier in sampleIdentifiers:
 
         # number of files to process per job 
-        splitFiles = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
-
-        nParts = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
-        print "DEBUG: split after ",splitFiles," files => number of parts = ",nParts
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
+        print "DEBUG: split after ",splitFilesChunkSize," files => number of parts = ",len(splitFilesChunks)
         
-        # submit all the single parts
-        for splitFilesPart in range(1, nParts+1):
+        # submit all the single chunks for one sample
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
             jobDict = repDict.copy()
             jobDict.update({
                     'arguments':
                         {
                         'trainingRegions': ','.join(trainingRegions),
                         'sampleIdentifier': sampleIdentifier,
-                        'cachePart': splitFilesPart,
-                        'cacheParts': nParts,
-                        'splitFiles': splitFiles,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
                         }
                     })
-            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=splitFilesPart)
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                compressedFileList = FileList.compress(splitFilesChunk)
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 
 if opts.task.startswith('runtraining'):

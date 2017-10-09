@@ -84,20 +84,13 @@ class MvaTrainingHelper(object):
                     # cut from the mva region
                     if self.treeCut:
                         sampleCuts.append(self.treeCut)
-                    cutList = '&&'.join(['(%s)'%x for x in sorted(sampleCuts)])
 
-                    # count number of chunks the cached data is split into
-                    splitFiles = sample.mergeCachingSize 
-                    nParts = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
-                    
                     tc = TreeCache.TreeCache(
-                            sample=sample.name,
-                            cutList=cutList,
+                            sample=sample,
+                            cutList=sampleCuts,
                             inputFolder=self.samplesPath,
                             tmpFolder=self.tmpPath,
                             outputFolder=self.cachedPath,
-                            cacheParts=nParts,
-                            splitFiles=splitFiles,
                             debug=True
                         )
                     sampleTree = tc.getTree()
@@ -134,11 +127,11 @@ class MvaTrainingHelper(object):
     def printInfo(self):
         #WRITE INFOFILE
         MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
-        infofile = open(MVAdir+self.factoryname+'_'+self.MVAname+'.info','w')
+        infofile = open(MVAdir+self.factoryname+'_'+self.mvaName+'.info','w')
         print ('@DEBUG: output infofile name')
         print (infofile)
 
-        info=mvainfo(self.MVAname)
+        info=mvainfo(self.mvaName)
         info.factoryname=self.factoryname
         info.factorysettings=self.factorysettings
         info.MVAtype=self.MVAtype

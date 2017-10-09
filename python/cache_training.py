@@ -11,7 +11,7 @@ import sys
 
 class CacheTraining(object):
 
-    def __init__(self, config, sampleIdentifier, trainingRegions, cacheParts=1, cachePart=1, splitFiles=-1):
+    def __init__(self, config, sampleIdentifier, trainingRegions, splitFilesChunks=1, chunkNumber=1, splitFilesChunkSize=-1):
         self.config = config
         self.sampleIdentifier = sampleIdentifier
         self.trainingRegions = trainingRegions
@@ -38,9 +38,9 @@ class CacheTraining(object):
         self.TrainCut = config.get('Cuts', 'TrainCut') 
         self.EvalCut = config.get('Cuts', 'EvalCut')
 
-        self.cacheParts = cacheParts
-        self.cachePart = cachePart
-        self.splitFiles = splitFiles
+        self.splitFilesChunks = splitFilesChunks
+        self.chunkNumber = chunkNumber
+        self.splitFilesChunkSize = splitFilesChunkSize
         
         VHbbNameSpace=config.get('VHbbNameSpace','library')
         ROOT.gSystem.Load(VHbbNameSpace)
@@ -86,9 +86,9 @@ class CacheTraining(object):
                             inputFolder=self.samplesPath,
                             tmpFolder=self.tmpPath,
                             outputFolder=self.cachedPath,
-                            cacheParts=self.cacheParts,
-                            cachePart=self.cachePart,
-                            splitFiles=self.splitFiles,
+                            splitFilesChunks=self.splitFilesChunks,
+                            chunkNumber=self.chunkNumber,
+                            splitFilesChunkSize=self.splitFilesChunkSize,
                             debug=True
                         )
 
@@ -96,7 +96,7 @@ class CacheTraining(object):
                         if not tc.partIsCached():
                             # for the first sample which comes from this files, load the tree
                             if not self.sampleTree:
-                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFiles=self.splitFiles, splitFilesPart=self.cachePart)
+                                self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber)
                             treeCaches.append(tc.setSampleTree(self.sampleTree).cache())
 
             if len(treeCaches) > 0:
@@ -116,11 +116,11 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
                       help="sample identifier (no subsample!)")
-parser.add_option("-n","--cacheParts", dest="cacheParts", default='',
+parser.add_option("-n","--splitFilesChunks", dest="splitFilesChunks", default='',
                       help="number of parts")
-parser.add_option("-i","--cachePart", dest="cachePart", default='',
+parser.add_option("-i","--chunkNumber", dest="chunkNumber", default='',
                       help="number of part to cache")
-parser.add_option("-p","--splitFiles", dest="splitFiles", default='',
+parser.add_option("-p","--splitFilesChunkSize", dest="splitFilesChunkSize", default='',
                       help="number of files per part")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
@@ -135,10 +135,10 @@ config.read(opts.config)
 
 # initialize
 trainingRegions = opts.trainingRegions.split(',')
-cacheParts = int(opts.cacheParts) if len(opts.cacheParts) > 0 else 1
-cachePart = int(opts.cachePart) if len(opts.cachePart) > 0 else 1
-splitFiles = int(opts.splitFiles) if len(opts.splitFiles) > 0 else -1
-ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions, cachePart=cachePart, cacheParts=cacheParts, splitFiles=splitFiles)
+splitFilesChunks = int(opts.splitFilesChunks) if len(opts.splitFilesChunks) > 0 else 1
+chunkNumber = int(opts.chunkNumber) if len(opts.chunkNumber) > 0 else 1
+splitFilesChunkSize = int(opts.splitFilesChunkSize) if len(opts.splitFilesChunkSize) > 0 else -1
+ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions, chunkNumber=chunkNumber, splitFilesChunks=splitFilesChunks, splitFilesChunkSize=splitFilesChunkSize)
 ct.printInfo()
 
 # run training
