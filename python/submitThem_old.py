@@ -312,8 +312,6 @@ def submit(job,repDict,redirect_to_null=False):
             qsubOptions += ' -l h_vmem=6g '
 
         command = 'qsub {options} -o {logfile} {runscript}'.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
-
-        print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     else:
         waiting_time_before_retry = 60
@@ -330,7 +328,6 @@ def submit(job,repDict,redirect_to_null=False):
 
         if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
         else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s_%(additional)s.out' %(repDict) + ' &'
-        print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
 
     # run command
@@ -339,6 +336,9 @@ def submit(job,repDict,redirect_to_null=False):
         answer = raw_input().strip()
         if answer == 'no' or answer == 'skip':
             return
+    else:
+        print "the command is ", command
+
     subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
@@ -892,6 +892,56 @@ if opts.task.startswith('runplot'):
                 })
         jobName = 'plot_run_{region}'.format(region=region)
         submit(jobName, jobDict)
+
+if opts.task.startswith('cachedc'):
+    # get list of all sample names used in DC step
+    sampleNames = []
+    regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
+    if config.has_option('LimitGeneral','addSample_sys'):
+        addSample_sys = eval(config.get('LimitGeneral','addSample_sys'))
+        sampleNames += [addSample_sys[key] for key in addSample_sys]
+    for region in regions:
+        for sampleType in ['data', 'signal', 'background']:
+            sampleNames += eval(config.get('dc:%s'%region, sampleType))
+
+    # get samples info
+    sampleFolder = config.get('Directories', 'dcSamples')
+    info = ParseInfo(samplesinfo, sampleFolder)
+    samples = info.get_samples(sampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    print "sample identifiers: (",len(sampleIdentifiers),")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+
+        # number of files to process per job 
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        
+        # submit all the single parts
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
+            compressedFileList = FileList.compress(splitFilesChunk)
+            jobDict = repDict.copy()
+            jobDict.update({
+                    'arguments':
+                        {
+                        'sampleIdentifier': sampleIdentifier,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
+                        }
+                    })
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
+            submit(jobName, jobDict)
 
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]

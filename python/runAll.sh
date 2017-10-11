@@ -59,6 +59,9 @@ while [ $# -gt 0 ]; do
     --force)
       force="1"
       ;;
+    --verbose)
+      verbose="1"
+      ;;
     --vars=*)
       vars="${1#*=}"
       ;;
@@ -229,7 +232,7 @@ elif [ $task = "cacheplot" ]; then
     if [ "$fileList" ]; then
         runCommand="${runCommand} --fileList ${fileList}"
     fi
-    if [ $force = "1" ]; then
+    if [ "$force" = "1" ]; then
         runCommand="${runCommand} --force"
     fi
     runCommand="${runCommand} ${config_filenames[@]}"
@@ -242,6 +245,21 @@ elif [ $task = "runplot" ]; then
     else
         runCommand="python ./run_plot.py --regions ${regions} --vars ${vars} ${config_filenames[@]}";
     fi
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "cachedc" ]; then
+    runCommand="python ./cache_dc.py --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    if [ "$verbose" = "1" ]; then
+        runCommand="${runCommand} --verbose"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
 
