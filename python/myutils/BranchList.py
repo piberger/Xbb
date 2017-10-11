@@ -32,7 +32,7 @@ class BranchList(object):
                 cut = cut.replace(operator, separator)
             leaves = cut.split(separator)
             for leaf in leaves:
-                if len(leaf.strip()) > 0 and not self.isfloat(leaf) and not leaf.endswith('$') and not '::' in leaf:
+                if len(leaf.strip()) > 0 and not self.isfloat(leaf) and not leaf.endswith('$') and '::' not in leaf:
                     branches.append(leaf)
         branchesUnique = list(set(branches))
         return branchesUnique
@@ -48,6 +48,6 @@ class BranchList(object):
             else:
                 shortNames[shortName] = 1
         shortRepresentation = '{num} branches: '.format(num=len(listOfBranches))
-        shortRepresentation += ', '.join(['\x1b[35m{name}\x1b[0m'.format(name=shortName) if num == 1 else '{num} like \x1b[34m{name}_*\x1b[0m'.format(num=num, name=shortName)  for shortName, num in shortNames.iteritems()])
+        shortRepresentation += ', '.join(['\x1b[35m{name}\x1b[0m'.format(name=shortName) if num == 1 else '{num} like \x1b[34m{name}_*\x1b[0m'.format(num=num, name=shortName) for shortName, num in shortNames.iteritems()])
         return shortRepresentation
 

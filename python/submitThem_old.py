@@ -791,7 +791,7 @@ if opts.task.startswith('cachetraining'):
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
     sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
-    print "sample identifiers: (",len(sampleIdentifiers),")"
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
@@ -801,21 +801,21 @@ if opts.task.startswith('cachetraining'):
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
         splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
-        print "DEBUG: split after ",splitFilesChunkSize," files => number of parts = ",len(splitFilesChunks)
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
             jobDict = repDict.copy()
             jobDict.update({
-                    'arguments':
-                        {
+                'arguments':
+                    {
                         'trainingRegions': ','.join(trainingRegions),
                         'sampleIdentifier': sampleIdentifier,
                         'chunkNumber': chunkNumber,
                         'splitFilesChunks': len(splitFilesChunks),
                         'splitFilesChunkSize': splitFilesChunkSize,
-                        }
-                    })
+                    }
+                })
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
                 compressedFileList = FileList.compress(splitFilesChunk)
@@ -825,7 +825,7 @@ if opts.task.startswith('cachetraining'):
 
 if opts.task.startswith('runtraining'):
     # training regions
-    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
 
     # separate job for all training regions
     for trainingRegion in trainingRegions:
@@ -835,7 +835,7 @@ if opts.task.startswith('runtraining'):
         submit(jobName, jobDict)
 
 if opts.task.startswith('cacheplot'):
-    regions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
     sampleNames = eval(config.get('Plot_general', 'samples')) 
     dataSampleNames = eval(config.get('Plot_general', 'Data')) 
 
@@ -846,7 +846,7 @@ if opts.task.startswith('cacheplot'):
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
     sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
-    print "sample identifiers: (",len(sampleIdentifiers),")"
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
@@ -854,7 +854,7 @@ if opts.task.startswith('cacheplot'):
     for sampleIdentifier in sampleIdentifiers:
 
         # number of files to process per job 
-        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'plottingSamples')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
@@ -879,17 +879,17 @@ if opts.task.startswith('cacheplot'):
             submit(jobName, jobDict)
 
 if opts.task.startswith('runplot'):
-    regions = [x.strip() for x in (config.get('Plot_general','List')).split(',')]
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
 
     # submit all the plot regions as separate jobs
     for region in regions:
         jobDict = repDict.copy()
         jobDict.update({
-                'arguments':
-                    {
+            'arguments':
+                {
                     'regions': region,
-                    }
-                })
+                }
+            })
         jobName = 'plot_run_{region}'.format(region=region)
         submit(jobName, jobDict)
 
@@ -897,8 +897,8 @@ if opts.task.startswith('cachedc'):
     # get list of all sample names used in DC step
     sampleNames = []
     regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
-    if config.has_option('LimitGeneral','addSample_sys'):
-        addSample_sys = eval(config.get('LimitGeneral','addSample_sys'))
+    if config.has_option('LimitGeneral', 'addSample_sys'):
+        addSample_sys = eval(config.get('LimitGeneral', 'addSample_sys'))
         sampleNames += [addSample_sys[key] for key in addSample_sys]
     for region in regions:
         for sampleType in ['data', 'signal', 'background']:
@@ -912,7 +912,7 @@ if opts.task.startswith('cachedc'):
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
     sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
-    print "sample identifiers: (",len(sampleIdentifiers),")"
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
@@ -920,7 +920,7 @@ if opts.task.startswith('cachedc'):
     for sampleIdentifier in sampleIdentifiers:
 
         # number of files to process per job 
-        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
@@ -929,14 +929,14 @@ if opts.task.startswith('cachedc'):
             compressedFileList = FileList.compress(splitFilesChunk)
             jobDict = repDict.copy()
             jobDict.update({
-                    'arguments':
-                        {
+                'arguments':
+                    {
                         'sampleIdentifier': sampleIdentifier,
                         'chunkNumber': chunkNumber,
                         'splitFilesChunks': len(splitFilesChunks),
                         'splitFilesChunkSize': splitFilesChunkSize,
-                        }
-                    })
+                    }
+                })
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
                 jobDict['arguments']['fileList'] = compressedFileList

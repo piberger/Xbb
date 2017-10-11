@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, sys, ROOT, warnings, pickle
+import os, ROOT, warnings
 ROOT.gROOT.SetBatch(True)
-from array import array
-from math import sqrt
 from copy import copy, deepcopy
 #suppres the EvalInstace conversion warning bug
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
-from optparse import OptionParser
-from samplesclass import Sample
-from sample_parser import ParseInfo 
-import re
+from sample_parser import ParseInfo
 import json
 import NewTreeCache as TreeCache
 from sampleTree import SampleTree as SampleTree
@@ -20,7 +15,7 @@ class Datacard(object):
         self.verbose = True
         self.forceRedo = forceRedo
         self.config = config
-        VHbbNameSpace = config.get('VHbbNameSpace','library')
+        VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
         if returnCode != 0:
             print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
@@ -32,16 +27,16 @@ class Datacard(object):
         if self.anaTag not in ['7TeV', '8TeV', '13TeV']:
             raise Exception("anaTag %s unknown. Specify 8TeV or 7TeV or 13TeV in the general config"%self.anaTag)
         # Directories:
-        self.Wdir=config.get('Directories','Wdir')
-        self.vhbbpath=config.get('Directories','vhbbpath')
-        self.samplesinfo=config.get('Directories','samplesinfo')
-        self.path = config.get('Directories','dcSamples')
+        self.Wdir = config.get('Directories', 'Wdir')
+        self.vhbbpath = config.get('Directories', 'vhbbpath')
+        self.samplesinfo = config.get('Directories', 'samplesinfo')
+        self.path = config.get('Directories', 'dcSamples')
         self.cachedPath = self.config.get('Directories', 'tmpSamples')
         self.tmpPath = self.config.get('Directories', 'scratch')
-        self.outpath=config.get('Directories','limits')
-        self.optimisation= "" #TODO: opts.optimisation
+        self.outpath = config.get('Directories', 'limits')
+        self.optimisation = "" #TODO: opts.optimisation
         self.optimisation_training = False
-        self.UseTrainSample = eval(config.get('Analysis','UseTrainSample'))
+        self.UseTrainSample = eval(config.get('Analysis', 'UseTrainSample'))
         if self.UseTrainSample:
             print ('Training events will be used')
         if not self.optimisation == '':
@@ -54,34 +49,34 @@ class Datacard(object):
             os.mkdir(self.outpath)
         
         # parse histogram config:
-        self.treevar = config.get('dc:%s'%self.region,'var')
+        self.treevar = config.get('dc:%s'%self.region, 'var')
         print ('treevar is', self.treevar)
-        self.name = config.get('dc:%s'%self.region,'wsVarName')
+        self.name = config.get('dc:%s'%self.region, 'wsVarName')
         if self.optimisation_training:
-            self.treevar = self.optimisation+'.Nominal'
-            self.name += '_'+ self.optimisation
+            self.treevar = self.optimisation + '.Nominal'
+            self.name += '_' + self.optimisation
             if self.UseTrainSample:
                 self.name += '_Train'
         print ('again, treevar is', self.treevar)
         
         # set binning
         self.binning = {
-                'nBins': int(config.get('dc:%s'%self.region,'range').split(',')[0]),
-                'xMin': float(config.get('dc:%s'%self.region,'range').split(',')[1]),
-                'xMax': float(config.get('dc:%s'%self.region,'range').split(',')[2]),
+                'nBins': int(config.get('dc:%s'%self.region, 'range').split(',')[0]),
+                'xMin': float(config.get('dc:%s'%self.region, 'range').split(',')[1]),
+                'xMax': float(config.get('dc:%s'%self.region, 'range').split(',')[2]),
                 }
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
-        self.ROOToutname = config.get('dc:%s'%self.region,'dcName')
+        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName')
         if self.optimisation_training:
            self.ROOToutname += self.optimisation
            if self.UseTrainSample:
                self.ROOToutname += '_Train'
-        self.RCut = config.get('dc:%s'%self.region,'cut')
-        self.signals = eval('['+config.get('dc:%s'%self.region,'signal')+']') #TODO
-        self.Datacardbin=config.get('dc:%s'%self.region,'dcBin')
-        self.anType = config.get('dc:%s'%self.region,'type').upper()
-        self.setup = eval(config.get('LimitGeneral','setup'))
+        self.RCut = config.get('dc:%s'%self.region, 'cut')
+        self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
+        self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
+        self.anType = config.get('dc:%s'%self.region, 'type').upper()
+        self.setup = eval(config.get('LimitGeneral', 'setup'))
 
         #new
         try:
@@ -121,20 +116,20 @@ class Datacard(object):
             print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
 
         # read weights
-        self.weightF = config.get('Weights','weightF')
+        self.weightF = config.get('Weights', 'weightF')
         self.SBweight = None
-        print ('before adding SBweight, weightF is',  self.weightF)
+        print ('before adding SBweight, weightF is', self.weightF)
         if self.anType == 'MJJ':
             print ('Passed mJJ')
-            if config.has_option('dc:%s'%self.region,'SBweight'):
+            if config.has_option('dc:%s'%self.region, 'SBweight'):
                 print ('passed config')
-                self.SBweight = config.get('dc:%s'%self.region,'SBweight')
+                self.SBweight = config.get('dc:%s'%self.region, 'SBweight')
                 self.weightF ='('+self.weightF+')*('+self.SBweight+')'
-                print ('after adding SBweight, weightF is',  self.weightF)
+                print ('after adding SBweight, weightF is', self.weightF)
             else:
                 print ('NOT Passed config')
 
-        self.TrainFlag = eval(config.get('Analysis','TrainFlag'))
+        self.TrainFlag = eval(config.get('Analysis', 'TrainFlag'))
         self.treecut = config.get('Cuts', self.RCut)
         
         # checks on read options
@@ -146,7 +141,7 @@ class Datacard(object):
             self.sysOptions['binstat'] = False
 
         if self.sysOptions['blind']:
-            printc('red','', 'I AM BLINDED!')    
+            print('\x1b[31mI AM BLINDED!\x1b[0m')
             
         if self.anType != 'BDT':
             if self.sysOptions['rebin_active']:
@@ -156,6 +151,7 @@ class Datacard(object):
             self.setup.append(self.sysOptions['add_signal_as_bkg'])
 
         #--Setup--------------------------------------------------------------------
+        #TODO: move to config file
         #Assign Pt region for sys factors
         print ('Assign Pt region for sys factors')
         print ('================================\n')
@@ -170,7 +166,7 @@ class Datacard(object):
                 'bin150To200': ['Vptbin150To200'],
                 'bin200ToInf': ['Vptbin200ToInf'],
                 }
-        self.ptRegion = [ptRegion for ptRegion,outputNames in ptRegionsDict.iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
+        self.ptRegion = [ptRegion for ptRegion, outputNames in ptRegionsDict.iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
         print ("\x1b[34mptRegion:\x1b[0m", self.ptRegion)
        
         # TODO: move to config
@@ -190,7 +186,7 @@ class Datacard(object):
             self.MC_rescale_factor = 1.
 
         #systematics up/down
-        self.UD = ['Up','Down']
+        self.UD = ['Up', 'Down']
 
         print ('Parse the sample information')
         print ('============================\n')
@@ -201,9 +197,9 @@ class Datacard(object):
 
         print ('Get the sample list')
         print ('===================\n')
-        self.backgrounds = eval(config.get('dc:%s'%self.region,'background'))
-        self.signals = eval(config.get('dc:%s'%self.region,'signal'))
-        self.data_sample_names = eval(config.get('dc:%s'%self.region,'data'))
+        self.backgrounds = eval(config.get('dc:%s'%self.region, 'background'))
+        self.signals = eval(config.get('dc:%s'%self.region, 'signal'))
+        self.data_sample_names = eval(config.get('dc:%s'%self.region, 'data'))
 
         #Systematics:
         if self.sysOptions['addSample_sys']: 
@@ -256,10 +252,6 @@ class Datacard(object):
             print ('===================\n')
             print (json.dumps(self.sysOptions['sys_affecting'], sort_keys=True, indent=8, default=str))
 
-        #To prepare Histomaker
-        all_samples_HM = self.samplesInfo.get_samples(self.signals+self.backgrounds+self.additionals)
-        all_samples = self.samplesInfo.get_samples(self.MC_samples)
-
         self.systematicsDictionaryNominal = {
                 'cut': self.treecut,
                 'var': self.treevar,
@@ -305,65 +297,22 @@ class Datacard(object):
     def getRegion(self):
         return self.region
 
-    def cacheSample(self, sampleToCache):
-        treeCaches = []
-        self.sampleTree = None
-        
-        # cuts
-        allSamples = sum([y for x,y in self.samples.iteritems()], [])
-        subsamples = [x for x in allSamples if x.identifier == sampleToCache]
-        for sample in subsamples:
-            # combine subcut and systematics cut
-            sampleCuts = ['(%s)&&(%s)'%(sample.subcut,x['cut']) for x in self.systematicsList]
-
-            # add cache object
-            tc = TreeCache.TreeCache(
-                sample=sample.name,
-                cutList=sampleCuts,
-                cutSequenceMode='OR',
-                inputFolder=self.path,
-                tmpFolder=self.tmpPath,
-                outputFolder=self.cachedPath,
-                debug=True
-            )
-
-            # check if this part of the sample is already cached
-            isCached = tc.isCached()
-            print ("IS CACHED?", isCached)
-            if not isCached or self.forceRedo:
-                if isCached:
-                    tc.deleteCachedFiles()
-
-                # for the first sample which comes from this files, load the tree
-                if not self.sampleTree:
-                    self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.path})
-                    if not self.sampleTree or not self.sampleTree.tree:
-                        print ("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
-                        raise Exception("CreationOfSampleTreeFailed")
-                treeCaches.append(tc.setSampleTree(self.sampleTree).cache())
-
-        if len(treeCaches) > 0:
-            # run on the tree
-            self.sampleTree.process()
-        else:
-            print ("nothing to do!")
-
     def getSystematicsVar(self, syst, Q):
         treevar = self.treevar
         #replace tree variable
         if self.anType == 'BDT':
             if not 'UD' in syst:
-                print ('treevar was', _treevar)
-                treevar = treevar.replace('.Nominal','.%s_%s'%(syst,Q))
-                print ('.nominal by','.%s_%s'%(syst,Q))
+                print ('treevar was', treevar)
+                treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
+                print ('.nominal by', '.%s_%s'%(syst, Q))
             else:
-                treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD',Q)))
-                print ('.nominal by','.%s'%(syst.replace('UD',Q)))
+                treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
+                print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType == 'MJJ':
             if not 'UD' in syst:
-                print ('treevar was', _treevar)
-                treevar = treevar.replace('_reg_mass','_reg_mass_corr%s%s'%(syst,Q))
-                print ('_reg_mass','_reg_mass_corr%s%s'%(syst,Q))
+                print ('treevar was', treevar)
+                treevar = treevar.replace('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
+                print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
             else:
                 print ('\x1b[31m@ERROR: Why is there UD in sys ? Abort\x1b[0m')
                 raise Exception("DcSystMjjContainsUD")
