@@ -2,9 +2,11 @@
 from __future__ import print_function
 import ROOT
 import os
+import sys
 import math
 import time
 import glob
+from BranchList import BranchList
 
 #------------------------------------------------------------------------------
 # sample tree class
@@ -25,14 +27,17 @@ import glob
 #     print 'pt:', event.pt
 #------------------------------------------------------------------------------
 class SampleTree(object):
-
+    
+    # TODO: move to framework-wide config file
     xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
     moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False):
-        self.verbose = True
+    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+        self.verbose = verbose
+        self.config = config
         self.monitorPerformance = True
+        self.disableBranchesInOutput = True
         self.samples = samples
 
         # process only partial sample root file list
@@ -206,6 +211,10 @@ class SampleTree(object):
     #------------------------------------------------------------------------------
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
+        if self.formulas[formulaName].GetNdim() == 0:
+            print("DEBUG: formula is:", formula)
+            print("\x1b[31mERROR: adding the tree formula failed! Check branches of input tree and loaded namespaces.\x1b[0m")
+            raise Exception("SampleTreeAddTTreeFormulaFailed")
 
     #------------------------------------------------------------------------------
     # implement iterator for TChain, with updating TTreeFormula objects on tree
@@ -233,6 +242,7 @@ class SampleTree(object):
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
+                sys.stdout.flush()
             self.oldTreeNum = treeNum
             # update TTreeFormula's
             for formulaName, treeFormula in self.formulas.iteritems():
@@ -242,7 +252,9 @@ class SampleTree(object):
     def __iter__(self):
         self.treeIterator = self.tree.__iter__()
         return self
-
+    
+    # warpper to evaluate a formula, which has been added to the formula dictionary 
+    # vector valued formulas are not supported
     def evaluate(self, formulaName):
         if formulaName in self.formulas:
             if self.formulas[formulaName].GetNdata() > 0:
@@ -254,8 +266,8 @@ class SampleTree(object):
             print ("existing formulas are: ", existingFormulas)
             raise Exception("SampleTree::evaluate: formula '%s' not found!"%formulaName)
     
+    # return string of ETA in minutes
     def getETA(self):
-        # return ETA in seconds
         return '%1.1f'%(self.timeETA/60.0) if self.timeETA > 0 else '?'
 
     def GetListOfBranches(self):
@@ -292,50 +304,86 @@ class SampleTree(object):
         return localFileName
 
     #------------------------------------------------------------------------------
+    # handle 'tree-typed' cuts, passed as dictionary:
+    # e.g. cut = {'OR': [{'AND': ["pt>20","eta<3"]}, "data==1"]}
+    # short-circuit evaluation is handled by builtins any() and all()
+    #------------------------------------------------------------------------------
+    def addCutDictRecursive(self, cutDict):
+        if type(cutDict) == str:
+            if cutDict not in self.formulas:
+                self.addFormula(cutDict, cutDict)
+        elif 'OR' in cutDict and 'AND' in cutDict:
+            raise Exception("BadTreeTypeCutDict")
+        elif 'OR' in cutDict:
+            for subDict in cutDict['OR']:
+                self.addCutDictRecursive(subDict)
+        elif 'AND' in cutDict:
+            for subDict in cutDict['AND']:
+                self.addCutDictRecursive(subDict)
+        else:
+            raise Exception("BadTreeTypeCutDict")
+    
+    def evaluateCutDictRecursive(self, cutDict):
+        if type(cutDict) == str:
+            if self.formulaResults[cutDict] is None:
+                print ("FORMULA:", cutDict)
+                raise Exception("UnevaluatedFormula!!")
+            return self.formulaResults[cutDict]
+        elif 'OR' in cutDict and 'AND' in cutDict:
+            raise Exception("BadTreeTypeCutDict")
+        elif 'OR' in cutDict:
+            return any([self.evaluateCutDictRecursive(subDict) for subDict in cutDict['OR']])
+        elif 'AND' in cutDict:
+            return all([self.evaluateCutDictRecursive(subDict) for subDict in cutDict['AND']])
+        else:
+            raise Exception("BadTreeTypeCutDict")
+
+    #------------------------------------------------------------------------------
     # add output tree to be written during the process() function 
     #------------------------------------------------------------------------------
-    def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None):
+    def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None, cutSequenceMode='AND', name=''):
+        
+        # write events which satisfy either ONE of the conditions given in the list or ALL
+        if cutSequenceMode not in ['AND', 'OR', 'TREE']:
+            raise Exception("InvalidCutSequenceMode")
+
         outputTree = {
-            'tree': self.tree.CloneTree(0),
+            'tree': None, # will create this tree later, after it is known which branches will be enabled 
+            'name': name,
             'fileName': outputFileName,
             'file': ROOT.TFile.Open(outputFileName, 'recreate'),
             'cut': cut,
             'cutSequence': [],
+            'cutSequenceMode': cutSequenceMode,
             'hash': hash,
             'branches': branches,
             'callbacks': callbacks,
             'passed': 0,
         }
 
-        if not outputTree['tree']:
-            print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
-            # if input tree has 0 entries, don't copy 0 entries to the output tree, but ALL of them instead! (sic!)
-            outputTree['tree'] = self.tree.CloneTree()
-            if not outputTree['tree']:
-                print ("\x1b[31mERROR: output tree broken, input tree: ", self.tree, " \x1b[0m")
-            else:
-                print ("\x1b[32mINFO: recovered\x1b[0m")
+        if not outputTree['file'] or outputTree['file'].IsZombie():
+            print ("\x1b[31mERROR: output file broken\x1b[0m")
+            raise Exception("OutputFileBroken")
         
         # add CUT formulas
-        cutList = cut if type(cut) == list else [cut]
-        for i, cutString in enumerate(cutList):
-            formulaName = cutString.replace(' ','')
-            if formulaName not in self.formulas:
-                self.addFormula(formulaName, cutString)
-            outputTree['cutSequence'].append(formulaName)
+        if cutSequenceMode == 'TREE' and type(cut) == dict:
+            outputTree['cutSequence'] = cut
+            # now recursively parse the cut-tree and add all contained cut formulas
+            self.addCutDictRecursive(cut)
+        elif type(cut) == dict:
+            print ("HINT: use cutSequenceMode='TREE' to pass dictionaries!")
+            raise Exception("InvalidCutSequenceMode")
+        else:
+            cutList = cut if type(cut) == list else [cut]
+            for i, cutString in enumerate(cutList):
+                formulaName = cutString.replace(' ','')
+                if formulaName not in self.formulas:
+                    self.addFormula(formulaName, cutString)
+                outputTree['cutSequence'].append(formulaName)
         
         # set output file
-        outputTree['tree'].SetDirectory(outputTree['file'])
+        #outputTree['tree'].SetDirectory(outputTree['file'])
 
-        # only copy specific branches
-        if branches:
-            outputTree['tree'].SetBranchStatus("*", 0)
-            listOfBranches = self.GetListOfBranches()
-            for branch in branches:
-                if listOfBranches.findObject(branch):
-                    outputTree['tree'].SetBranchStatus(branch, 1)
-            if self.verbose:
-                print ("enabled ", len(branches), " branches:", branches)
 
         # copy count histograms to output files
         outputTree['histograms'] = {}
@@ -345,6 +393,7 @@ class SampleTree(object):
 
         self.outputTrees.append(outputTree)
 
+    # wrapper to enable/disable branches in the TChain
     def SetBranchStatus(self, branchName, branchStatus):
         self.tree.SetBranchStatus(branchName, branchStatus)
 
@@ -356,72 +405,95 @@ class SampleTree(object):
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:
-                print (' > ', outputTree['fileName'], ' <== ', outputTree['hash'], ' cut: ', outputTree['cut'])
+                cutString = "%r"%outputTree['cut']
+                if len(cutString) > 50:
+                    cutString = cutString[0:50] + '...(%s more chars)'%(len(cutString)-50)
+                print (' > ', outputTree['fileName'], ' <== ', outputTree['hash'], ' cut: ', cutString)
             print ('FORMULAS:')
             for formulaName, formula in self.formulas.iteritems():
                 print (' > \x1b[35m', formulaName, '\x1b[0m ==> ', formula)
 
-        self.tree.SetCacheSize(50*1024*1024)
-        self.tree.AddBranchToCache('*', ROOT.kTRUE)
-        self.tree.StopCacheLearningPhase()
+        # TODO
+        #self.tree.SetCacheSize(50*1024*1024)
+        #self.tree.AddBranchToCache('*', ROOT.kTRUE)
+        #self.tree.StopCacheLearningPhase()
 
-        # enable/disable branches
+        # find common set of branches which needs to be enabled for cuts and desired variables in all of the output trees
         listOfExistingBranches = self.GetListOfBranches()
         listOfBranchesToKeep = []
         for outputTree in self.outputTrees:
             if 'branches' in outputTree and outputTree['branches']:
                 listOfBranchesToKeep += outputTree['branches']
+
+        # ALWAYS keep the branches stated in config
+        if self.config:
+            listOfBranchesToKeep += eval(self.config.get('Branches', 'keep_branches'))
+
         listOfBranchesToKeep = list(set(listOfBranchesToKeep))
+        
+        # print abbreviated list of branches to keep
+        print ("INFO: branches to keep:", BranchList(listOfBranchesToKeep).getShortRepresentation())
 
-        # only disable the branches if there is no output tree which wants in have all
+        # disable the branches in the input if there is no output tree which wants to have all branches
         if '*' not in listOfBranchesToKeep:
-
-            # get the branches which are used implicitly in the cut formulas
-            listOfBranchesNeededForCuts = []
-            for formulaName, formula in self.formulas.iteritems():
-                for formulaLeaf in range(formula.GetNcodes()):
-                    try:
-                        listOfBranchesNeededForCuts.append(formula.GetLeaf(formulaLeaf).GetName())
-                    except:
-                        print ("\x1b[31mWARNING: invalid leaf?!?! (not used for now)\x1b[0m")
-            listOfBranchesNeededForCuts = list(set(listOfBranchesNeededForCuts))
-            print ("INFO: list of branches need to be kept for cut formulas:")
-            for branchName in listOfBranchesNeededForCuts:
-                print ("INFO: > {branchName}".format(branchName=branchName))
-
-            print ("INFO: list of branches need to be kept in output trees:")
+            # set the branch status of the input tree
+            self.tree.SetBranchStatus("*", 0)
             for branchName in listOfBranchesToKeep:
-                print ("INFO: > {branchName}".format(branchName=branchName))
+                if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
+                    self.tree.SetBranchStatus(branchName, 1)
 
-            print ("\x1b[31mINFO: NOT IMPLEMENTED ----> will keep all branches\x1b[0m")
-            # set the branch status
-            #self.tree.SetBranchStatus("*", 0)
-            #for branchName in listOfBranchesNeededForCuts+listOfBranchesToKeep:
-            #    if listOfExistingBranches.FindObject(branchName):
-            #        self.tree.SetBranchStatus(branchName, 1)
-
+        # initialize the output trees
+        for outputTree in self.outputTrees:
+            outputTree['tree'] = self.tree.CloneTree(0)
+            if not outputTree['tree']:
+                print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
+                # if input tree has 0 entries, don't copy 0 entries to the output tree, but ALL of them instead! (sic!)
+                # (this is done by omitting the argument to CloneTree)
+                outputTree['tree'] = self.tree.CloneTree()
+                if not outputTree['tree']:
+                    print ("\x1b[31mERROR: output tree broken, input tree: ", self.tree, " \x1b[0m")
+                else:
+                    print ("\x1b[32mINFO: recovered\x1b[0m")
+            outputTree['tree'].SetDirectory(outputTree['file'])
+        
         # callbacks before loop
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'beforeLoop' in outputTree['callbacks']:
                 outputTree['callbacks']['beforeLoop']()
 
+        print ("------------------")
+        print (" start processing ")
+        print ("------------------")
         # loop over all events and write to output branches
         for event in self:
 
             # evaluate all formulas
-            formulaResults = {}
+            self.formulaResults = {}
             for formulaName, formula in self.formulas.iteritems():
-                formulaResults[formulaName] = self.evaluate(formulaName)
+                self.formulaResults[formulaName] = self.evaluate(formulaName)
             
             # evaluate cuts for all output trees
             for outputTree in self.outputTrees:
 
                 # evaluate all cuts of the sequence and abort early if one is not satisfied
-                passedCut = True
-                for cutFormulaName in outputTree['cutSequence']:
-                    passedCut = passedCut and formulaResults[cutFormulaName]
-                    if not passedCut:
-                        break
+                if outputTree['cutSequenceMode'] == 'AND':
+                    passedCut = True
+                    for cutFormulaName in outputTree['cutSequence']:
+                        passedCut = passedCut and self.formulaResults[cutFormulaName]
+                        if not passedCut:
+                            break
+                elif outputTree['cutSequenceMode'] == 'OR':
+                    passedCut = False
+                    for cutFormulaName in outputTree['cutSequence']:
+                        passedCut = passedCut or self.formulaResults[cutFormulaName]
+                        if passedCut:
+                            break
+                elif outputTree['cutSequenceMode'] == 'TREE':
+                    passedCut = self.evaluateCutDictRecursive(outputTree['cutSequence'])
+                else:
+                    raise Exception("InvalidCutSequenceMode")
+
+                # fill event if it passed the selection
                 if passedCut:
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
@@ -432,17 +504,19 @@ class SampleTree(object):
             outputTree['file'].Write()
             outputTree['file'].Close()
         print('INFO: files written')
+        sys.stdout.flush()
 
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
                 outputTree['callbacks']['afterWrite']()
 
-        print('INFO: done. time ', time.ctime())
-        if self.verbose:
-            print ('OUTPUT TREES:')
-            for outputTree in self.outputTrees:
-                print (' > ', outputTree['fileName'], ' passed: ', outputTree['passed'], ' cut: ', outputTree['cut'])
+        print('INFO: done. time ', time.ctime(), ' events read:', self.eventsRead)
+        sys.stdout.flush()
+
+        for outputTree in self.outputTrees:
+            passedSelectionFraction = 100.0*outputTree['passed']/self.eventsRead if self.eventsRead>0 else '?'
+            print (' > \x1b[34m{name}\x1b[0m {passed} ({fraction}%) => {outputFile}'.format(name=outputTree['name'], passed=outputTree['passed'], fraction=passedSelectionFraction, outputFile=outputTree['fileName']))
 
     @staticmethod
     def countSampleFiles(samples):
@@ -462,6 +536,7 @@ class SampleTree(object):
     def getNumSampleFiles(self):
         return len(self.sampleFileNames)
 
+    # return the total scale for the sample, calculated from all count histograms from the TChain
     def getScale(self, sample):
         try:
             sample.xsec = sample.xsec[0]
@@ -489,11 +564,19 @@ class SampleTree(object):
             print("sampleTree.getScale(): sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
-    # make AND of all cuts and return a single cut string. warning: cuts may not contain spaces in e.g. string comparisons
+    # create a unique string representation of the total cut, e.g. used to calculate the hash for cached samples 
+    # this is not required to be a 'real' cut string, used by TTreeFormula etc.
     @staticmethod
-    def findMinimumCut(cutList):
-        if type(cutList) == list:
+    def findMinimumCut(cutList, cutSequenceMode='AND'):
+        if type(cutList) == list or type(cutList) == dict:
             cuts = cutList
         else:
             cuts = [cutList]
-        return '&&'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
+        if cutSequenceMode == 'AND':
+            minCut = '&&'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
+        elif cutSequenceMode == 'OR':
+            minCut = '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(list(set(cuts)))])
+        else:
+            minCut = "%r"%cuts
+        return minCut
+

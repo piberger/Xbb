@@ -51,7 +51,7 @@ import os
 # ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None):
+    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name=''):
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
@@ -62,14 +62,17 @@ class TreeCache:
         else:
             # sample passed as string
             self.sample = sample
+        self.name = name
         self.cutList = cutList
-        self.minCut = SampleTree.findMinimumCut(self.cutList)
+        self.cutSequenceMode = cutSequenceMode
+        self.minCut = SampleTree.findMinimumCut(self.cutList, cutSequenceMode=self.cutSequenceMode)
         self.inputFolder = inputFolder
         self.tmpFolder = tmpFolder
         self.outputFolder = outputFolder
         self.cachedFileNames = []
         self.branches = branches
-        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFilesChunkSize=splitFilesChunkSize, debug=False).get()
+        self.branchesForHash = None     # for now make hash independent of selecte branches 
+        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branchesForHash, splitFilesChunkSize=splitFilesChunkSize, debug=False).get()
         self.chunkNumber = chunkNumber
         self.splitFilesChunks = splitFilesChunks if splitFilesChunks > 1 else 1
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -177,7 +180,7 @@ class TreeCache:
         if self.sampleTree:
             outputFileName = self.getTmpFileName()
             callbacks = {'afterWrite': self.moveFilesToFinalLocation}
-            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.cutList, hash=self.hash, branches=self.branches, callbacks=callbacks)
+            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.cutList, hash=self.hash, branches=self.branches, callbacks=callbacks, cutSequenceMode=self.cutSequenceMode, name=self.name)
             self.tmpFiles.append(outputFileName)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
