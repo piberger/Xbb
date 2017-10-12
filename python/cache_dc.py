@@ -30,7 +30,7 @@ class CacheDatacards(object):
         self.fileList = FileList.decompress(fileList) if fileList else None
 
         # initialize Datacard objects
-        self.dcMakers = [Datacard(config=self.config, region=region, forceRedo=self.forceRedo) for region in self.regions]
+        self.dcMakers = [Datacard(config=self.config, region=region) for region in self.regions]
         
     def prepare(self):
         if len(self.dcMakers) > 0:

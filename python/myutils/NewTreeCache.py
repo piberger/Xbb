@@ -76,7 +76,9 @@ class TreeCache:
         self.chunkNumber = chunkNumber
         self.splitFilesChunks = splitFilesChunks if splitFilesChunks > 1 else 1
         self.splitFilesChunkSize = splitFilesChunkSize
-        self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.splitFilesChunks)
+        # identifier is just used as an arbitrary name for print-out
+        cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50]+'...').replace(' ','')
+        self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
         self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
@@ -139,7 +141,7 @@ class TreeCache:
         self.findCachedFileNames()
         if (len(self.cachedFileNames) != self.splitFilesChunks and self.splitFilesChunks > 1) or len(self.cachedFileNames) == 0:
             if self.debug:
-                print ('\x1b[32mDEBUG: not cached:', self.identification, '\x1b[0m')
+                print ('\x1b[32mDEBUG: not cached:', self.identifier, '\x1b[0m')
             return False
         self.isCachedChecked = True
         return True
@@ -183,9 +185,9 @@ class TreeCache:
             self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.cutList, hash=self.hash, branches=self.branches, callbacks=callbacks, cutSequenceMode=self.cutSequenceMode, name=self.name)
             self.tmpFiles.append(outputFileName)
             if self.debug:
-                print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
+                print ('\x1b[32mDEBUG: output file for ', self.identifier, ' is ', outputFileName, '\x1b[0m')
         else:
-            print ('\x1b[31mERROR: no sample tree connected!:', self.identification, ' set the sampleTree first with "setSampleTree(sampleTree)" \x1b[0m')
+            print ('\x1b[31mERROR: no sample tree connected!:', self.identifier, ' set the sampleTree first with "setSampleTree(sampleTree)" \x1b[0m')
         return self
 
     # return sample tree class of cached samples if all files found

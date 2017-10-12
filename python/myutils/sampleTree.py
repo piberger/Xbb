@@ -17,6 +17,7 @@ from BranchList import BranchList
 #
 # create: (A)  sampleTree = SampleTree('path/to/indexfile.txt')
 # create: (B)  sampleTree = SampleTree(['path/to/file1.root', 'path/to/file2.root'])
+# create: (C)  sampleTree = SampleTree({'name': 'DY50to100', 'folder': ...})
 #
 # add formula: sampleTree.addFormula('ptCut','pt>100')
 #
@@ -186,11 +187,10 @@ class SampleTree(object):
     def getSampleFileNameChunks(self):
         sampleFileNames = self.getAllSampleFileNames()
         if self.splitFilesChunkSize > 0 and len(sampleFileNames) > self.splitFilesChunkSize:
-            self.numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFilesChunkSize))
             sampleFileNamesParts = [sampleFileNames[i:i + self.splitFilesChunkSize] for i in xrange(0, len(sampleFileNames), self.splitFilesChunkSize)]
         else:
-            self.numParts = 1
             sampleFileNamesParts = [sampleFileNames]
+        self.numParts = len(sampleFileNamesParts)
         return sampleFileNamesParts
 
     #------------------------------------------------------------------------------
@@ -295,13 +295,17 @@ class SampleTree(object):
     #------------------------------------------------------------------------------
     @staticmethod
     def getLocalFileName(rawFileName):
-        localFileName = rawFileName.strip()
-        localFileName = localFileName.replace(SampleTree.xrootdRedirector, '')
-        for red in SampleTree.moreXrootdRedirectors:
-            localFileName = localFileName.replace(red, '')
-        if localFileName.startswith('/store/'):
-            localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
-        return localFileName
+        if rawFileName:
+            localFileName = rawFileName.strip()
+            localFileName = localFileName.replace(SampleTree.xrootdRedirector, '')
+            for red in SampleTree.moreXrootdRedirectors:
+                localFileName = localFileName.replace(red, '')
+            if localFileName.startswith('/store/'):
+                localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
+            return localFileName
+        else:
+            print ("\x1b[31mERROR: invalid file name\x1b[0m")
+            raise Exception("InvalidFileName")
 
     #------------------------------------------------------------------------------
     # handle 'tree-typed' cuts, passed as dictionary:
@@ -572,7 +576,9 @@ class SampleTree(object):
             cuts = cutList
         else:
             cuts = [cutList]
-        if cutSequenceMode == 'AND':
+        if cutSequenceMode == 'TREE' or type(cutList) == dict:
+            minCut = "%r"%cuts
+        elif cutSequenceMode == 'AND':
             minCut = '&&'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
         elif cutSequenceMode == 'OR':
             minCut = '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(list(set(cuts)))])
