@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, sys, ROOT, warnings, pickle
+import sys, ROOT, warnings
 ROOT.gROOT.SetBatch(True)
-from array import array
-from math import sqrt
-from copy import copy, deepcopy
 #suppres the EvalInstace conversion warning bug
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
 from optparse import OptionParser
-from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebinner, HistoMaker
-import re
 import json
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
@@ -43,7 +38,7 @@ class CacheDatacards(object):
             self.sampleTree = None
 
             # cuts
-            allSamples = sum([y for x,y in self.dcMakers[0].samples.iteritems()], [])
+            allSamples = sum([y for x, y in self.dcMakers[0].samples.iteritems()], [])
             subsamples = [x for x in allSamples if x.identifier == self.sampleToCache]
 
             # loop over all datacard regions
@@ -130,19 +125,19 @@ if __name__ == "__main__":
                               help="Verbose mode.")
     parser.add_option("-C", "--config", dest="config", default=[], action="append",
                           help="configuration file")
-    parser.add_option("-t","--regions", dest="regions", default='',
+    parser.add_option("-t", "--regions", dest="regions", default='',
                           help="cut regions identifier")
-    parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
+    parser.add_option("-s", "--sampleIdentifier", dest="sampleIdentifier", default='',
                           help="sample identifier (no subsample!)")
-    parser.add_option("-n","--splitFilesChunks", dest="splitFilesChunks", default='',
+    parser.add_option("-n", "--splitFilesChunks", dest="splitFilesChunks", default='',
                           help="number of chunks the cached file is split into")
-    parser.add_option("-i","--chunkNumber", dest="chunkNumber", default='',
+    parser.add_option("-i", "--chunkNumber", dest="chunkNumber", default='',
                           help="number of part to cache")
-    parser.add_option("-p","--splitFilesChunkSize", dest="splitFilesChunkSize", default='',
+    parser.add_option("-p", "--splitFilesChunkSize", dest="splitFilesChunkSize", default='',
                           help="number of files per part")
-    parser.add_option("-f","--force", action="store_true", dest="force", default=False,
+    parser.add_option("-f", "--force", action="store_true", dest="force", default=False,
                           help="force overwriting of already cached files")
-    parser.add_option("-l","--fileList", dest="fileList", default="",
+    parser.add_option("-l", "--fileList", dest="fileList", default="",
                           help="file list")
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
@@ -157,7 +152,7 @@ if __name__ == "__main__":
 
     # if no region is given in argument, run it for all of them
     regionsListString = opts.regions if len(opts.regions.strip())>0 else config.get('LimitGeneral', 'List')
-    regions = [x.strip() for x in regionsListString.split(',') if len(x.strip())>0]
+    regions = [x.strip() for x in regionsListString.split(',') if len(x.strip()) > 0]
     
     # init and run
     cacheDC = CacheDatacards(
