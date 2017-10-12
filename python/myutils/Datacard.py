@@ -114,7 +114,7 @@ class Datacard(object):
         self.sysOptions = {}
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat',
-                'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys', 'sample_sys_info', 'addSample_sys' 
+                'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys', 'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict' 
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -159,30 +159,13 @@ class Datacard(object):
         #Assign Pt region for sys factors
         print ('Assign Pt region for sys factors')
         print ('================================\n')
-        ptRegionsDict = {
-                'HighPtLooseBTag': ['HighPtLooseBTag'],
-                'HighPt': ['HighPt', 'ATLAS', 'MJJ'],
-                'MedPt': ['MedPt'],
-                'LowPt': ['lowPt'],
-                'bin0': ['Vptbin0'],
-                'bin1': ['Vptbin1'],
-                'bin2': ['Vptbin2'],
-                'bin150To200': ['Vptbin150To200'],
-                'bin200ToInf': ['Vptbin200ToInf'],
-                }
-        self.ptRegion = [ptRegion for ptRegion,outputNames in ptRegionsDict.iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
-        print ("\x1b[34mptRegion:\x1b[0m", self.ptRegion)
+        self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
+        print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
        
-        # TODO: move to config
-        removeSystematicsDict = {
-                'Zee': ['CMS_vhbb_eff_m_13TeV', 'CMS_vhbb_eff_m_trigger_Zll_13TeV', 'CMS_vhbb_eff_m_MVAID_Zll_13TeV', 'CMS_vhbb_eff_m_tracker_Zll_13TeV', 'CMS_vhbb_eff_m_ISO_Zll_13TeV'],
-                'Zuu': ['CMS_vhbb_eff_e_13TeV', 'CMS_vhbb_eff_e_trigger_Zll_13TeV', 'CMS_vhbb_eff_e_MVAID_Zll_13TeV', 'CMS_vhbb_eff_e_MVAID_Zll_eta0_13TeV', 'CMS_vhbb_eff_e_MVAID_Zll_eta1_13TeV', 'CMS_vhbb_eff_e_tracker_Zll_13TeV'],
-                }
-        for outputName, removeSystematics in removeSystematicsDict.iteritems():
+        for outputName, removeSystematics in self.sysOptions['removeWeightSystematics'].iteritems():
             if outputName in self.ROOToutname:
                 self.sysOptions['weightF_sys'] = [x for x in self.sysOptions['weightF_sys'] if x not in removeSystematics]
-        
-         
+
         if self.TrainFlag:
             self.MC_rescale_factor = 2.
             print ('I RESCALE BY 2.0')
@@ -205,7 +188,7 @@ class Datacard(object):
         self.signals = eval(config.get('dc:%s'%self.region,'signal'))
         self.data_sample_names = eval(config.get('dc:%s'%self.region,'data'))
 
-        #Systematics:
+        #sample systematics:
         if self.sysOptions['addSample_sys']: 
             self.additionals = [self.sysOptions['addSample_sys'][key] for key in self.sysOptions['addSample_sys']]
         else:
