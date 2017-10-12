@@ -11,9 +11,8 @@ import NewTreeCache as TreeCache
 from sampleTree import SampleTree as SampleTree
 
 class Datacard(object):
-    def __init__(self, config, region, forceRedo=False):
+    def __init__(self, config, region):
         self.verbose = True
-        self.forceRedo = forceRedo
         self.config = config
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
@@ -254,7 +253,8 @@ class Datacard(object):
 
         print ('Assign the systematics')
         print ('======================\n')
-        #shape systematics
+
+        # shape systematics
         for syst in self.systematics:
             for Q in self.UD:
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
@@ -270,7 +270,78 @@ class Datacard(object):
             print ('systematics dict')
             print ('===================\n')
             print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
-                    
+       
+        
+        # weight systematics
+        # TODO: why uppercase is used for weight systematics?
+        for weightF_sys in self.sysOptions['weightF_sys']: 
+            for weight in [self.config.get('Weights','%s_%s' %(weightF_sys, UD)) for UD in ['UP', 'DOWN']]:
+                systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
+                systematicsDictionary.update({
+                        'sysType': 'weight',
+                        'weight': weight if self.SBweight == None else '('+weight+')*('+self.SBweight+')' 
+                    })
+                self.systematicsList.append(systematicsDictionary)
+
+        # sample systematics
+        #print 'before modif, _sample_sys_dic is', _sample_sys_dic
+        for sampleSystematicName, sampleSystematicSamples in self.sysOptions['sample_sys_info'].iteritems(): #loop over the systematics
+            for Q in self.UD:
+                systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
+                systematicsDictionary.update({
+                        'sysType': 'sample',
+                    })
+                # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+                for sampleSystematicSample in sampleSystematicSamples:
+                    for sample_type in sampleSystematicSample:
+                        sampleSystematicVariationTypes = {
+                                0: False,          # nominal
+                                1: (Q == 'Down'),  # down variation
+                                2: (Q == 'Up'),    # up variation
+                            }
+                        # mark nominal/up/down variations in sample_sys_dic
+                        for index, value in sampleSystematicVariationTypes.iteritems():
+                            for sampleName in sample_type[index]:
+                                systematicsDictionary['sample_sys_dic'][sampleName] = value
+
+                self.systematicsList.append(systematicsDictionary)
+
+    def run(self):
+
+        print ('Calculate luminosity')
+        print ('====================\n')
+        #Calculate lumi
+        lumi = sum([sample.lumi for sample in self.samples['DATA']])/len(self.samples['DATA']) if len(self.samples['DATA']) > 0 else 0  
+
+        print ('\n\t...fetching histos...\n')
+
+        # add DATA + MC samples
+        allSamples = sum([samples for sampleType, samples in self.samples.iteritems()], [])
+        for sample in allSamples: 
+            
+            # get cuts that was used in caching for this sample
+            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=sample.type == 'DATA')]
+            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+            print ("SAMPLE:", sample)
+
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    outputFolder=self.cachedPath,
+                    debug=True
+                )
+            sampleTree = tc.getTree()
+            print ("SAMPLE:", sample, " TREE:", sampleTree)
+
+        # BLINDING cut
+        if self.sysOptions['addBlindingCut']:
+            for systematics in self.systematicsList:
+                systematics['cut'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
+
+
+
     def getSystematicsList(self, isData=False):
         if isData:
             return [x for x in self.systematicsList if x['sysType'] == 'nominal']
@@ -280,6 +351,7 @@ class Datacard(object):
     def getRegion(self):
         return self.region
 
+    # return tree variable as string
     def getSystematicsVar(self, syst, Q):
         treevar = self.treevar
         #replace tree variable
@@ -301,6 +373,7 @@ class Datacard(object):
                 raise Exception("DcSystMjjContainsUD")
         return treevar 
 
+    # return weight as string
     def getSystematicsWeight(self, syst, Q):
         weight = self.weightF
         if syst in self.sysOptions['sys_weight_corr']:
@@ -310,6 +383,7 @@ class Datacard(object):
             print ('weight is \x1b[34m{weight}\x1b[0m'.format(weight=weight))
         return weight
 
+    # return cut for systematics variation as string
     def getSystematicsCut(self, syst, Q):
         cut = self.treecut
         new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
