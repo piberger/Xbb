@@ -56,8 +56,8 @@ print 'channel is', channel
 
 VHbbNameSpace=config.get('VHbbNameSpace','library')
 ROOT.gSystem.Load(VHbbNameSpace)
-AngLikeBkgs=eval(config.get('AngularLike','backgrounds'))
-ang_yield=eval(config.get('AngularLike','yields'))
+#AngLikeBkgs=eval(config.get('AngularLike','backgrounds'))
+#ang_yield=eval(config.get('AngularLike','yields'))
 
 pathIN = config.get('Directories','SYSin')
 pathOUT = config.get('Directories','SYSout')
@@ -1017,6 +1017,15 @@ for job in info:
                     print 'problem'
                     sys.exit()
                 tree.SetBranchAddress(branch_name, bdt_buffer[bdt_branch])
+
+        if recomputeVtype:
+            tree.SetBranchStatus('Vtype_new',0)
+            vLeptonsvar = ['pt', 'eta', 'phi', 'mass', 'relIso03', 'relIso04']
+            for var in vLeptonsvar:
+                tree.SetBranchStatus('vLeptons_new_%s'%var,0)
+            Vvar = ['pt', 'eta', 'phi', 'mass']
+            for var in Vvar:
+                tree.SetBranchStatus('V_new_%s'%var,0)
         
        # tree.SetBranchStatus('H',0)
         output.cd()
@@ -1613,6 +1622,7 @@ for job in info:
 
 
         if recomputeVtype:
+
             ### new branches for Vtype correction ###
             Vtype_new = array('f', [0])
             newtree.Branch('Vtype_new', Vtype_new, 'Vtype_new/F')
@@ -1655,14 +1665,12 @@ for job in info:
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
                     #sys.stdout.flush()
 
-                #if entry > 10000: break
                 #if entry > 100: break
-                #if entry > 1000: break
                 tree.GetEntry(entry)
 
 
                 ### Vtype correction for V25 samples
-                if channel == "Zmm" and recomputeVtype:
+                if (channel == "Zmm" or channel == "Zvv" or channel == "Wlv") and recomputeVtype:
 
                     #Variable to store Vtype and leptons info
                     Vtype_new_ = -1
@@ -1680,6 +1688,7 @@ for job in info:
                     zMuons.sort(key=lambda x:tree.selLeptons_pt[x], reverse=True)
                     zElectrons.sort(key=lambda x:tree.selLeptons_pt[x], reverse=True)
 
+                    #Zll case. Recompute lepton branches
                     if len(zMuons) >=  2 :
                         if tree.selLeptons_pt[zMuons[0]] > 20:
                             for i in zMuons[1:]:
@@ -1696,13 +1705,13 @@ for job in info:
                                     Vtype_new_ = 1
                                     for var in vLeptonsvar:
                                         vLeptonsBranches[var][0] = getattr(tree,'selLeptons_%s'%var)[0]
-                                        vLeptonsBranches[var][1] = getattr(tree,'selLeptons_%s'%var)[i]
+                                        vLeptonsBranches[var][1] = getattr(tree,'selLeptons_%s'%var)[1]
                                     break
                     else:
                         if tree.Vtype == 0 or tree.Vtype == 1:
                             print '@ERROR: This is impossible, the new ele cut should be losser...'
                             sys.exit(1)
-                        #add lepton if Vtype 2 or 3
+                        #Wlv case. Recompute lepton branches
                         if tree.Vtype == 2 or tree.Vtype == 3:
                             Vtype_new_ = tree.Vtype
                             for var in vLeptonsvar:
@@ -1720,10 +1729,19 @@ for job in info:
                         else:
                             Vtype_new_ = tree.Vtype
 
-                    # skip event, if vtype neither 0 or 1
-                    if Vtype_new_ != 0 and Vtype_new_ != 1:
-                        n_vtype_events_skipped += 1
-                        continue
+                    # skip event, if vtype_new doesn't correspond to channel
+                    if channel == 'Zll' or channel == 'Zmm' or channel == 'Zee':
+                        if Vtype_new_ != 0 and Vtype_new_ != 1:
+                            n_vtype_events_skipped += 1
+                            continue
+                    elif channel == 'Wlv':
+                        if Vtype_new_ != 2 and Vtype_new_ != 3:
+                            n_vtype_events_skipped += 1
+                            continue
+                    elif channel == 'Zvv':
+                        if Vtype_new_ != 4:
+                            n_vtype_events_skipped += 1
+                            continue
 
                     if Vtype_new_ == tree.Vtype:
                         n_vtype_unchanged += 1
@@ -1732,6 +1750,7 @@ for job in info:
 
                     V = ROOT.TLorentzVector()
 
+                    #Recompute combined lepton variables for Zll
                     if Vtype_new_ == 0 or Vtype_new_ == 1:
                         lep1 = ROOT.TLorentzVector()
                         lep2 = ROOT.TLorentzVector()
@@ -1740,25 +1759,26 @@ for job in info:
                         V = lep1+lep2
                         for var in Vvar:
                             VBranches[var][0] = getattr(V,LorentzDic[var])()
+                    #Use "old" lepton variables for Wlv and Zvv. i.e. only Vtype -> Vtype_new change, other _new variables are copy
                     else:
                         for var in Vvar:
                             VBranches[var][0] = getattr(tree,'V_%s'%var)
 
                     Vtype_new[0] = Vtype_new_
 
-                    #skip event not satisfying kinematic lepton cut
-                    if  vLeptonsBranches['pt'][0] < 20 or vLeptonsBranches['pt'][1] < 20 or VBranches['pt'][0] < 50:
-                        continue
-                    if job.type == 'DATA' and 'DoubleMuon' in job.name and  Vtype_new_ != 0:
-                        continue
-                    if job.type == 'DATA' and 'DoubleEG' in job.name and  Vtype_new_ != 1:
-                        continue
+                    ##skip event not satisfying kinematic lepton cut
+                    #if  vLeptonsBranches['pt'][0] < 20 or vLeptonsBranches['pt'][1] < 20 or VBranches['pt'][0] < 50:
+                    #    continue
+                    #if job.type == 'DATA' and 'DoubleMuon' in job.name and  Vtype_new_ != 0:
+                    #    continue
+                    #if job.type == 'DATA' and 'DoubleEG' in job.name and  Vtype_new_ != 1:
+                    #    continue
 
                     if stopAfterVtypeCorrection:
                         newtree.Fill()
                         continue
 
-                if channel == "Zmm" and applyBTagweights and job.type != 'DATA':
+                if applyBTagweights and job.type != 'DATA':
                     MakeSysRefMap()
 
                     jets_csv = []
@@ -2330,10 +2350,10 @@ for job in info:
                         ### todo: job.FullName is not defined!
                         jobName = str(job.FullName)
 
-                        if 'DY' in jobName:
+                        if 'DY' in jobName or 'WJets' in  jobName:
                             if '10to50' in jobName:
                                 isDY[0] = 3
-                            elif 'amcatnloFXFX' in jobName:
+                            elif 'amcatnloFXFX' in jobName or 'WJets' in jobName:
                                 isDY[0] = 2
                             else:
                                 isDY[0] = 1
