@@ -943,6 +943,21 @@ if opts.task.startswith('cachedc'):
             jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
             submit(jobName, jobDict)
 
+if opts.task.startswith('rundc'):
+    regions = [x.strip() for x in (config.get('LimitGeneral', 'List')).split(',')]
+
+    # submit all the plot regions as separate jobs
+    for region in regions:
+        jobDict = repDict.copy()
+        jobDict.update({
+            'arguments':
+                {
+                    'regions': region,
+                }
+            })
+        jobName = 'dc_run_{region}'.format(region=region)
+        submit(jobName, jobDict)
+
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars

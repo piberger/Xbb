@@ -3,12 +3,13 @@ from __future__ import print_function
 import os, ROOT, warnings
 ROOT.gROOT.SetBatch(True)
 from copy import copy, deepcopy
-#suppres the EvalInstace conversion warning bug
-warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
 from sample_parser import ParseInfo
 import json
+import hashlib
 import NewTreeCache as TreeCache
 from sampleTree import SampleTree as SampleTree
+from NewHistoMaker import NewHistoMaker as HistoMaker
+from NewStackMaker import NewStackMaker as StackMaker
 
 class Datacard(object):
     def __init__(self, config, region):
@@ -238,6 +239,7 @@ class Datacard(object):
                 'cut': self.treecut,
                 'var': self.treevar,
                 'name': self.name,
+                'systematicsName': 'nominal',
                 'binning': self.binning,
                 'weight': self.weightF,
                 'countHisto': 'CountWeighted',
@@ -263,6 +265,7 @@ class Datacard(object):
                         'var': self.getSystematicsVar(syst, Q),
                         'weight': self.getSystematicsWeight(syst, Q),
                         'sysType': 'shape',
+                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][syst], Q=Q) 
                     })
                 self.systematicsList.append(systematicsDictionary)
         
@@ -274,12 +277,14 @@ class Datacard(object):
         
         # weight systematics
         # TODO: why uppercase is used for weight systematics?
-        for weightF_sys in self.sysOptions['weightF_sys']: 
-            for weight in [self.config.get('Weights','%s_%s' %(weightF_sys, UD)) for UD in ['UP', 'DOWN']]:
+        for weightF_sys in self.sysOptions['weightF_sys']:
+            for Q in self.UD:
+                weight = self.config.get('Weights', '%s_%s' %(weightF_sys, Q.upper()))
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                 systematicsDictionary.update({
                         'sysType': 'weight',
-                        'weight': weight if self.SBweight == None else '('+weight+')*('+self.SBweight+')' 
+                        'weight': weight if self.SBweight == None else '('+weight+')*('+self.SBweight+')', 
+                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][weightF_sys], Q=Q) 
                     })
                 self.systematicsList.append(systematicsDictionary)
 
@@ -290,6 +295,7 @@ class Datacard(object):
                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                 systematicsDictionary.update({
                         'sysType': 'sample',
+                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q) 
                     })
                 # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
                 for sampleSystematicSample in sampleSystematicSamples:
@@ -305,42 +311,6 @@ class Datacard(object):
                                 systematicsDictionary['sample_sys_dic'][sampleName] = value
 
                 self.systematicsList.append(systematicsDictionary)
-
-    def run(self):
-
-        print ('Calculate luminosity')
-        print ('====================\n')
-        #Calculate lumi
-        lumi = sum([sample.lumi for sample in self.samples['DATA']])/len(self.samples['DATA']) if len(self.samples['DATA']) > 0 else 0  
-
-        print ('\n\t...fetching histos...\n')
-
-        # add DATA + MC samples
-        allSamples = sum([samples for sampleType, samples in self.samples.iteritems()], [])
-        for sample in allSamples: 
-            
-            # get cuts that was used in caching for this sample
-            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=sample.type == 'DATA')]
-            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
-            print ("SAMPLE:", sample)
-
-            # get sample tree from cache
-            tc = TreeCache.TreeCache(
-                    sample=sample,
-                    cutList=sampleCuts,
-                    inputFolder=self.path,
-                    outputFolder=self.cachedPath,
-                    debug=True
-                )
-            sampleTree = tc.getTree()
-            print ("SAMPLE:", sample, " TREE:", sampleTree)
-
-        # BLINDING cut
-        if self.sysOptions['addBlindingCut']:
-            for systematics in self.systematicsList:
-                systematics['cut'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
-
-
 
     def getSystematicsList(self, isData=False):
         if isData:
@@ -392,3 +362,110 @@ class Datacard(object):
                 old_str, new_str = new_cut.split('>')
                 cut = cut.replace(old_str, new_str.replace('SYS', syst).replace('UD', Q).replace('?', Q))
         return cut
+
+    def run(self):
+
+        print ('Calculate luminosity')
+        print ('====================\n')
+        #Calculate lumi
+        lumi = sum([sample.lumi for sample in self.samples['DATA']])/len(self.samples['DATA']) if len(self.samples['DATA']) > 0 else 0  
+
+        datacardFolder = self.outpath+'vhbb_TH_'+self.ROOToutname+'/'
+        histogramFileName = datacardFolder+self.ROOToutname+'.root'
+        try:
+            os.makedirs(datacardFolder)
+        except:
+            pass
+
+        outfile = ROOT.TFile(histogramFileName, 'RECREATE')
+        if not outfile or outfile.IsZombie():
+            print("\x1b[31mERROR: unable to open output file", histogramFileName,"\x1b[0m")
+            raise Exception("FileIOError")
+        rootFileSubdir = outfile.mkdir(self.Datacardbin, self.Datacardbin)
+        outfile.cd(self.Datacardbin)
+        print ('\n\t...fetching histos...\n')
+
+        # get DATA+MC histograms
+        histograms = {}
+        allSamples = sum([samples for sampleType, samples in self.samples.iteritems()], [])
+
+        #DEBUG, TODO: remove
+        #allSamples = [x for x in allSamples if x.identifier == 'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8']
+
+        # read cached sample trees, for every sample there is one SampleTree, which contains the events needed for ALL the systematics
+        cachedSamples = {}
+        for sample in allSamples: 
+            
+            # get cuts that were used in caching for this sample
+            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
+            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    outputFolder=self.cachedPath,
+                    debug=True
+                )
+            cachedSamples[sample.name] = tc.getTree()
+        
+        # get shape histograms for all systematics
+        for systematics in self.systematicsList:
+            systematicsCut = systematics['cut']
+
+            # additional BLINDING cut
+            if self.sysOptions['addBlindingCut']:
+                    systematicsCut = '({cut})&&({blindingCut})'.format(cut=systematicsCut, blindingCut=self.sysOptions['addBlindingCut'])
+            
+            # get shape histograms for all the samples
+            histograms = {}
+            for sample in allSamples: 
+                configSection = 'dc:%s'%self.region
+                histogramOptions = {
+                        'uniqueid': True,
+                        'rebin': eval(self.config.get(configSection,'rebin')) if self.config.has_option(configSection,'rebin') else 1,
+                        'var': systematics['var'],
+                        'treeVar': systematics['var'],
+                        'weight': systematics['weight'] if sample.type != 'DATA' else '1',
+                        'nBins': self.binning['nBins'],
+                        'xMin': self.binning['xMin'],
+                        'xMax': self.binning['xMax'],
+                    }
+                
+                # get histogram with systematics cut from cached tree
+                histogram = HistoMaker(self.config, sample=sample, sampleTree=cachedSamples[sample.name], histogramOptions=histogramOptions).getHistogram(systematicsCut)
+                if histogram:
+                    histogram.SetDirectory(0)
+                    sampleGroup = self.sysOptions['Group'][sample.name]
+                    if sampleGroup not in histograms:
+                        histograms[sampleGroup]= []
+                    histograms[sampleGroup].append(histogram)
+                else:
+                    print("WARNING: NO HISTOGRAM FOUND!!")
+
+            # sample groups for datacard
+            sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in allSamples]))
+
+            # sum histograms of all samples in the datacard group
+            systematics['histograms'] = {}
+            for sampleGroup in sampleGroups:
+                # adjust name for DC convention
+                datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                systematicsName = systematics['systematicsName'] if systematics['sysType'] != 'nominal' else ''
+
+                #TODO: this is ugly
+                systematicsName = systematicsName.replace('_Up','Up')
+                systematicsName = systematicsName.replace('_Down','Down')
+                systematicsName = systematicsName.replace('_UP','Up')
+                systematicsName = systematicsName.replace('_DOWN','Down')
+                systematicsName = systematicsName.replace('UP','Up')
+                systematicsName = systematicsName.replace('DOWN','Down')
+                datacardProcessHistogramName = '{process}{systematicsName}'.format(process=datacardProcess, systematicsName=systematicsName)
+                
+                # add up all the sample histograms for this process and this systematic
+                systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histograms[sampleGroup], datacardProcessHistogramName)
+                systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
+
+        outfile.Write()
+        print ("OUTPUT:", histogramFileName)

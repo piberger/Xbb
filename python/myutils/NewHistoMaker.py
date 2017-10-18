@@ -12,17 +12,24 @@ from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
 
 class NewHistoMaker:
+
+    instanceCounter = 0
+
     def __init__(self, config, sample, sampleTree, histogramOptions):
+        NewHistoMaker.instanceCounter += 1
         self.config = config
         self.sample = sample
         self.sampleTree = sampleTree
         self.histogramOptions = histogramOptions
         self.histogram = None
-        self.trainFlag = False #TODO: pass trainFlag
         TdrStyles.tdrStyle()
 
     def initializeHistogram(self):
-        self.histogramName = self.sample.name + '_' + self.histogramOptions['var']
+        self.histogramName = (self.histogramOptions['name']+'_') if 'name' in self.histogramOptions else ''
+        self.histogramName += self.sample.name + '_' + self.histogramOptions['var']
+        # add unique instance counter to avoid same name for histogram and ROOT complaining
+        if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
+            self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
         self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBins'], self.histogramOptions['xMin'], self.histogramOptions['xMax'])
         self.histogram.Sumw2()
         self.histogram.SetTitle(self.sample.name)
@@ -30,37 +37,23 @@ class NewHistoMaker:
 
     def scaleHistogram(self):
         if self.sample.type != 'DATA':
-            if 'BDT' in self.histogramOptions['treeVar'] or 'bdt' in self.histogramOptions['treeVar'] or 'OPT' in self.histogramOptions['treeVar']:
-                if self.trainFlag:
-                    if 'ZJets_amc' in self.sample.name:
-                        print ('No rescale applied for the sample', self.sample.name)
-                        MC_rescale_factor = 1.
-                    else:
-                        MC_rescale_factor = 2. ##FIXME## only dataset used for training must be rescaled!!
-                else: 
-                    MC_rescale_factor = 1.
-
-                ScaleFactor = self.sampleTree.getScale(self.sample) * MC_rescale_factor
-            else: 
-                ScaleFactor = self.sampleTree.getScale(self.sample)
-
+            ScaleFactor = self.sampleTree.getScale(self.sample)
             if ScaleFactor != 0:
                 self.histogram.Scale(ScaleFactor)
             else:
                 print ("\x1b[31mWARNING: histogram scaling factor is 0!\x1b[0m")
 
-    def getHistogram(self):
+    def getHistogram(self, cut='1'):
         if self.initializeHistogram():
             # apply weights only to MC and not to DATA
             if 'group' in self.histogramOptions and self.histogramOptions['group'] == 'DATA':
                 weightF = '1'
             else:
                 weightF = "({weight})".format(weight=self.histogramOptions['weight'] if ('weight' in self.histogramOptions and self.histogramOptions['weight']) else '1') 
-            
+
             # add tree cut 
-            # TODO: add BDT special cuts
             # TODO: add sample cut again, which should not matter but to be safe
-            selection = "({weight})*({cut})".format(weight=weightF, cut='1') 
+            selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:
                 print ("\x1b[31mERROR: error in TTree:Draw! returned {nEvents}\x1b[0m".format(nEvents=nEvents))
@@ -78,7 +71,6 @@ class NewHistoMaker:
             self.histogram.SetBinContent(self.histogram.GetNbinsX(),oFlow)
             self.histogram.SetBinError(1,uFlowErr)
             self.histogram.SetBinError(self.histogram.GetNbinsX(),oFlowErr)
-
 
         return self.histogram
 

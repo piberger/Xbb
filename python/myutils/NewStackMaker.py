@@ -277,7 +277,8 @@ class NewStackMaker:
         #    tAddFlag2 = self.myText(self.addFlag2,0.17,0.73)
 
     # adds TH1 objects together
-    def sumHistograms(self, histograms, outputName='summed_histogram'):
+    @staticmethod
+    def sumHistograms(histograms, outputName='summed_histogram'):
         summedHistogram = None
         for histogram in histograms:
             if summedHistogram:
@@ -299,7 +300,7 @@ class NewStackMaker:
         histogramGroups = list(set([histogram['group'] for histogram in self.histograms]))
         for histogramGroup in histogramGroups:
             histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group'] == histogramGroup]
-            groupedHistograms[histogramGroup] = self.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
+            groupedHistograms[histogramGroup] = NewStackMaker.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
         
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
@@ -348,7 +349,7 @@ class NewStackMaker:
         
         # draw ratio plot
         dataHistogram = groupedHistograms[dataGroupName]
-        mcHistogram = self.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group']!=dataGroupName], outputName='summedMcHistograms') 
+        mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group']!=dataGroupName], outputName='summedMcHistograms') 
         self.drawRatioPlot(dataHistogram, mcHistogram)
         
         self.pads['oben'].cd()
