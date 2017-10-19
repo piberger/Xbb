@@ -392,9 +392,30 @@ def projectionMETOntoJet(met, metphi, jet, jetphi, onlyPositive=True, threshold 
   else:
       return projection
 
+def getCorrFactor(GenVbosons_pt, sample, variation):
+    if sample == 'TT':
+        if variation == 'nom':
+            return (1.064 - 0.000380*V_pt)
+        elif variation == 'up':
+            return (1.064 - 0.000469*V_pt)
+        elif variation == 'down':
+            return (1.064 - 0.000291*V_pt)
+    elif sample == 'WLF':
+        if variation == 'nom':
+            return (1.097 - 0.000575*V_pt)
+        elif variation == 'up':
+            return (1.097 - 0.000621*V_pt)
+        elif variation == 'down':
+            return (1.097 - 0.000529*V_pt)
+    elif sample == 'WHF':
+        if variation == 'nom':
+            return (1.259 - 0.00167*V_pt)
+        elif variation == 'up':
+            return (1.259 - 0.00180*V_pt)
+        elif variation == 'down':
+            return (1.259 - 0.00154*V_pt)
+
 def signal_ewk(GenVbosons_pt, sample, variation):
-    sample = None
-    variation = None
     SF = 1.
 	#print 'Vpt:', GenVbosons_pt
     EWK = None
@@ -819,7 +840,7 @@ for job in info:
                 tree.SetBranchStatus('EWKw',0)
                 tree.SetBranchStatus('NLOw',0)
                 tree.SetBranchStatus('DYw',0)
-                tree.SetBranchStatus('isDY',0)
+                #tree.SetBranchStatus('isDY',0)
 
         if applyBTagweights:
             tree.SetBranchStatus("bTagWeightCMVAV2_Moriond*",0)
@@ -1389,10 +1410,21 @@ for job in info:
                 DYw[0] = 1
                 newtree.Branch('DYw',DYw,'DYw/F')
 
-                #isDY: to identify what kind of DY sample it is
-                isDY = array('i',[-1])
-                DYw[0] = -1
-                newtree.Branch('isDY', isDY, 'isDY/I')
+                ##isDY: to identify what kind of DY sample it is
+                #isDY = array('i',[-1])
+                #DYw[0] = -1
+                #newtree.Branch('isDY', isDY, 'isDY/I')
+
+        #TT, ST, WHF, WLF from data fit
+        if addFitCorr:
+            if job.type != 'DATA':
+                FitCorr = array('f',[0]*3)
+                FitCorr[0], FitCorr[1], FitCorr[2]= 1,1,1
+                newtree.Branch('FitCorr',FitCorr,'FitCorr[3]/F')
+                #To separate W+LF and W+HF during event loop
+                formWHF = ROOT.TTreeFormula('WHF',Sum$(GenJet_pt>20 && abs(GenJet_eta)<2.4 && GenJet_numBHadrons>=))
+
+
 
         if addTTW:
             if job.type != 'DATA':
@@ -2173,52 +2205,86 @@ for job in info:
                     newtree.Fill()
                     continue
 
+                if addFitCorr:
+                    #Corrections only used in Wlv
+                    formWHF.GetNdata()
+                    formWHF.EvalInstance()
+
+                    ##
+                    #Add TT,WHF and WLF corrections from data fit
+                    ##
+                    FitCorr[0] = 1
+                    FitCorr[1] = 1
+                    FitCorr[2] = 1
+
+                    corr_sample = None
+                    if channel == 'Wlv':
+                        if 'TT' in jobName:
+                            corr_sample = 'TT'
+                        elif ('WJetsToLNu' in jobName or 'WBJetsToLNu' in jobName):
+                            if
+                            corr_sample = 'TT'
+
+
                 if addEWK:
                     if job.type != 'DATA':
-                        ### todo: job.FullName is not defined!
                         jobName = str(job.FullName)
 
-                        if 'DY' in jobName or 'WJets' in  jobName:
-                            if '10to50' in jobName:
-                                isDY[0] = 3
-                            elif 'amcatnloFXFX' in jobName or 'WJets' in jobName:
-                                isDY[0] = 2
-                            else:
-                                isDY[0] = 1
-                        else:
-                            isDY[0] = 0
+                        ###
+                        #Add EWK weights to relevant DY and W+jet sampls
+                        ###
+
+                        if ('DY' in jobName and not '10to50' in jobName) or ('WJetsToLNu' in jobName or 'WBJetsToLNu' in jobName):
+                            applyEWK = True
 
                         EWKw[0] = 1
                         EWKw[1] = 1
                         EWKw[2] = 1
 
-                        if isDY[0] == 1 or isDY[0] == 2: #apply only on m50 DY samples
-                            #print 'GebVboson is', tree.GenVbosons_pt[0]
+                        #if isDY[0] == 1 or isDY[0] == 2:
+                        if applyEWK:
                             if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
                                 EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
                                 EWKw[1]= EWKw[0]
                                 EWKw[2]= EWKw[0]
-                        NLOw[0] = 1
-                        if isDY[0] == 1:
-                            etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
-                            if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
+
+                        ###
+                        #Add EWK on VH signal
+                        ###
 
                         sys_sample = None
-                        if 'ZH_HToBB_ZToLL' in job.name and not 'ggZH_HToBB_ZToLL' in job.name:
+                        if 'ZH_HToBB_ZToLL' in jobName and not 'ggZH_HToBB_ZToLL' in jobName:
                             sys_sample = 'Zll'
-                        elif 'WminusH_HToBB_WToLNu' in job.name:
+                        elif 'WminusH_HToBB_WToLNu' in jobName:
                             sys_sample = 'Wlvm'
-                        elif 'WplusH_HToBB_WToLNu' in job.name:
+                        elif 'WplusH_HToBB_WToLNu' in jobName:
                             sys_sample = 'Wlvp'
-                        elif 'ZH_HToBB_ZToNuNu' in job.name and not 'ggZH_HToBB_ZToNuNu' in job.name:
+                        elif 'ZH_HToBB_ZToNuNu' in jobName and not 'ggZH_HToBB_ZToNuNu' in jobName:
                             sys_sample = 'Zvv'
-
                         if tree.nGenVbosons > 0 and sys_sample:
                             EWKw[0] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
                             EWKw[1] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'down')
                             EWKw[2] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'up')
 
-                        DYw[0] = EWKw[0]*NLOw[0]
+                        ###
+                        #Add NLO weights to relevant DY and W+jet sampls
+                        ###
+
+                        applyNLO = False
+                        if applyEWK and not 'amcatnloFXFX' in jobName:
+                            applyNLO = True
+
+                        NLOw[0] = 1
+                        #if isDY[0] == 1:
+                        if applyNLO:
+                            etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
+                            if etabb < 5: NLOw[0] = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
+
+
+
+
+
+                        #DYw[0] = EWKw[0]*NLOw[0]
 
                 if addTTW:
                     if job.type != 'DATA':
