@@ -31,14 +31,23 @@ class CacheDatacards(object):
 
         # initialize Datacard objects
         self.dcMakers = [Datacard(config=self.config, region=region) for region in self.regions]
-        
+    
+    # make a minimum list of samples which is needed to produce all the Datacard regions at the same time
+    def getAllSamples(self):
+        samples = []
+        for dcMaker in self.dcMakers:
+            for sample in dcMaker.getAllSamples():
+                if len([x for x in samples if x.name == sample.name]) < 1:
+                    samples.append(sample)
+        return samples
+
     def prepare(self):
         if len(self.dcMakers) > 0:
             self.treeCaches = []
             self.sampleTree = None
 
             # cuts
-            allSamples = sum([y for x, y in self.dcMakers[0].samples.iteritems()], [])
+            allSamples = self.getAllSamples() 
             subsamples = [x for x in allSamples if x.identifier == self.sampleToCache]
 
             # loop over all datacard regions

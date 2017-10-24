@@ -13,6 +13,7 @@ class BranchList(object):
             self.cuts += cuts
         else:
             self.cuts.append(cuts)
+        return self
 
     def isfloat(self, value):
         try:
