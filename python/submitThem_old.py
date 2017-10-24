@@ -11,6 +11,7 @@ import zlib
 import base64
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
+from myutils.Datacard import Datacard
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -944,18 +945,49 @@ if opts.task.startswith('cachedc'):
             submit(jobName, jobDict)
 
 if opts.task.startswith('rundc'):
-    regions = [x.strip() for x in (config.get('LimitGeneral', 'List')).split(',')]
+    
+    regions = Datacard.getRegions(config=config)
+    samples = Datacard.getSamples(config=config, regions=regions)
 
-    # submit all the plot regions as separate jobs
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
+
+    # only process given samples (if option is present)
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    if len(samplesToCache) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToCache]
+
+    #DEBUG: sampleIdentifiers = [x for x in sampleIdentifiers if 'Double' in x]
+
+    # submit all the DC regions as separate jobs
+    for region in regions:
+        # submit separate jobs for either sampleIdentifiers
+        for sampleIdentifier in sampleIdentifiers: 
+            jobDict = repDict.copy()
+            jobDict.update({
+                'queue': 'short.q',
+                'arguments':
+                    {
+                        'regions': region,
+                        'sampleIdentifier': sampleIdentifier,
+                    }
+                })
+            jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+            submit(jobName, jobDict)
+
+if opts.task.startswith('mergedc'):
+    regions = Datacard.getRegions(config=config)
+
+    # submit all the DC regions as separate jobs
     for region in regions:
         jobDict = repDict.copy()
         jobDict.update({
+            'queue': 'short.q',
             'arguments':
                 {
                     'regions': region,
                 }
             })
-        jobName = 'dc_run_{region}'.format(region=region)
+        jobName = 'dc_merge_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
         submit(jobName, jobDict)
 
 if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':

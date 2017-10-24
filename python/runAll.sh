@@ -56,6 +56,9 @@ while [ $# -gt 0 ]; do
     --regions=*)
       regions="${1#*=}"
       ;;
+    --process=*)
+      process="${1#*=}"
+      ;;
     --force)
       force="1"
       ;;
@@ -67,6 +70,9 @@ while [ $# -gt 0 ]; do
       ;;
     --sampleIdentifier=*)
       sampleIdentifier="${1#*=}"
+      ;;
+    --sampleName=*)
+      sampleName="${1#*=}"
       ;;
     --splitFilesChunkSize=*)
       splitFilesChunkSize="${1#*=}"
@@ -259,6 +265,27 @@ elif [ $task = "cachedc" ]; then
     if [ "$verbose" = "1" ]; then
         runCommand="${runCommand} --verbose"
     fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "rundc" ]; then
+    runCommand="python ./run_dc.py --regions ${regions}";
+    if [ "$process" ]; then
+        runCommand="${runCommand} --process ${process}"
+    fi
+    if [ "$sampleIdentifier" ]; then
+        runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
+    fi
+    if [ "$sampleName" ]; then
+        runCommand="${runCommand} --sampleName ${sampleName}"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "mergedc" ]; then
+    runCommand="python ./merge_dc.py --regions ${regions}";
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
