@@ -7,15 +7,16 @@ ROOT.gROOT.SetBatch(True)
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
-
+from myutils.FileList import FileList
 import os,sys
 
 class CachePlot(object):
 
-    def __init__(self, config, sampleIdentifier, regions, cacheParts=1, cachePart=1, splitFiles=-1):
+    def __init__(self, config, sampleIdentifier, regions, splitFilesChunks=1, chunkNumber=1, splitFilesChunkSize=-1, forceRedo=False, fileList=None):
         self.config = config
         self.sampleIdentifier = sampleIdentifier
-        self.regions = regions
+        self.regions = list(set(regions))
+        self.forceRedo = forceRedo
 
         self.sampleTree = None
         self.samplesPath = self.config.get('Directories', 'plottingSamples')
@@ -34,10 +35,10 @@ class CachePlot(object):
         for region in self.regions:
             treeCut = config.get('Cuts', region)
             self.regionsDict[region] = {'cut': treeCut}
-
-        self.cacheParts = cacheParts
-        self.cachePart = cachePart
-        self.splitFiles = splitFiles
+        self.splitFilesChunkSize = splitFilesChunkSize
+        self.splitFilesChunks = splitFilesChunks
+        self.chunkNumber = chunkNumber
+        self.fileList = FileList.decompress(fileList) if fileList else None
     
         VHbbNameSpace=config.get('VHbbNameSpace','library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
@@ -52,6 +53,7 @@ class CachePlot(object):
             print (" > ",region.ljust(20), regionInfo['cut'])
 
     def run(self):
+
         # ----------------------------------------------------------------------------------------------------------------------
         # cache samples
         # ----------------------------------------------------------------------------------------------------------------------
@@ -70,10 +72,16 @@ class CachePlot(object):
                 # add cuts for all training regions
                 for region,regionInfo in self.regionsDict.iteritems():
 
+                    configSection = 'Plot:%s'%region
+                    
                     # cuts
                     sampleCuts = [sample.subcut]
                     if regionInfo['cut']:
                         sampleCuts.append(regionInfo['cut'])
+                    if self.config.has_option(configSection, 'Datacut'):
+                        sampleCuts.append(self.config.get(configSection, 'Datacut'))
+                    if self.config.has_option('Plot_general','addBlindingCut'):
+                        sampleCuts.append(self.config.has_option('Plot_general','addBlindingCut'))
 
                     # add cache object
                     tc = TreeCache.TreeCache(
@@ -82,23 +90,34 @@ class CachePlot(object):
                         inputFolder=self.samplesPath,
                         tmpFolder=self.tmpPath,
                         outputFolder=self.cachedPath,
-                        cacheParts=self.cacheParts,
-                        cachePart=self.cachePart,
-                        splitFiles=self.splitFiles,
+                        splitFilesChunks=self.splitFilesChunks,
+                        chunkNumber=self.chunkNumber,
+                        splitFilesChunkSize=self.splitFilesChunkSize,
+                        fileList=self.fileList,
                         debug=True
                     )
 
                     # check if this part of the sample is already cached
-                    if not tc.partIsCached():
+                    isCached = tc.partIsCached()
+                    if not isCached or self.forceRedo:
+                        if isCached:
+                            tc.deleteCachedFiles(chunkNumber=self.chunkNumber)
+
                         # for the first sample which comes from this files, load the tree
                         if not self.sampleTree:
-                            self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFiles=self.splitFiles, splitFilesPart=self.cachePart)
+                            self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config)
                             if not self.sampleTree or not self.sampleTree.tree:
                                 print ("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
-                                raise Exception("CreationOfSampleTreeFailed!")
+                                raise Exception("CreationOfSampleTreeFailed")
+                            # consistency check on the file list at submission time and now
+                            fileListNow = self.sampleTree.getSampleFileNameChunk(self.chunkNumber)
+                            if self.fileList and (sorted(self.fileList) != sorted(fileListNow)):
+                                print ("\x1b[31mERROR: sample files have changed between submission and run of the job!\x1b[0m")
+                                raise Exception("SampleFilesHaveChanged")
+
                         treeCaches.append(tc.setSampleTree(self.sampleTree).cache())
                     else:
-                        print ("INFO: already cached!",tc)
+                        print ("INFO: already cached!",tc, "(",tc.hash,")")
 
             if len(treeCaches) > 0:
                 # run on the tree
@@ -106,42 +125,47 @@ class CachePlot(object):
             else:
                 print ("nothing to do!")
 
-# read arguments
-argv = sys.argv
-parser = OptionParser()
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
-                          help="Verbose mode.")
-parser.add_option("-C", "--config", dest="config", default=[], action="append",
-                      help="configuration file")
-parser.add_option("-t","--regions", dest="regions", default='',
-                      help="cut regions identifier")
-parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
-                      help="sample identifier (no subsample!)")
-parser.add_option("-n","--cacheParts", dest="cacheParts", default='',
-                      help="number of parts")
-parser.add_option("-i","--cachePart", dest="cachePart", default='',
-                      help="number of part to cache")
-parser.add_option("-p","--splitFiles", dest="splitFiles", default='',
-                      help="number of files per part")
-(opts, args) = parser.parse_args(argv)
-if opts.config =="":
-        opts.config = "config"
+if __name__ == "__main__":
+    # read arguments
+    argv = sys.argv
+    parser = OptionParser()
+    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
+                              help="Verbose mode.")
+    parser.add_option("-C", "--config", dest="config", default=[], action="append",
+                          help="configuration file")
+    parser.add_option("-t","--regions", dest="regions", default='',
+                          help="cut regions identifier")
+    parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
+                          help="sample identifier (no subsample!)")
+    parser.add_option("-n","--splitFilesChunks", dest="splitFilesChunks", default='',
+                          help="number of chunks the cached file is split into")
+    parser.add_option("-i","--chunkNumber", dest="chunkNumber", default='',
+                          help="number of part to cache")
+    parser.add_option("-p","--splitFilesChunkSize", dest="splitFilesChunkSize", default='',
+                          help="number of files per part")
+    parser.add_option("-f","--force", action="store_true", dest="force", default=False,
+                          help="force overwriting of already cached files")
+    parser.add_option("-l","--fileList", dest="fileList", default="",
+                          help="file list")
+    (opts, args) = parser.parse_args(argv)
+    if opts.config == "":
+            opts.config = "config"
 
-# Import after configure to get help message
-from myutils import BetterConfigParser, mvainfo, ParseInfo
+    # Import after configure to get help message
+    from myutils import BetterConfigParser, mvainfo, ParseInfo
 
-# load config
-config = BetterConfigParser()
-config.read(opts.config)
+    # load config
+    config = BetterConfigParser()
+    config.read(opts.config)
 
-# initialize
-regions = opts.regions.split(',')
-cacheParts = int(opts.cacheParts) if len(opts.cacheParts) > 0 else 1
-cachePart = int(opts.cachePart) if len(opts.cachePart) > 0 else 1
-splitFiles = int(opts.splitFiles) if len(opts.splitFiles) > 0 else -1
-ct = CachePlot(config=config, sampleIdentifier=opts.sampleIdentifier, regions=regions, cachePart=cachePart, cacheParts=cacheParts, splitFiles=splitFiles)
-ct.printInfo()
+    # initialize
+    regions = opts.regions.split(',')
+    splitFilesChunks = int(opts.splitFilesChunks) if len(opts.splitFilesChunks) > 0 else 1
+    chunkNumber = int(opts.chunkNumber) if len(opts.chunkNumber) > 0 else 1
+    splitFilesChunkSize = int(opts.splitFilesChunkSize) if len(opts.splitFilesChunkSize) > 0 else -1
+    ct = CachePlot(config=config, sampleIdentifier=opts.sampleIdentifier, regions=regions, chunkNumber=chunkNumber, splitFilesChunks=splitFilesChunks, splitFilesChunkSize=splitFilesChunkSize, forceRedo=opts.force, fileList=opts.fileList)
+    ct.printInfo()
 
-# run training
-ct.run()
+    # run training
+    ct.run()
 

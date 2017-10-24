@@ -494,7 +494,7 @@ class HistoMaker:
         #! start the loop over variables (descriebed in options) 
         First_iter = True
         for options in self.optionsList:
-            print 'nomOnly is', nomOnly
+            #print 'nomOnly is', nomOnly
             if self.optionsList.index(options) == 0:
                 print 'This is the nominal histo, going to save him separatly'
             start_time = time.time()
@@ -515,47 +515,37 @@ class HistoMaker:
             if 'SBweight' in options:
                 SBweight=options['SBweight']
             else: SBweight = None
-            print 'SBweight is', SBweight
+            #print 'SBweight is', SBweight
 
             #Include weight per sample (specialweight)
-            #todo: add an option to include special weight to plot or not
-            # TODO TODO TODO TODO TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TODO
             if 'PSI' in self.config.get('Configuration','whereToLaunch'):
                 weightF="("+weightF+")"
                 #weightF="("+weightF+")*(" + job.specialweight +")"
             else:
-                #weightF="("+weightF+")"
-                weightF="("+weightF+")*(" + job.specialweight +")"
-            print 'weightF=', weightF
+                weightF="("+weightF+")"
+                #weightF="("+weightF+")*(" + job.specialweight +")"
 
             if 'countHisto' in options.keys() and 'countbin' in options.keys():
                 count=getattr(self.tc,options['countHisto'])[options['countbin']]
             else:
-                try:
-                    count=getattr(self.tc,"CountWeighted")[0]
-                except:
-                    print "Histomaker::161 !!!!!!! CountWeighted does not exist"
-                    count=getattr(self.tc,"Count")[0]
+                count=getattr(self.tc,"CountWeighted")[0]
 
-            # OLD
             #if cutOverWrite:
             #    treeCut= str(1)
             #else:
             #    treeCut='%s'%(options['cut'])
-
-            #treeCut='%s & %s'%(options['cut'],addCut)
-            #if replacement_cut:
-            #    if type(replacement_cut) is str:
-            #        treeCut='%s & %s'%(replacement_cut,addCut)
-            #    elif type(replacement_cut) is list:
-            #        treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
-            #    else:
-            #        print '@ERROR: replacement_cut is neither list or string. Aborting'
-            #        sys.exit()
-           
-            
-            # NEW!
-            treeCut = '&&'.join(['(%s)'%x for x in [job.addtreecut, job.subcut, addCut, options['cut']] if x and len(x.strip()) > 0 and x.strip() != '1'])
+            treeCut='%s & %s'%(options['cut'],addCut)
+            print "cut1:", options['cut']
+            print "cut2:",addCut
+            print "treecut:", treeCut
+            if replacement_cut:
+                if type(replacement_cut) is str:
+                    treeCut='%s & %s'%(replacement_cut,addCut)
+                elif type(replacement_cut) is list:
+                    treeCut='%s & %s'%(replacement_cut[(self.optionsList).index(options)],addCut)
+                else:
+                    print '@ERROR: replacement_cut is neither list or string. Aborting'
+                    sys.exit()
             
             hTree = ROOT.TH1F('%s'%name,'%s'%name,nBins,xMin,xMax)
 
@@ -565,12 +555,11 @@ class HistoMaker:
             #print('hTree.name() 1 =',hTree.GetName())
             #print('treeVar 1 =',treeVar)
             drawoption = ''
-            print 'treeVar: %s'%(treeVar)
-            print 'weightF: %s'%(weightF)
-            print 'BDT_add_cut: %s'%(BDT_add_cut)
-            print '\x1b[35mtreeCut: %s\x1b[0m'%(treeCut)
+            #print 'treeVar: %s'%(treeVar)
+            #print 'weightF: %s'%(weightF)
+            #print 'BDT_add_cut: %s'%(BDT_add_cut)
+            #print 'treeCut: %s'%(treeCut)
 
-#            print("START DRAWING")
             if job.type != 'DATA':
                 if 'BDT' in treeVar or 'bdt' in treeVar or 'OPT' in treeVar:#added OPT for BDT optimisation
                     drawoption = '(%s)*(%s & %s)'%(weightF,BDT_add_cut,treeCut)
@@ -586,12 +575,21 @@ class HistoMaker:
                 #    pdb.set_trace()
                 #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), ROOT.TCut(drawoption), "goff,e")
                 #treeVar = '1'
-                ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
+                #ROOT.gROOT.ProcessLine('.L /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/myutils/TreeDraw.C')
                 #from ROOT import TreeDraw
-                TD = ROOT.treedraw()
-                print 'drawoptions are', drawoption
-                hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
-                #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
+                #TD = ROOT.treedraw()
+                #print 'drawoptions are', drawoption
+                #Make sure sample used for sample systematics are used/skiped
+                sample_sys_dic = options['sample_sys_dic'] if 'sample_sys_dic' in options else {}
+                if job.name in sample_sys_dic and not sample_sys_dic[job.name]:
+                    print 'sample', job.name, ' will not be ploted'
+                    print 'job.name is', job.name
+                    print 'sample_sys_dic is', sample_sys_dic
+                else:
+                    print 'sample', job.name, ' will be ploted'
+                    #hTree = TD.TreeDraw(CuttedTree, hTree, '%s>>%s' %(treeVar,name), drawoption)
+                    #nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
+                    nevents = CuttedTree.Draw('%s>>%s' %(treeVar,name), str(drawoption), "goff,e")
                 #if First_iter: print 'Number of events are', nevents
                 #print 'nevents:',hTree.GetEntries(),' hTree.name() 2 =',hTree.GetName()
                 full=True
@@ -628,12 +626,7 @@ class HistoMaker:
                         veto = ("(%s <%s || %s > %s)" %(treeVar,lowLimitBlindingMass,treeVar,highLimitBlindingMass))
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),veto +'&'+' %(cut)s'%options, "goff,e")
                     else:
-                        # TODO TODO TODO
-#<<<<<<< HEAD
-                        CuttedTree.Draw('%s>>%s' %(treeVar,name),'(%s)*(%s)' %(treeCut,weightF), "goff,e")
-#=======
                         CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCutData, "goff,e")
-#>>>>>>> merge_silvio
                 else:
                     CuttedTree.Draw('%s>>%s' %(treeVar,name),'%s' %treeCutData, "goff,e")
                 full = True
@@ -888,7 +881,8 @@ class HistoMaker:
             #        custom_rebin.append(b)
             #    self.mybinning = Rebinner(len(custom_rebin) -1 ,custom_rebin),True,self.BDTmin)
         else:
-            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-0.8]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[0.]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
         print '\t > rebinning is set <\n'
@@ -926,7 +920,7 @@ class HistoMaker:
                     printc('magenta','','\t--> added %s to %s Integral: %s Entries: %s Error: %s'%(subsamplename,sample,integral,entries,error))
                     sumintegral += integral
                     nSample += 1
-            print 'The final integral is %s' % sumintegral
+            #print 'The final integral is %s' % sumintegral
         del histo_dicts
         #print "Output dict is", ordered_histo_dict
         return ordered_histo_dict 

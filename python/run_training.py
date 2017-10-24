@@ -8,7 +8,7 @@ from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
 
-import os,sys
+import os,sys,pickle
 
 class MvaTrainingHelper(object):
 
@@ -84,20 +84,13 @@ class MvaTrainingHelper(object):
                     # cut from the mva region
                     if self.treeCut:
                         sampleCuts.append(self.treeCut)
-                    cutList = '&&'.join(['(%s)'%x for x in sorted(sampleCuts)])
 
-                    # count number of chunks the cached data is split into
-                    splitFiles = sample.mergeCachingSize 
-                    nParts = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
-                    
                     tc = TreeCache.TreeCache(
-                            sample=sample.name,
-                            cutList=cutList,
+                            sample=sample,
+                            cutList=sampleCuts,
                             inputFolder=self.samplesPath,
                             tmpFolder=self.tmpPath,
                             outputFolder=self.cachedPath,
-                            cacheParts=nParts,
-                            splitFiles=splitFiles,
                             debug=True
                         )
                     sampleTree = tc.getTree()
@@ -129,16 +122,16 @@ class MvaTrainingHelper(object):
         self.factory.EvaluateAllMethods()
         print ('Execute TMVA: output.Write')
         self.trainingOutputFile.Close()
-        return self()
+        return self
 
     def printInfo(self):
         #WRITE INFOFILE
         MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
-        infofile = open(MVAdir+self.factoryname+'_'+self.MVAname+'.info','w')
-        print '@DEBUG: output infofile name'
-        print infofile
+        infofile = open(MVAdir+self.factoryname+'_'+self.mvaName+'.info','w')
+        print ('@DEBUG: output infofile name')
+        print (infofile)
 
-        info=mvainfo(self.MVAname)
+        info=mvainfo(self.mvaName)
         info.factoryname=self.factoryname
         info.factorysettings=self.factorysettings
         info.MVAtype=self.MVAtype
@@ -161,7 +154,7 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
-        opts.config = "config"
+        opts.config = ["config"]
 
 # Import after configure to get help message
 from myutils import BetterConfigParser, mvainfo, ParseInfo

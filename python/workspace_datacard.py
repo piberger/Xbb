@@ -462,6 +462,41 @@ print 'Get the sample list'
 print '===================\n'
 backgrounds = eval(config.get('dc:%s'%var,'background'))
 
+
+#Systematics from different sampe model (e.g. parton shower)
+if config.has_option('LimitGeneral','sample_sys_info'):
+    sample_sys_list = []#List of all the samples used for the sys. Those samples need to be skiped, except for corresponding sys
+    sample_sys_info = eval(config.get('LimitGeneral','sample_sys_info'))
+    #Extract list of sys samples
+    for key, item in sample_sys_info.iteritems():
+        for item2 in item:
+            for sample_type in item2:
+                NOMsamplesys = sample_type[0]
+                noNom = False
+                for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
+                    print 'nomsample is', nomsample
+                    print 'signals+backgrounds are', signals+backgrounds
+                    if nomsample not in signals+backgrounds: noNom = True
+                if noNom: continue
+                DOWNsamplesys = sample_type[1]
+                UPsamplesys = sample_type[2]
+                sample_sys_list += DOWNsamplesys
+                sample_sys_list += UPsamplesys
+#    additionals += sample_sys_list
+else:
+    sample_sys_list = None
+#    additionals += []
+#print 'additioinals are', additionals
+
+#Create dictonary to "turn of" all the sample systematic (for nominal)
+sample_sys_dic = {}
+for sample_sys in sample_sys_list:
+    sample_sys_dic[sample_sys] = False
+
+print 'sample_sys_dic is', sample_sys_dic
+
+#sys.exit()
+
 #How to split the MC background
 split_factor = eval(config.get('LimitGeneral','split_factor'))
 #split_factor = 0
@@ -572,7 +607,7 @@ if split:
 optionsList=[]
 shapecutList=[]
 
-def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind, 'sysType':copy(_sysType),'SBweight':copy(SBweight)})
+def appendList(): optionsList.append({'cut':copy(_cut),'var':copy(_treevar),'name':copy(_name),'nBins':nBins,'xMin':xMin,'xMax':xMax,'weight':copy(_weight),'countHisto':copy(_countHisto),'countbin':copy(_countbin),'blind':blind, 'sysType':copy(_sysType),'SBweight':copy(SBweight),'sample_sys_dic':copy(_sample_sys_dic)})
 def appendSCList(): shapecutList.append(shapecut)
 
 #nominal
@@ -583,6 +618,7 @@ _weight = weightF
 _countHisto = "CountWeighted"
 _countbin = 0
 _sysType = 'nominal'
+_sample_sys_dic = sample_sys_dic
 
 #shapecut = _cut
 #ie. take count from 'CountWeighted->GetBinContent(1)'
@@ -612,6 +648,7 @@ for syst in systematics:
         _cut = treecut
         _name = title
         _weight = weightF
+        _sample_sys_dic = sample_sys_dic
         #if not 'UD' in syst:
         if not isinstance(sys_cut_suffix[syst], list):
             new_cut=sys_cut_suffix[syst]
@@ -792,8 +829,57 @@ for weightF_sys in weightF_systematics:
         _treevar = treevar
         _name = title
         _sysType = 'weight'
+        _sample_sys_dic = sample_sys_dic
         appendList()
         appendSCList()
+
+#sample systematics
+print 'before modif, _sample_sys_dic is', _sample_sys_dic
+for key, item in sample_sys_info.iteritems():#loop over the systematics
+    _weight = weightF
+    _cut = shapecut_first
+    shapecut = shapecut_first
+    _treevar = treevar
+    _name = title
+    _sysType = 'sample'
+    #define up and down dictionary
+    _sample_sys_dic_up = copy(sample_sys_dic)
+    _sample_sys_dic_down = copy(sample_sys_dic)
+    for item2 in item:#loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+        for sample_type in item2:
+            NOMsamplesys  = sample_type[0]
+            DOWNsamplesys = sample_type[1]
+            UPsamplesys   = sample_type[2]
+            #Set all the nominal sample to False
+            for noms in NOMsamplesys:
+                _sample_sys_dic_up[noms] =  False
+                _sample_sys_dic_down[noms] =  False
+            #prepare disctionnary for Up and Down variation
+            for upsample, downsample in zip(UPsamplesys, DOWNsamplesys):
+                #Up variation
+                _sample_sys_dic_up[upsample] = True
+                _sample_sys_dic_up[downsample] = False
+                #appendList()
+                #appendSCList()
+                _sample_sys_dic_down[upsample] = False
+                _sample_sys_dic_down[downsample] = True
+                #appendList()
+                #appendSCList()
+                #reset to default
+             #_sample_sys_dic = sample_sys_dic
+
+    #Fill optionsList
+    #Up
+    _sample_sys_dic = _sample_sys_dic_up
+    appendList()
+    appendSCList()
+    #Down
+    _sample_sys_dic = _sample_sys_dic_down
+    appendList()
+    appendSCList()
+
+
+#print 'optionsList is', optionsList
 
 ##lhe_muF
 ##Appends options for each weight (up/down -> len =2 )
@@ -829,16 +915,22 @@ if len(optionsList) != len(shapecutList):
     print '@ERROR: optionsList and shapecutList don\'t have equal size. Aborting'
     sys.exit()
 
+print '=================='
+print 'all sample_sys_dic are:'
+print '=================='
+for op in optionsList:
+    print 'sysType:', op['sysType'], 'sample_sys_dic:', op['sample_sys_dic'], '\n'
+print ''
+
 _countHisto = "CountWeighted"
 _countbin = 0
 
 print '===================\n'
 print 'comparing cut strings'
 for optold, optnew in zip(optionsList,shapecutList):
-    print 'old option is', optold['cut']
-    print 'new option is', optnew
+    #print 'old option is', optold['cut']
+    #print 'new option is', optnew
     optionsList[optionsList.index(optold)]['cut']=optnew
-#sys.exit()
 
 ############
 #List the branches to keep here
@@ -992,7 +1084,7 @@ if merge:
         else:
             final_histos_merge[sys_name][sample_name] = AllHisoDic[key]
 
-    print 'final_histos_merge is ', final_histos_merge
+    #print 'final_histos_merge is ', final_histos_merge
 
     ##Fill  hTreeListData
     #hTreeDicData = {}
@@ -1240,6 +1332,13 @@ elif not split or (split and not split_data):
         for Q in UD:
             final_histos['%s_%s'%(systematicsnaming[weightF_sys],Q)]= HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
             ind+=1
+    print 'add sample sys'
+    print '==============\n'
+    for item in list(sample_sys_info.keys()):
+        for Q in UD:
+            final_histos['%s_%s'%(systematicsnaming[item],Q)]= HistoMaker.orderandadd([all_histos[job.name][ind] for job in all_samples],setup)
+            ind+=1
+
     #print 'add lhe sys'
     #print '==============\n'
     #if len(lhe_muF)==2:
@@ -1453,11 +1552,11 @@ columns=len(setup)
 
 if split:
     dc_dir = outpath+'vhbb_TH_'+ROOToutname
-    print 'the filname is', dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
+    #print 'the filname is', dc_dir+'/vhbb_DC_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
     fileName = dc_dir+'/vhbb_dc_%s_%s_%i.txt'%(DCtype,ROOToutname,split_number)
     f = open(fileName,'w')
 else:
-    fileName = outpath+'vhbb_dc_%s_%s.txt'%(DCtype,ROOToutname)
+    fileName = outpath+'vhbb_DC_%s_%s.txt'%(DCtype,ROOToutname)
     f = open(fileName,'w')
 f.write('imax\t1\tnumber of channels\n')
 f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(columns-1))
@@ -1478,11 +1577,21 @@ f.write('process\t')
 for c in setup: f.write('\t%s'%Dict[c])
 f.write('\n')
 f.write('process\t')
+#count #of signal processes
+SigProcess = []
+for _sig in signals:
+    if not GroupDict[_sig] in SigProcess: SigProcess.append(GroupDict[_sig])
+    else: continue
+nSig = len(SigProcess)
+#print 'SigProcess is', SigProcess
+#print 'nSig is', nSig
+
+for c in range(1,columns+1): f.write('\t%s'%(c-nSig))
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+4))
 #VH
 #for c in range(0,columns): f.write('\t%s'%(c-len(signals)+3))
 #VV
-for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
+#for c in range(0,columns): f.write('\t%s'%(c-len(signals)))
 f.write('\n')
 # datacard yields
 f.write('rate\t')
@@ -1546,6 +1655,24 @@ for weightF_sys in weightF_systematics:
             else: f.write('\t1.0')
             #if  setup[it] in decorrelate_sys_weight and weightF_sys in decorrelate_sys_weight[setup[it]]: f.write('\t1.0')
     f.write('\n')
+
+# additional sample systematics
+for key, item in sample_sys_info.iteritems():#loop over sys
+    f.write('%s\tshape'%(systematicsnaming[key]))
+    for it in range(0,columns):
+        found = False
+        for item2 in item:#loop over sample
+            for c in setup:
+                if not it == setup.index(c): continue
+                for sample_type in item2:
+                    if c in [GroupDict[d] for d in sample_type[0]]:
+                        found = True
+                        #print 'c is'
+                        #print 'sample_type is', sample_type[0]
+        if found: f.write('\t1.0')
+        else: f.write('\t-')
+    f.write('\n')
+
 #OLD
 #for weightF_sys in weightF_systematics:
 #    print 'the sys is', systematicsnaming[weightF_sys]
@@ -1574,21 +1701,21 @@ for weightF_sys in weightF_systematics:
 #                f.write('\t-')
 #        f.write('\n')
 # additional sample systematics
-if addSample_sys:
-    alreadyAdded = []
-    for newSample in addSample_sys.iterkeys():
-        for c in setup:
-            if not c == GroupDict[newSample]: continue
-            if Dict[c] in alreadyAdded: continue
-            if final_histos['nominal'][c].Integral()<0.1: continue #skip model syst for negligible samples (eg. ggZH in W+Light CR)
-            f.write('%s_%s\tshape'%(systematicsnaming['model'],Dict[c]))
-            for it in range(0,columns):
-                if it == setup.index(c):
-                     f.write('\t1.0')
-                else:
-                     f.write('\t-')
-            f.write('\n')
-            alreadyAdded.append(Dict[c])
+#if addSample_sys:
+#    alreadyAdded = []
+#    for newSample in addSample_sys.iterkeys():
+#        for c in setup:
+#            if not c == GroupDict[newSample]: continue
+#            if Dict[c] in alreadyAdded: continue
+#            if final_histos['nominal'][c].Integral()<0.1: continue #skip model syst for negligible samples (eg. ggZH in W+Light CR)
+#            f.write('%s_%s\tshape'%(systematicsnaming['model'],Dict[c]))
+#            for it in range(0,columns):
+#                if it == setup.index(c):
+#                     f.write('\t1.0')
+#                else:
+#                     f.write('\t-')
+#            f.write('\n')
+#            alreadyAdded.append(Dict[c])
 # regular systematics
 for sys in systematics:
     sys_factor=sys_factor_dict[sys]
