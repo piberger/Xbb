@@ -226,6 +226,8 @@ class SampleTree(object):
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
+
+            #self.tree.GetReadCache(self.tree.GetCurrentFile(), True).SetEnablePrefetching()
             # update ETA estimates
             if treeNum == 0:
                 self.timeStart = time.time()
@@ -242,6 +244,7 @@ class SampleTree(object):
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
+                self.tree.PrintCacheStats()
                 sys.stdout.flush()
             self.oldTreeNum = treeNum
             # update TTreeFormula's
@@ -401,6 +404,19 @@ class SampleTree(object):
     def SetBranchStatus(self, branchName, branchStatus):
         self.tree.SetBranchStatus(branchName, branchStatus)
 
+    # enables only the given branches (* wildcards supported) and checks existence before enabling them to avoid warning messages during tree iteration
+    def enableBranches(self, listOfBranchesToKeep):
+        listOfExistingBranches = self.GetListOfBranches()
+        self.tree.SetBranchStatus("*", 0)
+        enabledBranches = []
+        for branchName in listOfBranchesToKeep:
+            if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
+                self.tree.SetBranchStatus(branchName, 1)
+                enabledBranches.append(branchName)
+        print("INFO: reduced number of enabled branches from", len(listOfExistingBranches), " to", len(enabledBranches))
+        if self.verbose:
+            print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
+
     #------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the
     # cuts are fulfilled.
@@ -541,31 +557,34 @@ class SampleTree(object):
         return len(self.sampleFileNames)
 
     # return the total scale for the sample, calculated from all count histograms from the TChain
-    def getScale(self, sample):
+    def getScale(self, sample, countHistogram="CountWeighted"):
         try:
             sample.xsec = sample.xsec[0]
         except:
             pass
 
-        try:
-            posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
-            negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
-            count = posWeight - negWeight
-        except:
-            if self.verbose:
-                print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+        if not countHistogram:
             try:
-                count = self.histograms['Count'].GetBinContent(1)
-            except Exception as e:
-                print ("EXCEPTION:", e)
-                print ("ERROR: no weight histograms found in sampleTree => terminate")
-                print ("HISTOGRAMS:", self.histograms)
-                exit(0)
+                posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
+                negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
+                count = posWeight - negWeight
+            except:
+                if self.verbose:
+                    print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+                try:
+                    count = self.histograms['Count'].GetBinContent(1)
+                except Exception as e:
+                    print ("EXCEPTION:", e)
+                    print ("ERROR: no weight histograms found in sampleTree => terminate")
+                    print ("HISTOGRAMS:", self.histograms)
+                    exit(0)
+        else:
+            count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi * sample.xsec * sample.sf / float(count)
 
         if self.verbose:
-            print("sampleTree.getScale(): sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+            print("sampleTree.getScale(): sample: ", sample, "lumi: ", lumi, "xsec: ", sample.xsec, "sample.sf: ", sample.sf, "count (", countHistogram, "):", count, " ---> using scale: ", theScale)
         return theScale
 
     # create a unique string representation of the total cut, e.g. used to calculate the hash for cached samples 
