@@ -346,7 +346,7 @@ class SampleTree(object):
     #------------------------------------------------------------------------------
     # add output tree to be written during the process() function 
     #------------------------------------------------------------------------------
-    def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None, cutSequenceMode='AND', name=''):
+    def addOutputTree(self, outputFileName, cut, hash='', branches=None, callbacks=None, cutSequenceMode='AND', name=''):
 
         # write events which satisfy either ONE of the conditions given in the list or ALL
         if cutSequenceMode not in ['AND', 'OR', 'TREE']:
@@ -385,10 +385,6 @@ class SampleTree(object):
                 if formulaName not in self.formulas:
                     self.addFormula(formulaName, cutString)
                 outputTree['cutSequence'].append(formulaName)
-
-        # set output file
-        #outputTree['tree'].SetDirectory(outputTree['file'])
-
 
         # copy count histograms to output files
         outputTree['histograms'] = {}
@@ -448,20 +444,24 @@ class SampleTree(object):
             listOfBranchesToKeep += eval(self.config.get('Branches', 'keep_branches'))
 
         listOfBranchesToKeep = list(set(listOfBranchesToKeep))
-        
-        # print abbreviated list of branches to keep
-        print ("INFO: branches to keep:", BranchList(listOfBranchesToKeep).getShortRepresentation())
+
 
         # disable the branches in the input if there is no output tree which wants to have all branches
-        if '*' not in listOfBranchesToKeep:
+        if '*' not in listOfBranchesToKeep and len(listOfBranchesToKeep) > 0:
+            # print abbreviated list of branches to keep
+            print("INFO: branches to keep:", BranchList(listOfBranchesToKeep).getShortRepresentation())
+
             # set the branch status of the input tree
             self.tree.SetBranchStatus("*", 0)
             for branchName in listOfBranchesToKeep:
                 if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
                     self.tree.SetBranchStatus(branchName, 1)
+        else:
+            print("INFO: keep all branches")
 
         # initialize the output trees
         for outputTree in self.outputTrees:
+            # clone tree structure, but don't copy any entries
             outputTree['tree'] = self.tree.CloneTree(0)
             if not outputTree['tree']:
                 print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
