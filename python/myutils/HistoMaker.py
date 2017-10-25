@@ -580,7 +580,9 @@ class HistoMaker:
                 #TD = ROOT.treedraw()
                 #print 'drawoptions are', drawoption
                 #Make sure sample used for sample systematics are used/skiped
+                
                 sample_sys_dic = options['sample_sys_dic'] if 'sample_sys_dic' in options else {}
+                
                 if job.name in sample_sys_dic and not sample_sys_dic[job.name]:
                     print 'sample', job.name, ' will not be ploted'
                     print 'job.name is', job.name
@@ -881,8 +883,8 @@ class HistoMaker:
             #        custom_rebin.append(b)
             #    self.mybinning = Rebinner(len(custom_rebin) -1 ,custom_rebin),True,self.BDTmin)
         else:
-            #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
-            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-0.8]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-1.0]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
+            #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[-0.8]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         #self.mybinning = Rebinner(int(self.norebin_nBins),array('d',[0.]+[totalBG.GetBinLowEdge(i) for i in binlist]),True)
         self._rebin = True
         print '\t > rebinning is set <\n'

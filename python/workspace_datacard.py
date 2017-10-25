@@ -241,12 +241,16 @@ print anType
 print setup
 
 #Systematics:
-if config.has_option('LimitGeneral','addSample_sys'):
-    addSample_sys = eval(config.get('LimitGeneral','addSample_sys'))
-    additionals = [addSample_sys[key] for key in addSample_sys]
-else:
-    addSample_sys = None
-    additionals = []
+additionals = []
+
+#Not sure what is the use of this variable
+addSample_sys = False
+#if config.has_option('LimitGeneral','addSample_sys'):
+#    addSample_sys = eval(config.get('LimitGeneral','addSample_sys'))
+#    additionals = [addSample_sys[key] for key in addSample_sys]
+#else:
+#    addSample_sys = None
+#    additionals = []
 #find out if BDT or MJJ:
 bdt = False
 mjj = False
@@ -462,7 +466,7 @@ print 'Get the sample list'
 print '===================\n'
 backgrounds = eval(config.get('dc:%s'%var,'background'))
 
-
+sample_sys_info = {}
 #Systematics from different sampe model (e.g. parton shower)
 if config.has_option('LimitGeneral','sample_sys_info'):
     sample_sys_list = []#List of all the samples used for the sys. Those samples need to be skiped, except for corresponding sys
@@ -484,9 +488,10 @@ if config.has_option('LimitGeneral','sample_sys_info'):
                 sample_sys_list += UPsamplesys
 #    additionals += sample_sys_list
 else:
-    sample_sys_list = None
-#    additionals += []
-#print 'additioinals are', additionals
+    sample_sys_list = []
+
+additionals += sample_sys_list
+print 'additioinals are', additionals
 
 #Create dictonary to "turn of" all the sample systematic (for nominal)
 sample_sys_dic = {}
@@ -754,8 +759,8 @@ for rmv_ in rmv_sys:
 sysnomcut = '&'.join(rmv_sys)
 
 print 'after removing shape sys'
-print 'shapecut', shapecut #this is the sys variable only
-print 'shapecut_first', shapecut_first
+print 'shapecut', shapecut #not needed anymore
+print 'shapecut_first', shapecut_first #contains only cut variable affected by shape (not weight sys). Nominal case
 print 'sysnomcut', sysnomcut #this is the cut string without the sys variables
 #appendSCList()
 #sys.exit(0)
@@ -768,7 +773,7 @@ for shape__ in shapecut_split:
     if shape__.replace(' ','')  == '': continue#to avoid && case
     shapecut_split_ = shape__.split('||')
     for shape_ in  shapecut_split_:
-        new_cut_list=sys_cut_suffix[syst]
+        #new_cut_list=sys_cut_suffix[syst]
         for new_cut in replace_cut:
             old_str,new_str=new_cut.split('>')
             if old_str in shape_:
@@ -835,38 +840,39 @@ for weightF_sys in weightF_systematics:
 
 #sample systematics
 print 'before modif, _sample_sys_dic is', _sample_sys_dic
-for key, item in sample_sys_info.iteritems():#loop over the systematics
-    _weight = weightF
-    _cut = shapecut_first
-    shapecut = shapecut_first
-    _treevar = treevar
-    _name = title
-    _sysType = 'sample'
-    #define up and down dictionary
-    _sample_sys_dic_up = copy(sample_sys_dic)
-    _sample_sys_dic_down = copy(sample_sys_dic)
-    for item2 in item:#loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
-        for sample_type in item2:
-            NOMsamplesys  = sample_type[0]
-            DOWNsamplesys = sample_type[1]
-            UPsamplesys   = sample_type[2]
-            #Set all the nominal sample to False
-            for noms in NOMsamplesys:
-                _sample_sys_dic_up[noms] =  False
-                _sample_sys_dic_down[noms] =  False
-            #prepare disctionnary for Up and Down variation
-            for upsample, downsample in zip(UPsamplesys, DOWNsamplesys):
-                #Up variation
-                _sample_sys_dic_up[upsample] = True
-                _sample_sys_dic_up[downsample] = False
-                #appendList()
-                #appendSCList()
-                _sample_sys_dic_down[upsample] = False
-                _sample_sys_dic_down[downsample] = True
-                #appendList()
-                #appendSCList()
-                #reset to default
-             #_sample_sys_dic = sample_sys_dic
+if len(sample_sys_info) > 0:
+    for key, item in sample_sys_info.iteritems():#loop over the systematics
+        _weight = weightF
+        _cut = shapecut_first
+        shapecut = shapecut_first
+        _treevar = treevar
+        _name = title
+        _sysType = 'sample'
+        #define up and down dictionary
+        _sample_sys_dic_up = copy(sample_sys_dic)
+        _sample_sys_dic_down = copy(sample_sys_dic)
+        for item2 in item:#loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+            for sample_type in item2:
+                NOMsamplesys  = sample_type[0]
+                DOWNsamplesys = sample_type[1]
+                UPsamplesys   = sample_type[2]
+                #Set all the nominal sample to False
+                for noms in NOMsamplesys:
+                    _sample_sys_dic_up[noms] =  False
+                    _sample_sys_dic_down[noms] =  False
+                #prepare disctionnary for Up and Down variation
+                for upsample, downsample in zip(UPsamplesys, DOWNsamplesys):
+                    #Up variation
+                    _sample_sys_dic_up[upsample] = True
+                    _sample_sys_dic_up[downsample] = False
+                    #appendList()
+                    #appendSCList()
+                    _sample_sys_dic_down[upsample] = False
+                    _sample_sys_dic_down[downsample] = True
+                    #appendList()
+                    #appendSCList()
+                    #reset to default
+                 #_sample_sys_dic = sample_sys_dic
 
     #Fill optionsList
     #Up
@@ -995,9 +1001,10 @@ list_var = list(set(list_var))
 #print 'vars to keep are', list_var
 #print 'keep_branches are', keep_branches
 #
-all_keep_list = list_weights+list_cuts+list_var+keep_branches
+#all_keep_list = list_weights+list_cuts+list_var+keep_branches
+all_keep_list = None
 print 'all branches to keep are', all_keep_list
-print 'length is', len(all_keep_list)
+#print 'length is', len(all_keep_list)
 #sys.exit()
 
 if split:
