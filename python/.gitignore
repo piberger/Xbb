@@ -3,12 +3,10 @@
 *.swo
 *.swp
 !Gael*/
-!myutils/
 luca
 !json
 !*config/*
 */*.swo
-!myutils/
 !csv/*
 csv/*.d
 csv/*.pcm

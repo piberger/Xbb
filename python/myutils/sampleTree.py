@@ -4,6 +4,7 @@ import ROOT
 import os
 import math
 import time
+import glob
 
 #------------------------------------------------------------------------------
 # sample tree class
@@ -26,15 +27,22 @@ import time
 class SampleTree(object):
 
     xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
+    moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
     pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1):
+    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFiles=-1, splitFilesPart=1, countOnly=False):
         self.verbose = True
         self.monitorPerformance = True
 
         # get list of sample root files
         if type(samples) == list:
             sampleFileNames = samples
+        elif type(samples) == dict:
+            sampleName = samples['name']
+            sampleFolder = samples['folder']
+            if self.verbose:
+                print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
+            sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
         else:
             sampleTextFileName = samples
             if os.path.isfile(sampleTextFileName):
@@ -47,21 +55,23 @@ class SampleTree(object):
 
             with open(self.sampleTextFileName, 'r') as sampleTextFile:
                 sampleFileNames = sampleTextFile.readlines()
-
+        
+        #print ("FILES:", sampleFileNames)
         # process only partial sample root file list
         self.splitFiles = splitFiles
         self.splitFilesPart = splitFilesPart
         if self.splitFiles > 0 and len(sampleFileNames) > self.splitFiles:
-            numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
-            if self.splitFilesPart > 0 and self.splitFilesPart <= numParts:
+            self.numParts = int(math.ceil(float(len(sampleFileNames))/self.splitFiles))
+            if self.splitFilesPart > 0 and self.splitFilesPart <= self.numParts:
                 sampleFileNames = sampleFileNames[(self.splitFilesPart-1)*self.splitFiles:(self.splitFilesPart*self.splitFiles)]
             else:
                 print("\x1b[31mERROR: wrong part number ", self.splitFilesPart, " for: %s \x1b[0m" % sampleTextFileName)
                 return
             if self.verbose:
-                print ("INFO: reading part ", self.splitFilesPart, " of ", numParts)
+                print ("INFO: reading part ", self.splitFilesPart, " of ", self.numParts)
         else:
             self.splitFilesPart = 1
+            self.numParts = 1
 
         self.sampleFileNames = sampleFileNames
         self.status = 0
@@ -71,6 +81,7 @@ class SampleTree(object):
         self.limitFiles = int(limitFiles) 
         self.timeStart = time.time()
         self.timeETA = 0
+        self.eventsRead = 0
         self.outputTrees = []
 
         self.regionDict = {
@@ -84,84 +95,101 @@ class SampleTree(object):
         self.chainedFiles = []
         self.brokenFiles = []
         self.histograms = {}
-        self.tree = ROOT.TChain(self.treeName)
 
-        # check all .root files listed in the sample .txt file
-        for rootFileName in sampleFileNames:
+        if not countOnly:
+            self.tree = ROOT.TChain(self.treeName)
+
+            # check all .root files listed in the sample .txt file
+            for rootFileName in sampleFileNames:
+
+                if self.verbose:
+                    print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+                
+                # check root file existence
+                if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
+                    rootFileName = SampleTree.getXrootdFileName(rootFileName)
+                    input = ROOT.TFile.Open(rootFileName,'read')
+                    if input and not input.IsZombie():
+
+                        # add count histograms, since they are not in the tchain
+                        for key in input.GetListOfKeys():
+                            obj = key.ReadObj()
+                            if obj.GetName() == self.treeName:
+                                continue
+                            histogramName = obj.GetName()
+
+                            if histogramName in self.histograms:
+                                if self.histograms[histogramName]:
+                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                else:
+                                    print ("ERROR: histogram object was None!!!")
+                            else:
+                                self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                self.histograms[histogramName].SetDirectory(0)
+                        input.Close()
+
+                        # add file to chain
+                        chainTree = '%s/%s'%(rootFileName, self.treeName)
+                        if self.verbose:
+                            print ('chaining '+chainTree)
+                        statusCode = self.tree.Add(chainTree)
+
+                        # check for errors in chaining the file
+                        if statusCode != 1:
+                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
+                            raise Exception("TChain method Add failure")
+                        elif not self.tree:
+                            print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
+                        else:
+                            self.treeEmpty = False
+                            self.chainedFiles.append(rootFileName)
+                            if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
+                                print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
+                                break
+                    else:
+                        print ('ERROR: file is damaged: %s'%rootFileName)
+                        self.brokenFiles.append(rootFileName)
+                else:
+                    print ('ERROR: file is missing: %s'%rootFileName)
 
             if self.verbose:
-                print ('--> tree: %s'%(rootFileName.split('/')[-1].strip()))
+                print ('INFO: # files chained: %d'%len(self.chainedFiles))
+                print ('INFO: # files broken : %d'%len(self.brokenFiles))
+            
+            if len(self.chainedFiles) < 1:
+                self.tree = None
 
-            # check root file existence
-            if os.path.isfile(SampleTree.getLocalFileName(rootFileName)):
-                rootFileName = SampleTree.getXrootdFileName(rootFileName)
-                input = ROOT.TFile.Open(rootFileName,'read')
-                if input and not input.IsZombie():
-
-                    # add count histograms, since they are not in the tchain
-                    for key in input.GetListOfKeys():
-                        obj = key.ReadObj()
-                        if obj.GetName() == self.treeName:
-                            continue
-                        histogramName = obj.GetName()
-
-                        if histogramName in self.histograms:
-                            if self.histograms[histogramName]:
-                                self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
-                            else:
-                                print ("ERROR: histogram object was None!!!")
-                        else:
-                            self.histograms[histogramName] = obj.Clone(obj.GetName())
-                            self.histograms[histogramName].SetDirectory(0)
-                    input.Close()
-
-                    # add file to chain
-                    chainTree = '%s/%s'%(rootFileName, self.treeName)
-                    if self.verbose:
-                        print ('chaining '+chainTree)
-                    statusCode = self.tree.Add(chainTree)
-
-                    # check for errors in chaining the file
-                    if statusCode != 1:
-                        print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
-                        raise Exception("TChain method Add failure")
-                    elif not self.tree:
-                        print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
-                    else:
-                        self.treeEmpty = False
-                        self.chainedFiles.append(rootFileName)
-                        if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
-                            print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
-                            break
-                else:
-                    print ('ERROR: file is damaged: %s'%rootFileName)
-                    self.brokenFiles.append(rootFileName)
-            else:
-                print ('ERROR: file is missing: %s'%rootFileName)
-
-        if self.verbose:
-            print ('INFO: # files chained: %d'%len(self.chainedFiles))
-            print ('INFO: # files broken : %d'%len(self.brokenFiles))
+            if self.tree:
+                self.tree.SetCacheSize(100*1024*1024)
+    
+    def getNumberOfParts(self):
+        return self.numParts
 
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
 
     def next(self):
         self.treeIterator.next()
+        self.eventsRead += 1
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
             # update ETA estimates
             if treeNum == 0:
                 self.timeStart = time.time()
+                perfStats = '?'
             else:
                 fraction = 1.0*treeNum/len(self.chainedFiles)
                 passedTime = time.time() - self.timeStart
                 self.timeETA = (1.0-fraction)/fraction * passedTime if fraction > 0 else 0
+                perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
+
             # output status
             if self.verbose:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
-                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %1.1f min)'%(treeNum, percentage, self.getETA()/60.0))
+                if treeNum == 0:
+                    print ('INFO: time ', time.ctime())
+                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
             self.oldTreeNum = treeNum
             # update TTreeFormula's
             for formulaName, treeFormula in self.formulas.iteritems():
@@ -174,6 +202,7 @@ class SampleTree(object):
 
     def evaluate(self, formulaName):
         if formulaName in self.formulas:
+            #print ("eval:", formulaName, self.formulas[formulaName])
             if self.formulas[formulaName].GetNdata() > 0:
                 return self.formulas[formulaName].EvalInstance()
             else:
@@ -185,7 +214,7 @@ class SampleTree(object):
     
     def getETA(self):
         # return ETA in seconds
-        return self.timeETA
+        return '%1.1f'%(self.timeETA/60.0) if self.timeETA > 0 else '?'
 
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
@@ -197,6 +226,9 @@ class SampleTree(object):
             xrootdFileName = SampleTree.pnfsStoragePath + xrootdFileName.strip()
         isRemote = '/pnfs/' in xrootdFileName
         if isRemote:
+            xrootdFileName = xrootdFileName.replace(SampleTree.xrootdRedirector, '')
+            for red in SampleTree.moreXrootdRedirectors:
+                xrootdFileName = xrootdFileName.replace(red, '')
             return SampleTree.xrootdRedirector + xrootdFileName.replace(SampleTree.xrootdRedirector, '').strip()
         else:
             return xrootdFileName.strip()
@@ -204,7 +236,9 @@ class SampleTree(object):
     @staticmethod
     def getLocalFileName(rawFileName):
         localFileName = rawFileName.strip()
-        localFileName.replace(SampleTree.xrootdRedirector, '')
+        localFileName = localFileName.replace(SampleTree.xrootdRedirector, '')
+        for red in SampleTree.moreXrootdRedirectors:
+            localFileName = localFileName.replace(red, '')
         if localFileName.startswith('/store/'):
             localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
         return localFileName
@@ -215,12 +249,22 @@ class SampleTree(object):
             'fileName': outputFileName,
             'file': ROOT.TFile.Open(outputFileName, 'recreate'),
             'cut': cut,
+            'cutSequence': [],
             'hash': hash,
             'branches': branches,
             'callbacks': callbacks,
             'passed': 0,
         }
-        self.addFormula(hash, cut)
+
+        if not outputTree['tree']:
+            print ("ERROR: output tree broken, input tree:", self.tree)
+        cutList = cut if type(cut) == list else [cut]
+        for i, cutString in enumerate(cutList):
+            formulaName = cutString.replace(' ','')
+            if formulaName not in self.formulas:
+                self.addFormula(formulaName, cutString)
+            outputTree['cutSequence'].append(formulaName)
+ 
         outputTree['tree'].SetDirectory(outputTree['file'])
         if branches:
             outputTree['tree'].SetBranchStatus("*", 0)
@@ -253,33 +297,33 @@ class SampleTree(object):
         self.tree.AddBranchToCache('*', ROOT.kTRUE)
         self.tree.StopCacheLearningPhase()
 
-        #ps = None
-        #if self.monitorPerformance:
-        #    ps = ROOT.TTreePerfStats("ioperf", self.tree)
-
         # loop over all events and write to output branches
         for event in self:
             for outputTree in self.outputTrees:
-                if self.evaluate(outputTree['hash']):
+
+                # evaluate all cuts of the sequence and abort early if one is not satisfied
+                passedCut = True
+                for cutFormulaName in outputTree['cutSequence']:
+                    passedCut = passedCut and self.evaluate(cutFormulaName)
+                    if not passedCut:
+                        break
+                if passedCut:
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
-        print('INFO: end of processing')
+        print('INFO: end of processing. time ', time.ctime())
 
         # write files
         for outputTree in self.outputTrees:
             outputTree['file'].Write()
             outputTree['file'].Close()
         print('INFO: files written')
-
-        #if self.monitorPerformance and ps:
-        #    ps.Print()
-        #    ps.SaveAs("tree_perf.root")
-
+        
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
                 outputTree['callbacks']['afterWrite']()
 
+        print('INFO: done. time ', time.ctime())
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:
@@ -331,3 +375,11 @@ class SampleTree(object):
             print("sampleTree.getScale(): sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
+    # make AND of all cuts and return a single cut string. warning: cuts may not contain spaces in e.g. string comparisons
+    @staticmethod
+    def findMinimumCut(cutList):
+        if type(cutList) == list:
+            cuts = cutList
+        else:
+            cuts = [cutList]
+        return '&&'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])

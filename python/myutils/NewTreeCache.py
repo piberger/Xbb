@@ -2,6 +2,7 @@ from __future__ import print_function
 import glob
 from Hash import Hash
 from sampleTree import SampleTree as SampleTree
+from samplesclass import Sample
 import ROOT
 import subprocess
 import os
@@ -51,8 +52,18 @@ import os
 class TreeCache:
 
     def __init__(self, sample, cutList = '1', branches = None, inputFolder = None, tmpFolder = 'tmp/', outputFolder = 'cache/', cachePart=-1, cacheParts=-1, splitFiles=-1, debug=False):
-        self.sample = sample
-        self.minCut = self.findMinimumCut(cutList)
+        if isinstance(sample, Sample):
+            # sample passed as Sample object
+            # count number of chunks the cached data is split into
+            splitFiles = sample.mergeCachingSize 
+            cacheParts = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFiles=splitFiles).getNumberOfParts()
+            self.sample = sample.name
+            print ("INFO: use sample=", sample.name, " #parts = ", cacheParts)
+        else:
+            # sample passed as string
+            self.sample = sample
+        self.cutList = cutList
+        self.minCut = SampleTree.findMinimumCut(self.cutList)
         self.inputFolder = inputFolder
         self.tmpFolder = tmpFolder
         self.outputFolder = outputFolder
@@ -61,6 +72,7 @@ class TreeCache:
         self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branches, splitFiles=splitFiles, debug=False).get()
         self.cachePart = cachePart
         self.cacheParts = cacheParts if cacheParts > 1 else 1
+        self.splitFiles = splitFiles
         self.identification = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=self.minCut, parts=self.cacheParts)
         self.debug = debug
         self.sampleTree = None
@@ -68,13 +80,7 @@ class TreeCache:
         self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
         self.tmpFiles = []
 
-    # minimum common cut, sorted and cleaned. warning: may not contain spaces in e.g. string comparisons
-    def findMinimumCut(self, cutList):
-        if type(cutList) == list:
-            cuts = cutList
-        else:
-            cuts = [cutList]
-        return '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(cuts)])
+        self.createFolders()
 
     # file, where skimmed tree is written to
     def getTmpFileName(self):
@@ -96,20 +102,32 @@ class TreeCache:
 
     # check existence of files with skimmed trees
     def findCachedFileNames(self):
-        cachedFilesMask = self.outputFileNameFormat.format(
+        cachedFilesMaskRaw = self.outputFileNameFormat.format(
             outputFolder = self.outputFolder,
             hash = self.hash,
             part = '*',
             parts = '*'
         )
+        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
         if self.debug:
-            print ('\x1b[32mDEBUG: found files:')
+            print ('DEBUG: search files:', cachedFilesMask)
+            print ('\x1b[32mDEBUG: files:')
             for fileName in self.cachedFileNames:
                 print (' > ', fileName)
             if len(self.cachedFileNames) < 1:
                 print ('none!')
-            print ('\x1b[0m')
+            print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
+
+    def partIsCached(self):
+        cachedFilesMaskRaw = self.outputFileNameFormat.format(
+            outputFolder = self.outputFolder,
+            hash = self.hash,
+            part = self.cachePart,
+            parts = '*'
+        )
+        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
+        return (len(glob.glob(cachedFilesMask))>0)
 
     # isCached == all files containing the skimmed tree found!
     def isCached(self):
@@ -157,7 +175,7 @@ class TreeCache:
         if self.sampleTree:
             outputFileName = self.getTmpFileName()
             callbacks = {'afterWrite': self.moveFilesToFinalLocation}
-            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.minCut, hash=self.hash, branches=self.branches, callbacks=callbacks)
+            self.sampleTree.addOutputTree(outputFileName=outputFileName, cut=self.cutList, hash=self.hash, branches=self.branches, callbacks=callbacks)
             self.tmpFiles.append(outputFileName)
             if self.debug:
                 print ('\x1b[32mDEBUG: output file for ', self.identification, ' is ', outputFileName, '\x1b[0m')
@@ -194,22 +212,41 @@ class TreeCache:
         for fileName in self.cachedFileNames:
             self.deleteFile(fileName)
 
+    # create folders
+    def createFolders(self):
+        
+        tmpfolderLocal = SampleTree.getLocalFileName(self.tmpFolder)
+        if not os.path.isdir(tmpfolderLocal):
+            try:
+                xrootdFileName = SampleTree.getXrootdFileName(self.tmpFolder)
+                if '://' not in xrootdFileName:
+                    command = 'mkdir %s' % (xrootdFileName)
+                else:
+                    command = 'gfal-mkdir %s' % (xrootdFileName)
+                returnCode = subprocess.call([command], shell=True)
+                if self.debug:
+                    print(command, ' => ', returnCode)
+            except:
+                pass
+        outputFolderLocal = SampleTree.getLocalFileName(self.outputFolder)
+
+        if not os.path.isdir(outputFolderLocal):
+            try:
+                xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
+                if '://' not in xrootdFileName:
+                    command = 'mkdir %s' % (xrootdFileName)
+                else:
+                    command = 'gfal-mkdir %s' % (xrootdFileName)
+
+                returnCode = subprocess.call([command], shell=True)
+                if self.debug:
+                    print(command, ' => ', returnCode)
+            except Exception as e:
+                print ('Exception during mkdir:',e)
+
     # move files from temporary to final location
     def moveFilesToFinalLocation(self):
         success = True
-
-        try:
-            xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
-            if '://' not in xrootdFileName:
-                command = 'mkdir %s' % (xrootdFileName)
-            else:
-                command = 'gfal-mkdir %s' % (xrootdFileName)
-
-            returnCode = subprocess.call([command], shell=True)
-            if self.debug:
-                print(command, ' => ', returnCode)
-        except Exception as e:
-            print ('Exception during mkdir:',e)
 
         for tmpFileName in self.tmpFiles:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])

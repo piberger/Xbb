@@ -83,6 +83,9 @@ for addTreeFcn, samples in [
             [factory.AddSignalTree, samples['SIG']]
         ]:
     for sample in samples:
+        print '*'*80
+        print sample
+        print '*'*80
         for additionalCut in [TrainCut, EvalCut]:
             # cuts
             sampleCuts = [sample.subcut]
@@ -101,8 +104,12 @@ for addTreeFcn, samples in [
                     debug=True
                 )
             sampleTree = tc.getTree()
-            treeScale = sampleTree.getScale(sample) * globalRescale
-            addTreeFcn(sampleTree.tree, treeScale, ROOT.TMVA.Types.kTraining if additionalCut == TrainCut else ROOT.TMVA.Types.kTesting)
+            if sampleTree:
+                treeScale = sampleTree.getScale(sample) * globalRescale
+                addTreeFcn(sampleTree.tree, treeScale, ROOT.TMVA.Types.kTraining if additionalCut == TrainCut else ROOT.TMVA.Types.kTesting)
+            else:
+                print "TREE NOT FOUND:", sample.name, " -> not cached??"
+                exit(0)
 
 for var in MVA_Vars['Nominal']:
     factory.AddVariable(var, 'D')
