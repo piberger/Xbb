@@ -1151,7 +1151,8 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
             samples = info.get_samples(signals+backgrounds)
         elif opts.task == 'mergesyscaching':
             print 'region is', region
-            signals = eval('['+config.get('dc:%s'%region,'signal')+']')
+            #signals = eval('['+config.get('dc:%s'%region,'signal')+']')
+            signals = eval(config.get('dc:%s'%region,'signal'))
             #print 'signals are', signals
             backgrounds = eval(config.get('dc:%s'%region,'background'))
             #print 'background are', backgrounds
