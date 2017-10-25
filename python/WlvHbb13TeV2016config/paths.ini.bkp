@@ -7,7 +7,7 @@ List = paths.ini general.ini cuts.ini training.ini datacards.ini plots.ini lhe_w
 
 # "PSI" or "pisa"
 whereToLaunch = PSI
-channel = Zmm
+channel = Wlv
 ;channel = Znn
 TreeCopierPSI = True
 files_per_job = 50
@@ -25,21 +25,21 @@ scratch = /scratch/<!Configuration|user!>/VHbb/
 Wdir= /mnt/t3nfs01/data01/shome/<!Configuration|user!>/VHbb/CMSSW_7_4_3/src
 
 samplepath = <!Directories|plottingSamples!>
-samplefiles = /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/StephanWlvHbb13TeV2016config/VHbb_V25_DatanMC
+samplefiles = /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/WlvHbb13TeV2016config/VHbb_V25_DatanMC
 
 ;!! The directory with the code
 vhbbpath= <!Directories|Wdir!>/Xbb
 ;!! specifies the .cfg files with the Samples information
-samplesinfo:  /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/StephanWlvHbb13TeV2016config/samples_nosplit.ini
+samplesinfo:  /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/WlvHbb13TeV2016config/samples_nosplit.ini
 ;!! where you want to store the logfiles from job submissions
-logpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//MCACHING_Wlv/Logs/
+logpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SSYS_Wlv_3/Logs/
 
 ;!! from which samples to plot and where to save the plots
 plottingSamples: <!Directories|PREPout!>
 ;plottingSamples: <!Directories|SYSout!>
 ;plottingSamples: <!Directories|MVAout!>
 
-plotpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//MCACHING_Wlv/Plots/
+plotpath: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SSYS_Wlv_3/Plots/
 
 ;basedir for tagged folder structure
 tagDir: <!Directories|vhbbpath!>/python/logs_v25_Wlv/
@@ -51,7 +51,7 @@ tmpSamples =   root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/us
 #!! from which samples to make the DCs and where to save the DCs
 dcSamples: <!Directories|MVAout!>/
 
-limits: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//MCACHING_Wlv/Limits/
+limits: /mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25_Wlv//SSYS_Wlv_3/Limits/
 
 t3userfolder = root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>
 
@@ -60,8 +60,12 @@ PREPin:
 PREPout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/PREP_Wlv
 
 #!! On which samples to apply the regression and write the sys and where to write the resulting trees:
-SYSin:  DUMMY
-SYSout: DUMMY
+#SYSin: <!Directories|PREPout!>/
+#SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/SYS_Wlv
+#SYSin:  root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/SYS_Wlv
+#SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/SYS_Wlv_2
+SYSin:  root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/SYS_Wlv_2
+SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/AllChannels/SYS_Wlv_3
 
 #!! On which samples to evaluate the MVA on and where to write the resulting trees:
 MVAin: DUMMY
