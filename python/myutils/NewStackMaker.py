@@ -301,7 +301,7 @@ class NewStackMaker:
         for histogramGroup in histogramGroups:
             histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group'] == histogramGroup]
             groupedHistograms[histogramGroup] = NewStackMaker.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
-        
+
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
         colorDict = eval(self.config.get('Plot_general', 'colorDict'))
@@ -311,7 +311,7 @@ class NewStackMaker:
                     groupedHistograms[groupName].SetFillColor(colorDict[groupName])
                 if groupedHistograms[groupName]:
                     allStack.Add(groupedHistograms[groupName])
-        
+
         # draw stack
         allStack.Draw("hist")
         if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
@@ -339,25 +339,25 @@ class NewStackMaker:
         allStack.SetMaximum(Ymax)
         allStack.GetXaxis().SetLabelOffset(999)
         allStack.GetXaxis().SetLabelSize(0)
-        
+
         # draw DATA
         if dataGroupName in groupedHistograms:
             drawOption = 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
             groupedHistograms[dataGroupName].Draw(drawOption)
-        
+
         # draw ratio plot
         dataHistogram = groupedHistograms[dataGroupName]
         mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group']!=dataGroupName], outputName='summedMcHistograms') 
         self.drawRatioPlot(dataHistogram, mcHistogram)
-        
+
         self.pads['oben'].cd()
         theErrorGraph = ROOT.TGraphErrors(mcHistogram)
         theErrorGraph.SetFillColor(ROOT.kGray+3)
         theErrorGraph.SetFillStyle(3013)
         theErrorGraph.Draw('SAME2')
-        
+
         # draw legend
         self.drawSampleLegend(groupedHistograms, theErrorGraph)
 

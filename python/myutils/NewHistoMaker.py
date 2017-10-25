@@ -1,12 +1,6 @@
 from __future__ import print_function
-import sys,os
-import ROOT 
-from array import array
-from printcolor import printc
-from BetterConfigParser import BetterConfigParser
-from copy import copy
+import ROOT
 import TdrStyles
-import time
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -61,7 +55,7 @@ class NewHistoMaker:
         else:
             print ("ERROR: initialization of histogram failed!")
             raise Exception("HistoMakerInitializationError")
-        
+
         if 'addOverFlow' in self.histogramOptions and self.histogramOptions['addOverFlow']:
             uFlow = self.histogram.GetBinContent(0)+self.histogram.GetBinContent(1)
             oFlow = self.histogram.GetBinContent(self.histogram.GetNbinsX()+1)+self.histogram.GetBinContent(self.histogram.GetNbinsX())

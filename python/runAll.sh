@@ -271,14 +271,8 @@ elif [ $task = "cachedc" ]; then
 
 elif [ $task = "rundc" ]; then
     runCommand="python ./run_dc.py --regions ${regions}";
-    if [ "$process" ]; then
-        runCommand="${runCommand} --process ${process}"
-    fi
     if [ "$sampleIdentifier" ]; then
         runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
-    fi
-    if [ "$sampleName" ]; then
-        runCommand="${runCommand} --sampleName ${sampleName}"
     fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"

@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, ROOT, warnings
+import os, ROOT
 ROOT.gROOT.SetBatch(True)
-from copy import copy, deepcopy
+from copy import deepcopy
 from sample_parser import ParseInfo
 import json
-import hashlib
 import NewTreeCache as TreeCache
 from sampleTree import SampleTree as SampleTree
-from NewHistoMaker import NewHistoMaker as HistoMaker
 from NewStackMaker import NewStackMaker as StackMaker
 from BranchList import BranchList
 
@@ -51,7 +49,7 @@ class Datacard(object):
             os.stat(self.outpath)
         except:
             os.mkdir(self.outpath)
-        
+
         # parse histogram config:
         self.treevar = config.get('dc:%s'%self.region, 'var')
         print ('treevar is', self.treevar)
@@ -62,7 +60,7 @@ class Datacard(object):
             if self.UseTrainSample:
                 self.name += '_Train'
         print ('again, treevar is', self.treevar)
-        
+
         # set binning
         self.binning = {
                 'nBins': int(config.get('dc:%s'%self.region, 'range').split(',')[0]),
@@ -163,7 +161,7 @@ class Datacard(object):
         else:
             self.ptRegion = self.ptRegion[0]
         print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
-       
+
         for outputName, removeSystematics in self.sysOptions['removeWeightSystematics'].iteritems():
             if outputName in self.ROOToutname:
                 self.sysOptions['weightF_sys'] = [x for x in self.sysOptions['weightF_sys'] if x not in removeSystematics]
@@ -366,23 +364,16 @@ class Datacard(object):
         return sum([y for x, y in self.samples.iteritems()], []) 
 
     def run(self, useSampleIdentifiers=None):
-   
-        #Calculate lumi
-        lumi = sum([sample.lumi for sample in self.samples['DATA']])/len(self.samples['DATA']) if len(self.samples['DATA']) > 0 else 0  
-        
+
         # select samples to use
-        allSamples = self.getAllSamples() # sum([samples for sampleType, samples in self.samples.iteritems()], [])
-        #if useDatacardProcess:
-        #    allSamples = [sample for sample in allSamples if self.sysOptions['Group'][sample.name] != 'DATA' and self.sysOptions['Dict'][self.sysOptions['Group'][sample.name]] == useDatacardProcess] 
+        allSamples = self.getAllSamples()
         if useSampleIdentifiers:
             allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers] 
-        #if useSampleNames:
-        #    allSamples = [sample for sample in allSamples if sample.name in useSampleNames] 
-        
+
         usedSamplesString = ''
         if useSampleIdentifiers:
             usedSamplesString = '_' + ('_'.join(sorted(list(set([sample.identifier for sample in allSamples])))))
-        
+
         if len(allSamples) < 1:
             print ("INFO: no samples, nothing to do.")
             return None
@@ -394,7 +385,7 @@ class Datacard(object):
         # read cached sample trees, for every sample there is one SampleTree, which contains the events needed for ALL the systematics
         # use this sample tree with appropriate cuts for each systematics to fill the histograms
         for i, sample in enumerate(allSamples): 
-            
+
             print("SAMPLE NUMBER ", i, " OF ", len(allSamples))
             # get cuts that were used in caching for this sample
             systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
@@ -419,7 +410,7 @@ class Datacard(object):
                     systematics['cutWithBlinding'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
                 else:
                     systematics['cutWithBlinding'] = systematics['cut']
-                
+
                 # prepare histograms
                 histogramName = sample.name + '_' + systematics['systematicsName'] + '_c%d'%histogramCounter
                 histogramCounter += 1
@@ -458,7 +449,7 @@ class Datacard(object):
                         weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
                         treeVar = sampleTree.evaluate(systematics['var'])
                         self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor)
-        
+
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
 
     def load(self, histogramFileNames):
@@ -470,7 +461,7 @@ class Datacard(object):
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
             print ("SUBS:", [sample.name for sample in subsamples])
-                
+
             rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
             rootFile = ROOT.TFile.Open(rootFileName, 'read')
             if not rootFile or rootFile.IsZombie():
@@ -511,7 +502,7 @@ class Datacard(object):
         return '{process}{systematicsName}'.format(process=process, systematicsName=systematicsName)
 
     def writeDatacards(self, samples=None, dcName=''):
-        
+
         if not self.histograms:
             print("\x1b[31mERROR: no histograms found, datacard histograms must be either created with run() or loaded with load()\x1b[0m")
             raise Exception("DcHistogramsMissing")
@@ -527,19 +518,19 @@ class Datacard(object):
             os.makedirs(datacardFolder)
         except:
             pass
-        
+
         outfile = ROOT.TFile(histogramFileName, 'RECREATE')
         if not outfile or outfile.IsZombie():
             print("\x1b[31mERROR: unable to open output file", histogramFileName,"\x1b[0m")
             raise Exception("FileIOError")
         rootFileSubdir = outfile.mkdir(self.Datacardbin, self.Datacardbin)
-        
+
         # sample groups for datacard, all samples of each group will be added in a single column
         sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in samples]))
-            
+
         for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')): 
             systematics['histograms'] = {}
-        
+
         for sampleGroup in sampleGroups:
             # adjust name for DC convention
             for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')): 
@@ -556,10 +547,10 @@ class Datacard(object):
                     systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
         outfile.Write()
-        
-        #----------------------------------------------
+
+        # ----------------------------------------------
         # write TEXT file
-        #----------------------------------------------
+        # ----------------------------------------------
         txtFileName = self.getDatacardBaseName(dcName) + '.txt'
         print("TEXTFILE:", txtFileName)
 
@@ -593,18 +584,18 @@ class Datacard(object):
                     raise Exception("DcDictError")
 
             numProcesses = len(sampleGroups)
-            
+
             # MC datacard processes
             if len([s for s in samples if s.type != 'DATA']) < 1:
                 dcProcesses = []
             else:
                 dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
-            
+
             dcProcessSampleGroup = {v: k for k,v in self.sysOptions['Dict'].iteritems()}
-            
+
             # order datacard processes as given in config
             dcProcesses.sort(key=lambda x: self.sysOptions['setup'].index(dcProcessSampleGroup[x]) if x in dcProcessSampleGroup and dcProcessSampleGroup[x] in self.sysOptions['setup'] else 99999)
-            
+
             # header
             dcRows = []
             dcRows.append(['bin',''] + [self.Datacardbin for x in range(numProcesses)])
@@ -632,7 +623,7 @@ class Datacard(object):
                     #else:
                     #    f.write('\t%s'%what[c])
                 dcRows.append(dcRow)
-            
+
             # UEPS systematics
             for systematics in self.systematicsList:
                 if systematics['sysType'] == 'weight':
@@ -691,7 +682,7 @@ class Datacard(object):
                 dictProcs = eval(self.config.get('Datacard', rateParam))
                 for dcProcess in dictProcs.keys():
                     dcRows.append([rateParam, 'rateParam', self.Datacardbin, dcProcess, str(dictProcs[dcProcess]), '[{minR},{maxR}]'.format(minR=rateParamRange[0], maxR=rateParamRange[1])]) 
-            
+
             # write DC txt file 
             nColumns = max([len(dcRow) for dcRow in dcRows])
             nRows = len(dcRows)
@@ -714,7 +705,7 @@ class Datacard(object):
     @staticmethod
     def getRegions(config):
         return [x.strip() for x in (config.get('LimitGeneral', 'List')).split(',')]
-    
+
     @staticmethod
     def getSamples(config, regions=None):
         # default is all regions

@@ -3,12 +3,11 @@ from __future__ import print_function
 import ROOT
 import os
 import sys
-import math
 import time
 import glob
 from BranchList import BranchList
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # sample tree class
 # 
 # reads many .root files and chain them as a TChain and adds all the TH1D count
@@ -26,7 +25,7 @@ from BranchList import BranchList
 # for event in sampleTree: 
 #     print 'pt cut:', sampleTree.evaluate('ptCut')
 #     print 'pt:', event.pt
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class SampleTree(object):
     
     # TODO: move to framework-wide config file
@@ -227,7 +226,6 @@ class SampleTree(object):
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
 
-            #self.tree.GetReadCache(self.tree.GetCurrentFile(), True).SetEnablePrefetching()
             # update ETA estimates
             if treeNum == 0:
                 self.timeStart = time.time()
@@ -255,7 +253,7 @@ class SampleTree(object):
     def __iter__(self):
         self.treeIterator = self.tree.__iter__()
         return self
-    
+
     # warpper to evaluate a formula, which has been added to the formula dictionary 
     # vector valued formulas are not supported
     def evaluate(self, formulaName):
@@ -268,7 +266,7 @@ class SampleTree(object):
             existingFormulas = [x for x,y in self.formulas.iteritems()]
             print ("existing formulas are: ", existingFormulas)
             raise Exception("SampleTree::evaluate: formula '%s' not found!"%formulaName)
-    
+
     # return string of ETA in minutes
     def getETA(self):
         return '%1.1f'%(self.timeETA/60.0) if self.timeETA > 0 else '?'
@@ -329,7 +327,7 @@ class SampleTree(object):
                 self.addCutDictRecursive(subDict)
         else:
             raise Exception("BadTreeTypeCutDict")
-    
+
     def evaluateCutDictRecursive(self, cutDict):
         if type(cutDict) == str:
             if self.formulaResults[cutDict] is None:
@@ -349,7 +347,7 @@ class SampleTree(object):
     # add output tree to be written during the process() function 
     #------------------------------------------------------------------------------
     def addOutputTree(self, outputFileName, cut, hash, branches=None, callbacks=None, cutSequenceMode='AND', name=''):
-        
+
         # write events which satisfy either ONE of the conditions given in the list or ALL
         if cutSequenceMode not in ['AND', 'OR', 'TREE']:
             raise Exception("InvalidCutSequenceMode")
@@ -371,7 +369,7 @@ class SampleTree(object):
         if not outputTree['file'] or outputTree['file'].IsZombie():
             print ("\x1b[31mERROR: output file broken\x1b[0m")
             raise Exception("OutputFileBroken")
-        
+
         # add CUT formulas
         if cutSequenceMode == 'TREE' and type(cut) == dict:
             outputTree['cutSequence'] = cut
@@ -387,7 +385,7 @@ class SampleTree(object):
                 if formulaName not in self.formulas:
                     self.addFormula(formulaName, cutString)
                 outputTree['cutSequence'].append(formulaName)
-        
+
         # set output file
         #outputTree['tree'].SetDirectory(outputTree['file'])
 

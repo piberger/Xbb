@@ -1,22 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, sys, ROOT, warnings, pickle
+import sys, ROOT, warnings
 ROOT.gROOT.SetBatch(True)
-from array import array
-from math import sqrt
-from copy import copy, deepcopy
 #suppres the EvalInstace conversion warning bug
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
 from optparse import OptionParser
-from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebinner, HistoMaker
-import re
-import json
-from myutils import NewTreeCache as TreeCache
-from myutils.sampleTree import SampleTree as SampleTree
 from myutils.Datacard import Datacard
-from myutils.BranchList import BranchList
-from myutils.FileList import FileList
 
+# ------------------------------------------------------------------------------
+# script to produce datacards from cached tree
+# recommended to run it for one sample identifier per job
+# ------------------------------------------------------------------------------
 class RunDatacards(object):
 
     def __init__(self, config, region, useSampleIdentifiers=None, verbose=False, forceRedo=True):
@@ -52,7 +46,7 @@ if __name__ == "__main__":
             opts.config = "config"
 
     # Import after configure to get help message
-    from myutils import BetterConfigParser, mvainfo, ParseInfo
+    from myutils import BetterConfigParser
 
     # load config
     config = BetterConfigParser()
@@ -60,8 +54,8 @@ if __name__ == "__main__":
 
     # if no region is given in argument, run it for all of them
     regionsListString = opts.regions if len(opts.regions.strip())>0 else config.get('LimitGeneral', 'List')
-    useSampleIdentifiers = opts.sampleIdentifier.split(',') if len(opts.sampleIdentifier) > 0 else None
     regions = [x.strip() for x in regionsListString.split(',') if len(x.strip()) > 0]
+    useSampleIdentifiers = opts.sampleIdentifier.split(',') if len(opts.sampleIdentifier) > 0 else None
     for region in regions:
         runDC = RunDatacards(config=config, region=region, useSampleIdentifiers=useSampleIdentifiers)
         runDC.run()

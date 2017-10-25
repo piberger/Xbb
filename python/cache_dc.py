@@ -12,6 +12,9 @@ from myutils.Datacard import Datacard
 from myutils.BranchList import BranchList
 from myutils.FileList import FileList
 
+# ------------------------------------------------------------------------------
+# script to produce cached tree for datacards
+# ------------------------------------------------------------------------------
 class CacheDatacards(object):
 
     def __init__(self, config, regions, sampleToCache, splitFilesChunks=1, chunkNumber=1, splitFilesChunkSize=-1, forceRedo=False, fileList=None, verbose=False):
