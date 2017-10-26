@@ -372,7 +372,7 @@ class Datacard(object):
 
         usedSamplesString = ''
         if useSampleIdentifiers:
-            usedSamplesString = '_' + ('_'.join(sorted(list(set([sample.identifier for sample in allSamples])))))
+            usedSamplesString = ('_'.join(sorted(list(set([sample.identifier for sample in allSamples])))))
 
         if len(allSamples) < 1:
             print ("INFO: no samples, nothing to do.")
@@ -398,7 +398,12 @@ class Datacard(object):
                     inputFolder=self.path,
                     outputFolder=self.cachedPath,
                     debug=True
-                )
+                )            
+
+            if not tc.isCached():
+                print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
+                raise Exception("NotCached")
+
             sampleTree = tc.getTree()
 
             self.histograms[sample.name] = {}
@@ -452,7 +457,7 @@ class Datacard(object):
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
 
-    def load(self, histogramFileNames):
+    def load(self):
 
         self.histograms = {}
         allSamples = self.getAllSamples()
@@ -460,7 +465,6 @@ class Datacard(object):
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
-            print ("SUBS:", [sample.name for sample in subsamples])
 
             rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
             rootFile = ROOT.TFile.Open(rootFileName, 'read')

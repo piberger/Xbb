@@ -47,15 +47,13 @@ class MergeDatacards(object):
     def prepare(self):
         samples = Datacard.getSamples(config=self.config, regions=[self.region])
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
-
-        self.textFilePaths = [self.getTextFileName(sampleIdentifier) for sampleIdentifier in sampleIdentifiers]
         self.histogramFilePaths = [self.getHistogramFileName(sampleIdentifier) for sampleIdentifier in sampleIdentifiers]
-        
-        filesComplete = self.checkFiles(fileNames=self.textFilePaths) and self.checkFiles(fileNames=self.histogramFilePaths)
+        filesComplete = self.checkFiles(fileNames=self.histogramFilePaths)
         return self if filesComplete else None
     
+    # load all datacard histograms from rundc step and write output histograms+txt files
     def run(self):
-        self.dcMaker.load(self.histogramFilePaths)
+        self.dcMaker.load()
         self.dcMaker.writeDatacards()
 
 if __name__ == "__main__":
