@@ -1,0 +1,21 @@
+------------------------------------------------------------------------------
+prepare unit tests
+------------------------------------------------------------------------------
+
+./test_init.py          create some fake tree data with 10 files and many
+                        useless branches which will be stripped
+
+
+------------------------------------------------------------------------------
+run unit tests
+------------------------------------------------------------------------------
+
+./test_SampleTree.py    run some standard tests with good and bad input data
+
+
+------------------------------------------------------------------------------
+clean up
+------------------------------------------------------------------------------
+
+./test_clean.py         clean up all the files which have been created,
+                        including test trees made by test_init.py

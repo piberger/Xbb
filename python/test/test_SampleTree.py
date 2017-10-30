@@ -75,7 +75,6 @@ class TestSampleTreeMethods(unittest.TestCase):
         with self.assertRaises(Exception) as e:
             sampleTree.process()
 
-
     # test if an exception is thrown, if one gives bad arguments as cut
     def test_BadCut1(self):
         sampleTree = self.getTree()
@@ -141,16 +140,16 @@ class TestSampleTreeMethods(unittest.TestCase):
                                'a>c']
                        },
                        'nJet==6&&Sum$(Jet)>600',
-                       'c>-1',
+                       'c>1',
                        {
                            'OR': [
                                'Sum$(Jet)>1000',
                                'a>0.8',
-                               'b>30',
+                               'b>80',
                                {
                                    'AND': [
                                        'a>0.5',
-                                       'b>0.5',
+                                       'b>30',
                                        'c>0.5',
                                    ]
                                }
