@@ -38,6 +38,8 @@ parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", d
                       help="Override run_locally option to run in batch")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False,
                               help="Interactive mode")
+parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
+                      help="Force overwriting of files if they already exist")
 
 (opts, args) = parser.parse_args(sys.argv)
 #print 'opts.mass is', opts.mass
@@ -180,6 +182,7 @@ def dump_config(configs,output_file):
             outf.write(f.read())
         except: print '@WARNING: Config' + i + ' not found. It will not be used.'
 
+# TODO: binary files compiled by this function do not work (30.10.2017) 
 def compile_macro(config,macro):
     """
     Creates the library from a macro using CINT compiling it in scratch to avoid
@@ -300,9 +303,11 @@ def submit(job,repDict,redirect_to_null=False):
     # run script
     runScript = 'runAll.sh %(job)s %(en)s '%(repDict)
     runScript += opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+
+    # add named arguments to run script
     if 'arguments' in repDict:
         for argument, value in repDict['arguments'].iteritems():
-            runScript += ' --{argument}={value} '.format(argument=argument, value=value)
+            runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
 
     # submit script
     if run_locally == 'False':
@@ -864,6 +869,7 @@ if opts.task.startswith('cacheplot'):
             compressedFileList = FileList.compress(splitFilesChunk)
             jobDict = repDict.copy()
             jobDict.update({
+                    'queue': 'short.q',
                     'arguments':
                         {
                         'regions': ','.join(regions),
@@ -873,6 +879,8 @@ if opts.task.startswith('cacheplot'):
                         'splitFilesChunkSize': splitFilesChunkSize,
                         }
                     })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
                 jobDict['arguments']['fileList'] = compressedFileList
