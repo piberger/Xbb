@@ -168,8 +168,10 @@ print "I shall add the s/(s+b) weight, milord !"
 
 namelist=opts.names.split(',')
 
+print 'DEBUG0'
 #load info
 info = ParseInfo(samplesinfo,pathIN)
+print 'DEBUG1'
 
 if addSBweight:
     # Adding all the bin, dc and branch information in a dictionnary. Allows to fill multiple branches in one single loop. Keys of the histo are dc/mlfit_BIN (they are identical for Zll).
@@ -401,34 +403,15 @@ def getCorrFactor(V_pt, sample):
     CorrFactor = [1, 1, 1]
     if sample == 'TT':
         return [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
-        #if variation == 'nom':
-        #    return (1.064 - 0.000380*V_pt)
-        #elif variation == 'up':
-        #    return (1.064 - 0.000469*V_pt)
-        #elif variation == 'down':
-        #    return (1.064 - 0.000291*V_pt)
     elif sample == 'WLF':
         return [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
-        #if variation == 'nom':
-        #    return (1.097 - 0.000575*V_pt)
-        #elif variation == 'up':
-        #    return (1.097 - 0.000621*V_pt)
-        #elif variation == 'down':
-        #    return (1.097 - 0.000529*V_pt)
-    elif sample == 'WHF' or sample == 'WHF':
+    elif sample == 'WHF' or sample == 'ST':
         return [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
-        #if variation == 'nom':
-        #    return (1.259 - 0.00167*V_pt)
-        #elif variation == 'up':
-        #    return (1.259 - 0.00180*V_pt)
-        #elif variation == 'down':
-        #    return (1.259 - 0.00154*V_pt)
     else:
         return CorrFactor
 
 def signal_ewk(GenVbosons_pt, sample, variation):
     SF = 1.
-	#print 'Vpt:', GenVbosons_pt
     EWK = None
     print 'sample is', sample
     ###
@@ -671,7 +654,9 @@ if channel == "Znn":
     NewUnderQCD = filt.Get("NewUnderQCD")
     NewOverQCD  = filt.Get("NewOverQCD")
 
+print 'DEBUG3'
 for job in info:
+    print 'DEBUG4'
     if not job.name in namelist and len([x for x in namelist if x==job.identifier])==0:
         #print 'job.name',job.name,'and job.identifier',job.identifier,'not in namelist',namelist
         continue
@@ -1521,7 +1506,8 @@ for job in info:
                     print strftime("%Y-%m-%d %H:%M:%S", gmtime()),' - processing event',str(entry)+'/'+str(nEntries), '(cout every',j_out,'events)'
                     #sys.stdout.flush()
 
-                if entry > 100: break
+                #if entry > 10: break
+                #print 'entry is', entry
                 tree.GetEntry(entry)
 
 
@@ -2117,7 +2103,8 @@ for job in info:
                             else:
                                 weight.append(lepCorr.get_1D(tree.vLeptons_new_eta[0]))
 
-                            if tree.Vtype_new == 0:
+                            if tree.Vtype_new == 2:
+                                #Not filling the branches yet because need to separate run BCDEF and GH
                                 #IDISO
                                 if j.find('muon_ID_BCDEF') != -1:
                                     computeSF_SingleLep(muID_BCDEF)
@@ -2137,7 +2124,8 @@ for job in info:
                                     computeSF_SingleLep(muTrigg_BCDEF)
                                 elif j.find('theJSONfile_Period4') != -1:
                                     computeSF_SingleLep(muTrigg_GH)
-                            elif tree.Vtype_new == 1:
+                            elif tree.Vtype_new == 3:
+                                #Here the branches are filled directly
                                 #IDISO
                                 if j.find('EIDISO_WH_out') != -1:
                                     computeSF_SingleLep(weight_SF_TightIDnISO)
@@ -2149,7 +2137,8 @@ for job in info:
                                     computeSF_SingleLep(eTrigSFWeight_singleEle80)
 
                         #Fill muon triggers
-                        if tree.Vtype_new == 0:
+                        if tree.Vtype_new == 2:
+                            #Fill branches for muon
                             #Tracker
                             getLumiAvrgSF(muTRK_BCDEF,(20.1/36.4),muTRK_GH,(16.3/36.4),weight_SF_TRK)
                             #ID and ISO
@@ -2187,30 +2176,35 @@ for job in info:
                     continue
 
                 if addFitCorr:
-                    jobName = str(job.FullName)
-                    #Corrections only used in Wlv
-                    formWHF.GetNdata()
-                    formWHF.EvalInstance()
+                    if job.type != 'DATA':
+                        #jobName = str(job.FullName)
+                        jobFullName = str(job.FullName)
+                        #Corrections only used in Wlv
+                        formWHF.GetNdata()
+                        isWHF = formWHF.EvalInstance()
+                        print 'isWHF is', isWHF
 
-                    ##
-                    #Add TT,WHF and WLF corrections from data fit
-                    ##
-                    corr_sample = None
-                    if channel == 'Wlv':
-                        if 'TT' in jobName:
-                            corr_sample = 'TT'
-                        elif ('WJetsToLNu' in jobName or 'WBJetsToLNu' in jobName):
-                            if formWHF:
-                                corr_sample = 'WHF'
-                            else:
-                                corr_sample = 'WLF'
-                        elif 'ST' in jobName:
+
+                        ##
+                        #Add TT,WHF and WLF corrections from data fit
+                        ##
+                        corr_sample = None
+                        if channel == 'Wlv':
+                            if 'TT' in jobFullName:
+                                corr_sample = 'TT'
+                            elif ('WJets' in jobFullName):
+                                if isWHF:
+                                    corr_sample = 'WHF'
+                                else:
+                                    corr_sample = 'WLF'
+                            elif 'ST' in jobFullName:
                                 corr_sample = 'ST'
 
-                    print "corr_sample is", corr_sample
-                    if corr_sample:
-                        FitCorr_ = getCorrFactor(tree.V_new_pt, corr_sample)
-                        FitCorr[0], FitCorr[1], FitCorr[2] = FitCorr_[0], FitCorr_[1], FitCorr_[2]
+                        print "corr_sample is", corr_sample
+                        if corr_sample:
+                            FitCorr_ = getCorrFactor(tree.V_new_pt, corr_sample)
+                            print 'FitCorr_ is',FitCorr_
+                            FitCorr[0], FitCorr[1], FitCorr[2] = FitCorr_[0], FitCorr_[1], FitCorr_[2]
 
                 if addEWK:
                     if job.type != 'DATA':
@@ -2218,14 +2212,21 @@ for job in info:
                         #print 'jobName is',  jobName
                         #print 'job.name is', job.name
                         jobName = str(job.name)
+                        jobFullName = str(job.FullName)
+
+                        #Note:
+                        #jobName is the subsample name
+                        #jobFullName is the "sampleName" in samples_nosplit
 
                         ###
                         #Add EWK weights to relevant DY and W+jet sampls
                         ###
 
                         applyEWK = False
-                        if ('DY' in jobName and not '10to50' in jobName) or ('WJetsToLNu' in jobName or 'WBJetsToLNu' in jobName):
+                        if ('DY' in jobFullName and not '10to50' in jobFullName) or ('WJet' in  jobFullName):
                             applyEWK = True
+                        print 'jobFullName is', jobFullName
+                        print 'applyEWK is', applyEWK
 
                         EWKw[0] = 1
                         EWKw[1] = 1
@@ -2233,7 +2234,9 @@ for job in info:
 
                         #if isDY[0] == 1 or isDY[0] == 2:
                         if applyEWK:
+                            print 'DEBUG EWK'
                             if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
+                                print 'DEBUG EWK AGAIN'
                                 EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
                                 EWKw[1]= EWKw[0]
                                 EWKw[2]= EWKw[0]
@@ -2243,20 +2246,19 @@ for job in info:
                         ###
 
                         sys_sample = None
-                        if 'ZH_HToBB_ZToLL' in jobName and not 'ggZH_HToBB_ZToLL' in jobName:
+                        if 'ZH_HToBB_ZToLL' in jobFullName and not 'ggZH_HToBB_ZToLL' in jobFullName:
                             sys_sample = 'Zll'
-                        elif 'WminusH' in jobName:
+                        elif 'WminusH' in jobFullName:
                             sys_sample = 'Wlvm'
-                        elif 'WplusH' in jobName:
+                        elif 'WplusH' in jobFullName:
                             sys_sample = 'Wlvp'
-                        elif 'ZH_HToBB_ZToNuNu' in jobName and not 'ggZH_HToBB_ZToNuNu' in jobName:
+                        elif 'ZH_HToBB_ZToNuNu' in jobFullName and not 'ggZH_HToBB_ZToNuNu' in jobFullName:
                             sys_sample = 'Zvv'
 
                         print 'jobName is',  jobName
                         print 'sys_sample is', sys_sample
                         if tree.nGenVbosons > 0 and sys_sample:
                             print 'sig ewk is', signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
-                            print 'yeah'
                             EWKw[0] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
                             EWKw[1] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'down')
                             EWKw[2] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'up')
@@ -2266,7 +2268,7 @@ for job in info:
                         ###
 
                         applyNLO = False
-                        if applyEWK and not 'amcatnloFXFX' in jobName:
+                        if applyEWK and not 'amc' in jobName:
                             applyNLO = True
 
                         NLOw[0] = 1
