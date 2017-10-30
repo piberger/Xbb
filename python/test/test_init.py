@@ -10,7 +10,7 @@ print("Create test trees")
 
 def make_tree(fileName, numEvents=10000, offset=0):
 
-    f = ROOT.TFile(fileName , 'recreate')
+    f = ROOT.TFile(fileName, 'recreate')
     t = ROOT.TTree('tree', 'random data tree')
 
     maxn = 10

@@ -53,7 +53,7 @@ class SampleTree(object):
             else:
                 raise Exception("InvalidNumberOfSplitParts")
         else:
-            print("\x1b[31mERROR: wrong chunk number ", self.chunkNumber, " for: %s \x1b[0m" % sampleTextFileName)
+            print("\x1b[31mERROR: wrong chunk number ", self.chunkNumber, "\x1b[0m")
             raise Exception("InvalidChunkNumber")
         if self.verbose:
             print ("INFO: reading part ", self.chunkNumber, " of ", self.numParts)
@@ -89,12 +89,12 @@ class SampleTree(object):
                 # check root file existence
                 if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
                     rootFileName = SampleTree.getXrootdFileName(rootFileName)
-                    input = ROOT.TFile.Open(rootFileName,'read')
+                    input = ROOT.TFile.Open(rootFileName, 'read')
 
                     # check file validity
                     if input and not input.IsZombie() and input.GetNkeys() > 0 and not input.TestBit(ROOT.TFile.kRecovered):
 
-                        # add count histograms, since they are not in the tchain
+                        # add count histograms, since they are not in the TChain
                         for key in input.GetListOfKeys():
                             obj = key.ReadObj()
                             if obj.GetName() == self.treeName:
@@ -120,7 +120,7 @@ class SampleTree(object):
 
                         # check for errors in chaining the file
                         if statusCode != 1:
-                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
+                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
                             raise Exception("TChain method Add failure")
                         elif not self.tree:
                             print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
@@ -133,7 +133,7 @@ class SampleTree(object):
                     else:
                         print ('ERROR: file is damaged: %s'%rootFileName)
                         if input:
-                            print ('DEBUG: Zombie:', input.IsZombie(), '#keys:', input.GetNkeys(), 'recovered:',input.TestBit(ROOT.TFile.kRecovered))
+                            print ('DEBUG: Zombie:', input.IsZombie(), '#keys:', input.GetNkeys(), 'recovered:', input.TestBit(ROOT.TFile.kRecovered))
                         self.brokenFiles.append(rootFileName)
                 else:
                     print ('ERROR: file is missing: %s'%rootFileName)
@@ -149,9 +149,9 @@ class SampleTree(object):
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # return full list of sample root files 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def getAllSampleFileNames(self): 
         # given argument is list -> this is already the list of root files
         if type(self.samples) == list:
@@ -180,9 +180,9 @@ class SampleTree(object):
                 sampleFileNames = sampleTextFile.readlines()
         return sampleFileNames
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # return lists of sample root files, split into chunks with certain size  
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def getSampleFileNameChunks(self):
         sampleFileNames = self.getAllSampleFileNames()
         if self.splitFilesChunkSize > 0 and len(sampleFileNames) > self.splitFilesChunkSize:
@@ -192,9 +192,9 @@ class SampleTree(object):
         self.numParts = len(sampleFileNamesParts)
         return sampleFileNamesParts
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # return lists of sample root files for a single chunk  
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def getSampleFileNameChunk(self, chunkNumber):
         chunks = self.getSampleFileNameChunks()
         if chunkNumber > 0 and chunkNumber <= len(chunks):
@@ -205,9 +205,9 @@ class SampleTree(object):
     def getNumberOfParts(self):
         return self.numParts
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # add a TTreeFormula connected to the TChain
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def addFormula(self, formulaName, formula):
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
         if self.formulas[formulaName].GetNdim() == 0:
@@ -215,10 +215,10 @@ class SampleTree(object):
             print("\x1b[31mERROR: adding the tree formula failed! Check branches of input tree and loaded namespaces.\x1b[0m")
             raise Exception("SampleTreeAddTTreeFormulaFailed")
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # implement iterator for TChain, with updating TTreeFormula objects on tree
     # switching and show performance statistics during loop
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def next(self):
         self.treeIterator.next()
         self.eventsRead += 1
@@ -254,7 +254,7 @@ class SampleTree(object):
         self.treeIterator = self.tree.__iter__()
         return self
 
-    # warpper to evaluate a formula, which has been added to the formula dictionary 
+    # wrapper to evaluate a formula, which has been added to the formula dictionary
     # vector valued formulas are not supported
     def evaluate(self, formulaName):
         if formulaName in self.formulas:
@@ -274,9 +274,9 @@ class SampleTree(object):
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # get file name WITH redirector
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     @staticmethod
     def getXrootdFileName(rawFileName):
         xrootdFileName = rawFileName.strip()
@@ -291,9 +291,9 @@ class SampleTree(object):
         else:
             return xrootdFileName.strip()
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # get file name WITHOUT redirector
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     @staticmethod
     def getLocalFileName(rawFileName):
         if rawFileName:
@@ -308,11 +308,11 @@ class SampleTree(object):
             print ("\x1b[31mERROR: invalid file name\x1b[0m")
             raise Exception("InvalidFileName")
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # handle 'tree-typed' cuts, passed as dictionary:
     # e.g. cut = {'OR': [{'AND': ["pt>20","eta<3"]}, "data==1"]}
     # short-circuit evaluation is handled by builtins any() and all()
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def addCutDictRecursive(self, cutDict):
         if type(cutDict) == str:
             if cutDict not in self.formulas:
@@ -343,9 +343,9 @@ class SampleTree(object):
         else:
             raise Exception("BadTreeTypeCutDict")
 
-    #------------------------------------------------------------------------------
-    # add output tree to be written during the process() function 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    # add output tree to be written during the process() function
+    # ------------------------------------------------------------------------------
     def addOutputTree(self, outputFileName, cut, hash='', branches=None, callbacks=None, cutSequenceMode='AND', name=''):
 
         # write events which satisfy either ONE of the conditions given in the list or ALL
@@ -395,10 +395,10 @@ class SampleTree(object):
         if self.verbose:
             print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the
     # cuts are fulfilled.
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def process(self):
         if self.verbose:
             print ('OUTPUT TREES:')

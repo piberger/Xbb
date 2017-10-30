@@ -76,5 +76,48 @@ class TestSampleTreeMethods(unittest.TestCase):
             sampleTree.process()
 
 
+    # test if an exception is thrown, if one gives bad arguments as cut
+    def test_BadCut1(self):
+        sampleTree = self.getTree()
+        badCut = 42
+        sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', badCut, '')
+        with self.assertRaises(Exception) as e:
+            sampleTree.process()
+
+    # test if an exception is thrown, if one gives bad arguments as cut
+    def test_BadCut2(self):
+        sampleTree = self.getTree()
+        badCut = {'BLUBB': 'BLA'}
+        sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', badCut, '')
+        with self.assertRaises(Exception) as e:
+            sampleTree.process()
+
+    # test if an exception is thrown, if one gives bad arguments as cut
+    def test_BadCut3(self):
+        sampleTree = self.getTree()
+        badCut = 'nJet===5'
+        sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', badCut, '')
+        with self.assertRaises(Exception) as e:
+            sampleTree.process()
+
+    # test if an exception is thrown, if one gives bad arguments as cut
+    def test_BadCut4(self):
+        sampleTree = self.getTree()
+        goodCut = 'nJet==5'
+        badCutSequenceMode = 'LULZ'
+        with self.assertRaises(Exception) as e:
+            sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', goodCut, cutSequenceMode=badCutSequenceMode)
+
+    # test if an exception is thrown, if one gives bad arguments as cut
+    def test_BadCallback(self):
+        sampleTree = self.getTree()
+        goodCut = 'nJet==5'
+        sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', goodCut,
+                                 callbacks={'beforeLoop': 'aStringIsNotAFunction!'}
+                                 )
+        with self.assertRaises(Exception) as e:
+            sampleTree.process()
+
+
 if __name__ == '__main__':
     unittest.main()
