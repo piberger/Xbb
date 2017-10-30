@@ -370,22 +370,6 @@ class SampleTree(object):
             print ("\x1b[31mERROR: output file broken\x1b[0m")
             raise Exception("OutputFileBroken")
 
-        # add CUT formulas
-        if cutSequenceMode == 'TREE' and type(cut) == dict:
-            outputTree['cutSequence'] = cut
-            # now recursively parse the cut-tree and add all contained cut formulas
-            self.addCutDictRecursive(cut)
-        elif type(cut) == dict:
-            print ("HINT: use cutSequenceMode='TREE' to pass dictionaries!")
-            raise Exception("InvalidCutSequenceMode")
-        else:
-            cutList = cut if type(cut) == list else [cut]
-            for i, cutString in enumerate(cutList):
-                formulaName = cutString.replace(' ','')
-                if formulaName not in self.formulas:
-                    self.addFormula(formulaName, cutString)
-                outputTree['cutSequence'].append(formulaName)
-
         # copy count histograms to output files
         outputTree['histograms'] = {}
         for histogramName, histogram in self.histograms.iteritems():
@@ -398,7 +382,7 @@ class SampleTree(object):
     def SetBranchStatus(self, branchName, branchStatus):
         self.tree.SetBranchStatus(branchName, branchStatus)
 
-    # enables only the given branches (* wildcards supported) and checks existence before enabling them to avoid warning messages during tree iteration
+    # enables ONLY the given branches (* wildcards supported) and checks existence before enabling them to avoid warning messages during tree iteration
     def enableBranches(self, listOfBranchesToKeep):
         listOfExistingBranches = self.GetListOfBranches()
         self.tree.SetBranchStatus("*", 0)
@@ -427,17 +411,13 @@ class SampleTree(object):
             for formulaName, formula in self.formulas.iteritems():
                 print (' > \x1b[35m', formulaName, '\x1b[0m ==> ', formula)
 
-        # TODO
-        #self.tree.SetCacheSize(50*1024*1024)
-        #self.tree.AddBranchToCache('*', ROOT.kTRUE)
-        #self.tree.StopCacheLearningPhase()
-
         # find common set of branches which needs to be enabled for cuts and desired variables in all of the output trees
-        listOfExistingBranches = self.GetListOfBranches()
         listOfBranchesToKeep = []
         for outputTree in self.outputTrees:
             if 'branches' in outputTree and outputTree['branches']:
                 listOfBranchesToKeep += outputTree['branches']
+            if 'cut' in outputTree and outputTree['cut']:
+                listOfBranchesToKeep += BranchList(outputTree['cut']).getListOfBranches() 
 
         # ALWAYS keep the branches stated in config
         if self.config:
@@ -445,21 +425,13 @@ class SampleTree(object):
 
         listOfBranchesToKeep = list(set(listOfBranchesToKeep))
 
-
         # disable the branches in the input if there is no output tree which wants to have all branches
         if '*' not in listOfBranchesToKeep and len(listOfBranchesToKeep) > 0:
-            # print abbreviated list of branches to keep
-            print("INFO: branches to keep:", BranchList(listOfBranchesToKeep).getShortRepresentation())
-
-            # set the branch status of the input tree
-            self.tree.SetBranchStatus("*", 0)
-            for branchName in listOfBranchesToKeep:
-                if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
-                    self.tree.SetBranchStatus(branchName, 1)
+            self.enableBranches(listOfBranchesToKeep)
         else:
             print("INFO: keep all branches")
 
-        # initialize the output trees
+        # initialize the output trees, this has to be called after the calls to SetBranchStatus
         for outputTree in self.outputTrees:
             # clone tree structure, but don't copy any entries
             outputTree['tree'] = self.tree.CloneTree(0)
@@ -473,6 +445,24 @@ class SampleTree(object):
                 else:
                     print ("\x1b[32mINFO: recovered\x1b[0m")
             outputTree['tree'].SetDirectory(outputTree['file'])
+
+        # add CUT formulas, this has to be called after the calls to SetBranchStatus
+        for outputTree in self.outputTrees:
+            if outputTree['cutSequenceMode'] == 'TREE' and type(outputTree['cut']) == dict:
+                outputTree['cutSequence'] = outputTree['cut']
+                # now recursively parse the cut-tree and add all contained cut formulas
+                self.addCutDictRecursive(outputTree['cut'])
+            elif type(outputTree['cut']) == dict:
+                print ("HINT: use cutSequenceMode='TREE' to pass dictionaries!")
+                raise Exception("InvalidCutSequenceMode")
+            else:
+                # cut passed as string or list of strings
+                cutList = outputTree['cut'] if type(outputTree['cut']) == list else [outputTree['cut']]
+                for i, cutString in enumerate(cutList):
+                    formulaName = cutString.replace(' ','')
+                    if formulaName not in self.formulas:
+                        self.addFormula(formulaName, cutString)
+                    outputTree['cutSequence'].append(formulaName)
         
         # callbacks before loop
         for outputTree in self.outputTrees:

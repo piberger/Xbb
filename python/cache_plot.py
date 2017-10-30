@@ -54,6 +54,12 @@ class CachePlot(object):
 
     def run(self):
 
+        # keep additional branches for plotting
+        try:
+            keepBranchesPlot = eval(self.config.get('Branches', 'keep_branches_plot'))
+        except:
+            keepBranchesPlot = []
+
         # ----------------------------------------------------------------------------------------------------------------------
         # cache samples
         # ----------------------------------------------------------------------------------------------------------------------
@@ -82,7 +88,6 @@ class CachePlot(object):
                         sampleCuts.append(self.config.get(configSection, 'Datacut'))
                     if self.config.has_option('Plot_general','addBlindingCut'):
                         sampleCuts.append(self.config.has_option('Plot_general','addBlindingCut'))
-
                     # add cache object
                     tc = TreeCache.TreeCache(
                         sample=sample.name,
@@ -94,6 +99,7 @@ class CachePlot(object):
                         chunkNumber=self.chunkNumber,
                         splitFilesChunkSize=self.splitFilesChunkSize,
                         fileList=self.fileList,
+                        branches=keepBranchesPlot,
                         debug=True
                     )
 
