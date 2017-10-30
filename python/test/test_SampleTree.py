@@ -135,7 +135,7 @@ class TestSampleTreeMethods(unittest.TestCase):
                    [
                        {
                            'AND': [
-                               'nJet>4',
+                               'nJet>8',
                                'a>0',
                                'a>c']
                        },
@@ -143,14 +143,14 @@ class TestSampleTreeMethods(unittest.TestCase):
                        'c>1',
                        {
                            'OR': [
-                               'Sum$(Jet)>1000',
+                               'Sum$(Jet)>1200',
                                'a>0.8',
                                'b>80',
                                {
                                    'AND': [
-                                       'a>0.5',
-                                       'b>30',
-                                       'c>0.5',
+                                       'a>0.9',
+                                       'b>80',
+                                       'c>0.9',
                                    ]
                                }
                            ]

@@ -11,7 +11,7 @@ run unit tests
 ------------------------------------------------------------------------------
 
 ./test_SampleTree.py    run some standard tests with good and bad input data
-
+./test_TreeCache.py     test sample cache class
 
 ------------------------------------------------------------------------------
 clean up
