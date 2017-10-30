@@ -7,10 +7,23 @@ class BranchList(object):
         if cuts:
             self.addCut(cuts)
 
+    def flattenDict(self, cutDict):
+        if type(cutDict) == str:
+            return cutDict
+        elif type(cutDict) == dict:
+            if 'OR' in cutDict:
+                return '||'.join(['(%s)'%self.flattenDict(x) for x in cutDict['OR']])
+            elif 'AND' in cutDict:
+                return '&&'.join(['(%s)'%self.flattenDict(x) for x in cutDict['AND']])
+            else:
+                raise Exception('BadTreeTypeCutDict')
+
     # any expression which can be used to construct a TTreeFormula can be added here as a string or list of strings
     def addCut(self, cuts):
         if type(cuts) == list:
             self.cuts += cuts
+        elif type(cuts) == dict:
+            self.cuts.append(self.flattenDict(cuts))
         else:
             self.cuts.append(cuts)
         return self

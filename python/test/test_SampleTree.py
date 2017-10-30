@@ -118,6 +118,55 @@ class TestSampleTreeMethods(unittest.TestCase):
         with self.assertRaises(Exception) as e:
             sampleTree.process()
 
+    def test_TreeCutDict(self):
+
+        def flattenDict(cutDict):
+            if type(cutDict) == str:
+                return cutDict
+            elif type(cutDict) == dict:
+                if 'OR' in cutDict:
+                    return '||'.join(['(%s)'%flattenDict(x) for x in cutDict['OR']])
+                elif 'AND' in cutDict:
+                    return '&&'.join(['(%s)'%flattenDict(x) for x in cutDict['AND']])
+                else:
+                    raise Exception('BadTreeTypeCutDict')
+
+        sampleTree = self.getTree()
+        cutDict = {'OR':
+                   [
+                       {
+                           'AND': [
+                               'nJet>4',
+                               'a>0',
+                               'a>c']
+                       },
+                       'nJet==6&&Sum$(Jet)>600',
+                       'c>-1',
+                       {
+                           'OR': [
+                               'Sum$(Jet)>1000',
+                               'a>0.8',
+                               'b>30',
+                               {
+                                   'AND': [
+                                       'a>0.5',
+                                       'b>0.5',
+                                       'c>0.5',
+                                   ]
+                               }
+                           ]
+                       }
+                   ]
+               }
+        cutFlat = flattenDict(cutDict)
+        print ("flat:", cutFlat)
+        sampleTree.addOutputTree(TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root', cutDict, cutSequenceMode='TREE')
+        sampleTree.process()
+
+        # count number of entries written to output file
+        resultsMethodA = SampleTree([TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root']).tree.GetEntries()
+        resultsMethodB = sampleTree.tree.Draw("a", cutFlat, "goff")
+        self.assertEqual(resultsMethodA, resultsMethodB)
 
 if __name__ == '__main__':
     unittest.main()
