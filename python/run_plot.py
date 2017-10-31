@@ -57,7 +57,6 @@ class PlotHelper(object):
 
 
     def prepare(self):
-
         print ("INFO: starting plot for region \x1b[34m{region}\x1b[0m, variables:".format(region=region))
         for var in self.vars:
             print ("  > {var}".format(var=var))
@@ -105,8 +104,8 @@ class PlotHelper(object):
     def run(self):
         # draw
         for var in self.vars:
-            outputFolder = self.plotPath + 'plot_{region}_{var}'.format(region=self.region, var=var)
-            self.histogramStacks[var].Draw(outputFolder=outputFolder)
+            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
+            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
 
         return self
 
