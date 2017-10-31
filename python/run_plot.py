@@ -28,9 +28,6 @@ class PlotHelper(object):
         self.samplesDefinitions = config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
         self.sampleFilesFolder = config.get('Directories', 'samplefiles')
-
-        self.cachedPath = config.get('Directories', 'tmpSamples')
-        self.tmpPath = config.get('Directories', 'scratch')
         self.plotPath = config.get('Directories', 'plotpath')
 
         # plot regions
@@ -86,8 +83,7 @@ class PlotHelper(object):
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.samplesPath,
-                    tmpFolder=self.tmpPath,
-                    outputFolder=self.cachedPath,
+                    config=config,
                     debug=True
                 )
             sampleTree = tc.getTree()

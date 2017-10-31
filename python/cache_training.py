@@ -20,9 +20,6 @@ class CacheTraining(object):
         self.samplesPath = self.config.get('Directories', 'MVAin')
         self.samplesDefinitions = self.config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
-
-        self.cachedPath = self.config.get('Directories', 'tmpSamples')
-        self.tmpPath = self.config.get('Directories', 'scratch')
         self.sampleFilesFolder = self.config.get('Directories', 'samplefiles')
 
         self.backgroundSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'backgrounds')) for trainingRegion in self.trainingRegions], [])))
@@ -84,11 +81,10 @@ class CacheTraining(object):
                             sample=sample.name,
                             cutList=sampleCuts,
                             inputFolder=self.samplesPath,
-                            tmpFolder=self.tmpPath,
-                            outputFolder=self.cachedPath,
                             splitFilesChunks=self.splitFilesChunks,
                             chunkNumber=self.chunkNumber,
                             splitFilesChunkSize=self.splitFilesChunkSize,
+                            config=self.config,
                             debug=True
                         )
 

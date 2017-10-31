@@ -5,7 +5,9 @@ import os
 import sys
 import time
 import glob
+import BetterConfigParser
 from BranchList import BranchList
+from FileLocator import FileLocator
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -27,11 +29,6 @@ from BranchList import BranchList
 #     print 'pt:', event.pt
 # ------------------------------------------------------------------------------
 class SampleTree(object):
-    
-    # TODO: move to framework-wide config file
-    xrootdRedirector = 'root://t3dcachedb03.psi.ch:1094'
-    moreXrootdRedirectors = ['root://t3dcachedb.psi.ch:1094']
-    pnfsStoragePath = '/pnfs/psi.ch/cms/trivcat'
 
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
@@ -39,6 +36,7 @@ class SampleTree(object):
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
+        self.fileLocator = FileLocator(config=self.config)
 
         # process only partial sample root file list
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -68,10 +66,6 @@ class SampleTree(object):
         self.eventsRead = 0
         self.outputTrees = []
 
-        self.regionDict = {
-            'default': {'file': 0}
-        }
-
         # check existence of sample .txt file which contains list of .root files
         self.sampleTextFileName = ''
 
@@ -87,8 +81,8 @@ class SampleTree(object):
             for rootFileName in self.sampleFileNames:
 
                 # check root file existence
-                if os.path.isfile(SampleTree.getLocalFileName(rootFileName)) or '/store/' in rootFileName:
-                    rootFileName = SampleTree.getXrootdFileName(rootFileName)
+                if os.path.isfile(self.fileLocator.getLocalFileName(rootFileName)) or self.fileLocator.isStoragePath(rootFileName):
+                    rootFileName = self.fileLocator.getXrootdFileName(rootFileName)
                     input = ROOT.TFile.Open(rootFileName, 'read')
 
                     # check file validity
@@ -160,9 +154,10 @@ class SampleTree(object):
         elif type(self.samples) == dict:
             sampleName = self.samples['name']
             sampleFolder = self.samples['folder']
+            samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             if self.verbose:
-                print ("INFO: use ",SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root')
-            sampleFileNames = glob.glob(SampleTree.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root') 
+                print ("INFO: use ", samplesMask)
+            sampleFileNames = glob.glob(samplesMask)
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
         # given argument is a single file name -> read this .txt file 
@@ -274,39 +269,6 @@ class SampleTree(object):
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
 
-    # ------------------------------------------------------------------------------
-    # get file name WITH redirector
-    # ------------------------------------------------------------------------------
-    @staticmethod
-    def getXrootdFileName(rawFileName):
-        xrootdFileName = rawFileName.strip()
-        if xrootdFileName.startswith('/store/'):
-            xrootdFileName = SampleTree.pnfsStoragePath + xrootdFileName.strip()
-        isRemote = '/pnfs/' in xrootdFileName
-        if isRemote:
-            xrootdFileName = xrootdFileName.replace(SampleTree.xrootdRedirector, '')
-            for red in SampleTree.moreXrootdRedirectors:
-                xrootdFileName = xrootdFileName.replace(red, '')
-            return SampleTree.xrootdRedirector + xrootdFileName.replace(SampleTree.xrootdRedirector, '').strip()
-        else:
-            return xrootdFileName.strip()
-
-    # ------------------------------------------------------------------------------
-    # get file name WITHOUT redirector
-    # ------------------------------------------------------------------------------
-    @staticmethod
-    def getLocalFileName(rawFileName):
-        if rawFileName:
-            localFileName = rawFileName.strip()
-            localFileName = localFileName.replace(SampleTree.xrootdRedirector, '')
-            for red in SampleTree.moreXrootdRedirectors:
-                localFileName = localFileName.replace(red, '')
-            if localFileName.startswith('/store/'):
-                localFileName = SampleTree.pnfsStoragePath + localFileName.strip()
-            return localFileName
-        else:
-            print ("\x1b[31mERROR: invalid file name\x1b[0m")
-            raise Exception("InvalidFileName")
 
     # ------------------------------------------------------------------------------
     # handle 'tree-typed' cuts, passed as dictionary:

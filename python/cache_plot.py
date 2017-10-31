@@ -22,9 +22,6 @@ class CachePlot(object):
         self.samplesPath = self.config.get('Directories', 'plottingSamples')
         self.samplesDefinitions = self.config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
-
-        self.cachedPath = self.config.get('Directories', 'tmpSamples')
-        self.tmpPath = self.config.get('Directories', 'scratch')
         self.sampleFilesFolder = self.config.get('Directories', 'samplefiles')
 
         self.sampleNames = eval(self.config.get('Plot_general', 'samples'))
@@ -93,13 +90,12 @@ class CachePlot(object):
                         sample=sample.name,
                         cutList=sampleCuts,
                         inputFolder=self.samplesPath,
-                        tmpFolder=self.tmpPath,
-                        outputFolder=self.cachedPath,
                         splitFilesChunks=self.splitFilesChunks,
                         chunkNumber=self.chunkNumber,
                         splitFilesChunkSize=self.splitFilesChunkSize,
                         fileList=self.fileList,
                         branches=keepBranchesPlot,
+                        config=self.config,
                         debug=True
                     )
 

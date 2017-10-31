@@ -396,7 +396,7 @@ class Datacard(object):
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.path,
-                    outputFolder=self.cachedPath,
+                    config=self.config,
                     debug=True
                 )            
 

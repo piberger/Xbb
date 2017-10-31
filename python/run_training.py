@@ -42,9 +42,6 @@ class MvaTrainingHelper(object):
             'SIG': self.samplesInfo.get_samples(signalSampleNames),
         }
 
-        self.cachedPath = config.get('Directories', 'tmpSamples')
-        self.tmpPath = config.get('Directories', 'scratch')
-
         self.treeCutName = config.get(mvaName, 'treeCut')
         self.treeCut = config.get('Cuts', self.treeCutName)
 
@@ -89,8 +86,7 @@ class MvaTrainingHelper(object):
                             sample=sample,
                             cutList=sampleCuts,
                             inputFolder=self.samplesPath,
-                            tmpFolder=self.tmpPath,
-                            outputFolder=self.cachedPath,
+                            config=self.config,
                             debug=True
                         )
                     sampleTree = tc.getTree()

@@ -1,11 +1,12 @@
 from __future__ import print_function
 import glob
 from Hash import Hash
-from sampleTree import SampleTree as SampleTree
-from samplesclass import Sample
 import ROOT
 import subprocess
 import os
+from samplesclass import Sample
+from sampleTree import SampleTree as SampleTree
+from FileLocator import FileLocator
 
 # ------------------------------------------------------------------------------
 # TreeCache
@@ -51,39 +52,50 @@ import os
 # ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder='tmp/', outputFolder='cache/', chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name=''):
+    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder=None, outputFolder=None, chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name='', config=None):
+        self.config = config
+        self.fileLocator = FileLocator(config=self.config)
+
+        # SAMPLE
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
             splitFilesChunkSize = sample.mergeCachingSize 
-            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getNumberOfParts()
+            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getNumberOfParts()
             self.sample = sample.name
             print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
             # sample passed as string
             self.sample = sample
         self.name = name
+
+        # CUTS
         self.cutList = cutList
         self.cutSequenceMode = cutSequenceMode
         self.minCut = SampleTree.findMinimumCut(self.cutList, cutSequenceMode=self.cutSequenceMode)
+
+        # PATHS
         self.inputFolder = inputFolder
-        self.tmpFolder = tmpFolder
-        self.outputFolder = outputFolder
+        self.outputFolder = (config.get('Directories', 'tmpSamples') if config else 'cache/') if outputFolder is None else outputFolder
+        self.tmpFolder = (config.get('Directories', 'scratch') if config else 'tmp/') if tmpFolder is None else tmpFolder
         self.cachedFileNames = []
+        self.tmpFiles = []
+        self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
+
+        # BRANCHES and chunk information
         self.branches = branches
         self.branchesForHash = None     # for now make hash independent of selecte branches 
         self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branchesForHash, splitFilesChunkSize=splitFilesChunkSize, debug=False).get()
         self.chunkNumber = chunkNumber
         self.splitFilesChunks = splitFilesChunks if splitFilesChunks > 1 else 1
         self.splitFilesChunkSize = splitFilesChunkSize
+        
         # identifier is just used as an arbitrary name for print-out
         cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50]+'...').replace(' ','')
         self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
         self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
-        self.outputFileNameFormat = '{outputFolder}/tmp_{hash}_{part}of{parts}.root'
-        self.tmpFiles = []
 
         self.createFolders()
 
@@ -113,7 +125,7 @@ class TreeCache:
             part='*' if chunkNumber < 1 else '%d'%chunkNumber,
             parts='*'
         )
-        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
+        cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)
@@ -133,7 +145,7 @@ class TreeCache:
             part=self.chunkNumber,
             parts='*'
         )
-        cachedFilesMask = SampleTree.getLocalFileName(cachedFilesMaskRaw)
+        cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         return len(glob.glob(cachedFilesMask)) > 0
 
     # isCached == all files containing the skimmed tree found!
@@ -148,7 +160,7 @@ class TreeCache:
 
     # check if an existing file can be opened without errors by ROOT
     def checkFileValidity(self, rawFileName):
-        xrootdFileName = SampleTree.getXrootdFileName(rawFileName)
+        xrootdFileName = self.fileLocator.getXrootdFileName(rawFileName)
         f = ROOT.TFile.Open(xrootdFileName, 'read')
         if not f or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered) or f.IsZombie():
             print ('\x1b[31mWARNING: broken file:', rawFileName, ' => redo caching!\x1b[0m')
@@ -192,18 +204,19 @@ class TreeCache:
 
     # return sample tree class of cached samples if all files found
     def getTree(self):
-        if not self.isCachedChecked:
-            self.isCached()
-
-        if self.isCachedChecked:
-            self.sampleTree = SampleTree(self.cachedFileNames)
+        # if it has already been checked if tree is cached, then use this result dierctly
+        isCached = self.isCachedChecked
+        if not isCached:
+            isCached = self.isCached()
+        if isCached:
+            self.sampleTree = SampleTree(self.cachedFileNames, config=self.config)
         return self.sampleTree
 
     # delete file
     def deleteFile(self, rawFileName):
         if self.debug:
             print ('DELETE:', rawFileName)
-        xrootdFileName = SampleTree.getXrootdFileName(rawFileName)
+        xrootdFileName = self.fileLocator.getXrootdFileName(rawFileName)
         if '://' not in xrootdFileName:
             command = 'rm %s' % (xrootdFileName)
         else:
@@ -221,11 +234,10 @@ class TreeCache:
 
     # create folders
     def createFolders(self):
-        
-        tmpfolderLocal = SampleTree.getLocalFileName(self.tmpFolder)
+        tmpfolderLocal = self.fileLocator.getLocalFileName(self.tmpFolder)
         if not os.path.isdir(tmpfolderLocal):
             try:
-                xrootdFileName = SampleTree.getXrootdFileName(self.tmpFolder)
+                xrootdFileName = self.fileLocator.getXrootdFileName(self.tmpFolder)
                 if '://' not in xrootdFileName:
                     command = 'mkdir %s' % (xrootdFileName)
                 else:
@@ -235,11 +247,11 @@ class TreeCache:
                     print(command, ' => ', returnCode)
             except:
                 pass
-        outputFolderLocal = SampleTree.getLocalFileName(self.outputFolder)
+        outputFolderLocal = self.fileLocator.getLocalFileName(self.outputFolder)
 
         if not os.path.isdir(outputFolderLocal):
             try:
-                xrootdFileName = SampleTree.getXrootdFileName(self.outputFolder)
+                xrootdFileName = fileLocator.getXrootdFileName(self.outputFolder)
                 if '://' not in xrootdFileName:
                     command = 'mkdir %s' % (xrootdFileName)
                 else:
@@ -259,7 +271,7 @@ class TreeCache:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
             print ('copy ', tmpFileName, ' to ', outputFileName)
             self.deleteFile(outputFileName)
-            command = 'xrdcp -d 1 ' + SampleTree.getXrootdFileName(tmpFileName) + ' ' + SampleTree.getXrootdFileName(outputFileName)
+            command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
             print('the command is', command)
             returnCode = subprocess.call([command], shell=True)
             if returnCode != 0:

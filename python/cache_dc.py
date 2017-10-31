@@ -86,12 +86,11 @@ class CacheDatacards(object):
                         cutSequenceMode='TREE',
                         branches=branchesToKeep,
                         inputFolder=dcMaker.path,
-                        tmpFolder=dcMaker.tmpPath,
-                        outputFolder=dcMaker.cachedPath,
                         splitFilesChunks=self.splitFilesChunks,
                         chunkNumber=self.chunkNumber,
                         splitFilesChunkSize=self.splitFilesChunkSize,
                         fileList=self.fileList,
+                        config=self.config,
                         debug=self.verbose
                     )
 
