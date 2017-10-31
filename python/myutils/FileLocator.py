@@ -38,8 +38,9 @@ class FileLocator(object):
             xrootdFileName = self.pnfsStoragePath + xrootdFileName.strip()
         if self.isPnfs(xrootdFileName):
             # replace already existing redirectors with primary one
-            for redirector in self.xrootdRedirectors:
-                xrootdFileName = xrootdFileName.replace(redirector, '')
+            if self.xrootdRedirectors:
+                for redirector in self.xrootdRedirectors:
+                    xrootdFileName = xrootdFileName.replace(redirector, '')
             return self.xrootdRedirectors[0] + xrootdFileName 
         else:
             return xrootdFileName.strip()
@@ -51,8 +52,9 @@ class FileLocator(object):
     def getLocalFileName(self, rawFileName):
         if rawFileName:
             localFileName = rawFileName.strip()
-            for redirector in self.xrootdRedirectors:
-                localFileName = localFileName.replace(redirector, '')
+            if self.xrootdRedirectors:
+                for redirector in self.xrootdRedirectors:
+                    localFileName = localFileName.replace(redirector, '')
             if localFileName.startswith('/store/'):
                 localFileName = self.pnfsStoragePath + localFileName.strip()
             return localFileName
