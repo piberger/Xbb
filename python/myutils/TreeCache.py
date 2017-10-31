@@ -24,6 +24,8 @@ class TreeCache:
             self.dccut = dccut
         #! Make the cut lists from inputs
         for cut in cutList:
+            if not cut:
+                cut = ""
             self._cutList.append('(%s)'%cut.replace(' ',''))
         try:
             self.__tmpPath = os.environ["TMPDIR"]
@@ -81,7 +83,7 @@ class TreeCache:
         else:
             #remove repetition and (1) (the latter would keep all the events)
             for cut in self._cutList:
-                if not cut in effective_cuts and not cut == "(1)":
+                if not cut in effective_cuts:
                     effective_cuts.append(cut)
             self._cutList = effective_cuts
             self.minCut = '||'.join(self._cutList)
@@ -380,12 +382,13 @@ class TreeCache:
             #  READ INPUT files
             # ----------------------------------------------------------------------------------------------------------
             # list -> TChain
-            if ';' in inputfile:
+            if ';' in inputfile or type(inputfile) == list:
+                inputFilesList = inputfile.split(';') if type(inputfile) != list else inputfile
                 tree = ROOT.TChain(sample.tree)
                 histograms = {}
                 time1=time.time()
                 nFilesChained = 0
-                for rootFileName in inputfile.split(';'):
+                for rootFileName in inputFilesList:
                     chainTree = '%s/%s'%(rootFileName, sample.tree)
                     if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','')):
                         obj = None
@@ -433,6 +436,8 @@ class TreeCache:
             else:
                 print ("I am reading")
                 input = ROOT.TFile.Open(inputfile,'read')
+                if (not input or input.IsZombie()):
+                    print('file not found:' + inputfile)
                 input.Print()
                 print ("I read the tree")
                 tree = input.Get(sample.tree)
@@ -493,16 +498,21 @@ class TreeCache:
                     except:
                         pass
 
+                branchList = tree.GetListOfBranches()
                 for branch in removeBranches:
                     try:
                         #print ('will remove', branch)
-                        tree.SetBranchStatus(branch,0)
+                        if branchList.FindObject(branch):    
+                            print ('will remove', branch)
+                            tree.SetBranchStatus(branch,0)
                     except:
                         pass
                 if self.branch_to_keep:
                     tree.SetBranchStatus('*',0)
                     for b in self.branch_to_keep:
-                        tree.SetBranchStatus(b,1)
+                        if branchList.FindObject(b):
+                            print ('use branch:', b)
+                            tree.SetBranchStatus(b,1)
 
 
                 #time2 = time.time()
@@ -731,7 +741,8 @@ class TreeCache:
             #stop if a file is missing
             file_missing = False
             for sample in self.__sampleList:
-                theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
+                hashString = '%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)
+                theHash = hashlib.sha224(hashString).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
 
@@ -746,7 +757,7 @@ class TreeCache:
                 mergeList = [unmergedFiles[x:x+sample.mergeCachingSize] for x in xrange(0, len(unmergedFiles), sample.mergeCachingSize)]
 
                 # compare filenames from cached files with expectation from mergeList
-                print ('%s (%s): %d/%d'%(sample.FullName, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
+                print ('%s %s (%s): %d/%d'%(sample.FullName, sample.group, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
 
                 for i,mergeListPart in enumerate(mergeList):
                     found = False
@@ -755,6 +766,7 @@ class TreeCache:
                             found = True
                             break
                     if not found:
+                        print ('hash string:', hashString)
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
                         if not self.do_onlypart_n:
                             file_missing = True
@@ -769,7 +781,8 @@ class TreeCache:
                 # extract hashes from filenames and pass them as a list to __hashDict
                 self.__hashDict[sample.name] = [x.split('/')[-1].replace('tmp_','').split('.')[0] for x in mergedFiles]
             if file_missing:
-                raise Exception('files missing')
+                print (tmpFileMask)
+                raise Exception('files missing, run caching again')
             #print( "DICT:",self.__hashDict)
 
     def __cache_samples(self,filelist=None,mergeplot=False):
@@ -1026,11 +1039,15 @@ class TreeCache:
         try: sample.xsec = sample.xsec[0]
         except: pass
         self.__cachedPath
-        posWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountPosWeight') #input.Get('CountPosWeight')
-        negWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountNegWeight') #input.Get('CountNegWeight')
-        anaTag=config.get('Analysis','tag')
-        theScale = 1.
-        count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        try:
+            posWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountPosWeight') #input.Get('CountPosWeight')
+            negWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountNegWeight') #input.Get('CountNegWeight')
+            anaTag=config.get('Analysis','tag')
+            theScale = 1.
+            count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        except:
+            print ("TreeCache: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+            count = self.get_weight_histogram(self.__hashDict[sample.name], 'Count').GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
         #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)

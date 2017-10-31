@@ -1,0 +1,9 @@
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_1.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_2.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_3.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_4.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_5.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_6.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_7.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_8.root
+/store/user/berger_p2/gbb/ntuples/2015/QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8/170612_172632/0000/tree_9.root

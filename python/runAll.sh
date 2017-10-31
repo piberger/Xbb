@@ -43,6 +43,56 @@ fi
 echo "Task: $task"
 echo
 
+
+#-------------------------------------------------
+# parse named input arguments
+# todo: pass everything as named argument
+force="0"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --trainingRegions=*)
+      trainingRegions="${1#*=}"
+      ;;
+    --regions=*)
+      regions="${1#*=}"
+      ;;
+    --process=*)
+      process="${1#*=}"
+      ;;
+    --force)
+      force="1"
+      ;;
+    --verbose)
+      verbose="1"
+      ;;
+    --vars=*)
+      vars="${1#*=}"
+      ;;
+    --sampleIdentifier=*)
+      sampleIdentifier="${1#*=}"
+      ;;
+    --sampleName=*)
+      sampleName="${1#*=}"
+      ;;
+    --splitFilesChunkSize=*)
+      splitFilesChunkSize="${1#*=}"
+      ;;
+    --chunkNumber=*)
+      chunkNumber="${1#*=}"
+      ;;
+    --splitFilesChunks=*)
+      splitFilesChunks="${1#*=}"
+      ;;
+    --fileList=*)
+      fileList="${1#*=}"
+      ;;
+    *)
+      ;;
+  esac
+  shift
+done
+
+
 #-------------------------------------------------
 # Setup Environment
 
@@ -172,6 +222,68 @@ elif [ $task = "syseval" ]; then
 elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
+
+elif [ $task = "cachetraining" ]; then
+    runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "runtraining" ]; then
+    runCommand="python ./run_training.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "cacheplot" ]; then
+    runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "runplot" ]; then
+    if [ -z "$vars" ]; then 
+        runCommand="python ./run_plot.py --regions ${regions} ${config_filenames[@]}";
+    else
+        runCommand="python ./run_plot.py --regions ${regions} --vars ${vars} ${config_filenames[@]}";
+    fi
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "cachedc" ]; then
+    runCommand="python ./cache_dc.py --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    if [ "$verbose" = "1" ]; then
+        runCommand="${runCommand} --verbose"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "rundc" ]; then
+    runCommand="python ./run_dc.py --regions ${regions}";
+    if [ "$sampleIdentifier" ]; then
+        runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
+elif [ $task = "mergedc" ]; then
+    runCommand="python ./merge_dc.py --regions ${regions}";
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True

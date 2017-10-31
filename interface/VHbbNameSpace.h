@@ -101,6 +101,8 @@ double SoverSBWeight(double BDT, int channel) {
     if (channel == 3) return SB_Zee_high[BDTbin];
     if (channel == 4) return SB_Zuu_high[BDTbin];
 
+    return 0;
+
     }
 
 
@@ -895,7 +897,7 @@ double ptWeightEWK_Zllv2(int isDY ,double GenVbosons_pt){
 // weights correction for EWK NLO correction (for ZllHbb only !!!)
 double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nGenTop, int nGenHiggsBoson){
     double SF = 1.;
-    if (nGenVbosons ==1 & nGenTop == 0 & nGenHiggsBoson == 0)
+    if (nGenVbosons ==1 && nGenTop == 0 && nGenHiggsBoson == 0)
     {
         if (VtypeSim == 0 || VtypeSim == 1 || VtypeSim == 4 || VtypeSim == 5)
         {

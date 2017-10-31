@@ -1,0 +1,5 @@
+/store/user/berger_p2/gbb/ntuples/2016_v2//Run2016C_JetHT_23Sep2016-v1/170719_2340/0000/tree_19.root
+/store/user/berger_p2/gbb/ntuples/2016_v2//Run2016C_JetHT_23Sep2016-v1/170719_2340/0000/tree_23.root
+/store/user/berger_p2/gbb/ntuples/2016_v2//Run2016C_JetHT_23Sep2016-v1/170719_2340/0000/tree_43.root
+/store/user/berger_p2/gbb/ntuples/2016_v2//Run2016C_JetHT_23Sep2016-v1/170719_2340/0000/tree_4.root
+/store/user/berger_p2/gbb/ntuples/2016_v2//Run2016C_JetHT_23Sep2016-v1/170719_2340/0000/tree_7.root
