@@ -2,20 +2,22 @@ from __future__ import print_function
 
 class FileLocator(object):
 
-    def __init__(self, config):
+    def __init__(self, config=None):
         self.config = config
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             if len(self.xrootdRedirectors) < 1:
                 print("WARNING: empty list of xrootd redirectors given!")
         except Exception as e:
-            print (e)
-            print("WARNING: no xrootd redirector given!")
+            if config:
+                print (e)
+                print("WARNING: no xrootd redirector given!")
             self.xrootdRedirectors = None
         try:
             self.pnfsStoragePath = self.config.get('Configuration', 'pnfsStoragePath').strip()
         except:
-            print("WARNING: no pnfs storage path given!")
+            if config:
+                print("WARNING: no pnfs storage path given!")
             self.pnfsStoragePath = None
 
         self.storagePathPrefix = '/store/'
@@ -41,7 +43,8 @@ class FileLocator(object):
             if self.xrootdRedirectors:
                 for redirector in self.xrootdRedirectors:
                     xrootdFileName = xrootdFileName.replace(redirector, '')
-            return self.xrootdRedirectors[0] + xrootdFileName 
+                xrootdFileName = self.xrootdRedirectors[0] + xrootdFileName
+            return xrootdFileName.strip()
         else:
             return xrootdFileName.strip()
 
