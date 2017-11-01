@@ -363,10 +363,12 @@ class NewStackMaker:
             Ymax = maximumNormalized * 1.5
         else:
             Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
-        if self.log:
+        if self.log and not self.normalize:
             allStack.SetMinimum(0.1)
             Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
             ROOT.gPad.SetLogy()
+        else:
+            ROOT.gPad.SetLogy(0)
         allStack.SetMaximum(Ymax)
         if not normalize:
             allStack.GetXaxis().SetLabelOffset(999)
