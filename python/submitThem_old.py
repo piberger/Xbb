@@ -607,7 +607,7 @@ def return_splitcaching_hash(treecut,isdata):
         if shape__.replace(' ','')  == '': continue#to avoid && case
         shapecut_split_ = shape__.split('||')
         for shape_ in  shapecut_split_:
-            new_cut_list=sys_cut_suffix[syst]
+            #new_cut_list=sys_cut_suffix[syst]
             for new_cut in replace_cut:
                 old_str,new_str=new_cut.split('>')
                 if old_str in shape_:
