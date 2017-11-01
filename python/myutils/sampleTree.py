@@ -368,7 +368,7 @@ class SampleTree(object):
                 cutString = "%r"%outputTree['cut']
                 if len(cutString) > 50:
                     cutString = cutString[0:50] + '...(%s more chars)'%(len(cutString)-50)
-                print (' > ', outputTree['fileName'], ' <== ', outputTree['hash'], ' cut: ', cutString)
+                print (' > ', outputTree['fileName'], ' <== ', outputTree['name'] if 'name' in outputTree else outputTree['hash'], ' cut: ', cutString)
             print ('FORMULAS:')
             for formulaName, formula in self.formulas.iteritems():
                 print (' > \x1b[35m', formulaName, '\x1b[0m ==> ', formula)

@@ -806,13 +806,14 @@ if opts.task.startswith('cachetraining'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
             jobDict = repDict.copy()
             jobDict.update({
+                'queue': 'short.q',
                 'arguments':
                     {
                         'trainingRegions': ','.join(trainingRegions),
@@ -822,6 +823,8 @@ if opts.task.startswith('cachetraining'):
                         'splitFilesChunkSize': splitFilesChunkSize,
                     }
                 })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
                 compressedFileList = FileList.compress(splitFilesChunk)
