@@ -1,4 +1,4 @@
-#!/usr/bin/env pythoelen
+#!/usr/bin/env python
 
 import sys,hashlib
 import os,subprocess
