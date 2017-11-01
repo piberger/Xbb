@@ -42,8 +42,7 @@ class ParseInfo:
         except:
             raise Exception('config file is wrong/missing')
           
-        if '/pnfs/psi.ch/cms/' in samples_path:
-
+        if samples_path and '/pnfs/psi.ch/cms/' in samples_path:
             T3 = True
             _,p2=samples_path.split('/pnfs/')
             t3_path = '/pnfs/'+p2.strip('\n')
@@ -141,12 +140,29 @@ class ParseInfo:
 
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
-                subnames = eval((config.get(sample, 'subnames')))
-                subcuts = eval((config.get(sample, 'subcuts')))
                 subgroups = eval((config.get(sample,'sampleGroup')))
+                try:
+                    subnames = eval((config.get(sample, 'subnames')))
+                except:
+                    # create subnames automatically based on subgroup name to avoid duplication
+                    try:
+                        shortname = config.get(sample, 'shortname').strip()
+                    except:
+                        # use full name if no short name given
+                        shortname = sampleName
+                    subnames = [shortname + '_' + x for x in subgroups]
+                subcuts = eval((config.get(sample, 'subcuts')))
+                
                 if sampleType != 'DATA':
                     subxsecs = eval((config.get(sample, 'xSec')))
                     subsfs = eval((config.get(sample, 'SF')))
+                try:
+                    subspecialweights = eval((config.get(sample, 'specialweight')))
+                    #print 'specialweights=', subspecialweights
+                    if len(subspecialweights) < 2:
+                        subspecialweights = []
+                except:
+                    subspecialweights = []
                 newsamples = []
                 for i,cut in enumerate(subcuts):
                     newsubsample = copy(newsample)
@@ -157,7 +173,11 @@ class ParseInfo:
                     if sampleType != 'DATA':
                         newsubsample.sf = float(subsfs[i])
                         newsubsample.xsec = float(subxsecs[i])
+                    if len(subspecialweights) == len(subcuts):
+                        newsubsample.specialweight = subspecialweights[i] 
                     newsamples.append(newsubsample)
+                    #print 'newsubsample:', newsubsample
+
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
             else:
