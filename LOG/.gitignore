@@ -1,5 +1,0 @@
-# Ignore .log files.
-*.log
-
-# Ignore job configuration dump files.
-*.config

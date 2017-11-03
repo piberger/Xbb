@@ -6,13 +6,15 @@ ROOT.gROOT.SetBatch(True)
 
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
+from myutils.BranchList import BranchList
 
 import sys
 
 class CacheTraining(object):
 
-    def __init__(self, config, sampleIdentifier, trainingRegions, splitFilesChunks=1, chunkNumber=1, splitFilesChunkSize=-1):
+    def __init__(self, config, sampleIdentifier, trainingRegions, splitFilesChunks=1, chunkNumber=1, splitFilesChunkSize=-1, force=False):
         self.config = config
+        self.force = force
         self.sampleIdentifier = sampleIdentifier
         self.trainingRegions = trainingRegions
 
@@ -29,8 +31,15 @@ class CacheTraining(object):
         self.trainingRegionsDict = {}
         for trainingRegion in self.trainingRegions:
             treeCutName = config.get(trainingRegion, 'treeCut')
-            treeCut = config.get('Cuts', treeCutName)
-            self.trainingRegionsDict[trainingRegion] = {'cut': treeCut}
+            treeVarSet = config.get(trainingRegion, 'treeVarSet').strip()
+            systematics = [x for x in config.get('systematics', 'systematics').split(' ') if len(x.strip())>0]
+            mvaVars = []
+            for systematic in systematics:
+                mvaVars += config.get(treeVarSet, systematic).strip().split(' ')
+            self.trainingRegionsDict[trainingRegion] = {
+                    'cut': config.get('Cuts', treeCutName),
+                    'vars': mvaVars,
+                    }
 
         self.TrainCut = config.get('Cuts', 'TrainCut') 
         self.EvalCut = config.get('Cuts', 'EvalCut')
@@ -76,20 +85,28 @@ class CacheTraining(object):
                         if trainingRegionInfo['cut']:
                             sampleCuts.append(trainingRegionInfo['cut'])
 
+                        # special branches to keep
+                        mvaBranches = BranchList(trainingRegionInfo['vars']).getListOfBranches() 
+
                         # add cache object
                         tc = TreeCache.TreeCache(
+                            name='{region}_{sample}_{tr}'.format(region=trainingRegion, sample=sample.name, tr='TRAIN' if additionalCut==self.TrainCut else 'EVAL'),
                             sample=sample.name,
                             cutList=sampleCuts,
                             inputFolder=self.samplesPath,
                             splitFilesChunks=self.splitFilesChunks,
                             chunkNumber=self.chunkNumber,
                             splitFilesChunkSize=self.splitFilesChunkSize,
+                            branches=mvaBranches,
                             config=self.config,
                             debug=True
                         )
 
                         # check if this part of the sample is already cached
-                        if not tc.partIsCached():
+                        isCached = tc.partIsCached()
+                        if not isCached or self.force:
+                            if isCached:
+                                tc.deleteCachedFiles(chunkNumber=self.chunkNumber)
                             # for the first sample which comes from this files, load the tree
                             if not self.sampleTree:
                                 self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config)
@@ -99,7 +116,7 @@ class CacheTraining(object):
                 # run on the tree
                 self.sampleTree.process()
             else:
-                print ("noting to do!")
+                print ("nothing to do!")
 
 # read arguments
 argv = sys.argv
@@ -118,6 +135,8 @@ parser.add_option("-i","--chunkNumber", dest="chunkNumber", default='',
                       help="number of part to cache")
 parser.add_option("-p","--splitFilesChunkSize", dest="splitFilesChunkSize", default='',
                       help="number of files per part")
+parser.add_option("-f","--force", action="store_true", dest="force", default=False,
+                      help="force overwriting of already cached files")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
@@ -134,7 +153,7 @@ trainingRegions = opts.trainingRegions.split(',')
 splitFilesChunks = int(opts.splitFilesChunks) if len(opts.splitFilesChunks) > 0 else 1
 chunkNumber = int(opts.chunkNumber) if len(opts.chunkNumber) > 0 else 1
 splitFilesChunkSize = int(opts.splitFilesChunkSize) if len(opts.splitFilesChunkSize) > 0 else -1
-ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions, chunkNumber=chunkNumber, splitFilesChunks=splitFilesChunks, splitFilesChunkSize=splitFilesChunkSize)
+ct = CacheTraining(config=config, sampleIdentifier=opts.sampleIdentifier, trainingRegions=trainingRegions, chunkNumber=chunkNumber, splitFilesChunks=splitFilesChunks, splitFilesChunkSize=splitFilesChunkSize, force=opts.force)
 ct.printInfo()
 
 # run training

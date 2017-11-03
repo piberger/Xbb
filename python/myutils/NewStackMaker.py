@@ -80,6 +80,12 @@ class NewStackMaker:
         self.ratioPlot = None
         if SignalRegion:
             self.maxRatioUncert = 1000.
+        #self.outputFileTemplate = "{outputFolder}/{prefix}{prefixSeparator}plot_{var}.{ext}"
+        self.outputFileTemplate = "{outputFolder}/{prefix}.{ext}"
+        try:
+            self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
+        except:
+            self.outputFileFormats = ["png"]
 
         print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['xMin'], " max=", self.histogramOptions['xMax'], "nBins=", self.histogramOptions['nBins'])
 
@@ -118,7 +124,7 @@ class NewStackMaker:
     #------------------------------------------------------------------------------
     # create canvas and load default style 
     #------------------------------------------------------------------------------
-    def initializeCanvas(self):
+    def initializeSplitCanvas(self):
         TdrStyles.tdrStyle()
 
         # initialize canvas
@@ -148,6 +154,17 @@ class NewStackMaker:
         self.pads['oben'].cd()
         return self.canvas
 
+    #------------------------------------------------------------------------------
+    # create canvas and load default style 
+    #------------------------------------------------------------------------------
+    def initializeCanvas(self):
+        TdrStyles.tdrStyle()
+
+        self.canvas = ROOT.TCanvas(self.var+'Comp','',600,600)
+        self.canvas.SetFillStyle(4000)
+        self.canvas.SetFrameFillStyle(1000)
+        self.canvas.SetFrameFillColor(0)
+        return self.canvas
     #------------------------------------------------------------------------------
     #  
     #------------------------------------------------------------------------------
@@ -198,7 +215,8 @@ class NewStackMaker:
                 t0.DrawTextNDC(0.1059, 0.96, "0")
 
     def drawSampleLegend(self, groupedHistograms, theErrorGraph):
-        self.pads['oben'].cd()
+        if 'oben' in self.pads and self.pads['oben']:
+            self.pads['oben'].cd()
         self.legends['left'] = ROOT.TLegend(0.45, 0.6,0.75,0.92)
         self.legends['left'].SetLineWidth(2)
         self.legends['left'].SetBorderSize(0)
@@ -227,11 +245,11 @@ class NewStackMaker:
                     self.legends['left'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
                 else:
                     self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
-        
-        if not self.AddErrors:
-            self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
-        else:
-            self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.+ syst.)", "fl")
+        if theErrorGraph: 
+            if not self.AddErrors:
+                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
+            else:
+                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.+ syst.)", "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
         self.legends['left'].SetFillColor(0)
@@ -242,7 +260,8 @@ class NewStackMaker:
         self.legends['right'].Draw()
 
     def drawPlotTexts(self):
-        self.pads['oben'].cd()
+        if 'oben' in self.pads and self.pads['oben']:
+            self.pads['oben'].cd()
         self.addObject(self.myText("CMS",0.17,0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
@@ -290,9 +309,8 @@ class NewStackMaker:
     #------------------------------------------------------------------------------
     # draw the stacked histograms 
     #------------------------------------------------------------------------------
-    def Draw(self, outputFolder='./'):
-        
-        c = self.initializeCanvas()
+    def Draw(self, outputFolder='./', prefix='', normalize=False):
+        c = self.initializeCanvas() if normalize else self.initializeSplitCanvas()
 
         dataGroupName = self.dataGroupName
         # group ("sum") MC+DATA histograms 
@@ -305,15 +323,25 @@ class NewStackMaker:
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
         colorDict = eval(self.config.get('Plot_general', 'colorDict'))
+        maximumNormalized = 0
         for groupName in self.setup[::-1]:
             if groupName in groupedHistograms and groupName != dataGroupName:
                 if groupName in colorDict:
-                    groupedHistograms[groupName].SetFillColor(colorDict[groupName])
+                    if normalize:
+                        groupedHistograms[groupName].SetFillColor(0)
+                        groupedHistograms[groupName].SetLineColor(colorDict[groupName])
+                        groupedHistograms[groupName].SetLineWidth(3)
+                    else:
+                        groupedHistograms[groupName].SetFillColor(colorDict[groupName])
                 if groupedHistograms[groupName]:
+                    if normalize and groupedHistograms[groupName].Integral()>0:
+                        groupedHistograms[groupName].Scale(1./groupedHistograms[groupName].Integral())
+                        if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
+                            maximumNormalized = groupedHistograms[groupName].GetMaximum()
                     allStack.Add(groupedHistograms[groupName])
 
         # draw stack
-        allStack.Draw("hist")
+        allStack.Draw("hist" if not normalize else "histnostack")
         if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
             yTitle = 'S/(S+B) weighted entries'
         else:
@@ -331,44 +359,59 @@ class NewStackMaker:
             allStack.GetYaxis().SetTitle(yTitle)
             allStack.GetXaxis().SetRangeUser(self.histogramOptions['xMin'], self.histogramOptions['xMax'])
             allStack.GetYaxis().SetRangeUser(0,20000)
-        Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
-        if self.log:
+        if normalize:
+            Ymax = maximumNormalized * 1.5
+        else:
+            Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
+        if self.log and not self.normalize:
             allStack.SetMinimum(0.1)
             Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
             ROOT.gPad.SetLogy()
+        else:
+            ROOT.gPad.SetLogy(0)
         allStack.SetMaximum(Ymax)
-        allStack.GetXaxis().SetLabelOffset(999)
-        allStack.GetXaxis().SetLabelSize(0)
+        if not normalize:
+            allStack.GetXaxis().SetLabelOffset(999)
+            allStack.GetXaxis().SetLabelSize(0)
+        else:
+            allStack.GetXaxis().SetTitle(self.xAxis)
 
         # draw DATA
         if dataGroupName in groupedHistograms:
             drawOption = 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
+            if normalize and groupedHistograms[dataGroupName].Integral() > 0:
+                groupedHistograms[dataGroupName].Scale(1./groupedHistograms[dataGroupName].Integral())
             groupedHistograms[dataGroupName].Draw(drawOption)
 
         # draw ratio plot
-        dataHistogram = groupedHistograms[dataGroupName]
-        mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group']!=dataGroupName], outputName='summedMcHistograms') 
-        self.drawRatioPlot(dataHistogram, mcHistogram)
+        if not normalize:
+            dataHistogram = groupedHistograms[dataGroupName]
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group']!=dataGroupName], outputName='summedMcHistograms') 
+            self.drawRatioPlot(dataHistogram, mcHistogram)
 
-        self.pads['oben'].cd()
-        theErrorGraph = ROOT.TGraphErrors(mcHistogram)
-        theErrorGraph.SetFillColor(ROOT.kGray+3)
-        theErrorGraph.SetFillStyle(3013)
-        theErrorGraph.Draw('SAME2')
+            self.pads['oben'].cd()
+            theErrorGraph = ROOT.TGraphErrors(mcHistogram)
+            theErrorGraph.SetFillColor(ROOT.kGray+3)
+            theErrorGraph.SetFillStyle(3013)
+            theErrorGraph.Draw('SAME2')
+        else:
+            theErrorGraph = None
 
         # draw legend
         self.drawSampleLegend(groupedHistograms, theErrorGraph)
 
         # draw various labels
-        self.drawPlotTexts()
+        if not normalize:
+            self.drawPlotTexts()
 
         # save to file
-        outputFileName = outputFolder + 'plot_test_' + self.var + '.png'
-        c.SaveAs(outputFileName)
-        if os.path.isfile(outputFileName):
-            print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
-        else:
-            print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+        for ext in self.outputFileFormats:
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
+            c.SaveAs(outputFileName)
+            if os.path.isfile(outputFileName):
+                print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+            else:
+                print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
 
