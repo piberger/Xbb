@@ -8,6 +8,7 @@ import glob
 import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
+import array
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -59,12 +60,16 @@ class SampleTree(object):
         self.status = 0
         self.treeName = treeName
         self.formulas = {}
+        self.formulaDefinitions = []
         self.oldTreeNum = -1
         self.limitFiles = int(limitFiles) 
         self.timeStart = time.time()
         self.timeETA = 0
         self.eventsRead = 0
         self.outputTrees = []
+
+        # e.g. for additional branches to be added
+        self.aliases = []
 
         # check existence of sample .txt file which contains list of .root files
         self.sampleTextFileName = ''
@@ -204,11 +209,24 @@ class SampleTree(object):
     # add a TTreeFormula connected to the TChain
     # ------------------------------------------------------------------------------
     def addFormula(self, formulaName, formula):
+        self.formulaDefinitions.append({'name': formulaName, 'formula': formula})
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
         if self.formulas[formulaName].GetNdim() == 0:
             print("DEBUG: formula is:", formula)
             print("\x1b[31mERROR: adding the tree formula failed! Check branches of input tree and loaded namespaces.\x1b[0m")
             raise Exception("SampleTreeAddTTreeFormulaFailed")
+
+    # ------------------------------------------------------------------------------
+    # add a new branch
+    # ------------------------------------------------------------------------------
+    def addOutputBranch(self, aliasName, formula, branchType='f'):
+        if callable(formula):
+            self.aliases.append({'name': aliasName, 'function': formula, 'type': branchType})
+        else:
+            formulaName = 'alias:' + aliasName
+            self.addFormula(formulaName, formula)
+            newBranch = {'name': aliasName, 'formula': formulaName}
+            self.aliases.append(newBranch)
 
     # ------------------------------------------------------------------------------
     # implement iterator for TChain, with updating TTreeFormula objects on tree
@@ -379,7 +397,9 @@ class SampleTree(object):
             if 'branches' in outputTree and outputTree['branches']:
                 listOfBranchesToKeep += outputTree['branches']
             if 'cut' in outputTree and outputTree['cut']:
-                listOfBranchesToKeep += BranchList(outputTree['cut']).getListOfBranches() 
+                listOfBranchesToKeep += BranchList(outputTree['cut']).getListOfBranches()
+            for formula in self.formulaDefinitions:
+                listOfBranchesToKeep += BranchList(formula['formula']).getListOfBranches()
 
         # ALWAYS keep the branches stated in config
         if self.config:
@@ -425,7 +445,16 @@ class SampleTree(object):
                     if formulaName not in self.formulas:
                         self.addFormula(formulaName, cutString)
                     outputTree['cutSequence'].append(formulaName)
-        
+
+        # prepare memory for new branches to be written
+        for outputTree in self.outputTrees:
+            outputTree['aliasArrays'] = {}
+            outputTree['aliasBranches'] = {}
+            for alias in self.aliases:
+                outputTree['aliasArrays'][alias['name']] = array.array('f', [0])
+                outputTree['aliasBranches'][alias['name']] = outputTree['tree'].Branch(alias['name'], outputTree['aliasArrays'][alias['name']], alias['name'] + '/F')
+
+
         # callbacks before loop
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'beforeLoop' in outputTree['callbacks']:
@@ -436,6 +465,15 @@ class SampleTree(object):
         print ("------------------")
         # loop over all events and write to output branches
         for event in self:
+
+            # fill aliases
+            for alias in self.aliases:
+                # evaluate result either as function applied on the tree entry or as ttreeformula
+                aliasResult = alias['function'](event) if 'function' in alias else self.evaluate(alias['formula'])
+
+                # fill it for all the output trees
+                for outputTree in self.outputTrees:
+                    outputTree['aliasArrays'][alias['name']][0] = float(aliasResult)
 
             # evaluate all formulas
             self.formulaResults = {}
