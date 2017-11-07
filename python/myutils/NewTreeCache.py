@@ -239,12 +239,13 @@ class TreeCache:
             try:
                 xrootdFileName = self.fileLocator.getXrootdFileName(self.tmpFolder)
                 if '://' not in xrootdFileName:
-                    command = 'mkdir %s' % (xrootdFileName)
+                    os.makedirs(self.tmpFolder)
                 else:
                     command = 'gfal-mkdir %s' % (xrootdFileName)
-                returnCode = subprocess.call([command], shell=True)
-                if self.debug:
-                    print(command, ' => ', returnCode)
+                    returnCode = subprocess.call([command], shell=True)
+                    if self.debug:
+                        print(command, ' => ', returnCode)
+                        print ()
             except:
                 pass
         outputFolderLocal = self.fileLocator.getLocalFileName(self.outputFolder)
