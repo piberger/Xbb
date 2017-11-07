@@ -217,11 +217,7 @@ class TreeCache:
         if self.debug:
             print ('DELETE:', rawFileName)
         xrootdFileName = self.fileLocator.getXrootdFileName(rawFileName)
-        if '://' not in xrootdFileName:
-            command = 'rm %s' % (xrootdFileName)
-        else:
-            command = 'gfal-rm %s' % (xrootdFileName)
-
+        command = self.fileLocator.getDeletionCommand(xrootdFileName)
         returnCode = subprocess.call([command], shell=True)
         if self.debug:
             print(command, ' => ', returnCode)
@@ -230,12 +226,14 @@ class TreeCache:
     def deleteCachedFiles(self, chunkNumber=-1):
         cachedFileNames = self.findCachedFileNames(chunkNumber=chunkNumber)
         for fileName in cachedFileNames:
-            self.deleteFile(fileName)
+            if self.fileLocator.fileExists(fileName):
+                self.deleteFile(fileName)
 
     # create folders
     def createFolders(self):
         tmpfolderLocal = self.fileLocator.getLocalFileName(self.tmpFolder)
         if not os.path.isdir(tmpfolderLocal):
+            print("DOES NOT EXIST:", tmpfolderLocal)
             try:
                 xrootdFileName = self.fileLocator.getXrootdFileName(self.tmpFolder)
                 if '://' not in xrootdFileName:
@@ -251,13 +249,10 @@ class TreeCache:
         outputFolderLocal = self.fileLocator.getLocalFileName(self.outputFolder)
 
         if not os.path.isdir(outputFolderLocal):
+            print("DOES NOT EXIST:", outputFolderLocal)
             try:
-                xrootdFileName = fileLocator.getXrootdFileName(self.outputFolder)
-                if '://' not in xrootdFileName:
-                    command = 'mkdir %s' % (xrootdFileName)
-                else:
-                    command = 'gfal-mkdir %s' % (xrootdFileName)
-
+                xrootdFileName = self.fileLocator.getXrootdFileName(self.outputFolder)
+                command = self.fileLocator.getMakedirCommand(xrootdFileName)
                 returnCode = subprocess.call([command], shell=True)
                 if self.debug:
                     print(command, ' => ', returnCode)
@@ -271,7 +266,8 @@ class TreeCache:
         for tmpFileName in self.tmpFiles:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
             print ('copy ', tmpFileName, ' to ', outputFileName)
-            self.deleteFile(outputFileName)
+            if self.fileLocator.fileExists(outputFileName):
+                self.deleteFile(outputFileName)
             command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
             print('the command is', command)
             returnCode = subprocess.call([command], shell=True)
