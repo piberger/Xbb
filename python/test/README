@@ -14,6 +14,9 @@ run unit tests
 ./test_TreeCache.py     test sample cache class
 ./test_FileList.py      compression/decompression check of FileList
 ./test_BranchList.py    test class to get list of branches from cut string
+./test_SampleTree_AddBranches.py    test the functionality to add new branches
+                        to the output tree, filled by a TTreeFormula or a
+                        (lambda) function.
 
 ------------------------------------------------------------------------------
 clean up
