@@ -8,12 +8,12 @@ from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from sampleTree import SampleTree as SampleTree
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # produces histograms from trees with HistoMaker, groups them, and draws a
 # stacked histogram
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 class NewStackMaker:
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut = ''):
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut=''):
         self.config = config
         self.var = var
         self.region = region
@@ -35,13 +35,6 @@ class NewStackMaker:
         else:
             self.setup = setup
 
-        # TODO: move to config file
-        if not SignalRegion: 
-            if 'ZH' in self.setup:
-                self.setup.remove('ZH')
-            if 'WH' in self.setup:
-                self.setup.remove('WH')
-                self.setup.remove('ggZH')
         self.rebin = 1
         self.histogramOptions = {
                 'rebin': 1,
@@ -80,7 +73,6 @@ class NewStackMaker:
         self.ratioPlot = None
         if SignalRegion:
             self.maxRatioUncert = 1000.
-        #self.outputFileTemplate = "{outputFolder}/{prefix}{prefixSeparator}plot_{var}.{ext}"
         self.outputFileTemplate = "{outputFolder}/{prefix}.{ext}"
         try:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
@@ -89,9 +81,9 @@ class NewStackMaker:
 
         print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['xMin'], " max=", self.histogramOptions['xMax'], "nBins=", self.histogramOptions['nBins'])
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # draw text
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     @staticmethod
     def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8):
         ROOT.gPad.Update()
@@ -102,9 +94,9 @@ class NewStackMaker:
         text.DrawLatex(ndcX,ndcY,txt)
         return text
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # create histogram out of a tree
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def addSampleTree(self, sample, sampleTree, groupName):
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
@@ -121,9 +113,9 @@ class NewStackMaker:
     def addObject(self, object):
         self.collectedObjects.append(object)
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # create canvas and load default style 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def initializeSplitCanvas(self):
         TdrStyles.tdrStyle()
 
@@ -154,9 +146,9 @@ class NewStackMaker:
         self.pads['oben'].cd()
         return self.canvas
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # create canvas and load default style 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def initializeCanvas(self):
         TdrStyles.tdrStyle()
 
@@ -165,9 +157,10 @@ class NewStackMaker:
         self.canvas.SetFrameFillStyle(1000)
         self.canvas.SetFrameFillColor(0)
         return self.canvas
-    #------------------------------------------------------------------------------
-    #  
-    #------------------------------------------------------------------------------
+
+    # ------------------------------------------------------------------------------
+    # data/MC ratio
+    # ------------------------------------------------------------------------------
     def drawRatioPlot(self, dataHistogram, mcHistogram):
 
         self.pads['unten'].cd()
@@ -306,9 +299,9 @@ class NewStackMaker:
                 summedHistogram = histogram.Clone(outputName)
         return summedHistogram
 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     # draw the stacked histograms 
-    #------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
     def Draw(self, outputFolder='./', prefix='', normalize=False):
         c = self.initializeCanvas() if normalize else self.initializeSplitCanvas()
 
