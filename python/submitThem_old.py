@@ -923,7 +923,7 @@ if opts.task.startswith('cachedc'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single parts
