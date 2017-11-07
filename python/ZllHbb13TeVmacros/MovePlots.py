@@ -2,54 +2,101 @@ import os
 import sys
 import shutil
 import subprocess
+import argparse
 
 #Read input arguments
 
-args = sys.argv[1:]
-if len(args) == 2:
-    _input = args[0]
-    _output = args[1]
-else:
-    print 'Error, need two agruments. You have provided', len(args)
-    sys.exit(1)
 
+
+parser = argparse.ArgumentParser(description='Move plots to public webpage')
+parser.add_argument('_input', metavar='I', help='input folder')
+parser.add_argument('_output', default = '/', metavar='T', help='target')
+
+parser.add_argument('-no', dest='do_outp', action='store_const',
+                   const=False, default=True,  help='no copying')
+parser.add_argument('-ni', dest='do_inp', action='store_const',
+                   const=False, default=True,  help='no preparation of folders for each Region')
+parser.add_argument('-r', dest='region', action='store_const',
+                   const=False, default=True,  help='use automatic region list insead of default')
+parser.add_argument('--server', default = None, help='other server than lxplus')
+
+parser.add_argument('-nh', dest='ht', action='store_const',
+                   const=False, default=True,  help='no htaccess file is created')
+parser.add_argument('--name', default = None, help='Give a name to the new dir')
+
+args = parser.parse_args()
+#args = sys.argv[1:]
+#if len(args) == 2:
+#    _input = args[0]
+#    _output = args[1]
+#else:
+#    print 'Error, need two agruments. You have provided', len(args)
+#    sys.exit(1)
+_input = args._input
+_output = args._output
 print 'Input folder is', _input
 print 'Output folder is', _output
 
 #Move all plots in corresponding subfolders
 
-def MakeSubFolders(_input, RegioList):
+def MakeSubFolders(_input, RegionList=None):
 
     #I am in macro location
     current_ = os.getcwd()
     os.chdir(_input)
     #I am in Plots
-    _plotfolder = _input.split('/')[-2]
-
+    if args.name is None:
+        _plotfolder = _input.split('/')[-2]
+    else:
+        _plotfolder = args.name
+    
     if not os.path.isdir(_plotfolder):
         os.mkdir(_plotfolder)
 
     print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
-    subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
+    if args.ht:
+        subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
     subprocess.call('cp -r '+current_+'/index.php ' + _plotfolder + '/', shell = True)
 
     FILE = os.listdir('.')
 
     #subprocess.call('cp -r ../config .', shell = True)
+    
+    #make default RegionList
+    if RegionList is None:
+        RegionList = []
+	for file in FILE:
+           
+            #skip folders in listdir
+            if not os.path.isfile(file):
+                continue
 
+            region = file.split("__")[0]
+            region = region.replace("comp_","")
+            if region not in RegionList:
+                RegionList.append((region,region)) 
+    #print RegionList
+   
     for file in FILE:
         #if not 'comp' in file: continue #Skip shape plots
         print 'file is', file
+        
+        #skip folders in listdir
+        if not os.path.isfile(file):
+            continue
+        
         for name, folder in RegionList:
             if not name in file: continue
             folder2 = os.path.join(_plotfolder,folder)
             if not os.path.isdir(folder2):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
-                subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
+                if args.ht:
+                    subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
-            shutil.copy(file,folder2)
+            if os.path.isfile(file):
+                shutil.copy(file,folder2)
             if os.path.isfile('pdf/'+file.replace('png','pdf')):
                 shutil.copy('pdf/'+file.replace('png','pdf'), folder2)
             else:
@@ -60,14 +107,23 @@ def MakeSubFolders(_input, RegioList):
             else:
                 print 'root/'+file.replace('png','C'), 'doesn\'t exist'
 
-def MoveSubFolders(_input, _output):
-    _plotfolder = _input.split('/')[-2]
+def MoveSubFolders(_input, _output, server=None):
+    if server is None:
+        process = os.popen('echo $USER')
+        user = process.read().strip()
+        process.close()
+        server = user + '@lxplus.cern.ch'
+    
+    if args.name is None:
+        _plotfolder = _input.split('/')[-2]
+    else:
+        _plotfolder = args.name
     print 'gonna lunch the command'
-    #copyCommand = 'scp -r ' + _plotfolder + ' piberger@lxplus.cern.ch:' + _output
-    copyCommand = 'scp -r ' + _plotfolder + ' gaperrin@lxplus.cern.ch:' + _output
+    copyCommand = 'scp -r ' + _plotfolder + ' ' + server + ':' + _output
     print copyCommand
     subprocess.call(copyCommand, shell = True)
     print 'that was delicious!'
+
 
 RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lowpt'),('Zll_CRZb_incl_highpt__','Zhf_Zll_highpt'),\
               ('Zll_CRZlight__','Zlf_Zll'),('Zll_CRZlight_lowpt__','Zlf_Zll_lowpt'),('Zll_CRZlight_highpt__','Zlf_Zll_highpt'),\
@@ -86,6 +142,12 @@ RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lo
               ('all','all'),('nivf2','nivf2'),('HTL400','HLT400'),('HTL400nivf2','HTL400nivf2')\
               ]
 
-MakeSubFolders(_input, RegionList)
-MoveSubFolders(_input, _output)
+if args.do_inp:
+    if args.region:
+        MakeSubFolders(_input, RegionList)
+    else:
+        MakeSubFolders(_input)
+
+if args.do_outp:
+    MoveSubFolders(_input, _output, args.server)
 
