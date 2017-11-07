@@ -42,7 +42,7 @@ class FileLocator(object):
                 raise Exception("NoRedirectorSpecified")
         else:
             return "rm {file}".format(file=localName)
-    
+
     def getMakedirCommand(self, fileName):
         localName = self.getLocalFileName(fileName)
         if ('/' + localName.strip().strip('/')).startswith(self.pnfsPrefix):

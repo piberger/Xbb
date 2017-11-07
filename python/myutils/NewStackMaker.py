@@ -315,7 +315,7 @@ class NewStackMaker:
 
         # MC histograms, defined in setup
         mcHistogramGroups = list(set([histogram['group'] for histogram in self.histograms if histogram['group']!=dataGroupName]))
-        mcHistogramGroupsToPlot = sorted(mcHistogramGroups, key=lambda x: self.setup.index(x) if x in self.setup else 9999) 
+        mcHistogramGroupsToPlot = sorted(mcHistogramGroups, key=lambda x: self.setup.index(x) if x in self.setup else 9999)
         mcHistogramGroupsUndefined = [x for x in mcHistogramGroups if x not in self.setup]
         if len(mcHistogramGroupsUndefined) > 0:
             print("\x1b[97m\x1b[41mWARNING: some MC samples are not defined in 'setup' definition for plots: \x1b[0m")
@@ -328,7 +328,7 @@ class NewStackMaker:
         allStack = ROOT.THStack(self.var, '')
         colorDict = eval(self.config.get('Plot_general', 'colorDict'))
         maximumNormalized = 0
-        for groupName in mcHistogramGroupsToPlot[::-1]: 
+        for groupName in mcHistogramGroupsToPlot[::-1]:
             if groupName in groupedHistograms and groupName != dataGroupName:
                 if groupName in colorDict:
                     if normalize:
@@ -392,7 +392,7 @@ class NewStackMaker:
         # draw ratio plot
         if not normalize:
             dataHistogram = groupedHistograms[dataGroupName]
-            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms') 
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
             self.drawRatioPlot(dataHistogram, mcHistogram)
 
             self.pads['oben'].cd()

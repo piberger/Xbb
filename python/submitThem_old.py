@@ -292,7 +292,7 @@ list_submitted_singlejobs = {}
 def submit(job,repDict,redirect_to_null=False):
     global counter
     repDict['job'] = job
-    nJob = counter 
+    nJob = counter
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
 
@@ -361,7 +361,7 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     global counter
     repDict['job'] = job
     repDict['joblogname'] = job.replace(',','_')
-    nJob = counter 
+    nJob = counter
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
     repDict['name'] = repDict['name'].replace(',','_')+'_'+str(counter_local)
@@ -393,7 +393,7 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     global counter
     repDict['job'] = job
-    nJob = counter 
+    nJob = counter
     counter += 1
     repDict['name'] = ('%(job)s_%(en)s%(task)s' %repDict).replace(',','_')
     repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')

@@ -236,16 +236,20 @@ class TreeCache:
             print("DOES NOT EXIST:", tmpfolderLocal)
             try:
                 xrootdFileName = self.fileLocator.getXrootdFileName(self.tmpFolder)
-                command = self.fileLocator.getMakedirCommand(xrootdFileName)
-                returnCode = subprocess.call([command], shell=True)
-                if self.debug:
-                    print(command, ' => ', returnCode)
+                if '://' not in xrootdFileName:
+                    os.makedirs(self.tmpFolder)
+                else:
+                    command = 'gfal-mkdir %s' % (xrootdFileName)
+                    returnCode = subprocess.call([command], shell=True)
+                    if self.debug:
+                        print(command, ' => ', returnCode)
+                        print ()
             except:
                 pass
         outputFolderLocal = self.fileLocator.getLocalFileName(self.outputFolder)
 
         if not os.path.isdir(outputFolderLocal):
-            print("DOES NOT EXIST:", outputFolderLocal) 
+            print("DOES NOT EXIST:", outputFolderLocal)
             try:
                 xrootdFileName = self.fileLocator.getXrootdFileName(self.outputFolder)
                 command = self.fileLocator.getMakedirCommand(xrootdFileName)
