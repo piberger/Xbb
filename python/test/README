@@ -1,8 +1,14 @@
 ------------------------------------------------------------------------------
+run full test suite
+------------------------------------------------------------------------------
+./run_all.py            runs everything
+
+
+------------------------------------------------------------------------------
 prepare unit tests
 ------------------------------------------------------------------------------
 
-./test_init.py          create some fake tree data with 10 files and many
+./init.py               create some fake tree data with 10 files and many
                         useless branches which will be stripped
 
 
@@ -22,5 +28,5 @@ run unit tests
 clean up
 ------------------------------------------------------------------------------
 
-./test_clean.py         clean up all the files which have been created,
+./clean.py              clean up all the files which have been created,
                         including test trees made by test_init.py
