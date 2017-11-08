@@ -225,6 +225,9 @@ elif [ $task = "train" ] || [ $task = "splitsubcaching" ]; then
 
 elif [ $task = "cachetraining" ]; then
     runCommand="python ./cache_training.py --trainingRegions ${trainingRegions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber} ${config_filenames[@]}"
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
     echo "$runCommand"
     eval "$runCommand"
 

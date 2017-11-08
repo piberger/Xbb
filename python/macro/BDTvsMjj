@@ -1,9 +1,0 @@
-tree->Draw("H.mass >> bin0","MicheleBDTNoMjj.nominal>-1 && MicheleBDTNoMjj.nominal<-0.3 && H.mass<500 &&  H.mass>90","NORM")
-tree->Draw("H.mass >> bin1","MicheleBDTNoMjj.nominal>-.3 && MicheleBDTNoMjj.nominal<0. && H.mass<500 &&  H.mass>90","NORM")
-tree->Draw("H.mass >> bin2","MicheleBDTNoMjj.nominal>0 && MicheleBDTNoMjj.nominal<1. && H.mass<500 &&  H.mass>90","NORM")
-
-bin0->Draw()
-bin1->Draw("same")
-bin2->Draw("same")
-
-

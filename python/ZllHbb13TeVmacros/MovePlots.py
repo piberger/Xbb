@@ -86,9 +86,20 @@ def MakeSubFolders(_input, RegionList=None):
         if not os.path.isfile(file):
             continue
         
+        folder2 = None
         for name, folder in RegionList:
             if not name in file: continue
             folder2 = os.path.join(_plotfolder,folder)
+            break
+        if not folder2:
+            if not '.pdf' in file and not '.png' in file and not '.root' in file: continue
+            else:
+                #If file is not in RegionList, create folder using file prefix
+                folder = file.split('__')[0]
+                folder2 = os.path.join(_plotfolder,folder)
+
+        print 'folder2 is', folder2
+        if folder2:
             if not os.path.isdir(folder2):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
@@ -100,12 +111,14 @@ def MakeSubFolders(_input, RegionList=None):
             if os.path.isfile('pdf/'+file.replace('png','pdf')):
                 shutil.copy('pdf/'+file.replace('png','pdf'), folder2)
             else:
-                print 'pdf/'+file.replace('png','pdf'), 'doesn\'t exist'
+                pass
+                #print 'pdf/'+file.replace('png','pdf'), 'doesn\'t exist'
             if os.path.isfile('root/'+file.replace('png','C')) :
                 shutil.copy('root/'+file.replace('png','C'), folder2)
-                print 'root is here'
+                #print 'root is here'
             else:
-                print 'root/'+file.replace('png','C'), 'doesn\'t exist'
+                pass
+                #print 'root/'+file.replace('png','C'), 'doesn\'t exist'
 
 def MoveSubFolders(_input, _output, server=None):
     if server is None:

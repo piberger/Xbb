@@ -1,6 +1,0 @@
-Info in <TCanvas::MakeDefCanvas>:  created default TCanvas with name c1
-Error in <RootX11IOErrorHandler>: fatal X11 error (connection to server lost?!)
-
-**** Save data and exit application ****
-
-TCanvas::Constructor:0: RuntimeWarning: Deleting canvas with same name: c1
