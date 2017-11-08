@@ -547,6 +547,7 @@ class SampleTree(object):
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
         print('INFO: end of processing. time ', time.ctime())
+        sys.stdout.flush()
 
         # write files
         for outputTree in self.outputTrees:
@@ -558,7 +559,10 @@ class SampleTree(object):
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
-                outputTree['callbacks']['afterWrite']()
+                try:
+                    outputTree['callbacks']['afterWrite']()
+                except Exception as e:
+                    print("\x12b[31mWARNING: exception during callback:", e, "\x1b[0m")
 
         print('INFO: done. time ', time.ctime(), ' events read:', self.eventsRead)
         sys.stdout.flush()
@@ -566,6 +570,8 @@ class SampleTree(object):
         for outputTree in self.outputTrees:
             passedSelectionFraction = 100.0*outputTree['passed']/self.eventsRead if self.eventsRead>0 else '?'
             print (' > \x1b[34m{name}\x1b[0m {passed} ({fraction}%) => {outputFile}'.format(name=outputTree['name'], passed=outputTree['passed'], fraction=passedSelectionFraction, outputFile=outputTree['fileName']))
+        sys.stdout.flush()
+
 
     @staticmethod
     def countSampleFiles(samples):

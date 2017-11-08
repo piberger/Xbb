@@ -491,7 +491,23 @@ class Datacard(object):
 
                     self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
                     self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
-
+    
+    def splitFilesExist(self, useSampleIdentifier=None): 
+        filesExist = True
+        allSamples = self.getAllSamples()
+        if useSampleIdentifier:
+            sampleIdentifiers = useSampleIdentifier
+        else:
+            sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
+        for sampleIdentifier in sampleIdentifiers:
+            subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
+            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
+            rootFile = ROOT.TFile.Open(rootFileName, 'read')
+            if not rootFile or rootFile.IsZombie():
+                filesExist = False
+                break
+            rootFile.Close()
+        return filesExist
 
     def getHistogramName(self, process, systematics):
         systematicsName = systematics['systematicsName'] if systematics['sysType'] != 'nominal' else ''
@@ -555,7 +571,7 @@ class Datacard(object):
         # ----------------------------------------------
         # write TEXT file
         # ----------------------------------------------
-        txtFileName = self.getDatacardBaseName(dcName) + '.txt'
+        txtFileName = self.getDatacardBaseName(dcName, ext='.txt')
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
@@ -697,13 +713,17 @@ class Datacard(object):
 
         print("done")
 
-    def getDatacardBaseName(self, subPartName=''):
+    def getDatacardBaseName(self, subPartName='', ext=''):
+        dcType = self.DCtype
         if len(subPartName) > 0:
             # temporary
-            baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}'.format(dcType=self.DCtype, path=self.outpath, rootName=self.ROOToutname, part=subPartName)
+            baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, part=subPartName, ext=ext)
         else:
             # final
-            baseFileName = '{path}/vhbb_{dcType}_{rootName}'.format(dcType=self.DCtype, path=self.outpath, rootName=self.ROOToutname)
+            # different naming of text files and histograms, for some reason
+            if ext.endswith('txt'):
+                dcType = 'DC_' + dcType
+            baseFileName = '{path}/vhbb_{dcType}_{rootName}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, ext=ext)
         return baseFileName
 
     @staticmethod

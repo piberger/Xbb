@@ -277,6 +277,9 @@ elif [ $task = "rundc" ]; then
     if [ "$sampleIdentifier" ]; then
         runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"
     fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
