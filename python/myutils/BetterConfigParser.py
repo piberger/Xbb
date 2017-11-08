@@ -13,8 +13,12 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
     if not os.isatty(1):
       os.environ['TERM'] = 'dumb'
 
+    # allow string interpolation with environment variables
+    def __init__(self):
+        ConfigParser.SafeConfigParser.__init__(self, os.environ)
+
     def get(self, section, option):
-        result = ConfigParser.SafeConfigParser.get(self, section, option, raw=True)
+        result = ConfigParser.SafeConfigParser.get(self, section, option, raw=False)
         result = self.__replaceSectionwideTemplates(result)
         return result
 

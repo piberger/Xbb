@@ -23,7 +23,10 @@ class RunDatacards(object):
 
     def run(self):
         if self.dcMaker:
-            self.dcMaker.run(useSampleIdentifiers=self.useSampleIdentifiers)
+            if not self.dcMaker.splitFilesExist(useSampleIdentifier=self.useSampleIdentifiers) or self.forceRedo:
+                self.dcMaker.run(useSampleIdentifiers=self.useSampleIdentifiers)
+            else:
+                print ("nothing to do.")
         else:
             print ("\x1b[31mERROR: could not produce datacards\x1b[0m")
 
@@ -57,5 +60,5 @@ if __name__ == "__main__":
     regions = [x.strip() for x in regionsListString.split(',') if len(x.strip()) > 0]
     useSampleIdentifiers = opts.sampleIdentifier.split(',') if len(opts.sampleIdentifier) > 0 else None
     for region in regions:
-        runDC = RunDatacards(config=config, region=region, useSampleIdentifiers=useSampleIdentifiers)
+        runDC = RunDatacards(config=config, region=region, useSampleIdentifiers=useSampleIdentifiers, forceRedo=opts.force)
         runDC.run()

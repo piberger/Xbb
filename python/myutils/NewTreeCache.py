@@ -4,6 +4,7 @@ from Hash import Hash
 import ROOT
 import subprocess
 import os
+import sys
 from samplesclass import Sample
 from sampleTree import SampleTree as SampleTree
 from FileLocator import FileLocator
@@ -270,6 +271,7 @@ class TreeCache:
                 self.deleteFile(outputFileName)
             command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
             print('the command is', command)
+            sys.stdout.flush()
             returnCode = subprocess.call([command], shell=True)
             if returnCode != 0:
                 success = False
