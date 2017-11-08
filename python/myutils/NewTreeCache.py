@@ -4,6 +4,7 @@ from Hash import Hash
 import ROOT
 import subprocess
 import os
+import sys
 from samplesclass import Sample
 from sampleTree import SampleTree as SampleTree
 from FileLocator import FileLocator
