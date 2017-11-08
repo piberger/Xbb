@@ -562,7 +562,7 @@ class SampleTree(object):
                 try:
                     outputTree['callbacks']['afterWrite']()
                 except Exception as e:
-                    print("\x12b[31mWARNING: exception during callback:", e, "\x1b[0m")
+                    print("\x1b[31mWARNING: exception during callback:", e, "\x1b[0m")
 
         print('INFO: done. time ', time.ctime(), ' events read:', self.eventsRead)
         sys.stdout.flush()
