@@ -911,6 +911,7 @@ if opts.task.startswith('cachedc'):
         sampleNames += [addSample_sys[key] for key in addSample_sys]
     for region in regions:
         for sampleType in ['data', 'signal', 'background']:
+            print "region: ", region
             sampleNames += eval(config.get('dc:%s'%region, sampleType))
 
     # get samples info
