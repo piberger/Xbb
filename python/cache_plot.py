@@ -86,8 +86,12 @@ class CachePlot(object):
                     if self.config.has_option('Plot_general','addBlindingCut'):
                         sampleCuts.append(self.config.has_option('Plot_general', 'addBlindingCut'))
 
+                    # arbitrary (optional) name for the output tree, used for print-out (the TreeCache object has no idea what it is doing, e.g. dc, plot etc.)
+                    cacheName = 'plot:{region}_{sample}'.format(region=region, sample=sample.name)
+
                     # add cache object
                     tc = TreeCache.TreeCache(
+                        name=cacheName,
                         sample=sample.name,
                         cutList=sampleCuts,
                         inputFolder=self.samplesPath,

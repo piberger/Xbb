@@ -18,6 +18,14 @@ class PlotHelper(object):
         self.region = region
         self.vars = vars
 
+        # VHbb namespace
+        VHbbNameSpace=config.get('VHbbNameSpace','library')
+        returnCode = ROOT.gSystem.Load(VHbbNameSpace)
+        if returnCode != 0:
+            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
+        else:
+            print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
+
         # additional blinding cut:
         self.addBlindingCut = None
         if self.config.has_option('Plot_general','addBlindingCut'): #contained in plots, cut on the event number

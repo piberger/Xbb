@@ -238,7 +238,7 @@ class NewStackMaker:
                     self.legends['left'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
                 else:
                     self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
-            else:
+            elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
         if theErrorGraph: 
             if not self.AddErrors:
