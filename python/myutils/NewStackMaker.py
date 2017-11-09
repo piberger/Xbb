@@ -232,12 +232,14 @@ class NewStackMaker:
 
         numLegendEntries = len(groupNames) + 2
         for itemPosition, groupName in enumerate(groupNamesOrdered): 
-            if groupName != self.dataGroupName:
+            if groupName != self.dataGroupName and groupName in groupedHistograms:
                 legendEntryName = self.typLegendDict[groupName] if groupName in self.typLegendDict else groupName
                 if itemPosition < numLegendEntries/2.-2:
                     self.legends['left'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
                 else:
                     self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
+            else:
+                print("WARNING: histogram group not found:", groupName)
         if theErrorGraph: 
             if not self.AddErrors:
                 self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")

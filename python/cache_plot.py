@@ -84,7 +84,8 @@ class CachePlot(object):
                     if self.config.has_option(configSection, 'Datacut'):
                         sampleCuts.append(self.config.get(configSection, 'Datacut'))
                     if self.config.has_option('Plot_general','addBlindingCut'):
-                        sampleCuts.append(self.config.has_option('Plot_general','addBlindingCut'))
+                        sampleCuts.append(self.config.has_option('Plot_general', 'addBlindingCut'))
+
                     # add cache object
                     tc = TreeCache.TreeCache(
                         sample=sample.name,
