@@ -3,7 +3,7 @@ import os, pickle, sys, ROOT
 ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from myutils import BetterConfigParser, copytree, copytreePSI, ParseInfo
-import utils
+#import utils
 
 print 'start prepare_environment_with_config.py'
 
@@ -52,8 +52,9 @@ for job in info:
     if job.subsample:
         continue
     if('lxplus' in whereToLaunch):
+        pass
         # TreeCopier class
-        utils.TreeCopier(pathIN, pathOUT, job.identifier, job.prefix, job.addtreecut)
+        #utils.TreeCopier(pathIN, pathOUT, job.identifier, job.prefix, job.addtreecut)
     else:
         if TreeCopierPSI == 'True':
             # copytreePSI class, allowing for single file workflow
