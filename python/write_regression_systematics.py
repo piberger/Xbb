@@ -847,7 +847,9 @@ for job in info:
                 tree.SetBranchStatus('EWKw',0)
                 tree.SetBranchStatus('NLOw',0)
                 tree.SetBranchStatus('DYw',0)
-                #tree.SetBranchStatus('isDY',0)
+
+                tree.SetBranchStatus('EWKwSIG',0)
+                tree.SetBranchStatus('EWKwVJets',0)
 
         if applyBTagweights:
             tree.SetBranchStatus("bTagWeightCMVAV2_Moriond*",0)
@@ -1394,6 +1396,15 @@ for job in info:
                 DYw= array('f',[0])
                 DYw[0] = 1
                 newtree.Branch('DYw',DYw,'DYw/F')
+
+                #EWK weight. Separated for sig and background
+                EWKwSIG = array('f',[0]*3)
+                EWKwSIG[0], EWKwSIG[1], EWKwSIG[2]= 1,1,1
+                newtree.Branch('EWKwSIG',EWKwSIG,'EWKwSIG[3]/F')
+
+                EWKwVJets = array('f',[0]*3)
+                EWKwVJets[0], EWKwVJets[1], EWKwVJets[2]= 1,1,1
+                newtree.Branch('EWKwVJets',EWKwVJets,'EWKwVJets[3]/F')
 
 
         #TT, ST, WHF, WLF from data fit
@@ -2230,16 +2241,15 @@ for job in info:
                         #print 'jobFullName is', jobFullName
                         #print 'applyEWK is', applyEWK
 
-                        EWKw[0] = 1
-                        EWKw[1] = 1
-                        EWKw[2] = 1
+                        EWKwVJets[0] = 1
+                        EWKwVJets[1] = 1
+                        EWKwVJets[2] = 1
 
-                        #if isDY[0] == 1 or isDY[0] == 2:
                         if applyEWK:
                             if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                                EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
-                                EWKw[1]= EWKw[0]
-                                EWKw[2]= EWKw[0]
+                                EWKwVJets[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
+                                EWKwVJets[1]= EWKwVJets[0]
+                                EWKwVJets[2]= EWKwVJets[0]
 
                         ###
                         #Add EWK on VH signal
@@ -2255,13 +2265,18 @@ for job in info:
                         elif 'ZH_HToBB_ZToNuNu' in jobFullName and not 'ggZH_HToBB_ZToNuNu' in jobFullName:
                             sys_sample = 'Zvv'
 
-                        print 'jobName is',  jobName
-                        print 'sys_sample is', sys_sample
+                        #print 'jobName is',  jobName
+                        #print 'sys_sample is', sys_sample
                         if tree.nGenVbosons > 0 and sys_sample:
-                            print 'sig ewk is', signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
-                            EWKw[0] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
-                            EWKw[1] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'down')
-                            EWKw[2] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'up')
+                            #print 'sig ewk is', signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
+                            EWKwSIG[0] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
+                            EWKwSIG[1] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'down')
+                            EWKwSIG[2] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'up')
+
+                        #Group EWK weight for SIG and bkg in same branch
+                        EWKw[0] = EWKwSIG[0]*EWKwVJets[0]
+                        EWKw[1] = EWKwSIG[1]*EWKwVJets[1]
+                        EWKw[2] = EWKwSIG[2]*EWKwVJets[2]
 
                         ###
                         #Add NLO weights to relevant DY and W+jet sampls
