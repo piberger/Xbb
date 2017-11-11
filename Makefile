@@ -6,4 +6,5 @@ interface/VHbbNameSpace_h.so: interface/VHbbNameSpace.h
 clean:
 	 rm interface/VHbbNameSpace_h.so
 	 rm interface/VHbbNameSpace_h.d
+	 rm interface/VHbbNameSpace_h_ACLiC_dict_rdict.pcm
 
