@@ -14,6 +14,8 @@
 #
 #====================================================================
 
+STARTTIME=$(date +%s.%N)
+
 # Fix Python escape sequence bug.
 export TERM=""
 
@@ -114,13 +116,6 @@ print parser.get('Configuration', 'whereToLaunch')
 END
 )
 
-echo "whereToLaunch: $whereToLaunch"
-echo
-
-if [ $whereToLaunch == "pisa" ]; then
-    export TMPDIR=$CMSSW_BASE/src/tmp
-fi
-
 # The configuration file names, formatted as arguments to the task scripts.
 config_filenames=( $(
 python - << END
@@ -166,9 +161,12 @@ END
 # Run Task
 
 if [ $task = "prep" ]; then
-    echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}"
-    python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}
-
+    runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+    
 elif [ $task = "singleprep" ]; then
     echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist
@@ -398,6 +396,10 @@ elif [ $task = "mva_opt_dc" ]; then
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
 
 fi
+
+ENDTIME=$(date +%s.%N)
+DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
+echo "duration (real time): $DIFFTIME minutes"
 
 echo
 echo "Exiting runAll.sh"
