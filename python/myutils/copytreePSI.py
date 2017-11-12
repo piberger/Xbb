@@ -58,13 +58,16 @@ class CopyTreePSI(object):
         # default redirector
         redirector = 'root://xrootd-cms.infn.it/'
         try:
-            if self.config.has_option('Directories', 'xrootdRedirectorGlobal'):
-                redirector = self.config.get('Directories', 'xrootdRedirectorGlobal')
+            if self.config.has_option('Configuration', 'xrootdRedirectorGlobal'):
+                redirector = self.config.get('Configuration', 'xrootdRedirectorGlobal')
             elif 'XBBXRD' in os.environ:
                 redirector = os.environ['XBBXRD']
         except:
             print "could not get xrootd redirector, using default one:", redirector
             print "specify redirector in config [Directories] xrootdRedirectorGlobal=.."
+        # add base path where storage is located on fs (if sample txt files don't contain absolute path)
+        if self.config.has_option('Configuration', 'inputStoragePath'):
+            redirector += self.config.get('Configuration', 'inputStoragePath') + '/'
         return redirector
 
     def copytreePSI(self, pathIN, pathOUT, folderName, skimmingCut, fileList=None):

@@ -39,6 +39,8 @@ parser.add_option("-i", "--interactive", dest="interactive", action="store_true"
                               help="Interactive mode")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
+parser.add_option("-l", "--limit", dest="limit", default=None,
+                      help="max number of files to process per sample")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -224,14 +226,36 @@ def submit(job, repDict, redirect_to_null=False):
             runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
 
     # submit script
-    logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
-    qsubOptions = submitScriptOptionsTemplate%(repDict) 
+    logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.log' %(repDict)
+    errorOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.err' %(repDict)
+    outOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
+    
+    if 'condor' in whereToLaunch:
+        with open('batch/condor/template.sub', 'r') as template:
+            lines = template.readlines()
+        dictHash = '%(task)s_%(timestamp)s'%(repDict) + '_%x'%hash('%r'%repDict)
+        condorDict = {
+            'runscript': runScript.split(' ')[0],
+            'arguments': ' '.join(runScript.split(' ')[1:]),
+            'output': outOutputPath,
+            'log': logOutputPath,
+            'error': errorOutputPath,
+            'queue': 'workday',
+        }
+        submitFileName = 'condor_{hash}.sub'.format(hash=dictHash)
+        with open(submitFileName, 'w') as submitFile:
+            for line in lines:
+                submitFile.write(line.format(**condorDict))    
+        print "COMMAND:\x1b[35m", runScript, "\x1b[0m"
+        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName) 
+    else:
+        qsubOptions = submitScriptOptionsTemplate%(repDict) 
 
-    if opts.task in submitScriptSpecialOptions: 
-        qsubOptions += submitScriptSpecialOptions[opts.task]
+        if opts.task in submitScriptSpecialOptions: 
+            qsubOptions += submitScriptSpecialOptions[opts.task]
 
-    command = submitScriptTemplate.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
-    dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
+        command = submitScriptTemplate.format(options=qsubOptions, logfile=outOutputPath, runscript=runScript)
+        dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
 
     # run command
     if opts.interactive:
@@ -256,12 +280,16 @@ if opts.task == 'prep':
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
+    if samplesList and len(samplesList) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
     
     chunkSize = 10
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
         sampleFileList = filelist(samplefiles, sampleIdentifier)
+        if opts.limit and len(sampleFileList) > int(opts.limit):
+            sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
         # submit a job for a chunk of N files

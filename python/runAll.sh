@@ -88,6 +88,9 @@ while [ $# -gt 0 ]; do
     --fileList=*)
       fileList="${1#*=}"
       ;;
+    --limit=*)
+      limit="${1#*=}"
+      ;;
     *)
       ;;
   esac
@@ -163,6 +166,7 @@ END
 if [ $task = "prep" ]; then
     runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"

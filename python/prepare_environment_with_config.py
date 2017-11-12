@@ -23,6 +23,8 @@ parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="
                               help="samples you want to run on")
 parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
+parser.add_option("-l", "--limit", dest="limit", default=None,
+                              help="max number of files to process")
 (opts, args) = parser.parse_args(argv)
 config = BetterConfigParser()
 config.read(opts.config)
@@ -41,6 +43,8 @@ whereToLaunch = config.get('Configuration','whereToLaunch')
 info = ParseInfo(samplesinfo,pathIN)
 samples = [x for x in info if not x.subsample and (len(opts.sampleIdentifier) == 0 or x.identifier in opts.sampleIdentifier.split(','))]
 treeCopier = copytreePSI.CopyTreePSI(config=config)
+if opts.limit and len(samples) > int(opts.limit):
+    samples= samples[:int(opts.limit)]
 for sample in samples:
     treeCopier.copytreePSI(pathIN=samplefiles, pathOUT=pathOUT, folderName=sample.identifier, skimmingCut=sample.addtreecut, fileList=fileList)
     
