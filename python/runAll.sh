@@ -13,7 +13,8 @@
 #              ETH Zurich
 #
 #====================================================================
-
+cd ${CMSSW_BASE}/src/Xbb/python/
+echo "cd ${CMSSW_BASE}/src/Xbb/python/"
 STARTTIME=$(date +%s.%N)
 
 # Fix Python escape sequence bug.
@@ -43,6 +44,7 @@ elif [ $task = "mva_opt" -a $# -lt 5 ]; then
 fi
 
 echo "Task: $task"
+echo "Pwd: $PWD"
 echo
 
 
