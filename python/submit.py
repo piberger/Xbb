@@ -1,54 +1,43 @@
 #! /usr/bin/env python
 from optparse import OptionParser
 import sys
-import time,datetime
+import time
 import os
 import shutil
 import subprocess
-import hashlib
 import signal
-import zlib
-import base64
+import ROOT
+ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
 from myutils.Datacard import Datacard
+from myutils import BetterConfigParser, ParseInfo
+from myutils.copytreePSI import filelist
+from myutils.FileLocator import FileLocator
 
-# TODO: clean up
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
-parser.add_option("-S","--samples",dest="samples",default="",
-              help="samples you want to run on")
+parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
 parser.add_option("-F", "--folderTag", dest="ftag", default="",
                       help="Creats a new folder structure for outputs or uses an existing one with the given name")
 parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
                       help="Number of events per file when splitting or number of files when using single file workflow.")
-parser.add_option("-P", "--philipp-love-progress-bars", dest="philipp_love_progress_bars", default=False,
-                      help="If you share the love of Philipp...")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
                       help="Override run_locally option to run locally")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
-parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", default=False,
-                      help="Override run_locally option to run in batch")
-parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False,
-                              help="Interactive mode")
+parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
-parser.add_option("-l", "--limit", dest="limit", default=None,
-                      help="max number of files to process per sample")
+parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
 
 (opts, args) = parser.parse_args(sys.argv)
 
-import os,shutil,pickle,subprocess,ROOT,re
-ROOT.gROOT.SetBatch(True)
-from myutils import BetterConfigParser, Sample, ParseInfo, sample_parser, copytreePSI
-from myutils.copytreePSI import filelist
-import getpass
 
 debugPrintOUts = opts.verbose
 
@@ -77,7 +66,6 @@ en = opts.tag
 
 #create the list with the samples to run over
 samplesList=opts.samples.split(",")
-# timestamp = time.asctime().replace(' ','_').replace(':','-')
 timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
 
 if(debugPrintOUts): print 'samplesList',samplesList
@@ -96,11 +84,18 @@ if(debugPrintOUts): print 'opts.ftag',opts.ftag
 if not opts.ftag == '':
     tagDir = pathconfig.get('Directories','tagDir')
     if(debugPrintOUts): print 'tagDir',tagDir
-    DirStruct={'tagDir':tagDir,'ftagdir':'%s/%s/'%(tagDir,opts.ftag),'logpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Logs'),'plotpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Plots'),'limitpath':'%s/%s/%s/'%(tagDir,opts.ftag,'Limits'),'confpath':'%s/%s/%s/'%(tagDir,opts.ftag,'config') }
+    DirStruct={
+        'tagDir': tagDir,
+        'ftagdir': '%s/%s/'%(tagDir, opts.ftag),
+        'logpath':'%s/%s/%s/'%(tagDir, opts.ftag, 'Logs'),
+        'plotpath':'%s/%s/%s/'%(tagDir, opts.ftag, 'Plots'),
+        'limitpath':'%s/%s/%s/'%(tagDir, opts.ftag, 'Limits'),
+        'confpath':'%s/%s/%s/'%(tagDir, opts.ftag, 'config')
+    }
 
     if(debugPrintOUts): print 'DirStruct',DirStruct
 
-    for keys in ['tagDir','ftagdir','logpath','plotpath','limitpath','confpath']:
+    for keys in ['tagDir', 'ftagdir', 'logpath', 'plotpath', 'limitpath', 'confpath']:
         try:
             os.stat(DirStruct[keys])
         except:
@@ -131,11 +126,12 @@ config.read(configs)
 
 # RETRIEVE RELEVANT VARIABLES FROM CONFIG FILES AND FROM COMMAND LINE OPTIONS
 # TODO: clean up
-logPath = config.get("Directories","logpath")
 counter = 0
-samplesinfo = config.get("Directories","samplesinfo")
-whereToLaunch = config.get('Configuration','whereToLaunch')
-run_locally = str(config.get("Configuration","run_locally"))
+logPath = config.get('Directories', 'logpath')
+samplesinfo = config.get('Directories', 'samplesinfo')
+whereToLaunch = config.get('Configuration', 'whereToLaunch')
+run_locally = str(config.get('Configuration', 'run_locally'))
+
 if opts.override_to_run_locally and opts.override_to_run_in_batch:
     print 'both override_to_run_locally and override_to_run_in_batch ativated, using str(config.get("Configuration","run_locally")) instead'
 elif opts.override_to_run_locally:
@@ -145,28 +141,15 @@ elif opts.override_to_run_in_batch:
     run_locally = 'False'
     print 'using override_to_run_in_batch to override str(config.get("Configuration","run_locally"))'
 
-print 'whereToLaunch',whereToLaunch
-print 'run_locally',run_locally
+print 'whereToLaunch', whereToLaunch
+print 'run_locally', run_locally
 
-# CREATE DIRECTORIES FOR PSI
-# TODO: clean up
+# CREATE DIRECTORIES
+fileLocator = FileLocator(config=config)
 if 'PSI' in whereToLaunch:
-  print 'Create the ouput folders PREPout, SYSout, MVAout if not existing'
-  mkdir_list = [
-                config.get('Directories','PREPout').replace('root://t3dcachedb03.psi.ch:1094/',''),
-                config.get('Directories','SYSout').replace('root://t3dcachedb03.psi.ch:1094/',''),
-                config.get('Directories','MVAout').replace('root://t3dcachedb03.psi.ch:1094/',''),
-                config.get('Directories','tmpSamples').replace('root://t3dcachedb03.psi.ch:1094/',''),
-                ]
-  for mkdir_protocol in mkdir_list:
-    if(debugPrintOUts): print 'checking',mkdir_protocol
-    _output_folder = ''
-    for _folder in mkdir_protocol.split('/'):
-        _output_folder += '/'+_folder
-        if not os.path.exists(_output_folder):
-            command = "uberftp t3se01 'mkdir " + _output_folder + " ' "
-            if(debugPrintOUts): print 'command is',command
-            subprocess.call([command], shell = True)
+    for dirName in ['PREPout', 'SYSout', 'MVAout', 'tmpSamples']:
+        if not fileLocator.exists(config.get('Directories', dirName)):
+            fileLocator.makedirs(config.get('Directories', dirName))
 
 def dump_config(configs,output_file):
     """
@@ -192,7 +175,17 @@ if( not os.path.isdir(logPath) ):
     sys.exit(-1)
 
 # CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
-repDict = {'en':en,'logpath':logPath,'job':'','task':opts.task,'queue': 'all.q','timestamp':timestamp,'additional':'','job_id':'noid','nprocesses':str(max(int(pathconfig.get('Configuration','nprocesses')),1))}
+repDict = {
+    'en': en,
+    'logpath': logPath,
+    'job': '',
+    'task': opts.task,
+    'queue': 'all.q',
+    'timestamp': timestamp,
+    'additional': '',
+    'job_id': 'noid',
+    'nprocesses': str(max(int(pathconfig.get('Configuration', 'nprocesses')), 1))
+}
 
 list_submitted_singlejobs = {}
 
@@ -209,10 +202,9 @@ submitScriptSpecialOptions = {
         }
 
 # STANDARD WORKFLOW SUBMISSION FUNCTION
-def submit(job, repDict, redirect_to_null=False):
+def submit(job, repDict):
     global counter
     repDict['job'] = job
-    nJob = counter 
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
 
@@ -225,11 +217,14 @@ def submit(job, repDict, redirect_to_null=False):
         for argument, value in repDict['arguments'].iteritems():
             runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
 
-    # submit script
+    # log=batch system log, out=stdout of process
     logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.log' %(repDict)
     errorOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.err' %(repDict)
     outOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
-    
+
+    # -----------------------------------------------------------------------------
+    # CONDOR
+    # -----------------------------------------------------------------------------
     if 'condor' in whereToLaunch:
         with open('batch/condor/template.sub', 'r') as template:
             lines = template.readlines()
@@ -245,9 +240,13 @@ def submit(job, repDict, redirect_to_null=False):
         submitFileName = 'condor_{hash}.sub'.format(hash=dictHash)
         with open(submitFileName, 'w') as submitFile:
             for line in lines:
-                submitFile.write(line.format(**condorDict))    
+                submitFile.write(line.format(**condorDict))
         print "COMMAND:\x1b[35m", runScript, "\x1b[0m"
-        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName) 
+        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
+
+    # -----------------------------------------------------------------------------
+    # SGE
+    # -----------------------------------------------------------------------------
     else:
         qsubOptions = submitScriptOptionsTemplate%(repDict) 
 
@@ -255,11 +254,11 @@ def submit(job, repDict, redirect_to_null=False):
             qsubOptions += submitScriptSpecialOptions[opts.task]
 
         command = submitScriptTemplate.format(options=qsubOptions, logfile=outOutputPath, runscript=runScript)
-        dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
+        dump_config(configs, "%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
 
     # run command
     if opts.interactive:
-        print "the real command is:\x1b[34m",command,"\x1b[0m\n(press ENTER to run it and continue)"
+        print "the real command is:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
         answer = raw_input().strip()
         if answer.lower() in ['no', 'n', 'skip']:
             return
@@ -268,7 +267,6 @@ def submit(job, repDict, redirect_to_null=False):
             command = 'sh {runscript}'.format(runscript=runScript)
     else:
         print "the command is ", command
-
     subprocess.call([command], shell=True)
 
 # -----------------------------------------------------------------------------
