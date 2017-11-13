@@ -259,11 +259,11 @@ def submit(job, repDict, redirect_to_null=False):
 
     # run command
     if opts.interactive:
-        print "the real command is:\x1b[34m",command,"\x1b[0m\n(press ENTER to run it and continue)"
+        print "SUBMIT:\x1b[34m",command,"\x1b[0m\n(press ENTER to run it and continue)"
         answer = raw_input().strip()
         if answer.lower() in ['no', 'n', 'skip']:
             return
-        elif answer.lower() == 'l':
+        elif answer.lower() in ['l', 'local']:
             print "run locally"
             command = 'sh {runscript}'.format(runscript=runScript)
     else:
@@ -283,7 +283,7 @@ if opts.task == 'prep':
     if samplesList and len(samplesList) > 0:
         sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
     
-    chunkSize = 10
+    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
@@ -302,45 +302,9 @@ if opts.task == 'prep':
             jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 
-
-
-    '''
-    sample_list = {}
-    if ( samplesList == [''] ):
-        for job in info:
-            sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
-    else:
-        for job in info:
-            if job.identifier in samplesList:
-                sample_list[job.identifier] = [job.name] if not sample_list.has_key(job.identifier) else sample_list[job.identifier] + [job.name]
-
-    for item in Plot_vars:
-        if opts.task == 'singleplot':
-            section='Plot:%s'%item
-            data = eval(config.get(section,'Datas'))# read the data corresponding to each CR (section)
-            mc = eval(config.get('Plot_general','samples'))# read the list of mc samples
-            # print 'data',data
-            # print 'mc',mc
-        for sample, sampleplot in sample_list.iteritems():
-            print 'sample',sample
-            if sample == '': continue
-            if opts.task == 'singleprep' or opts.task == 'singlesys' or opts.task == 'singleeval' or opts.task == 'singleplot':
-                files = getfilelist(sample)
-                files_per_job = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else int(config.get("Configuration","files_per_job"))
-                files_split=[files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
-                files_split = [';'.join(sublist) for sublist in files_split]
-                counter_local = 0
-                if opts.task == 'singleplot':
-                    if set(sampleplot).isdisjoint(data+mc):
-                        print 'not included in plotting region',item
-                        continue
-                for files_sublist in files_split:
-                    submitsinglefile(sample,repDict,files_sublist,run_locally,counter_local,item)
-                    counter_local = counter_local + 1
-            elif opts.task == 'mergesingleprep' or opts.task == 'mergesinglesys' or opts.task == 'mergesingleeval' or opts.task == 'mergesingleplot':
-                mergesubmitsinglefile(sample,repDict,run_locally,item)
-    '''
-
+# -----------------------------------------------------------------------------
+# CACHETRAINING: prepare skimmed trees including the training/eval cuts 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('cachetraining'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
@@ -394,6 +358,9 @@ if opts.task.startswith('cachetraining'):
             jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# RUNTRAINING: train mva, outputs .xml file. Needs cachetraining before. 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('runtraining'):
     # training regions
     trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
@@ -405,6 +372,9 @@ if opts.task.startswith('runtraining'):
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# CACHEPLOT: prepare skimmed trees with cuts for the CR/SR 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('cacheplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
     sampleNames = eval(config.get('Plot_general', 'samples')) 
@@ -452,6 +422,9 @@ if opts.task.startswith('cacheplot'):
             jobName = 'plot_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
             submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# RUNPLOT: make CR/SR plots. Needs cacheplot before. 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
 
@@ -467,6 +440,10 @@ if opts.task.startswith('runplot'):
         jobName = 'plot_run_{region}'.format(region=region)
         submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
+# variations of systematics. 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('cachedc'):
     # get list of all sample names used in DC step
     sampleNames = []
@@ -517,6 +494,9 @@ if opts.task.startswith('cachedc'):
             jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
             submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# RUNDC: produce DC .txt and .root files. Needs cachedc before. 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('rundc'):
     
     regions = Datacard.getRegions(config=config)
@@ -528,8 +508,6 @@ if opts.task.startswith('rundc'):
     samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
     if len(samplesToCache) > 0:
         sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToCache]
-
-    #DEBUG: sampleIdentifiers = [x for x in sampleIdentifiers if 'Double' in x]
 
     # submit all the DC regions as separate jobs
     for region in regions:
@@ -547,6 +525,10 @@ if opts.task.startswith('rundc'):
             jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
             submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# MERGEDC: merge DC .root files for all samples per region and produce combined
+# .root and .txt files. Needs rundc before. 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('mergedc'):
     regions = Datacard.getRegions(config=config)
 
@@ -563,4 +545,39 @@ if opts.task.startswith('mergedc'):
         jobName = 'dc_merge_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
         submit(jobName, jobDict)
 
+if opts.task == 'trainReg':
+    repDict['queue'] = 'all.q'
+    submit('trainReg',repDict)
 
+# ADD SYSTEMATIC UNCERTAINTIES AND ADDITIONAL HIGHER LEVEL VARIABLES TO THE TREES
+if opts.task == 'sys' or opts.task == 'syseval':
+    path = config.get("Directories","SYSin")
+    info = ParseInfo(samplesinfo,path)
+    if opts.samples == "":
+        for job in info:
+            if (job.subsample):
+                continue # avoid multiple submissions form subsamples
+            # TO FIX FOR SPLITTED SAMPLE
+            submit(job.name,repDict)
+    else:
+        for sample in samplesList:
+            submit(sample,repDict)
+
+
+# EVALUATION OF EVENT BY EVENT BDT SCORE
+if opts.task == 'eval':
+    repDict['queue'] = 'long.q'
+    path = config.get("Directories","MVAin")
+    info = ParseInfo(samplesinfo,path)
+    if opts.samples == "":
+        for job in info:
+            if (job.subsample):
+                continue # avoid multiple submissions from subsamples
+            if(info.checkSplittedSampleName(job.identifier)): # if multiple entries for one name  (splitted samples) use the identifier to submit
+                print '@INFO: Splitted samples: submit through identifier'
+                submit(job.identifier,repDict)
+            else: submit(job.name,repDict)
+    else:
+        for sample in samplesList:
+            print sample
+            submit(sample,repDict)
