@@ -559,7 +559,6 @@ if opts.task == 'sys' or opts.task == 'syseval':
     sampleIdentifiers = info.getSampleIdentifiers() 
     if samplesList and len([x for x in samplesList if x]) > 0:
         sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
-    
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
  
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -568,7 +567,8 @@ if opts.task == 'sys' or opts.task == 'syseval':
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
-
+        
+        print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.." 
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
             jobDict = repDict.copy()

@@ -2,6 +2,7 @@
 */*
 *.swo
 *.swp
+.*.swp
 !Gael*/
 luca
 !json

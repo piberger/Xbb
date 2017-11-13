@@ -14,6 +14,7 @@ ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from btag_reweight import *
 from time import gmtime, strftime
+from myutils.FileList import FileList
 #import pdb
 
 argv = sys.argv
@@ -22,7 +23,7 @@ parser.add_option("-S", "--samples", dest="names", default="",
                       help="samples you want to run on")
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration defining the plots to make")
-parser.add_option("-f", "--filelist", dest="filelist", default="",
+parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files")
 
@@ -30,16 +31,15 @@ parser.add_option("-F", "--force", dest="force", action="store_true", help="over
 if opts.config =="":
         opts.config = "config"
 
-print 'opts.filelist="'+opts.filelist+'"'
-filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
-print filelist
+filelist = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
 print "len(filelist)",len(filelist),
 if len(filelist)>0:
     print "filelist[0]:",filelist[0];
 else:
     print ''
 
-from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF, bTagSF
+from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
+#from myutils import bTagSF
 #from btagSF import BtagSF
 #import BtagSF
 #from bTagSF import *
@@ -902,7 +902,7 @@ for job in info:
 
 
         if applyBTagweights:
-            ROOT.gSystem.Load("./BTagCalibrationStandalone.so")
+            ROOT.gSystem.Load("../interface/BTagCalibrationStandalone_cpp.so")
             #ROOT.gROOT.ProcessLine('.L ../interface/BTagCalibrationStandalone.cpp+')
 
             # from within CMSSW:
@@ -912,11 +912,11 @@ for job in info:
 
             # CSVv2
             #calib_csv = ROOT.BTagCalibration("csvv2", "./ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
-            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
+            calib_csv = ROOT.BTagCalibration("csvv2", "csv/CSVv2_Moriond17_B_H.csv")
 
             # cMVAv2
             #calib_cmva = ROOT.BTagCalibration("cmvav2", "./ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
-            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
+            calib_cmva = ROOT.BTagCalibration("cmvav2", "csv/cMVAv2_Moriond17_B_H.csv")
 
             print "\nCalibration Init...\n"
 

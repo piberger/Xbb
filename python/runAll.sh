@@ -186,8 +186,12 @@ elif [ $task = "trainReg" ]; then
     python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
 
 elif [ $task = "sys" ]; then
-    echo "python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
-    python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
+    runCommand="python ./write_regression_systematics.py --samples ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
 
 elif [ $task = "vars" ]; then
     echo "python ./write_newVariables.py --samples $sample ${config_filenames[@]}"
