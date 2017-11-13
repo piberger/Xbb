@@ -12,3 +12,4 @@ csv/*.d
 csv/*.pcm
 csv/*.so
 core.*
+condor_*.sub
