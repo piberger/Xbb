@@ -48,7 +48,7 @@ class FileLocator(object):
         return self.isPnfs(path) or '://' in path 
 
     def isValidRootFile(self, path):
-        f = ROOT.TFile.Open(path,'read')
+        f = ROOT.TFile.Open(path, 'read')
         if f:
             isValid = not (f.IsZombie() or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered))
             try:
@@ -130,7 +130,7 @@ class FileLocator(object):
         if self.isRemotePath(path):
             return self.remoteFileExists(path)
         else:
-            return os.path.exists(parth)
+            return os.path.exists(path)
 
     def mkdir(self, path):
         status = False
@@ -167,6 +167,7 @@ class FileLocator(object):
                 for j in range(i, len(directories) + 1):
                     remoteName = self.getRemoteFileName('/'.join(directories[:j]))
                     self.mkdir(remoteName)
+        return status
 
     def fileExists(self, fileName):
         return os.path.isfile(self.getLocalFileName(fileName))
