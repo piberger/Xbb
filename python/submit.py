@@ -86,8 +86,12 @@ if(debugPrintOUts): print 'timestamp',timestamp
 # the list of the config is taken from the path config
 pathconfig = BetterConfigParser()
 pathconfig.read('%sconfig/paths.ini'%(en))
-_configs = pathconfig.get('Configuration','List').split(" ")
-configs = [ '%sconfig/'%(en) + c for c in _configs  ]
+try:
+    _configs = pathconfig.get('Configuration','List').split(" ")
+    configs = [ '%sconfig/'%(en) + c for c in _configs  ]
+except:
+    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m") 
+    raise Exception("ConfigNotFound")
 
 if(debugPrintOUts): print 'configs',configs
 if(debugPrintOUts): print 'opts.ftag',opts.ftag
@@ -280,7 +284,7 @@ if opts.task == 'prep':
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len(samplesList) > 0:
+    if samplesList and len([x for x in samplesList if x]) > 0:
         sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
     
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
@@ -551,18 +555,31 @@ if opts.task == 'trainReg':
 
 # ADD SYSTEMATIC UNCERTAINTIES AND ADDITIONAL HIGHER LEVEL VARIABLES TO THE TREES
 if opts.task == 'sys' or opts.task == 'syseval':
-    path = config.get("Directories","SYSin")
-    info = ParseInfo(samplesinfo,path)
-    if opts.samples == "":
-        for job in info:
-            if (job.subsample):
-                continue # avoid multiple submissions form subsamples
-            # TO FIX FOR SPLITTED SAMPLE
-            submit(job.name,repDict)
-    else:
-        for sample in samplesList:
-            submit(sample,repDict)
+    path = config.get("Directories", "SYSin")
+    samplefiles = config.get('Directories','samplefiles')
+    info = ParseInfo(samplesinfo, path)
+    sampleIdentifiers = info.getSampleIdentifiers() 
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    
+    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+ 
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        if opts.limit and len(sampleFileList) > int(opts.limit):
+            sampleFileList = sampleFileList[0:int(opts.limit)]
+        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
+        # submit a job for a chunk of N files
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
+            jobDict = repDict.copy()
+            jobDict.update({'arguments':{
+                    'sampleIdentifier': sampleIdentifier,
+                    'fileList': FileList.compress(splitFilesChunk),
+                }})
+            jobName = 'sys_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+            submit(jobName, jobDict)
 
 # EVALUATION OF EVENT BY EVENT BDT SCORE
 if opts.task == 'eval':
