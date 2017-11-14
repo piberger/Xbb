@@ -4,7 +4,6 @@ ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from myutils import BetterConfigParser, copytree, copytreePSI, ParseInfo
 from myutils.FileList import FileList
-#import utils
 
 print 'start prepare_environment_with_config.py'
 
