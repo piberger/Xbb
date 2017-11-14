@@ -305,6 +305,37 @@ if opts.task == 'prep':
             submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
+# (experimental!!) SYSNEW: add additional branches and branches for sys variations 
+# -----------------------------------------------------------------------------
+if opts.task == 'sysnew':
+
+    path = config.get("Directories", "SYSin")
+    samplefiles = config.get('Directories','samplefiles')
+    info = ParseInfo(samplesinfo, path)
+    sampleIdentifiers = info.getSampleIdentifiers() 
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    
+    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        if opts.limit and len(sampleFileList) > int(opts.limit):
+            sampleFileList = sampleFileList[0:int(opts.limit)]
+        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
+
+        # submit a job for a chunk of N files
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
+            jobDict = repDict.copy()
+            jobDict.update({'arguments':{
+                    'sampleIdentifier': sampleIdentifier,
+                    'fileList': FileList.compress(splitFilesChunk),
+                }})
+            jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+            submit(jobName, jobDict)
+
+# -----------------------------------------------------------------------------
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cachetraining'):

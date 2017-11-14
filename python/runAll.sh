@@ -173,6 +173,14 @@ if [ $task = "prep" ]; then
     echo "$runCommand"
     eval "$runCommand"
     
+elif [ $task = "sysnew" ]; then
+    runCommand="python ./sys_new.py --sampleIdentifier ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "singleprep" ]; then
     echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist $filelist

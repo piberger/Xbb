@@ -4,6 +4,7 @@ import shutil
 import sys
 import subprocess
 import ROOT
+import hashlib
 
 class FileLocator(object):
 
@@ -35,6 +36,14 @@ class FileLocator(object):
         self.remoteRm = 'xrdfs {server} rm {path}'
         self.remoteCp = 'xrdcp -d 1 {source} {target}'
         self.makedirsMinLevel = 5   # don't even try to create/access the 5 lowest levels in the path
+
+    # special Xbb function: get filename after prep step from original file name
+    def getFilenameAfterPrep(self, inputFile):
+        subfolder = inputFile.split('/')[-4]
+        filename = inputFile.split('/')[-1]
+        filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
+        hash = hashlib.sha224(filename).hexdigest()
+        return filename.replace('.root','')+'_'+str(hash)+'.root'
 
     # check if path is relative to /store/
     def isStoragePath(self, path):

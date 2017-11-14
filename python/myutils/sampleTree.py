@@ -157,7 +157,10 @@ class SampleTree(object):
             sampleFileNames = self.samples
         # given argument is name and folder -> glob
         elif type(self.samples) == dict:
-            sampleName = self.samples['name']
+            if 'sample' in self.samples:
+                sampleName = self.samples['sample'].identifier
+            else:
+                sampleName = self.samples['name']
             sampleFolder = self.samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             if self.verbose:
