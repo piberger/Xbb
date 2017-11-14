@@ -144,6 +144,7 @@ class VtypeCorrector(object):
             return self.branchBuffers[arguments][0]
 
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
+        self.processEvent(event)
         # TODO: avoid this additional copy step
         for i in range(arguments['length']):
             destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
