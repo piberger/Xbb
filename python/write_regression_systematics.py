@@ -946,7 +946,9 @@ for job in info:
             for algo in ["CSV", "CMVAV2"]:
                 for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
                     print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
-                    btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
+                    #btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
+                    btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(3, syst)
+                    btag_calibrators[algo+"_iterative_"+syst].load(sf_type_map[algo]["file"], 0, "iterativefit")
             sysRefMap = {}
             sysMap = {}
             sysMap["JESUp"] = "up_jes"
@@ -1000,11 +1002,11 @@ for job in info:
                 if shape_corr:
                     if applies(fl,syst):
                         sf = btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-                        #print 'shape_corr SF:', sf
+                        #print 'shape_corr SF:',fl_index ,eta, pt, val, "=>", sf
                         return sf
                     else:
                         sf = btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-                        #print 'shape_corr for central SF:', sf
+                        #print 'shape_corr for central SF:', fl_index ,eta, pt, val, "=>", sf
                         return sf
 
 
@@ -1115,7 +1117,7 @@ for job in info:
             #isVerbose = True
 
             #regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
-            regWeight = './reg/gravall-v25.weights.xml'
+            regWeight = './csv/gravall-v25.weights.xml'
             #regWeight = './reg/TMVARegression_BDTG.weights.xml'
             regVars = ["Jet_pt",
                        "nPVs",
@@ -1510,7 +1512,6 @@ for job in info:
                 #print 'entry is', entry
                 tree.GetEntry(entry)
 
-
                 ### Vtype correction for V25 samples
                 if (channel == "Zll" or channel == "Zvv" or channel == "Wlv") and recomputeVtype:
 
@@ -1791,7 +1792,7 @@ for job in info:
                     JEC_systematics["HCMVAV2_reg_phi"][0]  = (hJ0+hJ1).Phi()
                     JEC_systematics["hJetCMVAV2_pt_reg_0"][0]  = hJ0.Pt()
                     JEC_systematics["hJetCMVAV2_pt_reg_1"][0]  = hJ1.Pt()
-
+                    
                     if job.type != 'DATA':
                         #now loop over all the jets
                         for syst in JECsys:
@@ -2225,8 +2226,8 @@ for job in info:
                         applyEWK = False
                         if ('DY' in jobFullName and not '10to50' in jobFullName) or ('WJet' in  jobFullName):
                             applyEWK = True
-                        print 'jobFullName is', jobFullName
-                        print 'applyEWK is', applyEWK
+                        #print 'jobFullName is', jobFullName
+                        #print 'applyEWK is', applyEWK
 
                         EWKw[0] = 1
                         EWKw[1] = 1
@@ -2234,9 +2235,9 @@ for job in info:
 
                         #if isDY[0] == 1 or isDY[0] == 2:
                         if applyEWK:
-                            print 'DEBUG EWK'
+                            #print 'DEBUG EWK'
                             if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                                print 'DEBUG EWK AGAIN'
+                                #print 'DEBUG EWK AGAIN'
                                 EWKw[0]= -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
                                 EWKw[1]= EWKw[0]
                                 EWKw[2]= EWKw[0]
@@ -2255,8 +2256,8 @@ for job in info:
                         elif 'ZH_HToBB_ZToNuNu' in jobFullName and not 'ggZH_HToBB_ZToNuNu' in jobFullName:
                             sys_sample = 'Zvv'
 
-                        print 'jobName is',  jobName
-                        print 'sys_sample is', sys_sample
+                        #print 'jobName is',  jobName
+                        #print 'sys_sample is', sys_sample
                         if tree.nGenVbosons > 0 and sys_sample:
                             print 'sig ewk is', signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')
                             EWKw[0] = signal_ewk(tree.GenVbosons_pt[0], sys_sample,'nom')

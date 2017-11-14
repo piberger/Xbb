@@ -511,7 +511,6 @@ double BTagCalibrationReader::BTagCalibrationReaderImpl::eval(
       }
     }
   }
-
   return 0.;  // default value
 }
 
