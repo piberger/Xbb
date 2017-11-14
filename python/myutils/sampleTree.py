@@ -68,6 +68,7 @@ class SampleTree(object):
         self.eventsRead = 0
         self.outputTrees = []
         self.callbacks = {}
+        self.removeBranches = []
 
         # e.g. for additional branches to be added
         self.newBranches = []
@@ -223,9 +224,14 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add a new branch
     # ------------------------------------------------------------------------------
-    def addOutputBranch(self, branchName, formula, branchType='f', length=1):
+    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None):
+        # this is needed to overwrite the branch if it already exists!
+        self.addBranchToBlacklist(branchName)
         if callable(formula):
-            self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length})
+            if arguments:
+                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length, 'arguments': arguments})
+            else:
+                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length})
         else:
             formulaName = 'alias:' + branchName
             self.addFormula(formulaName, formula)
@@ -242,6 +248,7 @@ class SampleTree(object):
                 formula=branchDict['formula'],
                 branchType=branchDict['type'] if 'type' in branchDict else 'f',
                 length=branchDict['length'] if 'length' in branchDict else 1,
+                arguments=branchDict['arguments'] if 'arguments' in branchDict else None,
             )
 
     # ------------------------------------------------------------------------------
@@ -350,7 +357,8 @@ class SampleTree(object):
             return all([self.evaluateCutDictRecursive(subDict) for subDict in cutDict['AND']])
         else:
             raise Exception("BadTreeTypeCutDict")
-
+    
+    # add callback function, which can return a boolean. false means skip this event!
     def setCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
@@ -392,10 +400,16 @@ class SampleTree(object):
             outputTree['histograms'][histogramName].SetDirectory(outputTree['file'])
 
         self.outputTrees.append(outputTree)
+    
+    # these branches are ALWAYS removed (e.g. because they will be recomputed), even when they are in the 'keep_branches' list
+    def addBranchToBlacklist(self, branchName):
+        self.removeBranches.append(branchName)
 
     # wrapper to enable/disable branches in the TChain
     def SetBranchStatus(self, branchName, branchStatus):
-        self.tree.SetBranchStatus(branchName, branchStatus)
+        listOfExistingBranches = self.GetListOfBranches()
+        if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
+            self.tree.SetBranchStatus(branchName, branchStatus)
 
     # enables ONLY the given branches (* wildcards supported) and checks existence before enabling them to avoid warning messages during tree iteration
     def enableBranches(self, listOfBranchesToKeep):
@@ -447,6 +461,11 @@ class SampleTree(object):
             self.enableBranches(listOfBranchesToKeep)
         else:
             print("INFO: keep all branches")
+
+        # now disable all branches, which will be e.g. recomputed
+        for branchName in self.removeBranches:
+            print ("INFO: but remove", branchName)
+            self.SetBranchStatus(branchName, 0)
 
         # initialize the output trees, this has to be called after the calls to SetBranchStatus
         for outputTree in self.outputTrees:
@@ -510,13 +529,18 @@ class SampleTree(object):
 
             # new event callback
             if self.callbacks and 'event' in self.callbacks:
-                self.callbacks['event'](event)
+                # if callbacks return false, skip event!
+                if not self.callbacks['event'](event):
+                    continue
 
             # fill branches
             for branch in self.newBranches:
                 # evaluate result either as function applied on the tree entry or as TTreeFormula
                 if branch['length'] == 1:
-                    branchResult = branch['function'](event) if 'function' in branch else self.evaluate(branch['formula'])
+                    if 'function' in branch:
+                        branchResult = branch['function'](event, arguments=branch['arguments'] if 'arguments' in branch else None)
+                    else:
+                        branchResult = self.evaluate(branch['formula'])
                     # fill it for all the output trees
                     for outputTree in self.outputTrees:
                         outputTree['newBranchArrays'][branch['name']][0] = branchResult
@@ -526,7 +550,7 @@ class SampleTree(object):
                         # todo: make it more efficient by using a shared memory block for all of the output trees'
                         # todo: branches, this would help in case one adds new branches and writes to several trees at once
                         for outputTree in self.outputTrees:
-                            branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']])
+                            branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']], arguments=branch['arguments'] if 'arguments' in branch else None)
                     else:
                         for outputTree in self.outputTrees:
                             self.evaluateArray(branch['formula'], destinationArray=outputTree['newBranchArrays'][branch['name']])
