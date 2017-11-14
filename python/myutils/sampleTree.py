@@ -67,6 +67,7 @@ class SampleTree(object):
         self.timeETA = 0
         self.eventsRead = 0
         self.outputTrees = []
+        self.callbacks = {}
 
         # e.g. for additional branches to be added
         self.newBranches = []
@@ -350,6 +351,13 @@ class SampleTree(object):
         else:
             raise Exception("BadTreeTypeCutDict")
 
+    def setCallback(self, category, fcn):
+        if category not in ['event']:
+            raise Exception("CallbackEventDoesNotExist")
+        if category in self.callbacks:
+            print("WARNING: callback function for ", category, " is overwritten!")
+        self.callbacks[category] = fcn
+
     # ------------------------------------------------------------------------------
     # add output tree to be written during the process() function
     # ------------------------------------------------------------------------------
@@ -499,6 +507,10 @@ class SampleTree(object):
         print ("------------------")
         # loop over all events and write to output branches
         for event in self:
+
+            # new event callback
+            if self.callbacks and 'event' in self.callbacks:
+                self.callbacks['event'](event)
 
             # fill branches
             for branch in self.newBranches:
