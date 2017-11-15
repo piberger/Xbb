@@ -13,6 +13,7 @@ from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
 from myutils.TTWeights import TTWeights
+from myutils.EWKweights import EWKweights
 
 argv = sys.argv
 parser = OptionParser()
@@ -117,16 +118,28 @@ for fileName in filelist:
             writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
             sampleTree.addOutputBranches(writeNewVariables)
         
+        # ------------------------------------------------------------------------------------------
+        # weights 
+        # ------------------------------------------------------------------------------------------
         if 'ttw' in collections or 'weights' in collections:
             if sample.type != 'DATA':
                 ttWeights = TTWeights()
                 sampleTree.addOutputBranches(ttWeights.getBranches())
+        if 'ewkw' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                ewkWeights = EWKweights(tree=sampleTree.tree, sample=sample)
+                sampleTree.addOutputBranches(ewkWeights.getBranches())
+
+
 
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
 
         # copy temporary file to output folder
+        if opts.force and fileLocator.exists(outputFileName):
+            fileLocator.rm(outputFileName) 
+
         fileLocator.cp(tmpFileName, outputFileName)
         fileLocator.rm(tmpFileName)
 
