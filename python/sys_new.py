@@ -106,6 +106,13 @@ for fileName in filelist:
             ajIndexCalculator = AdditionalJetIndex()
             sampleTree.addOutputBranches(ajIndexCalculator.getBranches())
 
+        # ------------------------------------------------------------------------------------------
+        # add variables defined in the config 
+        # ------------------------------------------------------------------------------------------
+        if 'addbranches' in collections:
+            writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
+            sampleTree.addOutputBranches(writeNewVariables)
+
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
