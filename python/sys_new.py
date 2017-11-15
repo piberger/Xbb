@@ -12,6 +12,7 @@ from myutils.FileLocator import FileLocator
 from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
+from myutils.TTWeights import TTWeights
 
 argv = sys.argv
 parser = OptionParser()
@@ -83,6 +84,9 @@ for fileName in filelist:
     if not fileLocator.exists(outputFileName) or opts.force:
         # load sample tree and initialize vtype corrector
         sampleTree = SampleTree([inputFileName], config=config)
+        if not sampleTree.tree:
+            print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
+            continue
         
         # ------------------------------------------------------------------------------------------
         # correct Vtype for V25 HEPPY ntuples
@@ -112,6 +116,11 @@ for fileName in filelist:
         if 'addbranches' in collections:
             writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
             sampleTree.addOutputBranches(writeNewVariables)
+        
+        if 'ttw' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                ttWeights = TTWeights()
+                sampleTree.addOutputBranches(ttWeights.getBranches())
 
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')

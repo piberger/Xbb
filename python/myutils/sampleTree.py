@@ -132,12 +132,12 @@ class SampleTree(object):
                                 print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
                                 break
                     else:
-                        print ('ERROR: file is damaged: %s'%rootFileName)
+                        print ('\x1b[31mERROR: file is damaged: %s\x1b[0m'%rootFileName)
                         if input:
                             print ('DEBUG: Zombie:', input.IsZombie(), '#keys:', input.GetNkeys(), 'recovered:', input.TestBit(ROOT.TFile.kRecovered))
                         self.brokenFiles.append(rootFileName)
                 else:
-                    print ('ERROR: file is missing: %s'%rootFileName)
+                    print ('\x1b[31mERROR: file is missing: %s\x1b[0m'%rootFileName)
 
             if self.verbose:
                 print ('INFO: # files chained: %d'%len(self.chainedFiles))
@@ -553,6 +553,8 @@ class SampleTree(object):
                             branchResult = branch['function'](event)
                     else:
                         branchResult = self.evaluate(branch['formula'])
+                    if 'type' in branch and branch['type'] == 'i':
+                        branchResult = int(branchResult)
                     # fill it for all the output trees
                     for outputTree in self.outputTrees:
                         outputTree['newBranchArrays'][branch['name']][0] = branchResult
