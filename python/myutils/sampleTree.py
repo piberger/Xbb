@@ -87,9 +87,10 @@ class SampleTree(object):
             # loop over all given .root files 
             for rootFileName in self.sampleFileNames:
 
-                # check root file existence
-                if os.path.isfile(self.fileLocator.getLocalFileName(rootFileName)) or self.fileLocator.isStoragePath(rootFileName):
-                    rootFileName = self.fileLocator.getXrootdFileName(rootFileName)
+                # check root file existence, TODO: simplify
+                if os.path.isfile(self.fileLocator.getLocalFileName(rootFileName)) or self.fileLocator.isStoragePath(rootFileName) or self.fileLocator.exists(rootFileName):
+                    if '://' not in rootFileName and (self.fileLocator.isStoragePath(rootFileName) or self.fileLocator.isPnfs(rootFileName)): 
+                        rootFileName = self.fileLocator.getXrootdFileName(rootFileName)
                     input = ROOT.TFile.Open(rootFileName, 'read')
 
                     # check file validity
@@ -573,7 +574,7 @@ class SampleTree(object):
             self.formulaResults = {}
             for formulaName, formula in self.formulas.iteritems():
                 self.formulaResults[formulaName] = self.evaluate(formulaName)
-            
+
             # evaluate cuts for all output trees
             for outputTree in self.outputTrees:
 

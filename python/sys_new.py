@@ -14,6 +14,7 @@ from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
 from myutils.TTWeights import TTWeights
 from myutils.EWKweights import EWKweights
+from myutils.BTagWeights import BTagWeights
 
 argv = sys.argv
 parser = OptionParser()
@@ -129,6 +130,10 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 ewkWeights = EWKweights(tree=sampleTree.tree, sample=sample)
                 sampleTree.addOutputBranches(ewkWeights.getBranches())
+        if 'btag' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                btagWeights = BTagWeights(tree=sampleTree.tree, sample=sample)
+                sampleTree.addOutputBranches(btagWeights.getBranches())
 
 
 

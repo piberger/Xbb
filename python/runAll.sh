@@ -419,7 +419,9 @@ elif [ $task = "mva_opt_dc" ]; then
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
 
 fi
-
+EXITCODE=$?
+echo "--------------------------------------------------------------------------------"
+echo "exit code: $EXITCODE"
 ENDTIME=$(date +%s.%N)
 DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
 echo "duration (real time): $DIFFTIME minutes"
@@ -427,3 +429,4 @@ echo "duration (real time): $DIFFTIME minutes"
 echo
 echo "Exiting runAll.sh"
 echo
+exit $EXITCODE
