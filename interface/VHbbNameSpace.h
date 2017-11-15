@@ -259,7 +259,16 @@ double SoverSBWeight(double BDT, int channel) {
 
     return cosTheta;
   }
+  
+  double normPProd(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2, eta2, phi2, mass2);
+      double pp = j1 * j2;
+      return pp / (mass * mass2);
+  }
 
+  
   double metCorSysShift(double met, double metphi, int Nvtx, int EVENT_run) {
     double metx = met * cos(metphi);
     double mety = met * sin(metphi);
