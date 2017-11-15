@@ -358,13 +358,21 @@ class SampleTree(object):
         else:
             raise Exception("BadTreeTypeCutDict")
     
-    # add callback function, which can return a boolean. false means skip this event!
+    # set callback function, which can return a boolean. false means skip this event!
     def setCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
         if category in self.callbacks:
             print("WARNING: callback function for ", category, " is overwritten!")
-        self.callbacks[category] = fcn
+        self.callbacks[category] = [fcn]
+
+    # add callback function, which can return a boolean. false means skip this event!
+    def addCallback(self, category, fcn):
+        if category not in ['event']:
+            raise Exception("CallbackEventDoesNotExist")
+        if category not in self.callbacks:
+             self.callbacks[category] = []
+        self.callbacks[category].append(fcn)
 
     # ------------------------------------------------------------------------------
     # add output tree to be written during the process() function
@@ -530,7 +538,8 @@ class SampleTree(object):
             # new event callback
             if self.callbacks and 'event' in self.callbacks:
                 # if callbacks return false, skip event!
-                if not self.callbacks['event'](event):
+                callbackResults = [fcn(event) for fcn in self.callbacks['event']]
+                if not all(callbackResults):
                     continue
 
             # fill branches
@@ -538,7 +547,10 @@ class SampleTree(object):
                 # evaluate result either as function applied on the tree entry or as TTreeFormula
                 if branch['length'] == 1:
                     if 'function' in branch:
-                        branchResult = branch['function'](event, arguments=branch['arguments'] if 'arguments' in branch else None)
+                        if 'arguments' in branch:
+                            branchResult = branch['function'](event, arguments=branch['arguments'])
+                        else:
+                            branchResult = branch['function'](event)
                     else:
                         branchResult = self.evaluate(branch['formula'])
                     # fill it for all the output trees

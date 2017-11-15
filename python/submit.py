@@ -35,6 +35,7 @@ parser.add_option("-i", "--interactive", dest="interactive", action="store_true"
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
+parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -333,6 +334,7 @@ if opts.task == 'sysnew':
             jobDict.update({'arguments':{
                     'sampleIdentifier': sampleIdentifier,
                     'fileList': FileList.compress(splitFilesChunk),
+                    'addCollections': opts.addCollections,
                 }})
             jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
