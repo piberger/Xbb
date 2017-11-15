@@ -181,6 +181,7 @@ elif [ $task = "sysnew" ]; then
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     if [ "$addCollections" ]; then runCommand="${runCommand} --addCollections ${addCollections}"; fi
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"

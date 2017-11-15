@@ -336,6 +336,8 @@ if opts.task == 'sysnew':
                     'fileList': FileList.compress(splitFilesChunk),
                     'addCollections': opts.addCollections,
                 }})
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 

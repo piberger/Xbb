@@ -23,7 +23,7 @@ parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
 parser.add_option("-b", "--addCollections", dest="addCollections", default="",
                               help="collections to add: vtype")
-parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files")
+parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files", default=False)
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = "config"
@@ -80,7 +80,7 @@ for fileName in filelist:
     fileLocator.makedirs(tmpFolder)
     fileLocator.makedirs(outputFolder)
 
-    if not fileLocator.exists(outputFileName):
+    if not fileLocator.exists(outputFileName) or opts.force:
         # load sample tree and initialize vtype corrector
         sampleTree = SampleTree([inputFileName], config=config)
         
