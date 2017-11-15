@@ -45,9 +45,9 @@ class NewHistoMaker:
             else:
                 weightF = "({weight})".format(weight=self.histogramOptions['weight'] if ('weight' in self.histogramOptions and self.histogramOptions['weight']) else '1') 
 
-            # per sample special weight
+            # per sample special weight 
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
-                specialweight = self.sample.specialweight
+                specialweight = self.sample.specialweight 
                 weightF = "(({weight})*({specialweight}))".format(weight=weightF, specialweight=specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=specialweight))
 
@@ -57,6 +57,7 @@ class NewHistoMaker:
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:
                 print ("\x1b[31mERROR: error in TTree:Draw! returned {nEvents}\x1b[0m".format(nEvents=nEvents))
+            print("# events:", nEvents)
             self.scaleHistogram()
         else:
             print ("ERROR: initialization of histogram failed!")
