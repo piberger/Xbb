@@ -8,6 +8,7 @@ from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
 from myutils.FileList import FileList
+from myutils.BranchList import BranchList
 import os,sys
 
 class CachePlot(object):
@@ -56,6 +57,20 @@ class CachePlot(object):
             keepBranchesPlot = eval(self.config.get('Branches', 'keep_branches_plot'))
         except:
             keepBranchesPlot = []
+        keepBranchesPlotOld = keepBranchesPlot
+
+        # also keep some branches which might be used later in variables definition and weights
+        try:
+            for section in self.config.sections():
+                if section.startswith('plotDef:') and self.config.has_option(section, 'relPath'):
+                    keepBranchesPlot.append(self.config.get(section, 'relPath'))
+        except Exception as e:
+            print(e)
+        try:
+            keepBranchesPlot.append(self.config.get('Weights', 'weightF'))
+        except:
+            pass
+        keepBranchesPlotFinal = BranchList(keepBranchesPlot).getListOfBranches()
 
         # ----------------------------------------------------------------------------------------------------------------------
         # cache samples
@@ -99,7 +114,7 @@ class CachePlot(object):
                         chunkNumber=self.chunkNumber,
                         splitFilesChunkSize=self.splitFilesChunkSize,
                         fileList=self.fileList,
-                        branches=keepBranchesPlot,
+                        branches=keepBranchesPlotFinal,
                         config=self.config,
                         debug=True
                     )
@@ -163,6 +178,8 @@ if __name__ == "__main__":
 
     # load config
     config = BetterConfigParser()
+    vhbbPlotDef = opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
+    opts.config.append(vhbbPlotDef)
     config.read(opts.config)
 
     # initialize
