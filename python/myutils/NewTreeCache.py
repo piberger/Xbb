@@ -217,11 +217,7 @@ class TreeCache:
     def deleteFile(self, rawFileName):
         if self.debug:
             print ('DELETE:', rawFileName)
-        xrootdFileName = self.fileLocator.getXrootdFileName(rawFileName)
-        command = self.fileLocator.getDeletionCommand(xrootdFileName)
-        returnCode = subprocess.call([command], shell=True)
-        if self.debug:
-            print(command, ' => ', returnCode)
+        self.fileLocator.rm(rawFileName)
 
     # delete cached files
     def deleteCachedFiles(self, chunkNumber=-1):
@@ -247,18 +243,10 @@ class TreeCache:
                         print ()
             except:
                 pass
-        outputFolderLocal = self.fileLocator.getLocalFileName(self.outputFolder)
 
-        if not os.path.isdir(outputFolderLocal):
-            print("DOES NOT EXIST:", outputFolderLocal)
-            try:
-                xrootdFileName = self.fileLocator.getXrootdFileName(self.outputFolder)
-                command = self.fileLocator.getMakedirCommand(xrootdFileName)
-                returnCode = subprocess.call([command], shell=True)
-                if self.debug:
-                    print(command, ' => ', returnCode)
-            except Exception as e:
-                print ('Exception during mkdir:',e)
+        if not self.fileLocator.exists(self.outputFolder):
+            print("INFO: output folder does not exist and will be created:", self.outputFolder)
+            self.fileLocator.makedirs(self.outputFolder)
 
     # move files from temporary to final location
     def moveFilesToFinalLocation(self):
