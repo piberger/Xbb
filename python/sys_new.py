@@ -17,6 +17,7 @@ from myutils.EWKweights import EWKweights
 from myutils.BTagWeights import BTagWeights
 from myutils.LeptonWeights import LeptonWeights
 from myutils.JetEnergySystematics import JetEnergySystematics
+from myutils.WPtReweight import WPtReweight
 
 argv = sys.argv
 parser = OptionParser()
@@ -143,7 +144,9 @@ for fileName in filelist:
         if 'jes' in collections or 'weights' in collections:
             jetEnergySystematics = JetEnergySystematics(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
             sampleTree.addOutputBranches(jetEnergySystematics.getBranches())
-
+        if 'wptreweight' in collections or 'weights' in collections:
+            wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
+            sampleTree.addOutputBranches(wptReweight.getBranches())
 
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
