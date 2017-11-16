@@ -27,6 +27,7 @@ class LeptonWeights(object):
             for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu']:
                 self.branchBuffers[branchName] = array.array('f', [1.0, 0.0, 0.0])
                 self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':3}, 'length': 3})
+        self.leptonSF = {}
 
     def getBranches(self):
         return self.branches
@@ -220,7 +221,10 @@ class LeptonWeights(object):
                 for j, name in jsons.iteritems():
 
                     self.weight = []
-                    lepCorr = LeptonSF(j , name[0], name[1])
+                    lepCorrIdentifier = j + '_' + name[0] + '_' + name[1]
+                    if lepCorrIdentifier not in self.leptonSF:
+                        self.leptonSF[lepCorrIdentifier] = LeptonSF(j , name[0], name[1])
+                    lepCorr = self.leptonSF[lepCorrIdentifier] 
 
                     #2-D binned SF
                     if not j.find('trk_SF_Run') != -1 and not j.find('EfficienciesAndSF_dZ_numH') != -1:
@@ -429,7 +433,10 @@ class LeptonWeights(object):
                     for j, name in jsons.iteritems():
 
                         self.weight = []
-                        lepCorr = LeptonSF(j,name[0], name[1])
+                        lepCorrIdentifier = j + '_' + name[0] + '_' + name[1]
+                        if lepCorrIdentifier not in self.leptonSF:
+                            self.leptonSF[lepCorrIdentifier] = LeptonSF(j , name[0], name[1])
+                        lepCorr = self.leptonSF[lepCorrIdentifier] 
 
                         #2-D binned SF
                         if not j.find('trk_SF_Run') != -1:
