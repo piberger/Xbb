@@ -16,6 +16,7 @@ from myutils.TTWeights import TTWeights
 from myutils.EWKweights import EWKweights
 from myutils.BTagWeights import BTagWeights
 from myutils.LeptonWeights import LeptonWeights
+from myutils.JetEnergySystematics import JetEnergySystematics
 
 argv = sys.argv
 parser = OptionParser()
@@ -139,7 +140,9 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 leptonWeights = LeptonWeights(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
                 sampleTree.addOutputBranches(leptonWeights.getBranches())
-
+        if 'jes' in collections or 'weights' in collections:
+            jetEnergySystematics = JetEnergySystematics(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
+            sampleTree.addOutputBranches(jetEnergySystematics.getBranches())
 
 
         # define output file 
