@@ -53,7 +53,10 @@ ROOT.gSystem.Load(VHbbNameSpace)
 pathIN = config.get('Directories','SYSin')
 pathOUT = config.get('Directories','SYSout')
 tmpDir = config.get('Directories','scratch')
-
+try:
+   remove_useless_branch = config.get('Analysis', 'remove_useless_branch').lower().strip() == 'true'
+except:
+   remove_useless_branch = False
 print 'INput samples:\t%s'%pathIN
 print 'OUTput samples:\t%s'%pathOUT
 
@@ -147,6 +150,11 @@ for fileName in filelist:
         if 'wptreweight' in collections or 'weights' in collections:
             wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
             sampleTree.addOutputBranches(wptReweight.getBranches())
+
+        if remove_useless_branch:
+            bl_branch = eval(config.get('Branches', 'useless_branch'))
+            for br in bl_branch:
+                sampleTree.addBranchToBlacklist(br)
 
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
