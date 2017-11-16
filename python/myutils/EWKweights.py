@@ -63,9 +63,9 @@ class EWKweights(object):
                 self.branchBuffers['EWKwVJets'][2] = self.branchBuffers['EWKwVJets'][0]
             
             if tree.nGenVbosons > 0 and self.sys_sample:
-                self.branchBuffers['EWKwSIG'][0] = self.signal_ewk(tree.GenVbosons_pt[0], sys_sample, 'nom')
-                self.branchBuffers['EWKwSIG'][1] = self.signal_ewk(tree.GenVbosons_pt[0], sys_sample, 'down')
-                self.branchBuffers['EWKwSIG'][2] = self.signal_ewk(tree.GenVbosons_pt[0], sys_sample, 'up')
+                self.branchBuffers['EWKwSIG'][0] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'nom')
+                self.branchBuffers['EWKwSIG'][1] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'down')
+                self.branchBuffers['EWKwSIG'][2] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'up')
             else:
                 self.branchBuffers['EWKwSIG'][0] = 1.0
                 self.branchBuffers['EWKwSIG'][1] = 1.0

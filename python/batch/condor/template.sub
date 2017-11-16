@@ -1,6 +1,5 @@
 executable              = {runscript}
 arguments               = {arguments}
-+PreCmd                 = setcwd.sh
 output                  = {output}
 error                   = {error}
 log                     = {log}

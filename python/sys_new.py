@@ -15,6 +15,7 @@ from myutils.AdditionalJetIndex import AdditionalJetIndex
 from myutils.TTWeights import TTWeights
 from myutils.EWKweights import EWKweights
 from myutils.BTagWeights import BTagWeights
+from myutils.LeptonWeights import LeptonWeights
 
 argv = sys.argv
 parser = OptionParser()
@@ -134,6 +135,10 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 btagWeights = BTagWeights(tree=sampleTree.tree, sample=sample)
                 sampleTree.addOutputBranches(btagWeights.getBranches())
+        if 'leptonsf' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                leptonWeights = LeptonWeights(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
+                sampleTree.addOutputBranches(leptonWeights.getBranches())
 
 
 
