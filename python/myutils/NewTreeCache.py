@@ -4,6 +4,7 @@ from Hash import Hash
 import ROOT
 import subprocess
 import os
+import sys
 from samplesclass import Sample
 from sampleTree import SampleTree as SampleTree
 from FileLocator import FileLocator
@@ -91,7 +92,7 @@ class TreeCache:
         self.splitFilesChunkSize = splitFilesChunkSize
         
         # identifier is just used as an arbitrary name for print-out
-        cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50]+'...').replace(' ','')
+        cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50] + '...').replace(' ', '')
         self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
         self.debug = debug
         self.sampleTree = None
@@ -270,6 +271,7 @@ class TreeCache:
                 self.deleteFile(outputFileName)
             command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
             print('the command is', command)
+            sys.stdout.flush()
             returnCode = subprocess.call([command], shell=True)
             if returnCode != 0:
                 success = False

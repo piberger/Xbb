@@ -57,6 +57,7 @@ class NewHistoMaker:
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:
                 print ("\x1b[31mERROR: error in TTree:Draw! returned {nEvents}\x1b[0m".format(nEvents=nEvents))
+            print("# events:", nEvents)
             self.scaleHistogram()
         else:
             print ("ERROR: initialization of histogram failed!")

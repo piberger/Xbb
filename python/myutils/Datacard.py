@@ -77,7 +77,7 @@ class Datacard(object):
         self.RCut = config.get('dc:%s'%self.region, 'cut')
         self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
         self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
-        self.anType = config.get('dc:%s'%self.region, 'type').lower()
+        self.anType = config.get('dc:%s'%self.region, 'type')
 
         #new
         try:
@@ -101,8 +101,8 @@ class Datacard(object):
                 'mjj': 'sys_Mjj',
                 'cr': 'sys_cr',
                 }
-        if self.anType in analysisSystematics:
-            self.systematics = eval(config.get('LimitGeneral', analysisSystematics[self.anType]))
+        if self.anType.lower() in analysisSystematics:
+            self.systematics = eval(config.get('LimitGeneral', analysisSystematics[self.anType.lower()]))
         else:
             print ("\x1b[31mEXIT: please specify if your datacards are BDT, Mjj or cr.\x1b[0m")
             raise Exception("InvalidDatacardSystematicsType")
@@ -121,7 +121,7 @@ class Datacard(object):
         self.weightF = config.get('Weights', 'weightF')
         self.SBweight = None
         print ('before adding SBweight, weightF is', self.weightF)
-        if self.anType == 'mjj':
+        if self.anType.lower() == 'mjj':
             print ('Passed mJJ')
             if config.has_option('dc:%s'%self.region, 'SBweight'):
                 print ('passed config')
@@ -136,7 +136,7 @@ class Datacard(object):
         
         # checks on read options
         #on control region cr never blind. Overwrite whatever is in the config
-        if self.anType == 'cr':
+        if self.anType.lower() == 'cr':
             if self.sysOptions['blind']:
                 print ('@WARNING: Changing blind to false since you are running for control region.')
             self.sysOptions['blind'] = False
@@ -145,7 +145,7 @@ class Datacard(object):
         if self.sysOptions['blind']:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
             
-        if self.anType != 'bdt':
+        if self.anType.lower() != 'bdt':
             if self.sysOptions['rebin_active']:
                 print ('@WARNING: Changing rebin_active to false since you are running for control region.')
             self.sysOptions['rebin_active'] = False
@@ -321,7 +321,7 @@ class Datacard(object):
     def getSystematicsVar(self, syst, Q):
         treevar = self.treevar
         #replace tree variable
-        if self.anType == 'bdt':
+        if self.anType.lower() == 'bdt':
             if not 'UD' in syst:
                 print ('treevar was', treevar)
                 treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
@@ -329,7 +329,7 @@ class Datacard(object):
             else:
                 treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
                 print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
-        elif self.anType == 'mjj':
+        elif self.anType.lower() == 'mjj':
             if not 'UD' in syst:
                 print ('treevar was', treevar)
                 treevar = treevar.replace('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
@@ -492,6 +492,22 @@ class Datacard(object):
                     self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
                     self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
 
+    def splitFilesExist(self, useSampleIdentifier=None):
+        filesExist = True
+        allSamples = self.getAllSamples()
+        if useSampleIdentifier:
+            sampleIdentifiers = useSampleIdentifier
+        else:
+            sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
+        for sampleIdentifier in sampleIdentifiers:
+            subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
+            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
+            rootFile = ROOT.TFile.Open(rootFileName, 'read')
+            if not rootFile or rootFile.IsZombie():
+                filesExist = False
+                break
+            rootFile.Close()
+        return filesExist
 
     def getHistogramName(self, process, systematics):
         systematicsName = systematics['systematicsName'] if systematics['sysType'] != 'nominal' else ''
@@ -555,7 +571,7 @@ class Datacard(object):
         # ----------------------------------------------
         # write TEXT file
         # ----------------------------------------------
-        txtFileName = self.getDatacardBaseName(dcName) + '.txt'
+        txtFileName = self.getDatacardBaseName(dcName, ext='.txt')
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
@@ -697,13 +713,17 @@ class Datacard(object):
 
         print("done")
 
-    def getDatacardBaseName(self, subPartName=''):
+    def getDatacardBaseName(self, subPartName='', ext=''):
+        dcType = self.DCtype
         if len(subPartName) > 0:
             # temporary
-            baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}'.format(dcType=self.DCtype, path=self.outpath, rootName=self.ROOToutname, part=subPartName)
+            baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, part=subPartName, ext=ext)
         else:
             # final
-            baseFileName = '{path}/vhbb_{dcType}_{rootName}'.format(dcType=self.DCtype, path=self.outpath, rootName=self.ROOToutname)
+            # different naming of text files and histograms, for some reason
+            if ext.endswith('txt'):
+                dcType = 'DC_' + dcType
+            baseFileName = '{path}/vhbb_{dcType}_{rootName}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, ext=ext)
         return baseFileName
 
     @staticmethod
