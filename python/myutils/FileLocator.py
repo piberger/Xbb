@@ -100,21 +100,25 @@ class FileLocator(object):
                 result = subprocess.call([command], shell=True, stdout=fp, stderr=fp)
             return result 
 
-    def getRemoteFileserver(self):
-        return self.xrootdRedirectors[0].split('://')[1].split(':')[0].strip()
+    def getRemoteFileserver(self, path=None):
+        if path and '://' in path:
+            server = path.split('://')[1].split('/')[0].split(':')[0].strip()
+        else:
+            server = self.xrootdRedirectors[0].split('://')[1].split('/')[0].split(':')[0].strip()
+        return server
 
     def remoteDirectoryExists(self, path):
-        statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
         result = self.runCommand(statCommand)
         return result==0
 
     def remoteFileExists(self, path):
-        statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
         result = self.runCommand(statCommand)
         return result==0
 
     def remoteFileRm(self, path):
-        command = self.remoteRm.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        command = self.remoteRm.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
         result = self.runCommand(command)
         return result==0
 

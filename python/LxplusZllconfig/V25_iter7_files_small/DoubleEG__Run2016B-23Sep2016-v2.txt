@@ -1,0 +1,10 @@
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_1.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_10.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_100.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_101.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_102.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_103.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_104.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_105.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_106.root
+/store/user/jpata/VHBBHeppyV25/DoubleEG/VHBB_HEPPY_V25_DoubleEG__Run2016B-23Sep2016-v2/170130_125400/0000/tree_107.root

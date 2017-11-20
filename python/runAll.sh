@@ -93,6 +93,9 @@ while [ $# -gt 0 ]; do
     --limit=*)
       limit="${1#*=}"
       ;;
+    --addCollections=*)
+      addCollections="${1#*=}"
+      ;;
     *)
       ;;
   esac
@@ -177,6 +180,8 @@ elif [ $task = "sysnew" ]; then
     runCommand="python ./sys_new.py --sampleIdentifier ${sampleIdentifier}"
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    if [ "$addCollections" ]; then runCommand="${runCommand} --addCollections ${addCollections}"; fi
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
@@ -414,7 +419,9 @@ elif [ $task = "mva_opt_dc" ]; then
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
 
 fi
-
+EXITCODE=$?
+echo "--------------------------------------------------------------------------------"
+echo "exit code: $EXITCODE"
 ENDTIME=$(date +%s.%N)
 DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
 echo "duration (real time): $DIFFTIME minutes"
@@ -422,3 +429,4 @@ echo "duration (real time): $DIFFTIME minutes"
 echo
 echo "Exiting runAll.sh"
 echo
+exit $EXITCODE
