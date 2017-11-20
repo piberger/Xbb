@@ -35,6 +35,7 @@ parser.add_option("-i", "--interactive", dest="interactive", action="store_true"
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
+parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -154,6 +155,14 @@ if 'PSI' in whereToLaunch:
     for dirName in ['PREPout', 'SYSout', 'MVAout', 'tmpSamples']:
         if not fileLocator.exists(config.get('Directories', dirName)):
             fileLocator.makedirs(config.get('Directories', dirName))
+if 'condor' in whereToLaunch:
+    if 'X509_USER_PROXY' not in os.environ:
+        print '\x1b[41m\x1b[97mX509 proxy certificate not set, run:\x1b[0m'
+        print '--------------'
+        print 'voms-proxy-init -voms cms -rfc -out ${HOME}/.x509up_${UID} -valid 192:00'
+        print 'export X509_USER_PROXY=${HOME}/.x509up_${UID}'
+        print '--------------'
+
 
 def dump_config(configs,output_file):
     """
@@ -278,7 +287,7 @@ def submit(job, repDict):
 # -----------------------------------------------------------------------------
 if opts.task == 'prep':
 
-    path = config.get("Directories", "PREPin")
+    path = config.get("Directories", "PREPin") 
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
@@ -293,7 +302,8 @@ if opts.task == 'prep':
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
-
+    
+        print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.." 
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
             jobDict = repDict.copy()
@@ -325,13 +335,17 @@ if opts.task == 'sysnew':
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
+        print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.." 
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
             jobDict = repDict.copy()
             jobDict.update({'arguments':{
                     'sampleIdentifier': sampleIdentifier,
                     'fileList': FileList.compress(splitFilesChunk),
+                    'addCollections': opts.addCollections,
                 }})
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 
