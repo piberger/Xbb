@@ -155,6 +155,14 @@ if 'PSI' in whereToLaunch:
     for dirName in ['PREPout', 'SYSout', 'MVAout', 'tmpSamples']:
         if not fileLocator.exists(config.get('Directories', dirName)):
             fileLocator.makedirs(config.get('Directories', dirName))
+if 'condor' in whereToLaunch:
+    if 'X509_USER_PROXY' not in os.environ:
+        print '\x1b[41m\x1b[97mX509 proxy certificate not set, run:\x1b[0m'
+        print '--------------'
+        print 'voms-proxy-init -voms cms -rfc -out ${HOME}/.x509up_${UID} -valid 192:00'
+        print 'export X509_USER_PROXY=${HOME}/.x509up_${UID}'
+        print '--------------'
+
 
 def dump_config(configs,output_file):
     """
