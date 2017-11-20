@@ -26,7 +26,7 @@ class CacheTraining(object):
 
         self.backgroundSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'backgrounds')) for trainingRegion in self.trainingRegions], [])))
         self.signalSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'signals')) for trainingRegion in self.trainingRegions], [])))
-        self.samples = self.samplesInfo.get_samples(self.backgroundSampleNames + self.signalSampleNames)
+        self.samples = self.samplesInfo.get_samples(list(set(self.backgroundSampleNames + self.signalSampleNames)))
 
         self.trainingRegionsDict = {}
         for trainingRegion in self.trainingRegions:

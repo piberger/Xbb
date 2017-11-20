@@ -3,7 +3,7 @@ import os, pickle, sys, ROOT
 ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from myutils import BetterConfigParser, copytree, copytreePSI, ParseInfo
-#import utils
+from myutils.FileList import FileList
 
 print 'start prepare_environment_with_config.py'
 
@@ -18,50 +18,33 @@ argv = sys.argv
 parser = OptionParser()
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="directory config")
-parser.add_option("-S", "--samples", dest="names", default="",
+parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="",
                               help="samples you want to run on")
-parser.add_option("-f", "--filelist", dest="filelist", default="",
+parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
-
+parser.add_option("-l", "--limit", dest="limit", default=None,
+                              help="max number of files to process")
 (opts, args) = parser.parse_args(argv)
-
 config = BetterConfigParser()
 config.read(opts.config)
 
-namelist=opts.names.split(',')
-filelist=opts.filelist.split(';')
-print "namelist:",namelist
-print "len(filelist)",len(filelist),"filelist[0]:",filelist[0]
+fileList = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
 
 pathIN = config.get('Directories','PREPin')
 pathOUT = config.get('Directories','PREPout')
 samplesinfo=config.get('Directories','samplesinfo')
+samplefiles = config.get('Directories','samplefiles')
 sampleconf = BetterConfigParser()
 sampleconf.read(samplesinfo)
 
 whereToLaunch = config.get('Configuration','whereToLaunch')
-TreeCopierPSI = config.get('Configuration','TreeCopierPSI')
-prefix=sampleconf.get('General','prefix')
 
 info = ParseInfo(samplesinfo,pathIN)
-print "samplesinfo:",samplesinfo
-print "info:",info
-for job in info:
-    if not job.name in namelist and not job.identifier in namelist:
-        continue
-    if job.subsample:
-        continue
-    if('lxplus' in whereToLaunch):
-        pass
-        # TreeCopier class
-        #utils.TreeCopier(pathIN, pathOUT, job.identifier, job.prefix, job.addtreecut)
-    else:
-        if TreeCopierPSI == 'True':
-            # copytreePSI class, allowing for single file workflow
-            samplefiles = config.get('Directories','samplefiles')
-            copytreePSI(samplefiles,pathOUT,prefix,job.prefix,job.identifier,'',job.addtreecut, config, filelist)
-        else:
-          # copytree function
-          copytree(pathIN,pathOUT,prefix,job.prefix,job.identifier,'',job.addtreecut, config)
-
+samples = [x for x in info if not x.subsample and (len(opts.sampleIdentifier) == 0 or x.identifier in opts.sampleIdentifier.split(','))]
+treeCopier = copytreePSI.CopyTreePSI(config=config)
+if opts.limit and len(samples) > int(opts.limit):
+    samples= samples[:int(opts.limit)]
+for sample in samples:
+    treeCopier.copytreePSI(pathIN=samplefiles, pathOUT=pathOUT, folderName=sample.identifier, skimmingCut=sample.addtreecut, fileList=fileList)
+    
 print 'end prepare_environment_with_config.py'
