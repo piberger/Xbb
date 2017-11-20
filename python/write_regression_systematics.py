@@ -14,6 +14,7 @@ ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
 from btag_reweight import *
 from time import gmtime, strftime
+from myutils.FileList import FileList
 #import pdb
 
 argv = sys.argv
@@ -22,7 +23,7 @@ parser.add_option("-S", "--samples", dest="names", default="",
                       help="samples you want to run on")
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration defining the plots to make")
-parser.add_option("-f", "--filelist", dest="filelist", default="",
+parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files")
 
@@ -30,16 +31,15 @@ parser.add_option("-F", "--force", dest="force", action="store_true", help="over
 if opts.config =="":
         opts.config = "config"
 
-print 'opts.filelist="'+opts.filelist+'"'
-filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
-print filelist
+filelist = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
 print "len(filelist)",len(filelist),
 if len(filelist)>0:
     print "filelist[0]:",filelist[0];
 else:
     print ''
 
-from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF, bTagSF
+from myutils import BetterConfigParser, ParseInfo, TreeCache, LeptonSF
+#from myutils import bTagSF
 #from btagSF import BtagSF
 #import BtagSF
 #from bTagSF import *
@@ -904,7 +904,7 @@ for job in info:
 
 
         if applyBTagweights:
-            ROOT.gSystem.Load("./BTagCalibrationStandalone.so")
+            ROOT.gSystem.Load("../interface/BTagCalibrationStandalone_cpp.so")
             #ROOT.gROOT.ProcessLine('.L ../interface/BTagCalibrationStandalone.cpp+')
 
             # from within CMSSW:
@@ -914,11 +914,11 @@ for job in info:
 
             # CSVv2
             #calib_csv = ROOT.BTagCalibration("csvv2", "./ttH_BTV_CSVv2_13TeV_2016All_36p5_2017_1_10.csv")
-            calib_csv = ROOT.BTagCalibration("csvv2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/CSVv2_Moriond17_B_H.csv")
+            calib_csv = ROOT.BTagCalibration("csvv2", "csv/CSVv2_Moriond17_B_H.csv")
 
             # cMVAv2
             #calib_cmva = ROOT.BTagCalibration("cmvav2", "./ttH_BTV_cMVAv2_13TeV_2016All_36p5_2017_1_26.csv")
-            calib_cmva = ROOT.BTagCalibration("cmvav2", "/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/csv/cMVAv2_Moriond17_B_H.csv")
+            calib_cmva = ROOT.BTagCalibration("cmvav2", "csv/cMVAv2_Moriond17_B_H.csv")
 
             print "\nCalibration Init...\n"
 
@@ -948,7 +948,9 @@ for job in info:
             for algo in ["CSV", "CMVAV2"]:
                 for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
                     print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
-                    btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
+                    #btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(sf_type_map[algo]["file"], 3 , "iterativefit", syst)
+                    btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(3, syst)
+                    btag_calibrators[algo+"_iterative_"+syst].load(sf_type_map[algo]["file"], 0, "iterativefit")
             sysRefMap = {}
             sysMap = {}
             sysMap["JESUp"] = "up_jes"
@@ -1002,11 +1004,11 @@ for job in info:
                 if shape_corr:
                     if applies(fl,syst):
                         sf = btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-                        #print 'shape_corr SF:', sf
+                        #print 'shape_corr SF:',fl_index ,eta, pt, val, "=>", sf
                         return sf
                     else:
                         sf = btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-                        #print 'shape_corr for central SF:', sf
+                        #print 'shape_corr for central SF:', fl_index ,eta, pt, val, "=>", sf
                         return sf
 
 
@@ -1117,7 +1119,7 @@ for job in info:
             #isVerbose = True
 
             #regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
-            regWeight = './reg/gravall-v25.weights.xml'
+            regWeight = './csv/gravall-v25.weights.xml'
             #regWeight = './reg/TMVARegression_BDTG.weights.xml'
             regVars = ["Jet_pt",
                        "nPVs",
@@ -1521,7 +1523,6 @@ for job in info:
                 #print 'entry is', entry
                 tree.GetEntry(entry)
 
-
                 ### Vtype correction for V25 samples
                 if (channel == "Zll" or channel == "Zvv" or channel == "Wlv") and recomputeVtype:
 
@@ -1803,7 +1804,7 @@ for job in info:
                     JEC_systematics["HCMVAV2_reg_phi"][0]  = (hJ0+hJ1).Phi()
                     JEC_systematics["hJetCMVAV2_pt_reg_0"][0]  = hJ0.Pt()
                     JEC_systematics["hJetCMVAV2_pt_reg_1"][0]  = hJ1.Pt()
-
+                    
                     if job.type != 'DATA':
                         #now loop over all the jets
                         for syst in JECsys:

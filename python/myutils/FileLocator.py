@@ -1,10 +1,16 @@
 from __future__ import print_function
 import os
+import shutil
+import sys
+import subprocess
+import ROOT
+import hashlib
 
 class FileLocator(object):
 
     def __init__(self, config=None):
         self.config = config
+        self.debug = 'XBBDEBUG' in os.environ
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             if len(self.xrootdRedirectors) < 1:
@@ -23,6 +29,21 @@ class FileLocator(object):
 
         self.storagePathPrefix = '/store/'
         self.pnfsPrefix = '/pnfs/'
+        # TODO: use XrootD python bindings
+        self.remoteStatDirectory = 'xrdfs {server} stat -q IsDir {path}'
+        self.remoteStatFile = 'xrdfs {server} stat {path}'
+        self.remoteMkdir = 'xrdfs {server} mkdir {path}'
+        self.remoteRm = 'xrdfs {server} rm {path}'
+        self.remoteCp = 'xrdcp -d 1 {source} {target}'
+        self.makedirsMinLevel = 5   # don't even try to create/access the 5 lowest levels in the path
+
+    # special Xbb function: get filename after prep step from original file name
+    def getFilenameAfterPrep(self, inputFile):
+        subfolder = inputFile.split('/')[-4]
+        filename = inputFile.split('/')[-1]
+        filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
+        hash = hashlib.sha224(filename).hexdigest()
+        return filename.replace('.root','')+'_'+str(hash)+'.root'
 
     # check if path is relative to /store/
     def isStoragePath(self, path):
@@ -32,33 +53,140 @@ class FileLocator(object):
     def isPnfs(self, path):
         return self.pnfsPrefix in path
 
-    def getDeletionCommand(self, fileName):
-        localName = self.getLocalFileName(fileName)
+    def isRemotePath(self, path):
+        return self.isPnfs(path) or '://' in path 
+
+    def isValidRootFile(self, path):
+        f = ROOT.TFile.Open(path, 'read')
+        if f:
+            isValid = not (f.IsZombie() or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered))
+            try:
+                f.Close()
+            except:
+                pass
+            return isValid
+        else:
+            return False
+
+    def getDeletionCommand(self, path):
+        localName = self.getLocalFileName(path)
         if ('/' + localName.strip().strip('/')).startswith(self.pnfsPrefix):
             if self.xrootdRedirectors and len(self.xrootdRedirectors) > 0:
                 serverName = self.xrootdRedirectors[0].split('root://')[1].split(':')[0]
-                return "xrdfs {server} rm {file}".format(server=serverName, file=localName)
+                return self.remoteRm.format(server=serverName, path=localName)
             else:
                 raise Exception("NoRedirectorSpecified")
         else:
             return "rm {file}".format(file=localName)
 
-    def getMakedirCommand(self, fileName):
-        localName = self.getLocalFileName(fileName)
+    def getMakedirCommand(self, path):
+        localName = self.getLocalFileName(path)
+        print (localName, "<-", path)
         if ('/' + localName.strip().strip('/')).startswith(self.pnfsPrefix):
             if self.xrootdRedirectors and len(self.xrootdRedirectors) > 0:
                 serverName = self.xrootdRedirectors[0].split('root://')[1].split(':')[0]
-                return "xrdfs {server} mkdir {file}".format(server=serverName, file=localName)
+                return self.remoteMkdir.format(server=serverName, file=localName)
             else:
                 raise Exception("NoRedirectorSpecified")
         else:
             return "mkdir {file}".format(file=localName)
+
+    def runCommand(self, command):
+        if self.debug:
+            print ("RUN: \x1b[32m",command,"\x1b[0m")
+            return subprocess.call([command], shell=True)
+        else:
+            with open(os.devnull, 'w') as fp:
+                result = subprocess.call([command], shell=True, stdout=fp, stderr=fp)
+            return result 
+
+    def getRemoteFileserver(self):
+        return self.xrootdRedirectors[0].split('://')[1].split(':')[0].strip()
+
+    def remoteDirectoryExists(self, path):
+        statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        result = self.runCommand(statCommand)
+        return result==0
+
+    def remoteFileExists(self, path):
+        statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        result = self.runCommand(statCommand)
+        return result==0
+
+    def remoteFileRm(self, path):
+        command = self.remoteRm.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+        result = self.runCommand(command)
+        return result==0
+
+    def remoteCopy(self, source, target):
+        command = self.remoteCp.format(source=source, target=target)
+        result = self.runCommand(command)
+        return result==0
+
+    def cp(self, source, target):
+        if self.isRemotePath(source) or self.isRemotePath(target):
+            self.remoteCopy(source, target)
+        else:
+            shutil.copyfile(source, target)
+
+    def rm(self, path):
+        if self.isRemotePath(path):
+            self.remoteFileRm(path)
+        else:
+            os.remove(path)
+
+    def exists(self, path):
+        if self.isRemotePath(path):
+            return self.remoteFileExists(path)
+        else:
+            return os.path.exists(path)
+
+    def mkdir(self, path):
+        status = False
+        if not self.isRemotePath(path):
+            try:
+                os.mkdir(path)
+                status = True
+            except:
+                pass
+        else:
+            command = self.remoteMkdir.format(server=self.getRemoteFileserver(), path=self.getLocalFileName(path))
+            status = self.runCommand(command)
+        return status
+
+    # create folder and parent folders 
+    def makedirs(self, path):
+        status = True
+        # use os functionality for local files
+        if not self.isRemotePath(path):
+            try:
+                os.makedirs(path)
+            except:
+                status = False
+        else:
+            if not self.remoteDirectoryExists(path):
+                localName = self.getLocalFileName(path.strip('/'))
+                directories = localName.split('/')
+                i = len(directories)
+                while i>self.makedirsMinLevel:
+                    parentDirectory = self.getRemoteFileName('/'.join(directories[:i-1]))
+                    if self.remoteDirectoryExists(parentDirectory):
+                        break
+                    i -= 1
+                for j in range(i, len(directories) + 1):
+                    remoteName = self.getRemoteFileName('/'.join(directories[:j]))
+                    self.mkdir(remoteName)
+        return status
 
     def fileExists(self, fileName):
         return os.path.isfile(self.getLocalFileName(fileName))
 
     def directoryExists(self, fileName):
         return os.path.isdir(self.getLocalFileName(fileName))
+
+    def getRemoteFileName(self, path):
+        # only xrootd protocol supported at the moment
+        return self.getXrootdFileName(path)
 
     # ------------------------------------------------------------------------------
     # get file name WITH redirector

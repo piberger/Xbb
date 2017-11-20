@@ -13,6 +13,9 @@
 #              ETH Zurich
 #
 #====================================================================
+cd ${CMSSW_BASE}/src/Xbb/python/
+echo "cd ${CMSSW_BASE}/src/Xbb/python/"
+STARTTIME=$(date +%s.%N)
 
 # Fix Python escape sequence bug.
 export TERM=""
@@ -41,6 +44,7 @@ elif [ $task = "mva_opt" -a $# -lt 5 ]; then
 fi
 
 echo "Task: $task"
+echo "Pwd: $PWD"
 echo
 
 
@@ -86,6 +90,9 @@ while [ $# -gt 0 ]; do
     --fileList=*)
       fileList="${1#*=}"
       ;;
+    --limit=*)
+      limit="${1#*=}"
+      ;;
     *)
       ;;
   esac
@@ -113,13 +120,6 @@ parser.read('${tag}config/paths.ini')
 print parser.get('Configuration', 'whereToLaunch')
 END
 )
-
-echo "whereToLaunch: $whereToLaunch"
-echo
-
-if [ $whereToLaunch == "pisa" ]; then
-    export TMPDIR=$CMSSW_BASE/src/tmp
-fi
 
 # The configuration file names, formatted as arguments to the task scripts.
 config_filenames=( $(
@@ -166,8 +166,20 @@ END
 # Run Task
 
 if [ $task = "prep" ]; then
-    echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}"
-    python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]}
+    runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+    
+elif [ $task = "sysnew" ]; then
+    runCommand="python ./sys_new.py --sampleIdentifier ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
 
 elif [ $task = "singleprep" ]; then
     echo "python ./prepare_environment_with_config.py --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
@@ -182,8 +194,12 @@ elif [ $task = "trainReg" ]; then
     python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
 
 elif [ $task = "sys" ]; then
-    echo "python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}"
-    python ./write_regression_systematics.py --samples $sample ${config_filenames[@]}
+    runCommand="python ./write_regression_systematics.py --samples ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
 
 elif [ $task = "vars" ]; then
     echo "python ./write_newVariables.py --samples $sample ${config_filenames[@]}"
@@ -398,6 +414,10 @@ elif [ $task = "mva_opt_dc" ]; then
     python ./workspace_datacard.py --variable $sample ${config_filenames[@]} --optimisation $bdt_params
 
 fi
+
+ENDTIME=$(date +%s.%N)
+DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
+echo "duration (real time): $DIFFTIME minutes"
 
 echo
 echo "Exiting runAll.sh"

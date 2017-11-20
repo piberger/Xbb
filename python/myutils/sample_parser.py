@@ -201,7 +201,7 @@ class ParseInfo:
                 return sample
         return None
     
-    def get_samples(self, samplenames):
+    def get_samples(self, samplenames=''):
         '''Samplenames is list of the samples names. Returns a list of samples corresponding to the names'''
         samples = []
         thenames = []
@@ -227,7 +227,9 @@ class ParseInfo:
                                 samples.append(sample)
                                 thenames.append(sample.name)
         return samples
-
+    
+    def getSampleIdentifiers(self):
+        return list(set([x.identifier for x in self]))
 
     #it checks whether filename is a splitted sample or is a pure samples and returns the file name without the _#
     def checkSplittedSample(self, filename):
