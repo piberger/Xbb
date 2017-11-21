@@ -359,7 +359,7 @@ class SampleTree(object):
         else:
             raise Exception("BadTreeTypeCutDict")
     
-    # set callback function, which can return a boolean. false means skip this event!
+    # set callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def setCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
@@ -367,7 +367,7 @@ class SampleTree(object):
             print("WARNING: callback function for ", category, " is overwritten!")
         self.callbacks[category] = [fcn]
 
-    # add callback function, which can return a boolean. false means skip this event!
+    # add callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def addCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
@@ -565,7 +565,10 @@ class SampleTree(object):
                         # todo: make it more efficient by using a shared memory block for all of the output trees'
                         # todo: branches, this would help in case one adds new branches and writes to several trees at once
                         for outputTree in self.outputTrees:
-                            branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']], arguments=branch['arguments'] if 'arguments' in branch else None)
+                            if 'arguments' in branch:
+                                branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']], arguments=branch['arguments'])
+                            else:
+                                branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']])
                     else:
                         for outputTree in self.outputTrees:
                             self.evaluateArray(branch['formula'], destinationArray=outputTree['newBranchArrays'][branch['name']])
