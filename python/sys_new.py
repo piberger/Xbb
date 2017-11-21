@@ -12,9 +12,9 @@ from myutils.FileLocator import FileLocator
 from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
-from myutils.TTWeights import TTWeights
-from myutils.EWKweights import EWKweights
-from myutils.BTagWeights import BTagWeights
+#from myutils.TTWeights import TTWeights
+#from myutils.EWKweights import EWKweights
+#from myutils.BTagWeights import BTagWeights
 
 argv = sys.argv
 parser = OptionParser()

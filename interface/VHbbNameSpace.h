@@ -105,7 +105,11 @@ double SoverSBWeight(double BDT, int channel) {
 
     }
 
-
+  TLorentzVector getTLorentzVector(double pt, double eta, double phi, double mass){
+      TLorentzVector v;
+      v.SetPtEtaPhiM(pt, eta, phi, mass);
+      return v;
+  }
 
   double deltaPhi(double phi1, double phi2) {
     double result = phi1 - phi2;
@@ -123,6 +127,26 @@ double SoverSBWeight(double BDT, int channel) {
     return TMath::Sqrt(deta*deta + dphi*dphi);
   }
 
+  double deltaR2(TLorentzVector& j1, TLorentzVector& j2) {
+        double dphi, dy;
+        dphi = deltaPhi(j1.Phi(), j2.Phi());
+        if (std::isinf(j1.Rapidity()) || std::isinf(j2.Rapidity())){
+            dy = 10;
+        }
+        else { 
+            dy = j1.Rapidity()-j2.Rapidity();
+        }
+        return TMath::Sqrt(dy*dy + dphi*dphi);
+  }
+
+
+  double deltaR2(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2, eta2, phi2, mass2);
+      return deltaR2(j1, j2);
+  }
+  
   double HJetVarByCSV(double CSVj1, double Varj1, double CSVj2, double Varj2, bool pickhighestBtag) {
     if ((CSVj1 > CSVj2) && pickhighestBtag) {
       return Varj1;
@@ -268,7 +292,17 @@ double SoverSBWeight(double BDT, int channel) {
       return pp / (mass * mass2);
   }
 
-  
+  double deltaRu_vpw(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2,double pt3, double eta3, double phi3, double mass3){
+      //Returns deltaR2 of (u, v+w)
+      TLorentzVector u,v,w,x;
+      u.SetPtEtaPhiM(pt, eta, phi,  mass);
+      v.SetPtEtaPhiM( pt2,  eta2,  phi2,  mass2);
+      w.SetPtEtaPhiM(pt3,  eta3,  phi3,  mass3);
+      x = v + w;
+      return deltaR2(u, x);
+  }
+
+
   double metCorSysShift(double met, double metphi, int Nvtx, int EVENT_run) {
     double metx = met * cos(metphi);
     double mety = met * sin(metphi);
