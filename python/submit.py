@@ -155,6 +155,14 @@ if 'PSI' in whereToLaunch:
     for dirName in ['PREPout', 'SYSout', 'MVAout', 'tmpSamples']:
         if not fileLocator.exists(config.get('Directories', dirName)):
             fileLocator.makedirs(config.get('Directories', dirName))
+if 'condor' in whereToLaunch:
+    if 'X509_USER_PROXY' not in os.environ:
+        print '\x1b[41m\x1b[97mX509 proxy certificate not set, run:\x1b[0m'
+        print '--------------'
+        print 'voms-proxy-init -voms cms -rfc -out ${HOME}/.x509up_${UID} -valid 192:00'
+        print 'export X509_USER_PROXY=${HOME}/.x509up_${UID}'
+        print '--------------'
+
 
 def dump_config(configs,output_file):
     """
@@ -618,18 +626,29 @@ if opts.task == 'sys' or opts.task == 'syseval':
 
 # EVALUATION OF EVENT BY EVENT BDT SCORE
 if opts.task == 'eval':
-    repDict['queue'] = 'long.q'
+    #repDict['queue'] = 'long.q'
     path = config.get("Directories","MVAin")
     info = ParseInfo(samplesinfo,path)
-    if opts.samples == "":
-        for job in info:
-            if (job.subsample):
-                continue # avoid multiple submissions from subsamples
-            if(info.checkSplittedSampleName(job.identifier)): # if multiple entries for one name  (splitted samples) use the identifier to submit
-                print '@INFO: Splitted samples: submit through identifier'
-                submit(job.identifier,repDict)
-            else: submit(job.name,repDict)
-    else:
-        for sample in samplesList:
-            print sample
-            submit(sample,repDict)
+    samplefiles = config.get('Directories','samplefiles')
+    sampleIdentifiers = info.getSampleIdentifiers()
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+
+    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+
+        # get partitioned list of existing sample files in input folder
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=chunkSize, config=config).getSampleFileNameChunks()
+
+        # submit a job for each chunk of up to N files
+        print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
+            jobDict = repDict.copy()
+            jobDict.update({'arguments':{
+                    'sampleIdentifier': sampleIdentifier,
+                    'fileList': FileList.compress(splitFilesChunk),
+                }})
+            jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+            submit(jobName, jobDict)

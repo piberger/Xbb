@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 import sys
-import os
-import subprocess
-import ROOT 
+import ROOT
 ROOT.gROOT.SetBatch(True)
-from array import array
 from optparse import OptionParser
 from myutils.FileList import FileList
 from myutils import BetterConfigParser, ParseInfo, LeptonSF
@@ -12,9 +9,12 @@ from myutils.FileLocator import FileLocator
 from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
-#from myutils.TTWeights import TTWeights
-#from myutils.EWKweights import EWKweights
-#from myutils.BTagWeights import BTagWeights
+from myutils.TTWeights import TTWeights
+from myutils.EWKweights import EWKweights
+from myutils.BTagWeights import BTagWeights
+from myutils.LeptonWeights import LeptonWeights
+from myutils.JetEnergySystematics import JetEnergySystematics
+from myutils.WPtReweight import WPtReweight
 
 argv = sys.argv
 parser = OptionParser()
@@ -28,13 +28,13 @@ parser.add_option("-b", "--addCollections", dest="addCollections", default="",
                               help="collections to add: vtype")
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files", default=False)
 (opts, args) = parser.parse_args(argv)
-if opts.config =="":
+if opts.config == "":
         opts.config = "config"
 
-filelist = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
+filelist = FileList.decompress(opts.fileList) if len(opts.fileList) > 0 else None
 print "len(filelist)",len(filelist),
-if len(filelist)>0:
-    print "filelist[0]:",filelist[0];
+if len(filelist) > 0:
+    print "filelist[0]:", filelist[0]
 else:
     print ''
 
@@ -50,7 +50,6 @@ ROOT.gSystem.Load(VHbbNameSpace)
 pathIN = config.get('Directories','SYSin')
 pathOUT = config.get('Directories','SYSout')
 tmpDir = config.get('Directories','scratch')
-
 print 'INput samples:\t%s'%pathIN
 print 'OUTput samples:\t%s'%pathOUT
 
@@ -96,7 +95,7 @@ for fileName in filelist:
         if 'vtype' in collections:
             vTypeCorrector = VtypeCorrector(tree=sampleTree.tree, channel=channel)
 
-            # (optional) allows the event to be skipped if recomputed vtype does not match 
+            # (optional) allows the event to be skipped if recomputed vtype does not match
             sampleTree.addCallback('event', vTypeCorrector.processEvent)
 
             # get list of new branches to add
@@ -106,21 +105,21 @@ for fileName in filelist:
             sampleTree.addOutputBranches(newBranches)
 
         # ------------------------------------------------------------------------------------------
-        # this is just a TEST 
+        # this is just a TEST
         # ------------------------------------------------------------------------------------------
         if 'ajidx' in collections:
             ajIndexCalculator = AdditionalJetIndex()
             sampleTree.addOutputBranches(ajIndexCalculator.getBranches())
 
         # ------------------------------------------------------------------------------------------
-        # add variables defined in the config 
+        # add variables defined in the config
         # ------------------------------------------------------------------------------------------
         if 'addbranches' in collections:
             writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
             sampleTree.addOutputBranches(writeNewVariables)
         
         # ------------------------------------------------------------------------------------------
-        # weights 
+        # weights
         # ------------------------------------------------------------------------------------------
         if 'ttw' in collections or 'weights' in collections:
             if sample.type != 'DATA':
@@ -134,8 +133,24 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 btagWeights = BTagWeights(tree=sampleTree.tree, sample=sample)
                 sampleTree.addOutputBranches(btagWeights.getBranches())
+        if 'leptonsf' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                leptonWeights = LeptonWeights(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
+                sampleTree.addOutputBranches(leptonWeights.getBranches())
+        if 'jes' in collections or 'weights' in collections:
+            jetEnergySystematics = JetEnergySystematics(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
+            sampleTree.addOutputBranches(jetEnergySystematics.getBranches())
+        if 'wptreweight' in collections or 'weights' in collections:
+            wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
+            sampleTree.addOutputBranches(wptReweight.getBranches())
 
-
+        if 'removebranches' in collections:
+            bl_branch = eval(config.get('Branches', 'useless_branch'))
+            for br in bl_branch:
+                sampleTree.addBranchToBlacklist(br)
+            bl_branch = eval(config.get('Branches', 'useless_after_sys'))
+            for br in bl_branch:
+                sampleTree.addBranchToBlacklist(br)
 
         # define output file 
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
@@ -143,7 +158,7 @@ for fileName in filelist:
 
         # copy temporary file to output folder
         if opts.force and fileLocator.exists(outputFileName):
-            fileLocator.rm(outputFileName) 
+            fileLocator.rm(outputFileName)
 
         fileLocator.cp(tmpFileName, outputFileName)
         fileLocator.rm(tmpFileName)
@@ -154,4 +169,4 @@ for fileName in filelist:
             vTypeCorrector.printStatistics()
     else:
         print 'SKIP:', localFileName
-    
+

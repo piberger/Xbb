@@ -47,6 +47,8 @@ class MvaTrainingHelper(object):
 
         self.TrainCut = config.get('Cuts', 'TrainCut') 
         self.EvalCut = config.get('Cuts', 'EvalCut')
+        print("TRAINING CUT:", self.TrainCut)
+        print("EVAL CUT:", self.EvalCut)
 
         self.globalRescale = 2.0
         
@@ -58,7 +60,7 @@ class MvaTrainingHelper(object):
         # ----------------------------------------------------------------------------------------------------------------------
         self.factory = ROOT.TMVA.Factory(self.factoryname, self.trainingOutputFile, self.factorysettings)
         if self.trainingOutputFile and self.factory:
-            print ("INFO: initialized MvaTrainingHelper.") 
+            print ("INFO: initialized MvaTrainingHelper.", self.factory) 
         else:
             print ("\x1b[31mERROR: initialization of MvaTrainingHelper failed!\x1b[0m") 
 
@@ -67,9 +69,20 @@ class MvaTrainingHelper(object):
         # ----------------------------------------------------------------------------------------------------------------------
         # add sig/bkg x training/eval trees
         # ----------------------------------------------------------------------------------------------------------------------
+        try:
+            addBackgroundTreeMethod = self.factory.AddBackgroundTree
+            addSignalTreeMethod = self.factory.AddSignalTree
+            self.dataLoader = None
+        except:
+            print("oh no..")
+            # the DataLoader wants to be called '.'
+            self.dataLoader = ROOT.TMVA.DataLoader(".")
+            addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
+            addSignalTreeMethod = self.dataLoader.AddSignalTree
+
         for addTreeFcn, samples in [
-                    [self.factory.AddBackgroundTree, self.samples['BKG']],
-                    [self.factory.AddSignalTree, self.samples['SIG']]
+                    [addBackgroundTreeMethod, self.samples['BKG']],
+                    [addSignalTreeMethod, self.samples['SIG']]
                 ]:
             for sample in samples:
                 print ('*'*80,'\n%s\n'%sample,'*'*80)
@@ -98,8 +111,12 @@ class MvaTrainingHelper(object):
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
 
-        for var in self.MVA_Vars['Nominal']:
-            self.factory.AddVariable(var, 'D')
+        if self.dataLoader:
+            for var in self.MVA_Vars['Nominal']:
+                self.dataLoader.AddVariable(var, 'D')
+        else:
+            for var in self.MVA_Vars['Nominal']:
+                self.factory.AddVariable(var, 'D')
 
         return self
 
@@ -109,7 +126,13 @@ class MvaTrainingHelper(object):
         # ----------------------------------------------------------------------------------------------------------------------
         self.factory.Verbose()
         print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
-        self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
+        try:
+            self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
+        except:
+            print("ROOT 6 TMVA!!! >_<")
+            print("weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
+            ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
+            self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
         print ('Execute TMVA: TrainAllMethods')
         self.factory.TrainAllMethods()
         print ('Execute TMVA: TestAllMethods')

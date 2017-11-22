@@ -2,6 +2,7 @@
 import ROOT
 import numpy as np
 import array
+import sys
 
 class VtypeCorrector(object):
 
@@ -81,6 +82,7 @@ class VtypeCorrector(object):
             else:
                 if tree.Vtype == 0 or tree.Vtype == 1:
                     print '@ERROR: This is impossible, the new ele cut should be losser...'
+                    print 'selected mu/e:',selectedMuons, selectedElectrons, ' z mu:', zMuons, ' z e:', zElectrons
                     sys.exit(1)
                 #Wlv case. Recompute lepton branches
                 if tree.Vtype == 2 or tree.Vtype == 3:

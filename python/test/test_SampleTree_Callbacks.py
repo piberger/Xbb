@@ -28,6 +28,7 @@ class TestSampleTreeCallbacksMethods(unittest.TestCase):
         if tree.b>444.4 and tree.b<444.5:
             print("event found:", tree.event, tree.b)
             self.nEventsFound += 1
+        return True
 
     def test_SampleTree_Callback_1(self):
         sampleTree = self.getTree()
