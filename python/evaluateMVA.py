@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import sys,hashlib
-import os,subprocess
-import ROOT 
-from array import array
-from math import sqrt
-from copy import copy
+import sys
+import ROOT
 #suppres the EvalInstace conversion warning bug
 import warnings
 warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
@@ -15,10 +11,8 @@ from myutils.FileList import FileList
 from myutils.FileLocator import FileLocator
 from myutils.sampleTree import SampleTree as SampleTree
 
-
 #CONFIGURE
 ROOT.gROOT.SetBatch(True)
-#load config
 argv = sys.argv
 parser = OptionParser()
 parser.add_option("-D", "--discr", dest="discr", default="",
@@ -35,86 +29,86 @@ parser.add_option("-o","--force", action="store_true", dest="force", default=Fal
                       help="force overwriting of already cached files")
 (opts, args) = parser.parse_args(argv)
 
-if opts.config =="":
+if opts.config == "":
         opts.config = "config"
 
 weight = opts.weight
 evaluate_optimisation = False
-if weight != '': evaluate_optimisation = True
+if weight != '':
+    evaluate_optimisation = True
 
 #Import after configure to get help message
-from myutils import BetterConfigParser, progbar, printc, ParseInfo, MvaEvaluator
+from myutils import BetterConfigParser, ParseInfo, MvaEvaluator
 
 config = BetterConfigParser()
 config.read(opts.config)
-anaTag = config.get("Analysis","tag")
+anaTag = config.get("Analysis", "tag")
 
 fileLocator = FileLocator(config=config)
 print ("OPTS", opts)
-if len(opts.fileList)>0:
-    filelist = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
-    print ("len(filelist)",len(filelist))
-    if len(filelist)>0:
-        print ("filelist[0]:",filelist[0])
+if len(opts.fileList) > 0:
+    filelist = FileList.decompress(opts.fileList) if len(opts.fileList) > 0 else None
+    print ("len(filelist)", len(filelist))
+    if len(filelist) > 0:
+        print ("filelist[0]:", filelist[0])
 else:
     filelist = SampleTree({'name': opts.sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=-1, config=config).getSampleFileNameChunks()[0]
     print ("INFO: no file list given, use all files!")
     print (len(filelist), filelist)
 
 #get locations:
-Wdir=config.get('Directories','Wdir')
-samplesinfo=config.get('Directories','samplesinfo')
+Wdir = config.get('Directories', 'Wdir')
+samplesinfo = config.get('Directories', 'samplesinfo')
 
 #read shape systematics
-systematics=config.get('systematics','systematics')
+systematics = config.get('systematics', 'systematics')
 
-INpath = config.get('Directories','MVAin')
-OUTpath = config.get('Directories','MVAout')
-tmpDir = config.get('Directories','scratch')
+INpath = config.get('Directories', 'MVAin')
+OUTpath = config.get('Directories', 'MVAout')
+tmpDir = config.get('Directories', 'scratch')
 
 info = ParseInfo(samplesinfo,INpath)
 
 arglist = ''
 
 if not evaluate_optimisation:
-    arglist=opts.discr #RTight_blavla,bsbsb
+    arglist = opts.discr #RTight_blavla,bsbsb
 else:
 #    print '@INFO: Evaluating bdt for optimisation'
-    arglist=weight
+    arglist = weight
 
-namelistIN=opts.sampleIdentifier
-namelist=namelistIN.split(',')
-print ('namelist',namelist)
+namelistIN = opts.sampleIdentifier
+namelist = namelistIN.split(',')
+print ('namelist', namelist)
 
 #doinfo=bool(int(opts.update))
 
-MVAlist=arglist.split(',')
+MVAlist = arglist.split(',')
 
 #CONFIG
 #factory
-factoryname=config.get('factory','factoryname')
+factoryname = config.get('factory','factoryname')
 
 #load the namespace
-VHbbNameSpace=config.get('VHbbNameSpace','library')
+VHbbNameSpace = config.get('VHbbNameSpace','library')
 ROOT.gSystem.Load(VHbbNameSpace)
 
 #MVA
-MVAinfos=[]
-MVAdir=config.get('Directories','vhbbpath')
+MVAinfos = []
+MVAdir = config.get('Directories','vhbbpath')
 for MVAname in MVAlist:
-    MVAinfofile = open(MVAdir+'/python/weights/'+factoryname+'_'+MVAname+'.info','r')
+    MVAinfofile = open(MVAdir+'/python/weights/'+factoryname+'_'+MVAname+'.info', 'r')
     MVAinfos.append(pickle.load(MVAinfofile))
     MVAinfofile.close()
-    
+
 #Workdir
-workdir=ROOT.gDirectory.GetPath()
+workdir = ROOT.gDirectory.GetPath()
 
 theMVAs = []
 for mva in MVAinfos:
     theMVAs.append(MvaEvaluator(config,mva))
 
 # samples
-info = ParseInfo(samplesinfo, INpath)
 matchingSamples = [x for x in info if x.identifier==opts.sampleIdentifier and not x.subsample]
 if len(matchingSamples) != 1:
     print ("need exactly 1 sample identifier as input with -S !!", matchingSamples)
@@ -131,34 +125,33 @@ for fileName in filelist:
     fileLocator.makedirs(tmpFolder)
     fileLocator.makedirs(outputFolder)
     if not fileLocator.exists(outputFileName) or opts.force:
-        # load sample tree and initialize vtype corrector
+        # load sample tree
         sampleTree = SampleTree([inputFileName], config=config)
         if not sampleTree.tree:
             print ("\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m")
             continue
-        #Set branch adress for all vars
-        for i in range(0,len(theMVAs)):
+        # Set branch adress for all vars
+        for i in range(0, len(theMVAs)):
             theMVAs[i].setVariables(sampleTree.tree, sample)
         mvaBranches = []
-        for i in range(0,len(theMVAs)):
+        for i in range(0, len(theMVAs)):
             mvaBranches.append({
                     'name': MVAinfos[i].MVAname,
                     'length': len(systematics.split()),
                     'formula': theMVAs[i].evaluate,
                     'leaflist': ':'.join(systematics.split())+'/F',
                 })
-            print('\n--> ' + sample.name +':')
-    
+
         sampleTree.addOutputBranches(mvaBranches)
 
-        # define output file 
+        # define output file
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
 
         # copy temporary file to output folder
         if opts.force and fileLocator.exists(outputFileName):
-            fileLocator.rm(outputFileName) 
-        
+            fileLocator.rm(outputFileName)
+
         if fileLocator.exists(tmpFileName):
             fileLocator.cp(tmpFileName, outputFileName)
             fileLocator.rm(tmpFileName)
