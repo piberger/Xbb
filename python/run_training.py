@@ -75,7 +75,8 @@ class MvaTrainingHelper(object):
             self.dataLoader = None
         except:
             print("oh no..")
-            self.dataLoader = ROOT.TMVA.DataLoader("someDataLoaderThingy")
+            # the DataLoader wants to be called '.'
+            self.dataLoader = ROOT.TMVA.DataLoader(".")
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
 
@@ -144,7 +145,9 @@ class MvaTrainingHelper(object):
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
         except:
-            print(">_<")
+            print("ROOT 6 TMVA!!! >_<")
+            print("weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
+            ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
         print ('Execute TMVA: TrainAllMethods')
         self.factory.TrainAllMethods()
