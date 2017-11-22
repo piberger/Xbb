@@ -56,6 +56,7 @@ class TreeCache:
     def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder=None, outputFolder=None, chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name='', config=None):
         self.config = config
         self.fileLocator = FileLocator(config=self.config)
+        self.debug = debug or ('XBBDEBUG' in os.environ)
 
         # SAMPLE
         if isinstance(sample, Sample):
@@ -94,7 +95,6 @@ class TreeCache:
         # identifier is just used as an arbitrary name for print-out
         cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50] + '...').replace(' ', '')
         self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
-        self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
 

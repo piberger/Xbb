@@ -90,8 +90,7 @@ class PlotHelper(object):
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.samplesPath,
-                    config=config,
-                    debug=True
+                    config=config
                 )
             sampleTree = tc.getTree()
 

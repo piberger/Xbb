@@ -33,6 +33,7 @@ class SampleTree(object):
 
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
@@ -116,7 +117,7 @@ class SampleTree(object):
 
                         # add file to chain
                         chainTree = '%s/%s'%(rootFileName, self.treeName)
-                        if self.verbose:
+                        if self.debug:
                             print ('DEBUG: chaining '+chainTree)
                         statusCode = self.tree.Add(chainTree)
 
@@ -280,12 +281,13 @@ class SampleTree(object):
                 perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
 
             # output status
-            if self.verbose:
+            if self.verbose or self.debug:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
-                self.tree.PrintCacheStats()
+                if self.debug:
+                    self.tree.PrintCacheStats()
                 sys.stdout.flush()
             self.oldTreeNum = treeNum
             # update TTreeFormula's
