@@ -127,6 +127,13 @@ double SoverSBWeight(double BDT, int channel) {
     return TMath::Sqrt(deta*deta + dphi*dphi);
   }
 
+  double deltaR_(double eta1, double phi1, double eta2, double phi2) {
+    // calculates deltaR of 1 with the opposite of 2
+    double deta = eta1 + eta2;
+    double dphi = deltaPhi(phi1, phi2+TMath::Pi());
+    return TMath::Sqrt(deta*deta + dphi*dphi);
+  }
+
   double deltaR2(TLorentzVector& j1, TLorentzVector& j2) {
         double dphi, dy;
         dphi = deltaPhi(j1.Phi(), j2.Phi());
@@ -144,6 +151,13 @@ double SoverSBWeight(double BDT, int channel) {
       TLorentzVector j1, j2;
       j1.SetPtEtaPhiM(pt, eta, phi, mass);
       j2.SetPtEtaPhiM(pt2, eta2, phi2, mass2);
+      return deltaR2(j1, j2);
+  }
+  
+  double deltaR2_(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2,-eta2, phi2+TMath::Pi(), mass2);
       return deltaR2(j1, j2);
   }
   
