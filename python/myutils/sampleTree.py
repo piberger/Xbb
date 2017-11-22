@@ -225,22 +225,27 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add a new branch
     # ------------------------------------------------------------------------------
-    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None):
+    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None):
         # this is needed to overwrite the branch if it already exists!
         self.addBranchToBlacklist(branchName)
+
+        # function
         if callable(formula):
+            newBranch = {'name': branchName, 'function': formula, 'type': branchType, 'length': length}
             if arguments:
-                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length, 'arguments': arguments})
-            else:
-                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length})
+                newBranch['arguments'] = arguments
+        # string which contains a TTreeFormula expression
         else:
             formulaName = 'alias:' + branchName
             self.addFormula(formulaName, formula)
             newBranch = {'name': branchName, 'formula': formulaName, 'type': branchType, 'length': length}
-            self.newBranches.append(newBranch)
+        if leaflist:
+            newBranch['leaflist'] = leaflist
+        self.newBranches.append(newBranch)
 
     # ------------------------------------------------------------------------------
     # pass a list of dictionaries of branches to add
+    # TODO: avoid detour via addOutputBranch and set dictionary directly
     # ------------------------------------------------------------------------------
     def addOutputBranches(self, branchDictList):
         for branchDict in branchDictList:
@@ -250,6 +255,7 @@ class SampleTree(object):
                 branchType=branchDict['type'] if 'type' in branchDict else 'f',
                 length=branchDict['length'] if 'length' in branchDict else 1,
                 arguments=branchDict['arguments'] if 'arguments' in branchDict else None,
+                leaflist=branchDict['leaflist'] if 'leaflist' in branchDict else None,
             )
 
     # ------------------------------------------------------------------------------
@@ -515,8 +521,11 @@ class SampleTree(object):
             outputTree['newBranches'] = {}
             for branch in self.newBranches:
                 outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
-                branchTypeDef = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
-                outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], branchTypeDef)
+                if 'leaflist' in branch:
+                    leafList = branch['leaflist'] 
+                else:
+                    leafList = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
+                outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], leafList)
         if len(self.newBranches) > 0:
             print("ADD NEW BRANCHES:")
             for branch in self.newBranches:

@@ -626,18 +626,29 @@ if opts.task == 'sys' or opts.task == 'syseval':
 
 # EVALUATION OF EVENT BY EVENT BDT SCORE
 if opts.task == 'eval':
-    repDict['queue'] = 'long.q'
+    #repDict['queue'] = 'long.q'
     path = config.get("Directories","MVAin")
     info = ParseInfo(samplesinfo,path)
-    if opts.samples == "":
-        for job in info:
-            if (job.subsample):
-                continue # avoid multiple submissions from subsamples
-            if(info.checkSplittedSampleName(job.identifier)): # if multiple entries for one name  (splitted samples) use the identifier to submit
-                print '@INFO: Splitted samples: submit through identifier'
-                submit(job.identifier,repDict)
-            else: submit(job.name,repDict)
-    else:
-        for sample in samplesList:
-            print sample
-            submit(sample,repDict)
+    samplefiles = config.get('Directories','samplefiles')
+    sampleIdentifiers = info.getSampleIdentifiers()
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+
+    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+
+        # get partitioned list of existing sample files in input folder
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=chunkSize, config=config).getSampleFileNameChunks()
+
+        # submit a job for each chunk of up to N files
+        print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
+            jobDict = repDict.copy()
+            jobDict.update({'arguments':{
+                    'sampleIdentifier': sampleIdentifier,
+                    'fileList': FileList.compress(splitFilesChunk),
+                }})
+            jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+            submit(jobName, jobDict)
