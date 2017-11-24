@@ -152,6 +152,27 @@ class SampleTree(object):
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
 
+    def __del__(self):
+        self.delete()
+
+    def delete(self):
+        try:
+            for formulaName, formula in self.formulas.iteritems():
+                if formula:
+                    formula.Delete()
+        except:
+            pass
+        try:
+            for outputTree in self.outputTrees:
+                if outputTree['tree']:
+                    outputTree['tree'].Delete()
+        except:
+            pass
+        try:
+            self.tree.Delete()
+        except:
+            pass
+
     # ------------------------------------------------------------------------------
     # return full list of sample root files 
     # ------------------------------------------------------------------------------
