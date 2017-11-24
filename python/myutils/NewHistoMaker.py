@@ -25,16 +25,11 @@ class NewHistoMaker:
         if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
             self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
         is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
+        print ("HO:", self.histogramOptions)
         if is2D:
-            nBinsX = self.histogramOptions['nBinsX'] if 'nBinsX' in self.histogramOptions else self.histogramOptions['nBins']
-            nBinsY = self.histogramOptions['nBinsY'] if 'nBinsY' in self.histogramOptions else self.histogramOptions['nBins']
-            minX = self.histogramOptions['minX'] if 'minX' in self.histogramOptions else self.histogramOptions['min']
-            minY = self.histogramOptions['minY'] if 'minY' in self.histogramOptions else self.histogramOptions['min']
-            maxX = self.histogramOptions['maxX'] if 'maxX' in self.histogramOptions else self.histogramOptions['max']
-            maxY = self.histogramOptions['maxY'] if 'maxY' in self.histogramOptions else self.histogramOptions['max']
-            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, nBinsX, minX, maxX, nBinsY, minY, maxY) 
+            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY']) 
         else:
-            self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBins'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
+            self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
         self.histogram.Sumw2()
         self.histogram.SetTitle(self.sample.name)
         return self.histogram

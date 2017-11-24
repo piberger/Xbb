@@ -43,36 +43,46 @@ class NewStackMaker:
                 'rebin': 1,
                 'var': self.var,
                 }
-        if self.config.has_option(self.configSection,'rebin'):
-            self.histogramOptions['rebin'] = eval(self.config.get(self.configSection,'rebin'))
-        for axis in ['', 'X', 'Y']:
-            if self.config.has_option(self.configSection,'nBins'+axis):
-                self.histogramOptions['nBins'+axis] = int(eval(self.config.get(self.configSection,'nBins'+axis))/self.histogramOptions['rebin'])
-            elif self.config.has_option('plotDef:%s'%var,'nBins'+axis):
-                self.histogramOptions['nBins'+axis] = int(eval(self.config.get('plotDef:%s'%var,'nBins'+axis))/self.histogramOptions['rebin'])
-            if self.config.has_option(self.configSection,'min'+axis):
-                self.histogramOptions['min'+axis] = eval(self.config.get(self.configSection,'min'+axis))
-            elif self.config.has_option('plotDef:%s'%var,'min'+axis):
-                self.histogramOptions['min'+axis] = eval(self.config.get('plotDef:%s'%var,'min'+axis))
-            if self.config.has_option(self.configSection,'max'+axis):
-                self.histogramOptions['max'+axis] = eval(self.config.get(self.configSection,'max'+axis))
-            elif self.config.has_option('plotDef:%s'%var,'max'+axis):
-                self.histogramOptions['max'+axis] = eval(self.config.get('plotDef:%s'%var,'max'+axis))
-        if 'minX' not in self.histogramOptions:
-            self.histogramOptions['minX'] = self.histogramOptions['min']
-        if 'maxX' not in self.histogramOptions:
-            self.histogramOptions['maxX'] = self.histogramOptions['max']
-        self.histogramOptions['treeVar'] = self.config.get('plotDef:%s'%var,'relPath')
 
+        # general event by event weight which is applied to all samples
         if self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
             self.histogramOptions['weight'] = None
        
-        optionals = ['drawOption', 'draw']
-        for optionName in optionals:
-            if self.config.has_option('plotDef:%s'%var, optionName):
-                self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, optionName)
+        optionNames = {
+                    'treeVar': 'relPath',
+                    'rebin': 'rebin',
+                    'xAxis': 'xAxis',
+                    'yAxis': 'yAxis',
+                    'drawOption': 'drawOption',
+                    'draw': 'draw',
+                    'min': ['min', 'minX'],
+                    'max': ['max', 'maxX'], 
+                    'minX': ['minX', 'min'],
+                    'minY': ['minY', 'min'],
+                    'maxX': ['maxX', 'max'],
+                    'maxY': ['maxY', 'max'],
+                    'nBins': ['nBins', 'nBinsX'],
+                    'nBinsX': ['nBinsX', 'nBins'],
+                    'nBinsY': ['nBinsY', 'nBins'],
+                }
+        numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY']
+        for optionName, configKeys in optionNames.iteritems():
+            # use the first available option from the config, first look in region definition, afterwards in plot definition
+            configKeysList = configKeys if type(configKeys) == list else [configKeys]
+            for configKey in configKeysList:
+                if self.config.has_option(self.configSection, configKey):
+                    self.histogramOptions[optionName] = self.config.get(self.configSection, configKey)
+                    break
+                elif self.config.has_option('plotDef:%s'%var, configKey):
+                    self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
+                    break
+                else:
+                    print("NOT found:", self.configSection, 'plotDef:%s'%var, optionName, configKey)
+            # convert numeric options to float/int
+            if optionName in numericOptions and type(self.histogramOptions[optionName]) == str:
+                self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
 
         self.groups = {}
         self.histograms = []
