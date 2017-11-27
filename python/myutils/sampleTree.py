@@ -160,17 +160,21 @@ class SampleTree(object):
         try:
             for formulaName, formula in self.formulas.iteritems():
                 if formula:
-                    formula.Delete()
+                    del formula
+                    formula = None
         except:
             pass
         try:
             for outputTree in self.outputTrees:
                 if outputTree['tree']:
-                    outputTree['tree'].Delete()
+                    del outputTree['tree']
+                    outputTree['tree'] = None
         except:
             pass
         try:
-            self.tree.Delete()
+            if self.tree:
+                del self.tree
+                self.tree = None
         except:
             pass
 
