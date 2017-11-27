@@ -9,6 +9,7 @@ import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
 import array
+import resource
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -467,6 +468,8 @@ class SampleTree(object):
     # cuts are fulfilled.
     # ------------------------------------------------------------------------------
     def process(self):
+        if self.debug:
+            print('DEBUG: mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:
