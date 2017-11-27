@@ -3,6 +3,7 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
+import array
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -32,6 +33,7 @@ class NewStackMaker:
         self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
         self.is2D = True if self.yAxis else False
         self.typLegendDict = eval(config.get('Plot_general','typLegendDict'))
+        self.plotLabels = {}
         if setup is None:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
@@ -61,13 +63,15 @@ class NewStackMaker:
                     'max': ['max', 'maxX'], 
                     'minX': ['minX', 'min'],
                     'minY': ['minY', 'min'],
+                    'minZ': ['minZ'],
                     'maxX': ['maxX', 'max'],
                     'maxY': ['maxY', 'max'],
+                    'maxZ': ['maxZ'],
                     'nBins': ['nBins', 'nBinsX'],
                     'nBinsX': ['nBinsX', 'nBins'],
                     'nBinsY': ['nBinsY', 'nBins'],
                 }
-        numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY']
+        numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -78,10 +82,8 @@ class NewStackMaker:
                 elif self.config.has_option('plotDef:%s'%var, configKey):
                     self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
                     break
-                else:
-                    print("NOT found:", self.configSection, 'plotDef:%s'%var, optionName, configKey)
             # convert numeric options to float/int
-            if optionName in numericOptions and type(self.histogramOptions[optionName]) == str:
+            if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
 
         self.groups = {}
@@ -315,6 +317,13 @@ class NewStackMaker:
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
         self.addObject(self.myText(addFlag, 0.17+(0.03 if self.is2D else 0), 0.78))
+
+        try:
+            for labelName, label in self.plotLabels.iteritems():
+                self.addObject(self.myText(label['text'], label['x'], label['y'], label['size']))
+        except:
+            pass
+
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
         #    tAddFlag2 = self.myText(self.addFlag2,0.17,0.73)
@@ -385,15 +394,39 @@ class NewStackMaker:
 
         # draw stack/sum
         if self.is2D:
-            # TODO!
+            self.plotLabels['topright1'] = {'text': '2Dplot', 'x': 0.69, 'y': 0.9, 'size': 0.7}
             if 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip() == self.dataGroupName:
-                allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedMcHistograms')
+                allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                self.plotLabels['topright1']['text'] = 'DATA'
+            elif 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip().upper() == 'RATIO':
+                allStackData = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                allStackMc = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                allStack = allStackData.Clone('summedRatioHistogram')
+                allStack.Sumw2()
+                allStack.Divide(allStackMc)
+                self.plotLabels['topright1']['text'] = 'DATA/MC'
+                try:
+                    unityPos = 0.33
+                    try:
+                        if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
+                            unityPos = (1.0-self.histogramOptions['minZ'])/(self.histogramOptions['maxZ']-self.histogramOptions['minZ'])
+                    except:
+                        pass
+                    stops = array.array('d', [0.0, unityPos, 1.0])
+                    reds = array.array('d', [0.34, 0.63, 1.0])
+                    greens = array.array('d', [0.34, 0.63, 0])
+                    blues = array.array('d', [0.63, 0.63, 0])
+                    nc = 20
+                    ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
+                    ROOT.gStyle.SetNumberContours(nc)
+                except Exception as e:
+                    print("\x1b[31m",e,"\x1b[0m")
             else:
                 allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                self.plotLabels['topright1']['text'] = 'MC'
             allStack.SetStats(0)
             allStack.SetTitle('')
         allStack.Draw(drawOption)
-
 
         # set axis titles
         if self.is2D:
@@ -434,6 +467,10 @@ class NewStackMaker:
             allStack.GetXaxis().SetLabelSize(0)
         else:
             allStack.GetXaxis().SetTitle(self.xAxis)
+
+        if self.is2D:
+            if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
+                allStack.GetZaxis().SetRangeUser(self.histogramOptions['minZ'], self.histogramOptions['maxZ'])
 
         # draw DATA
         if dataGroupName in groupedHistograms and not self.is2D:

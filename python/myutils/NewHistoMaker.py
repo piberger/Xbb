@@ -25,7 +25,6 @@ class NewHistoMaker:
         if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
             self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
         is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
-        print ("HO:", self.histogramOptions)
         if is2D:
             self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY']) 
         else:
