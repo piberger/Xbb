@@ -141,8 +141,9 @@ for fileName in filelist:
             jetEnergySystematics = JetEnergySystematics(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
             sampleTree.addOutputBranches(jetEnergySystematics.getBranches())
         if 'wptreweight' in collections or 'weights' in collections:
-            wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
-            sampleTree.addOutputBranches(wptReweight.getBranches())
+            if sample.type != 'DATA':
+                wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
+                sampleTree.addOutputBranches(wptReweight.getBranches())
 
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
