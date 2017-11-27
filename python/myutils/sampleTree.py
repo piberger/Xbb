@@ -157,26 +157,33 @@ class SampleTree(object):
         self.delete()
 
     def delete(self):
+        # close possible left open files referencing the TChain and delete output trees 
+        self.callbacks = None
+        self.tree.Reset()
+        self.fileLocator = None
+        self.config = None
+        for outputTree in self.outputTrees:
+            del outputTree['file']
         try:
             for formulaName, formula in self.formulas.iteritems():
                 if formula:
                     del formula
                     formula = None
-        except:
-            pass
+        except e:
+            print("EXCEPTION:", e)
         try:
             for outputTree in self.outputTrees:
                 if outputTree['tree']:
                     del outputTree['tree']
                     outputTree['tree'] = None
-        except:
-            pass
+        except e:
+            print("EXCEPTION:", e)
         try:
             if self.tree:
                 del self.tree
                 self.tree = None
-        except:
-            pass
+        except e:
+            print("EXCEPTION:", e)
 
     # ------------------------------------------------------------------------------
     # return full list of sample root files 
