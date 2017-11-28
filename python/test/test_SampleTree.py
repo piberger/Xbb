@@ -57,7 +57,8 @@ class TestSampleTreeMethods(unittest.TestCase):
         sampleTree.process()
 
         # load subtrees and count events
-        resultsMethodA = [SampleTree([TestSampleTreeMethods.scratchDirectory + '/tree_skimmed_%d.root'%i]).tree.GetEntries() for i, cut in enumerate(cuts)]
+        newSampleTrees = [SampleTree([TestSampleTreeMethods.scratchDirectory + '/tree_skimmed_%d.root'%i])  for i, cut in enumerate(cuts)]
+        resultsMethodA = [newSampleTree.tree.GetEntries() for newSampleTree in newSampleTrees]
 
         # count directly
         resultsMethodB = [sampleTree.tree.Draw("a", cut, "goff") for i, cut in enumerate(cuts)]
@@ -163,7 +164,8 @@ class TestSampleTreeMethods(unittest.TestCase):
         sampleTree.process()
 
         # count number of entries written to output file
-        resultsMethodA = SampleTree([TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root']).tree.GetEntries()
+        skimmedSampleTree = SampleTree([TestSampleTreeMethods.scratchDirectory + '/tree_dummy.root'])
+        resultsMethodA = skimmedSampleTree.tree.GetEntries()
         resultsMethodB = sampleTree.tree.Draw("a", cutFlat, "goff")
         self.assertEqual(resultsMethodA, resultsMethodB)
 

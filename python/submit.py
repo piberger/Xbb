@@ -34,6 +34,8 @@ parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="stor
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
+parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
+                      help="don't submit jobs if output files already exist")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 
@@ -49,6 +51,7 @@ if opts.tag == "":
 if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
+
 
 globalFilesSubmitted = 0
 globalFilesSkipped = 0
@@ -315,11 +318,12 @@ if opts.task == 'prep':
             submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
-# (experimental!!) SYSNEW: add additional branches and branches for sys variations 
+# SYSNEW: add additional branches and branches for sys variations 
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew':
 
     path = config.get("Directories", "SYSin")
+    pathOUT = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
@@ -338,16 +342,25 @@ if opts.task == 'sysnew':
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.." 
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
-            jobDict = repDict.copy()
-            jobDict.update({'arguments':{
-                    'sampleIdentifier': sampleIdentifier,
-                    'fileList': FileList.compress(splitFilesChunk),
-                    'addCollections': opts.addCollections,
-                }})
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
-            submit(jobName, jobDict)
+
+            if opts.skipExisting: 
+                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+            else:
+                skipChunk = False
+
+            if not skipChunk or opts.force:
+                jobDict = repDict.copy()
+                jobDict.update({'arguments':{
+                        'sampleIdentifier': sampleIdentifier,
+                        'fileList': FileList.compress(splitFilesChunk),
+                        'addCollections': opts.addCollections,
+                    }})
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+                submit(jobName, jobDict)
+            else:
+                print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
 # -----------------------------------------------------------------------------
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 

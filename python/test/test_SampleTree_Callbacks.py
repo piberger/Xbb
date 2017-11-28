@@ -56,9 +56,11 @@ class TestSampleTreeCallbacksMethods(unittest.TestCase):
         sampleTree.process()
 
         # check otuput
-        resultsMethodB = SampleTree([TestSampleTreeCallbacksMethods.scratchDirectory + '/tree_test_0.root']).tree.GetEntries()
+        sampleTree2 = SampleTree([TestSampleTreeCallbacksMethods.scratchDirectory + '/tree_test_0.root'])
+        resultsMethodB = sampleTree2.tree.GetEntries()
+        print(sampleTree2.tree)
         print("events which triggered callback:", self.nEventsFound)
-        print("events in tree 0:", self.nEventsFound)
+        print("events in tree 0:", resultsMethodB)
         self.assertEqual(self.nEventsFound, resultsMethodB)
         self.assertTrue(self.nEventsFound > 0)
 
