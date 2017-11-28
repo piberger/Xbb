@@ -232,7 +232,7 @@ submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(n
 submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
-        'eval': ' -l h_vmem=2g ',
+        'eval': ' -l h_vmem=4g ',
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
         }
