@@ -732,7 +732,7 @@ if opts.task == 'eval':
 if 'condor' in whereToLaunch:
     for batchName, submitFileIdentifier in condorBatchGroups.iteritems():
         submitFileName = 'condor_{identifier}.sub'.format(identifier=submitFileIdentifier)
-        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
+        command = 'condor_submit {submitFileName}  -batch-name {batchName}'.format(submitFileName=submitFileName, batchName=batchName)
         if opts.interactive:
             print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
             answer = raw_input().strip()
