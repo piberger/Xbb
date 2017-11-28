@@ -36,6 +36,8 @@ parser.add_option("-f", "--force", dest="force", action="store_true", default=Fa
                       help="Force overwriting of files if they already exist")
 parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
                       help="don't submit jobs if output files already exist")
+parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
+                      help="submit in a single submit file per job instead of using batches")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 
@@ -216,6 +218,7 @@ submitScriptSpecialOptions = {
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
         }
+condorBatchGroups = {}
 
 # STANDARD WORKFLOW SUBMISSION FUNCTION
 def submit(job, repDict):
@@ -244,7 +247,20 @@ def submit(job, repDict):
     if 'condor' in whereToLaunch:
         with open('batch/condor/template.sub', 'r') as template:
             lines = template.readlines()
-        dictHash = '%(task)s_%(timestamp)s'%(repDict) + '_%x'%hash('%r'%repDict)
+        
+        firstFileOfBatch = False 
+        isBatched = 'batch' in repDict and not opts.condorNobatch
+        if isBatched:
+            if repDict['batch'] not in condorBatchGroups:
+                # first file of batch -> make new submit file
+                firstFileOfBatch = True
+                condorBatchGroups[repDict['batch']] = '%(task)s_%(timestamp)s_%(batch)s'%(repDict)
+            # use existing submit file and append
+            dictHash = condorBatchGroups[repDict['batch']]
+        else:
+            # create a new submit file
+            dictHash = '%(task)s_%(timestamp)s'%(repDict) + '_%x'%hash('%r'%repDict)
+        
         condorDict = {
             'runscript': runScript.split(' ')[0],
             'arguments': ' '.join(runScript.split(' ')[1:]),
@@ -254,11 +270,20 @@ def submit(job, repDict):
             'queue': 'workday',
         }
         submitFileName = 'condor_{hash}.sub'.format(hash=dictHash)
-        with open(submitFileName, 'w') as submitFile:
-            for line in lines:
-                submitFile.write(line.format(**condorDict))
+        
+        # append to existing bath
+        if isBatched:
+            with open(submitFileName, 'a') as submitFile:
+                submitFile.write("\n")    
+                for line in lines:
+                    submitFile.write(line.format(**condorDict))
+            command = None
+        else:
+            with open(submitFileName, 'w') as submitFile:
+                for line in lines:
+                    submitFile.write(line.format(**condorDict))
+            command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
         print "COMMAND:\x1b[35m", runScript, "\x1b[0m"
-        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
 
     # -----------------------------------------------------------------------------
     # SGE
@@ -273,17 +298,18 @@ def submit(job, repDict):
         dump_config(configs, "%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
 
     # run command
-    if opts.interactive:
-        print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
-        answer = raw_input().strip()
-        if answer.lower() in ['no', 'n', 'skip']:
-            return
-        elif answer.lower() in ['l', 'local']:
-            print "run locally"
-            command = 'sh {runscript}'.format(runscript=runScript)
-    else:
-        print "the command is ", command
-    subprocess.call([command], shell=True)
+    if command:
+        if opts.interactive:
+            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
+            answer = raw_input().strip()
+            if answer.lower() in ['no', 'n', 'skip']:
+                return
+            elif answer.lower() in ['l', 'local']:
+                print "run locally"
+                command = 'sh {runscript}'.format(runscript=runScript)
+        else:
+            print "the command is ", command
+        subprocess.call([command], shell=True)
 
 # -----------------------------------------------------------------------------
 # PREP: copy skimmed ntuples to local storage
@@ -350,11 +376,14 @@ if opts.task == 'sysnew':
 
             if not skipChunk or opts.force:
                 jobDict = repDict.copy()
-                jobDict.update({'arguments':{
+                jobDict.update({
+                    'arguments':{
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
                         'addCollections': opts.addCollections,
-                    }})
+                    },
+                    'batch': sampleIdentifier,
+                    })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
                 jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
@@ -665,3 +694,17 @@ if opts.task == 'eval':
                 }})
             jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
+
+# submit all jobs, which have been grouped in a batch
+if 'condor' in whereToLaunch:
+    for batchName, submitFileIdentifier in condorBatchGroups.iteritems():
+        submitFileName = 'condor_{identifier}.sub'.format(identifier=submitFileIdentifier)
+        command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
+        if opts.interactive:
+            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
+            answer = raw_input().strip()
+            if answer.lower() in ['no', 'n', 'skip']:
+                continue
+        else:
+            print "the command is ", command
+        subprocess.call([command], shell=True)
