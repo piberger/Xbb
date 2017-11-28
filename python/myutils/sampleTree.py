@@ -39,6 +39,7 @@ class SampleTree(object):
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
+        self.tree = None
         self.fileLocator = FileLocator(config=self.config)
 
         # process only partial sample root file list
@@ -157,9 +158,13 @@ class SampleTree(object):
         self.delete()
 
     def delete(self):
-        # close possible left open files referencing the TChain and delete output trees 
         self.callbacks = None
-        self.tree.Reset()
+        # close possible left open files referencing the TChain and delete output trees 
+        try:
+            if self.tree:
+                self.tree.Reset()
+        except:
+            pass
         self.fileLocator = None
         self.config = None
         for outputTree in self.outputTrees:
