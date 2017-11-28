@@ -232,6 +232,7 @@ submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(n
 submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
+        'eval': ' -l h_vmem=2g ',
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
         }
@@ -700,6 +701,7 @@ if opts.task == 'sys' or opts.task == 'syseval':
 if opts.task == 'eval':
     #repDict['queue'] = 'long.q'
     path = config.get("Directories", "MVAin")
+    pathOUT = config.get("Directories", "MVAout")
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
     sampleIdentifiers = info.getSampleIdentifiers()
@@ -717,16 +719,25 @@ if opts.task == 'eval':
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
-            jobDict = repDict.copy()
-            jobDict.update({
-                'arguments':{
-                    'sampleIdentifier': sampleIdentifier,
-                    'fileList': FileList.compress(splitFilesChunk),
-                },
-                'batch': sampleIdentifier,
-            })
-            jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
-            submit(jobName, jobDict)
+            # check existence of OUTPUT files
+            if opts.skipExisting:
+                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileName.split('/')[-1])) for fileName in splitFilesChunk])
+            else:
+                skipChunk = False
+
+            if not skipChunk or opts.force:
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments':{
+                        'sampleIdentifier': sampleIdentifier,
+                        'fileList': FileList.compress(splitFilesChunk),
+                    },
+                    'batch': sampleIdentifier,
+                })
+                jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+                submit(jobName, jobDict)
+            else:
+                print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:
