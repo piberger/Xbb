@@ -359,10 +359,13 @@ if opts.task == 'prep':
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
             jobDict = repDict.copy()
-            jobDict.update({'arguments': {
+            jobDict.update({
+                'arguments': {
                     'sampleIdentifier': sampleIdentifier,
                     'fileList': FileList.compress(splitFilesChunk),
-                }})
+                },
+                'batch': 'prep_' + sampleIdentifier,
+                })
             jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
             submit(jobName, jobDict)
 
@@ -405,7 +408,7 @@ if opts.task == 'sysnew':
                         'fileList': FileList.compress(splitFilesChunk),
                         'addCollections': opts.addCollections,
                     },
-                    'batch': sampleIdentifier,
+                    'batch': opts.task + '_' + sampleIdentifier,
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
@@ -459,7 +462,8 @@ if opts.task.startswith('cachetraining'):
                         'chunkNumber': chunkNumber,
                         'splitFilesChunks': len(splitFilesChunks),
                         'splitFilesChunkSize': splitFilesChunkSize,
-                    }
+                    },
+                'batch': opts.task + '_' + sampleIdentifier,
                 })
             if opts.force:
                 jobDict['arguments']['force'] = ''
@@ -524,7 +528,8 @@ if opts.task.startswith('cacheplot'):
                         'chunkNumber': chunkNumber,
                         'splitFilesChunks': len(splitFilesChunks),
                         'splitFilesChunkSize': splitFilesChunkSize,
-                        }
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
                     })
             if opts.force:
                 jobDict['arguments']['force'] = ''
@@ -598,7 +603,8 @@ if opts.task.startswith('cachedc'):
                         'chunkNumber': chunkNumber,
                         'splitFilesChunks': len(splitFilesChunks),
                         'splitFilesChunkSize': splitFilesChunkSize,
-                    }
+                    },
+                'batch': opts.task + '_' + sampleIdentifier,
                 })
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
@@ -632,7 +638,8 @@ if opts.task.startswith('rundc'):
                     {
                         'regions': region,
                         'sampleIdentifier': sampleIdentifier,
-                    }
+                    },
+                'batch': opts.task + '_' + sampleIdentifier,
                 })
             jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
             submit(jobName, jobDict)
@@ -732,7 +739,7 @@ if opts.task == 'eval':
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
                     },
-                    'batch': sampleIdentifier,
+                    'batch': opts.task + '_' + sampleIdentifier,
                 })
                 jobName = 'eval_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
                 submit(jobName, jobDict)
