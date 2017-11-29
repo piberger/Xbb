@@ -111,6 +111,15 @@ double SoverSBWeight(double BDT, int channel) {
       return v;
   }
 
+  double Alt(bool crit, double val1, double val2){
+      if(crit){
+          return val1;
+      }
+      else{
+          return val2;
+      }
+  }
+
   double deltaPhi(double phi1, double phi2) {
     double result = phi1 - phi2;
     if (result > TMath::Pi()) {
