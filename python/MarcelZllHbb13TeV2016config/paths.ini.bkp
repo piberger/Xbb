@@ -39,21 +39,21 @@ vhbbpath= <!Directories|Wdir!>/Xbb
 samplesinfo: <!Directories|vhbbpath!>/python/MarcelZllHbb13TeV2016config/samples_nosplit.ini
 
 ;!! where you want to store the logfiles from job submissions
-logpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_e5/Logs/
+logpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_cp58/Logs/
 
 ;!! from which samples to plot and where to save the plots
 ;plottingSamples: <!Directories|PREPout!>
-plottingSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_AddJet7/
+plottingSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_ISR08/
 ;plottingSamples: <!Directories|MVAout!>
 
 
-plotpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_e5/Plots/
+plotpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_cp58/Plots/
 ;! basedir for tagged folder structure
 
 tagDir: <!Directories|vhbbpath!>/python/<!Directories|Dname!>/
 
 ;#!! cached files
-tmpSamples =  root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>/VHbb/Zll2016/tmp-dc-v6/
+tmpSamples =  root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>/VHbb/Zll2016/tmp-dc-v11/
 
 sampleName = WW_pythia8
 
@@ -61,7 +61,7 @@ sampleName = WW_pythia8
 ;To make di-jet mass plots
 dcSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/sys_v8_allw_addJESsys_sysMinMax_bTagsplit_rmvbr_MVAIDsplit_v2_VV_SBWeightVV_SBWeightVH
 
-limits: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_e5/Limits/
+limits: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25//addJetvars_cp58/Limits/
 
 
 t3userfolder = root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>
@@ -73,12 +73,12 @@ PREPout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gap
 #!! On which samples to apply the regression and write the sys and where to write the resulting trees:
 
 SYSin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/mva_v8/ 
-SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_ISR01/
+SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_ISR08/
 
 
 #!! On which samples to evaluate the MVA on and where to write the resulting trees:
-MVAin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_AddJet7/
-MVAout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/eval_v8_AddJet2/
+MVAin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_ISR06/
+MVAout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/eval_v8_ISR06/
 
 #!! to fix corruption problem use scratch
 #MVAout: <!Directories|scratch!>/

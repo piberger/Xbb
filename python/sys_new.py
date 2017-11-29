@@ -15,6 +15,7 @@ from myutils.BTagWeights import BTagWeights
 from myutils.LeptonWeights import LeptonWeights
 from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
+import resource
 
 argv = sys.argv
 parser = OptionParser()
@@ -156,6 +157,8 @@ for fileName in filelist:
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
 
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        
         # copy temporary file to output folder
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)
