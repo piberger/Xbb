@@ -124,7 +124,7 @@ for fileName in filelist:
     tmpFolder = '/'.join(tmpFileName.split('/')[:-1])
     fileLocator.makedirs(tmpFolder)
     fileLocator.makedirs(outputFolder)
-    if not fileLocator.exists(outputFileName) or opts.force:
+    if not fileLocator.isValidRootFile(outputFileName) or opts.force:
         # load sample tree
         sampleTree = SampleTree([inputFileName], config=config)
         if not sampleTree.tree:
@@ -152,11 +152,17 @@ for fileName in filelist:
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)
 
-        if fileLocator.exists(tmpFileName):
+        if fileLocator.isValidRootFile(tmpFileName):
             fileLocator.cp(tmpFileName, outputFileName)
-            fileLocator.rm(tmpFileName)
+            #fileLocator.rm(tmpFileName)
             print ("copy: ", tmpFileName, " --> ", outputFileName)
+            if fileLocator.isValidRootFile(outputFileName):
+                fileLocator.rm(tmpFileName)
+            else:
+                print("TMP:", tmpFileName)
+                print("OUT:", outputFileName)
+                print("\x1b[31mERROR: copy from tmp to output failed!\x1b[0m")
         else:
-            print("\x1b[31mERROR: temporary file disappeared!", tmpFileName ,"\x1b[0m")
+            print("\x1b[31mERROR: temporary file is zombie or disappeared!", tmpFileName ,"\x1b[0m")
     else:
         print("SKIP: ", localFileName)

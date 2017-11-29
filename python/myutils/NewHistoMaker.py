@@ -24,7 +24,11 @@ class NewHistoMaker:
         # add unique instance counter to avoid same name for histogram and ROOT complaining
         if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
             self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
-        self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBins'], self.histogramOptions['xMin'], self.histogramOptions['xMax'])
+        is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
+        if is2D:
+            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY']) 
+        else:
+            self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
         self.histogram.Sumw2()
         self.histogram.SetTitle(self.sample.name)
         return self.histogram

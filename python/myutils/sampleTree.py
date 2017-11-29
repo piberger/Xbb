@@ -9,6 +9,7 @@ import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
 import array
+import resource
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -33,10 +34,12 @@ class SampleTree(object):
 
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
+        self.tree = None
         self.fileLocator = FileLocator(config=self.config)
 
         # process only partial sample root file list
@@ -116,7 +119,7 @@ class SampleTree(object):
 
                         # add file to chain
                         chainTree = '%s/%s'%(rootFileName, self.treeName)
-                        if self.verbose:
+                        if self.debug:
                             print ('DEBUG: chaining '+chainTree)
                         statusCode = self.tree.Add(chainTree)
 
@@ -150,6 +153,42 @@ class SampleTree(object):
 
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
+
+    def __del__(self):
+        self.delete()
+
+    def delete(self):
+        self.callbacks = None
+        # close possible left open files referencing the TChain and delete output trees 
+        try:
+            if self.tree:
+                self.tree.Reset()
+        except:
+            pass
+        self.fileLocator = None
+        self.config = None
+        for outputTree in self.outputTrees:
+            del outputTree['file']
+        try:
+            for formulaName, formula in self.formulas.iteritems():
+                if formula:
+                    del formula
+                    formula = None
+        except e:
+            print("EXCEPTION:", e)
+        try:
+            for outputTree in self.outputTrees:
+                if outputTree['tree']:
+                    del outputTree['tree']
+                    outputTree['tree'] = None
+        except e:
+            print("EXCEPTION:", e)
+        try:
+            if self.tree:
+                del self.tree
+                self.tree = None
+        except e:
+            print("EXCEPTION:", e)
 
     # ------------------------------------------------------------------------------
     # return full list of sample root files 
@@ -280,12 +319,13 @@ class SampleTree(object):
                 perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
 
             # output status
-            if self.verbose:
+            if self.verbose or self.debug:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
-                self.tree.PrintCacheStats()
+                if self.debug:
+                    self.tree.PrintCacheStats()
                 sys.stdout.flush()
             self.oldTreeNum = treeNum
             # update TTreeFormula's
@@ -444,6 +484,8 @@ class SampleTree(object):
     # cuts are fulfilled.
     # ------------------------------------------------------------------------------
     def process(self):
+        if self.debug:
+            print('DEBUG: mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:

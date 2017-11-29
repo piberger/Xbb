@@ -77,7 +77,8 @@ class TestSampleTreeAddBranchesMethods(unittest.TestCase):
         sampleTree.process()
 
         # compare histograms of tree with new branches with expected result
-        newTree = SampleTree([TestSampleTreeAddBranchesMethods.scratchDirectory + '/tree_withaddedbranches.root']).tree
+        newSampleTree = SampleTree([TestSampleTreeAddBranchesMethods.scratchDirectory + '/tree_withaddedbranches.root'])
+        newTree = newSampleTree.tree
         outfile = ROOT.TFile.Open('histograms.root', 'recreate')
         h1 = ROOT.TH1F('h1', 'h1', 200, 0, 200)
         h2 = ROOT.TH1F('h2', 'h2', 200, 0, 200)

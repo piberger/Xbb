@@ -79,7 +79,8 @@ class MvaTrainingHelper(object):
             self.dataLoader = ROOT.TMVA.DataLoader(".")
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
-
+        
+        self.sampleTrees = []
         for addTreeFcn, samples in [
                     [addBackgroundTreeMethod, self.samples['BKG']],
                     [addSignalTreeMethod, self.samples['SIG']]
@@ -103,6 +104,7 @@ class MvaTrainingHelper(object):
                             debug=True
                         )
                     sampleTree = tc.getTree()
+                    self.sampleTrees.append(sampleTree)
                     if sampleTree:
                         treeScale = sampleTree.getScale(sample) * self.globalRescale
                         if sampleTree.tree.GetEntries() > 0:
@@ -128,9 +130,14 @@ class MvaTrainingHelper(object):
         print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
+            print("ROOT 5 style TMVA found")
         except:
-            print("ROOT 6 TMVA!!! >_<")
-            print("weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
+            print("ROOT 6 style TMVA found, using data loader object!!! >_<")
+            print(" weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
+            print(" data loader:", self.dataLoader)
+            print(" type:       ", self.MVAtype)
+            print(" name:       ", self.mvaName)
+            print(" settings:   ", self.MVAsettings)
             ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
         print ('Execute TMVA: TrainAllMethods')

@@ -34,7 +34,7 @@ class FileLocator(object):
         self.remoteStatFile = 'xrdfs {server} stat {path}'
         self.remoteMkdir = 'xrdfs {server} mkdir {path}'
         self.remoteRm = 'xrdfs {server} rm {path}'
-        self.remoteCp = 'xrdcp -d 1 {source} {target}'
+        self.remoteCp = 'xrdcp -d 1 -f --posc --nopbar {source} {target}'
         self.makedirsMinLevel = 5   # don't even try to create/access the 5 lowest levels in the path
 
     # special Xbb function: get filename after prep step from original file name
