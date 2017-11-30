@@ -246,7 +246,7 @@ def getJobQueue():
     if 'condor' in whereToLaunch:
         getJobQueueCommand = ["condor_q", "-nobatch"]
     else:
-        getJobQueueCommand = ["qstat", " -xml | tr '\n' ' ' | sed 's#<job_list[^>]*>#\n#g' | sed 's#<[^>]*>##g' | grep ' ' | column -t"]
+        getJobQueueCommand = ["qstat -xml | tr '\\n' ' ' | sed 's#<job_list[^>]*>#\\n#g' | sed 's#<[^>]*>##g' | grep ' ' | column -t"]
     p = subprocess.Popen(getJobQueueCommand, stdout=subprocess.PIPE, shell=True)
     out, err = p.communicate()
     return out.split("\n")
