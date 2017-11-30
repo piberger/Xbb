@@ -375,6 +375,26 @@ if opts.waitFor:
     waitFor(opts.waitFor)
 
 # -----------------------------------------------------------------------------
+# DATASETS: create list of .root files for each dataset 
+# -----------------------------------------------------------------------------
+if opts.task == 'datasets':
+    dasQuery = config.get("Configuration", "dasQuery")
+    datasetsFileName = config.get("Configuration", "datasets")
+    samplefiles = config.get('Directories', 'samplefiles')
+    with open(datasetsFileName, 'r') as datasetsFile:
+        datasets = datasetsFile.readlines()
+    for dataset in datasets:
+        print "DATASET:", dataset
+        getDatasetFilesComand = [dasQuery.format(dataset=dataset.strip())]
+        p = subprocess.Popen(getDatasetFilesComand, stdout=subprocess.PIPE, shell=True)
+        out, err = p.communicate()
+        print "command:", getDatasetFilesComand
+        print "root files:\n", out
+        datasetName = dataset.strip().strip('/').split('/')[0]
+        with open(samplefiles + '/' + datasetName + '.txt', 'w') as datasetFile:
+            datasetFile.write(out)
+
+# -----------------------------------------------------------------------------
 # PREP: copy skimmed ntuples to local storage
 # -----------------------------------------------------------------------------
 if opts.task == 'prep':
