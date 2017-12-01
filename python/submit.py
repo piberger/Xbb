@@ -234,6 +234,7 @@ submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
+        'cachedc': ' -l h_vmem=4g ',
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
         }
