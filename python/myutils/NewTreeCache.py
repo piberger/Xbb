@@ -102,7 +102,7 @@ class TreeCache:
         self.createFolders()
     
     # free memory
-    def deleteSampleTree():
+    def deleteSampleTree(self):
         self.sampleTree = None
 
     # file, where skimmed tree is written to
