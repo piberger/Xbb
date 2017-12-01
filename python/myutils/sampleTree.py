@@ -32,7 +32,7 @@ import resource
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
@@ -62,7 +62,14 @@ class SampleTree(object):
             print ("INFO: reading part ", self.chunkNumber, " of ", self.numParts)
 
         self.status = 0
-        self.treeName = treeName
+        if not treeName:
+            if self.config and self.config.has_option('Configuration', 'treeName'):
+                self.treeName = self.config.get('Configuration', 'treeName')
+            else:
+                # HEPPY default
+                self.treeName = 'tree'
+        else:
+            self.treeName = treeName
         self.formulas = {}
         self.formulaDefinitions = []
         self.oldTreeNum = -1
@@ -108,14 +115,27 @@ class SampleTree(object):
                             histogramName = obj.GetName()
 
                             if histogramName in self.histograms:
-                                if self.histograms[histogramName]:
-                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                if obj.IsA().InheritsFrom(ROOT.TTree.Class()):
+                                    clonedTree = obj.Clone(obj.GetName())
+                                    clonedTree.SetDirectory(0)
+                                    self.histograms[histogramName].append(clonedTree)
                                 else:
-                                    print ("ERROR: histogram object was None!!!")
-                                    raise Exception("CountHistogramMissing")
+                                    if self.histograms[histogramName]:
+                                        self.histograms[histogramName].Add(clonedTree)
+                                    else:
+                                        print ("ERROR: histogram object was None!!!")
+                                        raise Exception("CountHistogramMissing")
                             else:
-                                self.histograms[histogramName] = obj.Clone(obj.GetName())
-                                self.histograms[histogramName].SetDirectory(0)
+                                # keep list of TTrees
+                                if obj.IsA().InheritsFrom(ROOT.TTree.Class()):
+                                    clonedTree = obj.Clone(obj.GetName())
+                                    clonedTree.SetDirectory(0)
+                                    self.histograms[histogramName] = ROOT.TList
+                                    self.histograms[histogramName].Add(clonedTree)
+                                # add all TH*'s in one single histogram
+                                else:
+                                    self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                    self.histograms[histogramName].SetDirectory(0)
                         input.Close()
 
                         # add file to chain
@@ -154,6 +174,12 @@ class SampleTree(object):
 
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
+
+            # merge nano counting trees 
+            for histogramName, obj in self.histograms:
+                if obj.IsA().InheritsFrom(ROOT.TList.Class()):
+                    mergedTree = ROOT.TTree.MergeTrees(obj)
+                    self.histograms[histogramName] = mergedTree
 
     def __del__(self):
         self.delete()
