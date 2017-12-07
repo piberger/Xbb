@@ -312,7 +312,7 @@ double SoverSBWeight(double BDT, int channel) {
       j1.SetPtEtaPhiM(pt, eta, phi, mass);
       j2.SetPtEtaPhiM(pt2, eta2, phi2, mass2);
       double pp = j1 * j2;
-      return pp / (mass * mass2);
+      return pp / (pt * mass2);
   }
 
   double deltaRu_vpw(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2,double pt3, double eta3, double phi3, double mass3){
