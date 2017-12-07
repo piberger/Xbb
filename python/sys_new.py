@@ -16,6 +16,7 @@ from myutils.LeptonWeights import LeptonWeights
 from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
 import resource
+from myutils.DYspecialWeight import DYspecialWeight
 
 argv = sys.argv
 parser = OptionParser()
@@ -145,6 +146,10 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
                 sampleTree.addOutputBranches(wptReweight.getBranches())
+        if 'dyspecialweight' in collections or 'weights' in collections:
+            if sample.type != 'DATA':
+                dyWeight = DYspecialWeight(tree=sampleTree.tree, sample=sample)
+                sampleTree.addOutputBranches(dyWeight.getBranches())
 
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))

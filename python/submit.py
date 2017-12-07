@@ -40,6 +40,7 @@ parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_
                       help="submit in a single submit file per job instead of using batches")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
+parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -239,9 +240,39 @@ submitScriptSpecialOptions = {
         }
 condorBatchGroups = {}
 
+# ------------------------------------------------------------------------------
+# get job queue 
+# ------------------------------------------------------------------------------
+def getJobQueue():
+    if 'condor' in whereToLaunch:
+        getJobQueueCommand = ["condor_q", "-nobatch"]
+    else:
+        getJobQueueCommand = ["qstat -xml | tr '\\n' ' ' | sed 's#<job_list[^>]*>#\\n#g' | sed 's#<[^>]*>##g' | grep ' ' | column -t"]
+    p = subprocess.Popen(getJobQueueCommand, stdout=subprocess.PIPE, shell=True)
+    out, err = p.communicate()
+    return out.split("\n")
+
+# ------------------------------------------------------------------------------
+# wait for other jobs to finish first 
+# ------------------------------------------------------------------------------
+def waitFor(jobNameList):
+    matches = -1
+    while matches != 0:
+        matches = 0
+        jobNames = [x.strip() for x in jobNameList.split(',') if len(x.strip()) > 0]
+        if len(jobNames) > 0:
+            jobQueue = getJobQueue()
+            for jobName in jobNames:
+                matches += len([jobName for job in jobQueue if jobName in job])
+                print "\x1b[44m\x1b[97mwaiting for \x1b[92m", matches, "\x1b[97m jobs of type \x1b[93m", jobName, "\x1b[97m to finish....\x1b[0m"
+                if matches > 0:
+                    break
+        if matches > 0:
+            time.sleep(30)
 
 # ------------------------------------------------------------------------------
 # STANDARD WORKFLOW SUBMISSION FUNCTION
+# TODO: separate classes for SGE and HTCondor
 # ------------------------------------------------------------------------------
 def submit(job, repDict):
     global counter
@@ -249,7 +280,10 @@ def submit(job, repDict):
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
 
-    # run script
+    # -----------------------------------------------------------------------------
+    # prepare RUN SCRIPT
+    # (this is independent of batch system or local)
+    # -----------------------------------------------------------------------------
     runScript = 'runAll.sh %(job)s %(en)s '%(repDict)
     runScript += opts.task + ' ' + repDict['nprocesses'] + ' ' + repDict['job_id'] + ' ' + repDict['additional']
 
@@ -334,6 +368,32 @@ def submit(job, repDict):
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
+
+# -----------------------------------------------------------------------------
+# check prerequisities
+# -----------------------------------------------------------------------------
+if opts.waitFor:
+    waitFor(opts.waitFor)
+
+# -----------------------------------------------------------------------------
+# DATASETS: create list of .root files for each dataset 
+# -----------------------------------------------------------------------------
+if opts.task == 'datasets':
+    dasQuery = config.get("Configuration", "dasQuery")
+    datasetsFileName = config.get("Configuration", "datasets")
+    samplefiles = config.get('Directories', 'samplefiles')
+    with open(datasetsFileName, 'r') as datasetsFile:
+        datasets = datasetsFile.readlines()
+    for dataset in datasets:
+        print "DATASET:", dataset
+        getDatasetFilesComand = [dasQuery.format(dataset=dataset.strip())]
+        p = subprocess.Popen(getDatasetFilesComand, stdout=subprocess.PIPE, shell=True)
+        out, err = p.communicate()
+        print "command:", getDatasetFilesComand
+        print "root files:\n", out
+        datasetName = dataset.strip().strip('/').split('/')[0]
+        with open(samplefiles + '/' + datasetName + '.txt', 'w') as datasetFile:
+            datasetFile.write(out)
 
 # -----------------------------------------------------------------------------
 # PREP: copy skimmed ntuples to local storage
