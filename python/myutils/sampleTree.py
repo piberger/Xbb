@@ -92,6 +92,7 @@ class SampleTree(object):
         self.brokenFiles = []
         self.histograms = {}
         self.nanoTreeCounts = {}
+        self.totalNanoTreeCounts = {}
 
         if not countOnly:
             self.tree = ROOT.TChain(self.treeName)
@@ -192,10 +193,10 @@ class SampleTree(object):
                 # TODO: per run if possible, sum LHE weights if present
 
                 # sum the contributions from the subtrees
-                totalNanoTreeCounts = {key: sum(values) for key,values in self.nanoTreeCounts.iteritems() if len(values) > 0 and type(values[0]) in [int, float, long]}
+                self.totalNanoTreeCounts = {key: sum(values) for key,values in self.nanoTreeCounts.iteritems() if len(values) > 0 and type(values[0]) in [int, float, long]}
 
                 # print summary table
-                countBranches = totalNanoTreeCounts.keys()
+                countBranches = self.totalNanoTreeCounts.keys()
                 depth = None
                 for key,values in self.nanoTreeCounts.iteritems():
                     if type(values[0]) in [int, float, long]:
@@ -205,13 +206,13 @@ class SampleTree(object):
                 print("tree".ljust(25), ''.join([countBranch.ljust(25) for countBranch in countBranches]))
                 for treeNum in range(depth):
                     print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
-                print("\x1b[34m","sum".ljust(24), ''.join([('%r'%totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
+                print("\x1b[34m","sum".ljust(24), ''.join([('%r'%self.totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
                 print("-"*160)
 
                 # fill summed tree (create new tree)
                 self.histograms['Runs'] = ROOT.TTree('Runs', 'count histograms for nano')
                 nanoTreeCountBuffers = {}
-                for key, value in totalNanoTreeCounts.iteritems():
+                for key, value in self.totalNanoTreeCounts.iteritems():
                     if type(value) == int:
                         typeCode = 'i'
                     elif type(value) == long:
@@ -792,7 +793,10 @@ class SampleTree(object):
                     print ("HISTOGRAMS:", self.histograms)
                     exit(0)
         else:
-            count = self.histograms[countHistogram].GetBinContent(1)
+            if self.totalNanoTreeCounts:
+                count = self.totalNanoTreeCounts['genEventCount']
+            else:
+                count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi * sample.xsec * sample.sf / float(count)
 
