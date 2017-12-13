@@ -35,6 +35,7 @@ class SampleTree(object):
     def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
+        self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
@@ -323,8 +324,10 @@ class SampleTree(object):
                 percentage = 100.0*treeNum/len(self.chainedFiles)
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
-                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
                 if self.debug:
+                    perfStats = perfStats + ' max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+                print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
+                if self.debugProfiling:
                     self.tree.PrintCacheStats()
                 sys.stdout.flush()
             self.oldTreeNum = treeNum
@@ -485,7 +488,7 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     def process(self):
         if self.debug:
-            print('DEBUG: mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+            print('DEBUG: max mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:

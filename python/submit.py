@@ -235,6 +235,7 @@ submitScriptSpecialOptions = {
         'sysnew': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
+        'cachedc': ' -l h_vmem=6g ',
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
         }
@@ -400,9 +401,9 @@ if opts.task == 'datasets':
 # -----------------------------------------------------------------------------
 if opts.task == 'prep':
 
-    path = config.get("Directories", "PREPin")
+    pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samplesinfo, pathOUT)
     sampleIdentifiers = info.getSampleIdentifiers()
     if samplesList and len([x for x in samplesList if x]) > 0:
         sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
@@ -419,16 +420,25 @@ if opts.task == 'prep':
         print "going to submit \x1b[36m", len(splitFilesChunks), "\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
-            jobDict = repDict.copy()
-            jobDict.update({
-                'arguments': {
-                    'sampleIdentifier': sampleIdentifier,
-                    'fileList': FileList.compress(splitFilesChunk),
-                },
-                'batch': 'prep_' + sampleIdentifier,
-                })
-            jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
-            submit(jobName, jobDict)
+
+            if opts.skipExisting:
+                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+            else:
+                skipChunk = False
+
+            if not skipChunk or opts.force:
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments': {
+                        'sampleIdentifier': sampleIdentifier,
+                        'fileList': FileList.compress(splitFilesChunk),
+                    },
+                    'batch': 'prep_' + sampleIdentifier,
+                    })
+                jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+                submit(jobName, jobDict)
+            else:
+                print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
 # -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations 

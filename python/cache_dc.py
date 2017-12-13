@@ -11,6 +11,7 @@ from myutils.sampleTree import SampleTree as SampleTree
 from myutils.Datacard import Datacard
 from myutils.BranchList import BranchList
 from myutils.FileList import FileList
+import resource
 
 # ------------------------------------------------------------------------------
 # script to produce cached tree for datacards
@@ -99,7 +100,7 @@ class CacheDatacards(object):
                     print ("check if sample \x1b[34m{sample}\x1b[0m part {part} is cached:".format(sample=sample.name, part=self.chunkNumber), isCached)
                     if not isCached or self.forceRedo:
                         if isCached:
-                            tc.deleteCachedFiles()
+                            tc.deleteCachedFiles(chunkNumber=self.chunkNumber)
 
                         # for the first sample which comes from this files, load the tree
                         if not self.sampleTree:

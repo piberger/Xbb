@@ -15,13 +15,18 @@ class CopyTreePSI(object):
           print 'input file NOT EXISTING:',inputFile
           #input.Close()
           return
+        try:
+            __tmpPath = os.environ["TMPDIR"]
+        except:
+            __tmpPath = self.config.get('Directories', 'scratch')
 
-        __tmpPath = os.environ["TMPDIR"]
         outputFileName = outputFile.split('/')[len(outputFile.split('/'))-1]
         print 'outputFileName',__tmpPath+'/'+outputFileName
         output = ROOT.TFile.Open(__tmpPath+'/'+outputFileName,'recreate')
 
         inputTree = input.Get("tree")
+        if not inputTree:
+            inputTree = input.Get("Events")
         nEntries = inputTree.GetEntries()
         for branch in remove_branches:
           if branch and not branch.isspace():
@@ -40,7 +45,7 @@ class CopyTreePSI(object):
         for key in ROOT.gDirectory.GetListOfKeys():
             input.cd()
             obj = key.ReadObj()
-            if obj.GetName() == 'tree':
+            if obj.GetName() not in  ['tree', 'Events']:
                 continue
             output.cd()
             obj.Write(key.GetName())

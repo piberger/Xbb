@@ -8,6 +8,7 @@ import sys
 from samplesclass import Sample
 from sampleTree import SampleTree as SampleTree
 from FileLocator import FileLocator
+import resource
 
 # ------------------------------------------------------------------------------
 # TreeCache
@@ -99,6 +100,10 @@ class TreeCache:
         self.isCachedChecked = False
 
         self.createFolders()
+    
+    # free memory
+    def deleteSampleTree(self):
+        self.sampleTree = None
 
     # file, where skimmed tree is written to
     def getTmpFileName(self):
@@ -251,19 +256,28 @@ class TreeCache:
     # move files from temporary to final location
     def moveFilesToFinalLocation(self):
         success = True
+        # free some memory for file copy command
+        if self.debug:
+            print('DEBUG: max mem used A:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        self.deleteSampleTree()
+        if self.debug:
+            print('DEBUG: max mem used B:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
         for tmpFileName in self.tmpFiles:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
             print ('copy ', tmpFileName, ' to ', outputFileName)
             if self.fileLocator.fileExists(outputFileName):
                 self.deleteFile(outputFileName)
-            command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
-            print('the command is', command)
-            sys.stdout.flush()
-            returnCode = subprocess.call([command], shell=True)
-            if returnCode != 0:
+            #command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
+            #print('the command is', command)
+            #sys.stdout.flush()
+            #returnCode = subprocess.call([command], shell=True)
+            print('DEBUG: max mem used 1:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+            copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
+            print('DEBUG: max mem used 2:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+            if not copySuccessful:
                 success = False
-                print('\x1b[31mERROR: XRDCP failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
+                print('\x1b[31mERROR: copy failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
                                                                                                 outputfile=outputFileName))
             else:
                 # delete temporary file if copy was successful
