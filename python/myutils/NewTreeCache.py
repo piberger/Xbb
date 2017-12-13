@@ -64,7 +64,7 @@ class TreeCache:
             # sample passed as Sample object
             # count number of chunks the cached data is split into
             splitFilesChunkSize = sample.mergeCachingSize 
-            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getNumberOfParts()
+            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
             self.sample = sample.name
             print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
@@ -272,9 +272,7 @@ class TreeCache:
             #print('the command is', command)
             #sys.stdout.flush()
             #returnCode = subprocess.call([command], shell=True)
-            print('DEBUG: max mem used 1:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
             copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
-            print('DEBUG: max mem used 2:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
             if not copySuccessful:
                 success = False
                 print('\x1b[31mERROR: copy failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,

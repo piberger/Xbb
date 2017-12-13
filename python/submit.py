@@ -36,6 +36,8 @@ parser.add_option("-f", "--force", dest="force", action="store_true", default=Fa
                       help="Force overwriting of files if they already exist")
 parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
                       help="don't submit jobs if output files already exist")
+parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true", default=False,
+                      help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
@@ -693,9 +695,44 @@ if opts.task.startswith('rundc'):
     sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
 
     # only process given samples (if option is present)
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    if len(samplesToCache) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToCache]
+    samplesToUse = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    if len(samplesToUse) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToUse]
+
+    # check existence of cached files
+    if opts.checkCached:
+        status = {}
+        for region in regions:
+            dcMaker = Datacard(config=config, region=region, verbose=False)
+            status[region] = dcMaker.getCacheStatus(useSampleIdentifiers=sampleIdentifiers)
+
+        print("regions:")
+        for i,region in enumerate(regions):
+            print ('  %02d: %s'%(i, region))
+
+        print("-"*80)
+        header = ' '*40 + ' '.join(['%02d'%x for x in range(len(regions))])
+        print(header)
+        nFound = 0
+        nNotFound = 0
+        sampleNames = sorted(list(set([sample.name for sample in samples])))
+        for sampleName in sampleNames: 
+            line = sampleName.rjust(39) + ' '
+            for region in regions:
+                if region in status and sampleName in status[region]:
+                    if status[region][sampleName]:
+                        line += '\x1b[42m\x1b[97m[+]\x1b[0m'
+                        nFound += 1
+                    else:
+                        line += '\x1b[41m\x1b[97m[X]\x1b[0m'
+                        nNotFound += 1
+                else:
+                    line += '\x1b[45m[?]\x1b[0m'
+            print line
+        print('summary:\n----------\nfound: %d\nnot found:%d'%(nFound, nNotFound))
+        if nNotFound>0:
+            print('run cachedc again!')
+            raise Exception("NotCached")
 
     # submit all the DC regions as separate jobs
     for region in regions:
@@ -711,6 +748,8 @@ if opts.task.startswith('rundc'):
                     },
                 'batch': opts.task + '_' + sampleIdentifier,
                 })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
             submit(jobName, jobDict)
 
