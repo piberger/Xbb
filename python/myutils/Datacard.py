@@ -575,10 +575,7 @@ class Datacard(object):
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
-        if 'setupSignals' in self.sysOptions:
-            numSignals = len([x for x in sampleGroups if x in self.sysOptions['setupSignals']])
-        else:
-            numSignals = 1   # which is the first one by old convention!!!
+        numSignals = 1
         numBackgrounds = numProcesses - numSignals
 
         with open(txtFileName, 'w') as f:
@@ -602,8 +599,6 @@ class Datacard(object):
                 else:
                     print("\x1b[31mERROR: more or less than 1 nominal values found!!\x1b[0m")
                     raise Exception("DcDictError")
-
-            numProcesses = len(sampleGroups)
 
             # MC datacard processes
             if len([s for s in samples if s.type != 'DATA']) < 1:
@@ -635,13 +630,6 @@ class Datacard(object):
                 for dcProcess in dcProcesses:
                     dcRow.append(str(systematicDict[dcProcessSampleGroup[dcProcess]]) if dcProcessSampleGroup[dcProcess] in systematicDict else '-')
 
-                    #TODO: IMPLEMENT??
-                    #if '_eff_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
-                    #elif '_eff_m' in item and 'Zee' in ROOToutname : f.write('\t-')
-                    #elif '_trigger_e' in item and 'Zuu' in ROOToutname : f.write('\t-')
-                    #elif '_trigger_m' in item and 'Zee' in ROOToutname : f.write('\t-')
-                    #else:
-                    #    f.write('\t%s'%what[c])
                 dcRows.append(dcRow)
 
             # UEPS systematics
