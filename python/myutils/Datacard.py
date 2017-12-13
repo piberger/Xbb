@@ -2,6 +2,7 @@
 from __future__ import print_function
 import os, ROOT
 ROOT.gROOT.SetBatch(True)
+from math import sqrt
 from copy import deepcopy
 from sample_parser import ParseInfo
 import json
@@ -11,8 +12,8 @@ from NewStackMaker import NewStackMaker as StackMaker
 from BranchList import BranchList
 
 class Datacard(object):
-    def __init__(self, config, region):
-        self.verbose = True
+    def __init__(self, config, region, verbose=True):
+        self.verbose = verbose
         self.config = config
         self.DCtype = 'TH'
         self.histograms = None
@@ -133,7 +134,7 @@ class Datacard(object):
 
         self.TrainFlag = eval(config.get('Analysis', 'TrainFlag'))
         self.treecut = config.get('Cuts', self.RCut)
-        
+
         # checks on read options
         #on control region cr never blind. Overwrite whatever is in the config
         if self.anType.lower() == 'cr':
@@ -210,7 +211,10 @@ class Datacard(object):
         for sample_sys in self.sample_sys_list:
             self.sample_sys_dic[sample_sys] = False
         print ("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
+       
+
         
+
         self.MC_samples = self.signals + self.backgrounds + self.additionals
         
         self.samples = {
@@ -363,6 +367,26 @@ class Datacard(object):
     def getAllSamples(self):
         return sum([y for x, y in self.samples.iteritems()], []) 
 
+    def getCacheStatus(self, useSampleIdentifiers=None):
+        allSamples = self.getAllSamples()
+        if useSampleIdentifiers:
+            allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers] 
+        cacheStatus = {}
+        for i, sample in enumerate(allSamples): 
+            # get cuts that were used in caching for this sample
+            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
+            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    config=self.config,
+                    debug=self.verbose,
+                )            
+            cacheStatus[sample.name] = tc.isCached()
+        return cacheStatus
+
     def run(self, useSampleIdentifiers=None):
 
         # select samples to use
@@ -375,7 +399,9 @@ class Datacard(object):
             usedSamplesString = ('_'.join(sorted(list(set([sample.identifier for sample in allSamples])))))
 
         if len(allSamples) < 1:
-            print ("INFO: no samples, nothing to do.")
+            print("INFO: all:", [x.name for x in self.getAllSamples()])
+            print("USE:", useSampleIdentifiers)
+            print("INFO: no samples, nothing to do.")
             return None
 
         print ('\n\t...fetching histos...\n')
@@ -530,6 +556,7 @@ class Datacard(object):
         if samples is None:
             samples = self.getAllSamples()
 
+
         # open and prepare histogram output files
         histogramFileName = self.getDatacardBaseName(dcName) + '.root'
         print("HISTOGRAM:", histogramFileName)
@@ -566,6 +593,50 @@ class Datacard(object):
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
                     systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
+        # write bin-by-bin systematic histograms for sample groups
+        if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
+            binsBelowThreshold = {}
+            systematicsListBeforeBBB = self.getSystematicsList(isData=(sampleGroup == 'DATA'))
+            sampleGroupsMC = [x for x in sampleGroups if x != 'DATA']
+            for sampleGroup in sampleGroupsMC:
+                print("Running Statistical uncertainty")
+                threshold =  0.5 #stat error / sqrt(value). It was 0.5
+                print("threshold", threshold)
+                for systematics in systematicsListBeforeBBB: 
+                    if 'histograms' in systematics and sampleGroup in systematics['histograms'] and systematics['systematicsName'] == 'nominal':
+                        dcProcess = self.sysOptions['Dict'][sampleGroup]
+                        hist = systematics['histograms'][sampleGroup]
+                        for bin in range(1, self.binning['nBins'] + 1):
+                            if dcProcess not in binsBelowThreshold.keys():
+                                binsBelowThreshold[dcProcess] = []
+                            print ("binsBelowThreshold", binsBelowThreshold)
+                            print ("hist.GetBinContent(bin)", hist.GetBinContent(bin))
+                            print ("hist.GetBinError(bin)", hist.GetBinError(bin))
+                            if hist.GetBinContent(bin) > 0.:
+                                if hist.GetBinError(bin)/sqrt(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) >= 1.:
+                                    binsBelowThreshold[dcProcess].append(bin)
+                                elif hist.GetBinError(bin)/(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) < 1.:
+                                    binsBelowThreshold[dcProcess].append(bin)
+                            for Q in self.UD:
+                                # add histogram with bin n varied up/down
+                                bbbHistogram = hist.Clone()
+                                bbbHistogram.SetDirectory(rootFileSubdir)
+                                if Q == 'Up':
+                                    bbbHistogram.SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)+hist.GetBinError(bin)))
+                                if Q == 'Down':
+                                    bbbHistogram.SetBinContent(bin,max(1.E-6,hist.GetBinContent(bin)-hist.GetBinError(bin)))
+                                # add entry for the txt file
+                                systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
+                                systematicsDictionary.update({
+                                        'sysType': 'bbb',
+                                        'systematicsName': '%s_bin%s_%s_%s'%(self.sysOptions['systematicsnaming']['stats'],bin,dcProcess,self.Datacardbin),
+                                        'dcProcess': dcProcess,
+                                        'histograms': {sampleGroup: bbbHistogram},
+                                    })
+                                bbbHistogramName = self.getHistogramName(process=dcProcess, systematics=systematicsDictionary) + Q
+                                bbbHistogram.SetName(bbbHistogramName)
+                                self.systematicsList.append(systematicsDictionary)
+
         outfile.Write()
 
         # ----------------------------------------------
@@ -575,12 +646,14 @@ class Datacard(object):
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
+
+        # note: numBackgrounds is 'number of processes minus 1' and not really number of backgrounds
         numSignals = 1
         numBackgrounds = numProcesses - numSignals
 
         with open(txtFileName, 'w') as f:
             f.write('imax\t1\tnumber of channels\n')
-            f.write('jmax\t%s\tnumber of backgrounds (\'*\' = automatic)\n'%(numBackgrounds))
+            f.write('jmax\t%s\tnumber of processes minus 1 (\'*\' = automatic)\n'%(numBackgrounds))
             f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
             f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(self.DCtype, self.ROOToutname, self.DCprocessSeparatorDict[self.DCtype], self.DCprocessSeparatorDict[self.DCtype]))
             f.write('bin\t%s\n\n'%self.Datacardbin)
@@ -619,7 +692,9 @@ class Datacard(object):
             # negative or zero for signals, otherwise for backgrounds
             dcRows.append(['process',''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
 
-            histogramTotals = [systematics['histograms'][dcProcessSampleGroup[dcProcess]].Integral() for dcProcess in dcProcesses]
+            nominalHistograms = [x for x in self.systematicsList if x['sysType'] == 'nominal'][0]['histograms']
+            histogramTotals = [nominalHistograms[dcProcessSampleGroup[dcProcess]].Integral() for dcProcess in dcProcesses]
+
             dcRows.append(['rate',''] + ['%f'%x for x in histogramTotals])
             
             # write non-shape systematics
@@ -629,8 +704,19 @@ class Datacard(object):
                 dcRow = [systematic, systematicDict['type']]
                 for dcProcess in dcProcesses:
                     dcRow.append(str(systematicDict[dcProcessSampleGroup[dcProcess]]) if dcProcessSampleGroup[dcProcess] in systematicDict else '-')
-
                 dcRows.append(dcRow)
+            
+            # bin by bin
+            if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
+                for systematics in self.systematicsList:
+                    if systematics['sysType'] == 'bbb':
+                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                            dcRow = [systematicsNameForDC, 'shape']
+                            for dcProcess in dcProcesses:
+                                value = '1.0' if dcProcess == systematics['dcProcess'] else  '-'
+                                dcRow.append(value)
+                            dcRows.append(dcRow)
 
             # UEPS systematics
             for systematics in self.systematicsList:
