@@ -30,7 +30,7 @@ class AdditionalJetIndex(object):
         self.Sfsr = {}
         self.nISR = {}
         self.nFSR = {}
-        self.cuts = ['advCut','ptCut','dRCut']
+        self.cuts = ['advCut','ptCut','dRCut','dRppCut']
         for cut in self.cuts:
             self.ISR_treeIdx[cut] = None
             self.Sisr_treeIdx[cut] = None
@@ -271,12 +271,15 @@ class AdditionalJetIndex(object):
         if tree.GetReadEntry() == self.HVpp_treeIdx:
             return self.HVpp
         self.HVpp_treeIdx = tree.GetReadEntry()
-        HV = self.getHV()
+        HV = self.getHV(tree)
         self.HVpp = []
         Jet = ROOT.TLorentzVector()
         for idx in range(self.nJet):
-            Jet.SetPtEtaPhiM(tree.Jet_pt[idx],tree.Jet_eta[idx],tree.Jet_phi[idx],tree.Jet_mass[idx])
-            self.HVpp.append((HV * Jet) / (Jet.Pt() * HV.M()))
+            if idx < tree.nJet:
+                Jet.SetPtEtaPhiM(tree.Jet_pt[idx],tree.Jet_eta[idx],tree.Jet_phi[idx],tree.Jet_mass[idx])
+                self.HVpp.append((HV * Jet) / (Jet.Pt() * HV.M()))
+            else:
+                self.HVpp.append(-1)
         return self.HVpp
 
     def getISRidx(self,tree,cut):
@@ -313,7 +316,7 @@ class AdditionalJetIndex(object):
             if cut == 'dRppCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
                 pp = self.getJet_HV_pp(tree)[idx]
-                isr_cut = (dRh-0.5)**2 + (np.log10(pp)/0.8)**2 > 0.4**2
+                isr_cut = (dRh-0.6)**2 + (np.log10(pp-0.6)/1.5 + 0.1)**2 > 0.3**2
 
             if isr_cut:
                 self.ISRidx[cut].append(idx)
