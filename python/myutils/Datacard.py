@@ -646,14 +646,12 @@ class Datacard(object):
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
-
-        # note: numBackgrounds is 'number of processes minus 1' and not really number of backgrounds
-        numSignals = 1
+        numSignals = len(self.sysOptions['setupSignals']) if 'setupSignals' in self.sysOptions else 1
         numBackgrounds = numProcesses - numSignals
 
         with open(txtFileName, 'w') as f:
             f.write('imax\t1\tnumber of channels\n')
-            f.write('jmax\t%s\tnumber of processes minus 1 (\'*\' = automatic)\n'%(numBackgrounds))
+            f.write('jmax\t%s\tnumber of processes minus 1 (\'*\' = automatic)\n'%(numProcesses-1))
             f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
             f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(self.DCtype, self.ROOToutname, self.DCprocessSeparatorDict[self.DCtype], self.DCprocessSeparatorDict[self.DCtype]))
             f.write('bin\t%s\n\n'%self.Datacardbin)
