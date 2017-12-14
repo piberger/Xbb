@@ -1,0 +1,2 @@
+/store/user/berger_p2/VHbb/nano80x/ntuples/DYJetsToLL_Pt-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/NanoCrabProd004/171002_121150/0000/lzma_1_Skim.root
+/store/user/berger_p2/VHbb/nano80x/ntuples/DYJetsToLL_Pt-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/NanoCrabProd004/171002_121150/0000/lzma_2_Skim.root

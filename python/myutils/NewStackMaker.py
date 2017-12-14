@@ -345,7 +345,6 @@ class NewStackMaker:
     def Draw(self, outputFolder='./', prefix='', normalize=False):
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms]) 
-        c = self.initializeCanvas() if normalize or self.is2D else self.initializeSplitCanvas()
 
         dataGroupName = self.dataGroupName
         # group ("sum") MC+DATA histograms 
@@ -365,6 +364,8 @@ class NewStackMaker:
                 print(" > ", hiddenGroup, " is not defined in setup")
         if dataGroupName in mcHistogramGroupsToPlot:
             raise Exception("DATA contained in MC groups!")
+
+        c = self.initializeCanvas() if (normalize or self.is2D or dataGroupName not in histogramGroups) else self.initializeSplitCanvas()
 
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
@@ -462,7 +463,7 @@ class NewStackMaker:
             else:
                 ROOT.gPad.SetLogy(0)
             allStack.SetMaximum(Ymax)
-        if not normalize and not self.is2D:
+        if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
             allStack.GetXaxis().SetLabelOffset(999)
             allStack.GetXaxis().SetLabelSize(0)
         else:
@@ -482,18 +483,20 @@ class NewStackMaker:
             groupedHistograms[dataGroupName].Draw(drawOption)
 
         # draw ratio plot
+        theErrorGraph = None
         if not normalize and not self.is2D:
-            dataHistogram = groupedHistograms[dataGroupName]
-            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
-            self.drawRatioPlot(dataHistogram, mcHistogram)
+            if dataGroupName in groupedHistograms:
+                dataHistogram = groupedHistograms[dataGroupName]
+                mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                self.drawRatioPlot(dataHistogram, mcHistogram)
 
-            self.pads['oben'].cd()
-            theErrorGraph = ROOT.TGraphErrors(mcHistogram)
-            theErrorGraph.SetFillColor(ROOT.kGray+3)
-            theErrorGraph.SetFillStyle(3013)
-            theErrorGraph.Draw('SAME2')
-        else:
-            theErrorGraph = None
+                self.pads['oben'].cd()
+                theErrorGraph = ROOT.TGraphErrors(mcHistogram)
+                theErrorGraph.SetFillColor(ROOT.kGray+3)
+                theErrorGraph.SetFillStyle(3013)
+                theErrorGraph.Draw('SAME2')
+            else:
+                print("INFO: no DATA available")
 
         # draw legend
         if not self.is2D:

@@ -32,7 +32,7 @@ import resource
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
@@ -62,7 +62,14 @@ class SampleTree(object):
             print ("INFO: reading part ", self.chunkNumber, " of ", self.numParts)
 
         self.status = 0
-        self.treeName = treeName
+        if not treeName:
+            if self.config and self.config.has_option('Configuration', 'treeName'):
+                self.treeName = self.config.get('Configuration', 'treeName')
+            else:
+                # HEPPY default
+                self.treeName = 'tree'
+        else:
+            self.treeName = treeName
         self.formulas = {}
         self.formulaDefinitions = []
         self.oldTreeNum = -1
@@ -84,6 +91,8 @@ class SampleTree(object):
         self.chainedFiles = []
         self.brokenFiles = []
         self.histograms = {}
+        self.nanoTreeCounts = {}
+        self.totalNanoTreeCounts = {}
 
         if not countOnly:
             self.tree = ROOT.TChain(self.treeName)
@@ -107,21 +116,44 @@ class SampleTree(object):
                                 continue
                             histogramName = obj.GetName()
 
+                            # nanoAOD: use branch of a tree instead of histogram for counting
+                            if histogramName == 'Runs':
+                                branchList = [x.GetName() for x in obj.GetListOfBranches()]
+                                if self.debug:
+                                    print ("DEBUG: nano counting tree has the following BRANCHES:", branchList)
+                                for branch in branchList:
+                                    if branch not in self.nanoTreeCounts:
+                                        self.nanoTreeCounts[branch] = []
+                                nEntries = obj.GetEntries()
+                                for i in range(nEntries):
+                                    obj.GetEntry(i)
+                                    for branch in branchList:
+                                        self.nanoTreeCounts[branch].append(getattr(obj, branch))
+
                             if histogramName in self.histograms:
-                                if self.histograms[histogramName]:
-                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                if obj.IsA().InheritsFrom(ROOT.TTree.Class()):
+                                    if self.debug:
+                                        print("DEBUG: object is a tree and will be skipped:", obj.GetName())
                                 else:
-                                    print ("ERROR: histogram object was None!!!")
-                                    raise Exception("CountHistogramMissing")
+                                    if self.histograms[histogramName]:
+                                        self.histograms[histogramName].Add(obj)
+                                    else:
+                                        print ("ERROR: histogram object was None!!!")
+                                        raise Exception("CountHistogramMissing")
                             else:
-                                self.histograms[histogramName] = obj.Clone(obj.GetName())
-                                self.histograms[histogramName].SetDirectory(0)
+                                # add all TH*'s in one single histogram
+                                if obj.IsA().InheritsFrom(ROOT.TH1.Class()):
+                                    self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                    self.histograms[histogramName].SetDirectory(0)
+                                else:
+                                    if self.debug:
+                                        print("DEBUG: omitting object ", obj, " since it is neither TH1 or TTree!")
                         input.Close()
 
                         # add file to chain
                         chainTree = '%s/%s'%(rootFileName, self.treeName)
                         if self.debug:
-                            print ('DEBUG: chaining '+chainTree)
+                            print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
                         statusCode = self.tree.Add(chainTree)
 
                         # check for errors in chaining the file
@@ -154,6 +186,42 @@ class SampleTree(object):
 
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
+
+
+            # merge nano counting trees 
+            if self.nanoTreeCounts:
+                # TODO: per run if possible, sum LHE weights if present
+
+                # sum the contributions from the subtrees
+                self.totalNanoTreeCounts = {key: sum(values) for key,values in self.nanoTreeCounts.iteritems() if len(values) > 0 and type(values[0]) in [int, float, long]}
+
+                # print summary table
+                countBranches = self.totalNanoTreeCounts.keys()
+                depth = None
+                for key,values in self.nanoTreeCounts.iteritems():
+                    if type(values[0]) in [int, float, long]:
+                        depth = len(values)
+                        break
+                print("-"*160)
+                print("tree".ljust(25), ''.join([countBranch.ljust(25) for countBranch in countBranches]))
+                for treeNum in range(depth):
+                    print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
+                print("\x1b[34m","sum".ljust(24), ''.join([('%r'%self.totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
+                print("-"*160)
+
+                # fill summed tree (create new tree)
+                self.histograms['Runs'] = ROOT.TTree('Runs', 'count histograms for nano')
+                nanoTreeCountBuffers = {}
+                for key, value in self.totalNanoTreeCounts.iteritems():
+                    if type(value) == int:
+                        typeCode = 'i'
+                    elif type(value) == long:
+                        typeCode = 'L'
+                    elif type(value) == float:
+                        typeCode = 'f'
+                    nanoTreeCountBuffers[key] = array.array(typeCode, [value])
+                    self.histograms['Runs'].Branch(key, nanoTreeCountBuffers[key], '{name}/{typeCode}'.format(name=key, typeCode=typeCode))
+                self.histograms['Runs'].Fill()
 
     def __del__(self):
         self.delete()
@@ -725,7 +793,10 @@ class SampleTree(object):
                     print ("HISTOGRAMS:", self.histograms)
                     exit(0)
         else:
-            count = self.histograms[countHistogram].GetBinContent(1)
+            if self.totalNanoTreeCounts:
+                count = self.totalNanoTreeCounts['genEventCount']
+            else:
+                count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi * sample.xsec * sample.sf / float(count)
 

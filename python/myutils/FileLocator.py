@@ -129,9 +129,10 @@ class FileLocator(object):
 
     def cp(self, source, target):
         if self.isRemotePath(source) or self.isRemotePath(target):
-            self.remoteCopy(source, target)
+            return self.remoteCopy(source, target)
         else:
             shutil.copyfile(source, target)
+            return True
 
     def rm(self, path):
         if self.isRemotePath(path):
