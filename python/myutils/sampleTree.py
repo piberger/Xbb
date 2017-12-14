@@ -501,6 +501,10 @@ class SampleTree(object):
         if cutSequenceMode not in ['AND', 'OR', 'TREE']:
             raise Exception("InvalidCutSequenceMode")
 
+        if len([x for x in self.outputTrees if x['fileName'] == outputFileName])>0:
+            print("WARNING: skipping duplicate file ", outputFileName, "!")
+            return False
+
         outputTree = {
             'tree': None, # will create this tree later, after it is known which branches will be enabled 
             'name': name,
