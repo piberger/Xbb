@@ -612,11 +612,14 @@ class Datacard(object):
                             print ("binsBelowThreshold", binsBelowThreshold)
                             print ("hist.GetBinContent(bin)", hist.GetBinContent(bin))
                             print ("hist.GetBinError(bin)", hist.GetBinError(bin))
+                            belowThreshold = False
                             if hist.GetBinContent(bin) > 0.:
                                 if hist.GetBinError(bin)/sqrt(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) >= 1.:
-                                    binsBelowThreshold[dcProcess].append(bin)
+                                    belowThreshold = True
                                 elif hist.GetBinError(bin)/(hist.GetBinContent(bin)) > threshold and hist.GetBinContent(bin) < 1.:
-                                    binsBelowThreshold[dcProcess].append(bin)
+                                    belowThreshold = True
+                            if belowThreshold:
+                                binsBelowThreshold[dcProcess].append(bin)
                             for Q in self.UD:
                                 # add histogram with bin n varied up/down
                                 bbbHistogram = hist.Clone()
@@ -632,6 +635,7 @@ class Datacard(object):
                                         'systematicsName': '%s_bin%s_%s_%s'%(self.sysOptions['systematicsnaming']['stats'],bin,dcProcess,self.Datacardbin),
                                         'dcProcess': dcProcess,
                                         'histograms': {sampleGroup: bbbHistogram},
+                                        'binBelowThreshold': belowThreshold,
                                     })
                                 bbbHistogramName = self.getHistogramName(process=dcProcess, systematics=systematicsDictionary) + Q
                                 bbbHistogram.SetName(bbbHistogramName)
@@ -706,15 +710,16 @@ class Datacard(object):
             
             # bin by bin
             if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
-                for systematics in self.systematicsList:
-                    if systematics['sysType'] == 'bbb':
-                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
-                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
-                            dcRow = [systematicsNameForDC, 'shape']
-                            for dcProcess in dcProcesses:
-                                value = '1.0' if dcProcess == systematics['dcProcess'] else  '-'
-                                dcRow.append(value)
-                            dcRows.append(dcRow)
+                # sort rows for bbb systematics in the same order as the processes and only include the bins below threshold
+                bbbSystematics = sorted([x for x in self.systematicsList if x['sysType'] == 'bbb' and x['binBelowThreshold']], key=lambda y: dcProcesses.index(y['dcProcess']) if y['dcProcess'] in dcProcesses else -1)
+                for systematics in bbbSystematics:
+                    systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                    if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                        dcRow = [systematicsNameForDC, 'shape']
+                        for dcProcess in dcProcesses:
+                            value = '1.0' if dcProcess == systematics['dcProcess'] else  '-'
+                            dcRow.append(value)
+                        dcRows.append(dcRow)
 
             # UEPS systematics
             for systematics in self.systematicsList:
