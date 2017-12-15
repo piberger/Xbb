@@ -15,6 +15,7 @@ from sampleTree import SampleTree as SampleTree
 # ------------------------------------------------------------------------------
 class NewStackMaker:
     def __init__(self, config, var, region, SignalRegion, setup=None, subcut=''):
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.var = var
         self.region = region
@@ -103,8 +104,9 @@ class NewStackMaker:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
-
-        print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
+        
+        if self.debug:
+            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
 
     # ------------------------------------------------------------------------------
     # draw text

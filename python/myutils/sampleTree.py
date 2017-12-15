@@ -775,30 +775,31 @@ class SampleTree(object):
         return len(self.sampleFileNames)
 
     # return the total scale for the sample, calculated from all count histograms from the TChain
-    def getScale(self, sample, countHistogram="CountWeighted"):
+    def getScale(self, sample, countHistogram=None):
         try:
             sample.xsec = sample.xsec[0]
         except:
             pass
 
-        if not countHistogram:
-            try:
-                posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
-                negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
-                count = posWeight - negWeight
-            except:
-                if self.verbose:
-                    print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
-                try:
-                    count = self.histograms['Count'].GetBinContent(1)
-                except Exception as e:
-                    print ("EXCEPTION:", e)
-                    print ("ERROR: no weight histograms found in sampleTree => terminate")
-                    print ("HISTOGRAMS:", self.histograms)
-                    exit(0)
+        if self.totalNanoTreeCounts:
+            count = self.totalNanoTreeCounts[countHistogram if countHistogram else 'genEventCount']
         else:
-            if self.totalNanoTreeCounts:
-                count = self.totalNanoTreeCounts['genEventCount']
+            if not countHistogram:
+                try:
+                    posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
+                    negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
+                    count = posWeight - negWeight
+                    countHistogram = 'CountPosWeight - CountNegWeight'
+                except:
+                    if self.verbose:
+                        print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+                    try:
+                        count = self.histograms['Count'].GetBinContent(1)
+                    except Exception as e:
+                        print ("EXCEPTION:", e)
+                        print ("ERROR: no weight histograms found in sampleTree => terminate")
+                        print ("HISTOGRAMS:", self.histograms)
+                        exit(0)
             else:
                 count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)
