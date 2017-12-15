@@ -678,6 +678,8 @@ if opts.task.startswith('cachedc'):
                     },
                 'batch': opts.task + '_' + sampleIdentifier,
                 })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
             # pass file list, if only a chunk of it is processed
             if len(splitFilesChunks) > 1:
                 jobDict['arguments']['fileList'] = compressedFileList
