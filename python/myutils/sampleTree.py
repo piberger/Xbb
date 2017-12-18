@@ -32,11 +32,12 @@ import resource
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
+        self.saveMemory = saveMemory
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
@@ -738,6 +739,12 @@ class SampleTree(object):
             outputTree['file'].Close()
         print('INFO: files written')
         sys.stdout.flush()
+
+        if self.saveMemory:
+            self.tree.Reset()
+            self.tree = None
+            for outputTree in self.outputTrees:
+                outputTree['tree'] = None
 
         # callbacks after having written file
         for outputTree in self.outputTrees:
