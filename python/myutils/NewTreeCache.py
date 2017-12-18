@@ -66,7 +66,8 @@ class TreeCache:
             splitFilesChunkSize = sample.mergeCachingSize 
             splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
             self.sample = sample.name
-            print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
+            if self.debug:
+                print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
             # sample passed as string
             self.sample = sample
