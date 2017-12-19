@@ -34,7 +34,7 @@ class FileLocator(object):
         self.remoteStatFile = 'xrdfs {server} stat {path}'
         self.remoteMkdir = 'xrdfs {server} mkdir {path}'
         self.remoteRm = 'xrdfs {server} rm {path}'
-        self.remoteCp = 'xrdcp -d 1 {source} {target}'
+        self.remoteCp = 'xrdcp -d 1 -f --posc --nopbar {source} {target}'
         self.makedirsMinLevel = 5   # don't even try to create/access the 5 lowest levels in the path
 
     # special Xbb function: get filename after prep step from original file name
@@ -129,9 +129,10 @@ class FileLocator(object):
 
     def cp(self, source, target):
         if self.isRemotePath(source) or self.isRemotePath(target):
-            self.remoteCopy(source, target)
+            return self.remoteCopy(source, target)
         else:
             shutil.copyfile(source, target)
+            return True
 
     def rm(self, path):
         if self.isRemotePath(path):

@@ -28,6 +28,7 @@ class TestSampleTreeCallbacksMethods(unittest.TestCase):
         if tree.b>444.4 and tree.b<444.5:
             print("event found:", tree.event, tree.b)
             self.nEventsFound += 1
+        return True
 
     def test_SampleTree_Callback_1(self):
         sampleTree = self.getTree()
@@ -55,9 +56,11 @@ class TestSampleTreeCallbacksMethods(unittest.TestCase):
         sampleTree.process()
 
         # check otuput
-        resultsMethodB = SampleTree([TestSampleTreeCallbacksMethods.scratchDirectory + '/tree_test_0.root']).tree.GetEntries()
+        sampleTree2 = SampleTree([TestSampleTreeCallbacksMethods.scratchDirectory + '/tree_test_0.root'])
+        resultsMethodB = sampleTree2.tree.GetEntries()
+        print(sampleTree2.tree)
         print("events which triggered callback:", self.nEventsFound)
-        print("events in tree 0:", self.nEventsFound)
+        print("events in tree 0:", resultsMethodB)
         self.assertEqual(self.nEventsFound, resultsMethodB)
         self.assertTrue(self.nEventsFound > 0)
 

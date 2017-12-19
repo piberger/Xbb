@@ -75,10 +75,12 @@ class MvaTrainingHelper(object):
             self.dataLoader = None
         except:
             print("oh no..")
-            self.dataLoader = ROOT.TMVA.DataLoader("someDataLoaderThingy")
+            # the DataLoader wants to be called '.'
+            self.dataLoader = ROOT.TMVA.DataLoader(".")
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
 
+        self.sampleTrees = []
         for addTreeFcn, samples in [
                     [addBackgroundTreeMethod, self.samples['BKG']],
                     [addSignalTreeMethod, self.samples['SIG']]
@@ -102,26 +104,11 @@ class MvaTrainingHelper(object):
                             debug=True
                         )
                     sampleTree = tc.getTree()
+                    self.sampleTrees.append(sampleTree)
                     if sampleTree:
                         treeScale = sampleTree.getScale(sample) * self.globalRescale
                         if sampleTree.tree.GetEntries() > 0:
                             addTreeFcn(sampleTree.tree, treeScale, ROOT.TMVA.Types.kTraining if additionalCut == self.TrainCut else ROOT.TMVA.Types.kTesting)
-                        # HCMVAV2_reg_mass HCMVAV2_reg_pt VHbb::deltaPhi(HCMVAV2_reg_phi,V_new_phi) Jet_btagCMVAV2[hJCMVAV2idx[0]] Jet_btagCMVAV2[hJCMVAV2idx[1]] hJetCMVAV2_pt_reg_0 hJetCMVAV2_pt_reg_1 V_new_mass Sum$(hJetCMVAV2_pt_reg>30&&abs(Jet_eta)<2.4&&Jet_puId==7&&Jet_id>0&&aJCidx!=(hJCMVAV2idx[0])&&(aJCidx!=(hJCMVAV2idx[1]))) V_new_pt (HCMVAV2_reg_pt/V_new_pt) abs(Jet_eta[hJCMVAV2idx[0]]-Jet_eta[hJCMVAV2idx[1]]) softActivityVH_njets5 VHbb::deltaR(HCMVAV2_reg_eta,HCMVAV2_reg_phi,V_new_eta,V_new_phi) met_pt
-
-                        #sampleTree.addOutputBranches([
-                        #        {'name': 'deltaPhiVH' , 'formula': 'VHbb::deltaPhi(HCMVAV2_reg_phi,V_new_phi)'},
-                        #        {'name': 'btag0', 'formula': 'Jet_btagCMVAV2[hJCMVAV2idx[0]]'},
-                        #        {'name': 'btag1', 'formula': 'Jet_btagCMVAV2[hJCMVAV2idx[1]]'},
-                        #        {'name': 'najets', 'formula': 'Sum$(hJetCMVAV2_pt_reg>30&&abs(Jet_eta)<2.4&&Jet_puId==7&&Jet_id>0&&aJCidx!=(hJCMVAV2idx[0])&&(aJCidx!=(hJCMVAV2idx[1])))'},
-                        #        {'name': 'ptRatio', 'formula': 'HCMVAV2_reg_pt/V_new_pt'},
-                        #        {'name': 'ptBalance', 'formula': 'HCMVAV2_reg_pt-V_new_pt'},
-                        #        {'name': 'deltaEtaBB', 'formula': 'abs(Jet_eta[hJCMVAV2idx[0]]-Jet_eta[hJCMVAV2idx[1]])'},
-                        #        {'name': 'deltaRVH', 'formula': 'VHbb::deltaR(HCMVAV2_reg_eta,HCMVAV2_reg_phi,V_new_eta,V_new_phi)'},
-                        #        {'name': 'deltaEtaVH', 'formula': 'abs(HCMVAV2_reg_eta-V_new_eta)'},
-                        #        {'name': 'deltaRBB', 'formula': 'VHbb::deltaR(Jet_eta[hJCMVAV2idx[0]],Jet_phi[hJCMVAV2idx[0]],Jet_eta[hJCMVAV2idx[1]],Jet_phi[hJCMVAV2idx[1]])'},
-                        #    ])
-                        #sampleTree.addOutputTree('/scratch/berger_p2/'+ ('training_' if additionalCut == self.TrainCut else 'evaluation_' ) + sample.identifier + '.root', cut='1', branches='*')
-                        #sampleTree.process()
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
@@ -143,8 +130,15 @@ class MvaTrainingHelper(object):
         print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
+            print("ROOT 5 style TMVA found")
         except:
-            print(">_<")
+            print("ROOT 6 style TMVA found, using data loader object!!! >_<")
+            print(" weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
+            print(" data loader:", self.dataLoader)
+            print(" type:       ", self.MVAtype)
+            print(" name:       ", self.mvaName)
+            print(" settings:   ", self.MVAsettings)
+            ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
         print ('Execute TMVA: TrainAllMethods')
         self.factory.TrainAllMethods()

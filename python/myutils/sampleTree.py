@@ -9,6 +9,7 @@ import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
 import array
+import resource
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -31,12 +32,16 @@ import array
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName='tree', limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False):
         self.verbose = verbose
+        self.debug = 'XBBDEBUG' in os.environ
+        self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
+        self.saveMemory = saveMemory
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
+        self.tree = None
         self.fileLocator = FileLocator(config=self.config)
 
         # process only partial sample root file list
@@ -58,7 +63,14 @@ class SampleTree(object):
             print ("INFO: reading part ", self.chunkNumber, " of ", self.numParts)
 
         self.status = 0
-        self.treeName = treeName
+        if not treeName:
+            if self.config and self.config.has_option('Configuration', 'treeName'):
+                self.treeName = self.config.get('Configuration', 'treeName')
+            else:
+                # HEPPY default
+                self.treeName = 'tree'
+        else:
+            self.treeName = treeName
         self.formulas = {}
         self.formulaDefinitions = []
         self.oldTreeNum = -1
@@ -80,6 +92,8 @@ class SampleTree(object):
         self.chainedFiles = []
         self.brokenFiles = []
         self.histograms = {}
+        self.nanoTreeCounts = {}
+        self.totalNanoTreeCounts = {}
 
         if not countOnly:
             self.tree = ROOT.TChain(self.treeName)
@@ -103,21 +117,44 @@ class SampleTree(object):
                                 continue
                             histogramName = obj.GetName()
 
+                            # nanoAOD: use branch of a tree instead of histogram for counting
+                            if histogramName == 'Runs':
+                                branchList = [x.GetName() for x in obj.GetListOfBranches()]
+                                if self.debug:
+                                    print ("DEBUG: nano counting tree has the following BRANCHES:", branchList)
+                                for branch in branchList:
+                                    if branch not in self.nanoTreeCounts:
+                                        self.nanoTreeCounts[branch] = []
+                                nEntries = obj.GetEntries()
+                                for i in range(nEntries):
+                                    obj.GetEntry(i)
+                                    for branch in branchList:
+                                        self.nanoTreeCounts[branch].append(getattr(obj, branch))
+
                             if histogramName in self.histograms:
-                                if self.histograms[histogramName]:
-                                    self.histograms[histogramName].Add(obj.Clone(obj.GetName()))
+                                if obj.IsA().InheritsFrom(ROOT.TTree.Class()):
+                                    if self.debug:
+                                        print("DEBUG: object is a tree and will be skipped:", obj.GetName())
                                 else:
-                                    print ("ERROR: histogram object was None!!!")
-                                    raise Exception("CountHistogramMissing")
+                                    if self.histograms[histogramName]:
+                                        self.histograms[histogramName].Add(obj)
+                                    else:
+                                        print ("ERROR: histogram object was None!!!")
+                                        raise Exception("CountHistogramMissing")
                             else:
-                                self.histograms[histogramName] = obj.Clone(obj.GetName())
-                                self.histograms[histogramName].SetDirectory(0)
+                                # add all TH*'s in one single histogram
+                                if obj.IsA().InheritsFrom(ROOT.TH1.Class()):
+                                    self.histograms[histogramName] = obj.Clone(obj.GetName())
+                                    self.histograms[histogramName].SetDirectory(0)
+                                else:
+                                    if self.debug:
+                                        print("DEBUG: omitting object ", obj, " since it is neither TH1 or TTree!")
                         input.Close()
 
                         # add file to chain
                         chainTree = '%s/%s'%(rootFileName, self.treeName)
-                        if self.verbose:
-                            print ('DEBUG: chaining '+chainTree)
+                        if self.debug:
+                            print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
                         statusCode = self.tree.Add(chainTree)
 
                         # check for errors in chaining the file
@@ -150,6 +187,78 @@ class SampleTree(object):
 
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
+
+
+            # merge nano counting trees
+            if self.nanoTreeCounts:
+                # TODO: per run if possible, sum LHE weights if present
+
+                # sum the contributions from the subtrees
+                self.totalNanoTreeCounts = {key: sum(values) for key,values in self.nanoTreeCounts.iteritems() if len(values) > 0 and type(values[0]) in [int, float, long]}
+
+                # print summary table
+                countBranches = self.totalNanoTreeCounts.keys()
+                depth = None
+                for key,values in self.nanoTreeCounts.iteritems():
+                    if type(values[0]) in [int, float, long]:
+                        depth = len(values)
+                        break
+                print("-"*160)
+                print("tree".ljust(25), ''.join([countBranch.ljust(25) for countBranch in countBranches]))
+                for treeNum in range(depth):
+                    print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
+                print("\x1b[34m","sum".ljust(24), ''.join([('%r'%self.totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
+                print("-"*160)
+
+                # fill summed tree (create new tree)
+                self.histograms['Runs'] = ROOT.TTree('Runs', 'count histograms for nano')
+                nanoTreeCountBuffers = {}
+                for key, value in self.totalNanoTreeCounts.iteritems():
+                    if type(value) == int:
+                        typeCode = 'i'
+                    elif type(value) == long:
+                        typeCode = 'L'
+                    elif type(value) == float:
+                        typeCode = 'f'
+                    nanoTreeCountBuffers[key] = array.array(typeCode, [value])
+                    self.histograms['Runs'].Branch(key, nanoTreeCountBuffers[key], '{name}/{typeCode}'.format(name=key, typeCode=typeCode))
+                self.histograms['Runs'].Fill()
+
+    def __del__(self):
+        self.delete()
+
+    def delete(self):
+        self.callbacks = None
+        # close possible left open files referencing the TChain and delete output trees
+        try:
+            if self.tree:
+                self.tree.Reset()
+        except:
+            pass
+        self.fileLocator = None
+        self.config = None
+        for outputTree in self.outputTrees:
+            del outputTree['file']
+        try:
+            for formulaName, formula in self.formulas.iteritems():
+                if formula:
+                    del formula
+                    formula = None
+        except e:
+            print("EXCEPTION:", e)
+        try:
+            for outputTree in self.outputTrees:
+                if outputTree['tree']:
+                    del outputTree['tree']
+                    outputTree['tree'] = None
+        except e:
+            print("EXCEPTION:", e)
+        try:
+            if self.tree:
+                del self.tree
+                self.tree = None
+        except e:
+            print("EXCEPTION:", e)
 
     # ------------------------------------------------------------------------------
     # return full list of sample root files 
@@ -225,22 +334,27 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add a new branch
     # ------------------------------------------------------------------------------
-    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None):
+    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None):
         # this is needed to overwrite the branch if it already exists!
         self.addBranchToBlacklist(branchName)
+
+        # function
         if callable(formula):
+            newBranch = {'name': branchName, 'function': formula, 'type': branchType, 'length': length}
             if arguments:
-                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length, 'arguments': arguments})
-            else:
-                self.newBranches.append({'name': branchName, 'function': formula, 'type': branchType, 'length': length})
+                newBranch['arguments'] = arguments
+        # string which contains a TTreeFormula expression
         else:
             formulaName = 'alias:' + branchName
             self.addFormula(formulaName, formula)
             newBranch = {'name': branchName, 'formula': formulaName, 'type': branchType, 'length': length}
-            self.newBranches.append(newBranch)
+        if leaflist:
+            newBranch['leaflist'] = leaflist
+        self.newBranches.append(newBranch)
 
     # ------------------------------------------------------------------------------
     # pass a list of dictionaries of branches to add
+    # TODO: avoid detour via addOutputBranch and set dictionary directly
     # ------------------------------------------------------------------------------
     def addOutputBranches(self, branchDictList):
         for branchDict in branchDictList:
@@ -250,6 +364,7 @@ class SampleTree(object):
                 branchType=branchDict['type'] if 'type' in branchDict else 'f',
                 length=branchDict['length'] if 'length' in branchDict else 1,
                 arguments=branchDict['arguments'] if 'arguments' in branchDict else None,
+                leaflist=branchDict['leaflist'] if 'leaflist' in branchDict else None,
             )
 
     # ------------------------------------------------------------------------------
@@ -274,12 +389,15 @@ class SampleTree(object):
                 perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
 
             # output status
-            if self.verbose:
+            if self.verbose or self.debug:
                 percentage = 100.0*treeNum/len(self.chainedFiles)
                 if treeNum == 0:
                     print ('INFO: time ', time.ctime())
+                if self.debug:
+                    perfStats = perfStats + ' max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
-                self.tree.PrintCacheStats()
+                if self.debugProfiling:
+                    self.tree.PrintCacheStats()
                 sys.stdout.flush()
             self.oldTreeNum = treeNum
             # update TTreeFormula's
@@ -359,7 +477,7 @@ class SampleTree(object):
         else:
             raise Exception("BadTreeTypeCutDict")
     
-    # set callback function, which can return a boolean. false means skip this event!
+    # set callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def setCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
@@ -367,7 +485,7 @@ class SampleTree(object):
             print("WARNING: callback function for ", category, " is overwritten!")
         self.callbacks[category] = [fcn]
 
-    # add callback function, which can return a boolean. false means skip this event!
+    # add callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def addCallback(self, category, fcn):
         if category not in ['event']:
             raise Exception("CallbackEventDoesNotExist")
@@ -383,6 +501,10 @@ class SampleTree(object):
         # write events which satisfy either ONE of the conditions given in the list or ALL
         if cutSequenceMode not in ['AND', 'OR', 'TREE']:
             raise Exception("InvalidCutSequenceMode")
+
+        if len([x for x in self.outputTrees if x['fileName'] == outputFileName])>0:
+            print("WARNING: skipping duplicate file ", outputFileName, "!")
+            return False
 
         outputTree = {
             'tree': None, # will create this tree later, after it is known which branches will be enabled 
@@ -438,6 +560,8 @@ class SampleTree(object):
     # cuts are fulfilled.
     # ------------------------------------------------------------------------------
     def process(self):
+        if self.debug:
+            print('DEBUG: max mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         if self.verbose:
             print ('OUTPUT TREES:')
             for outputTree in self.outputTrees:
@@ -515,8 +639,11 @@ class SampleTree(object):
             outputTree['newBranches'] = {}
             for branch in self.newBranches:
                 outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
-                branchTypeDef = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
-                outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], branchTypeDef)
+                if 'leaflist' in branch:
+                    leafList = branch['leaflist']
+                else:
+                    leafList = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
+                outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], leafList)
         if len(self.newBranches) > 0:
             print("ADD NEW BRANCHES:")
             for branch in self.newBranches:
@@ -565,7 +692,10 @@ class SampleTree(object):
                         # todo: make it more efficient by using a shared memory block for all of the output trees'
                         # todo: branches, this would help in case one adds new branches and writes to several trees at once
                         for outputTree in self.outputTrees:
-                            branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']], arguments=branch['arguments'] if 'arguments' in branch else None)
+                            if 'arguments' in branch:
+                                branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']], arguments=branch['arguments'])
+                            else:
+                                branch['function'](event, destinationArray=outputTree['newBranchArrays'][branch['name']])
                     else:
                         for outputTree in self.outputTrees:
                             self.evaluateArray(branch['formula'], destinationArray=outputTree['newBranchArrays'][branch['name']])
@@ -610,6 +740,12 @@ class SampleTree(object):
         print('INFO: files written')
         sys.stdout.flush()
 
+        if self.saveMemory:
+            self.tree.Reset()
+            self.tree = None
+            for outputTree in self.outputTrees:
+                outputTree['tree'] = None
+
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
@@ -646,29 +782,33 @@ class SampleTree(object):
         return len(self.sampleFileNames)
 
     # return the total scale for the sample, calculated from all count histograms from the TChain
-    def getScale(self, sample, countHistogram="CountWeighted"):
+    def getScale(self, sample, countHistogram=None):
         try:
             sample.xsec = sample.xsec[0]
         except:
             pass
 
-        if not countHistogram:
-            try:
-                posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
-                negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
-                count = posWeight - negWeight
-            except:
-                if self.verbose:
-                    print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
-                try:
-                    count = self.histograms['Count'].GetBinContent(1)
-                except Exception as e:
-                    print ("EXCEPTION:", e)
-                    print ("ERROR: no weight histograms found in sampleTree => terminate")
-                    print ("HISTOGRAMS:", self.histograms)
-                    exit(0)
+        if self.totalNanoTreeCounts:
+            count = self.totalNanoTreeCounts[countHistogram if countHistogram else 'genEventCount']
         else:
-            count = self.histograms[countHistogram].GetBinContent(1)
+            if not countHistogram:
+                try:
+                    posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
+                    negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
+                    count = posWeight - negWeight
+                    countHistogram = 'CountPosWeight - CountNegWeight'
+                except:
+                    if self.verbose:
+                        print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+                    try:
+                        count = self.histograms['Count'].GetBinContent(1)
+                    except Exception as e:
+                        print ("EXCEPTION:", e)
+                        print ("ERROR: no weight histograms found in sampleTree => terminate")
+                        print ("HISTOGRAMS:", self.histograms)
+                        exit(0)
+            else:
+                count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi * sample.xsec * sample.sf / float(count)
 
