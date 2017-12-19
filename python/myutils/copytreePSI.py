@@ -6,22 +6,30 @@ class CopyTreePSI(object):
     
     def __init__(self, config):
         self.config = config
+        self.debug = 'XBBDEBUG' in os.environ
         self.fileLocator = FileLocator(config=self.config)
 
     def copySingleFile(self, whereToLaunch,inputFile,outputFile,skimmingCut,remove_branches):
-            
+
+        if self.debug:
+            print("INPUT:", inputFile)
         input = ROOT.TFile.Open(inputFile,'read')
         if not input:
           print 'input file NOT EXISTING:',inputFile
           #input.Close()
           return
+        try:
+            __tmpPath = os.environ["TMPDIR"]
+        except:
+            __tmpPath = self.config.get('Directories', 'scratch')
 
-        __tmpPath = os.environ["TMPDIR"]
         outputFileName = outputFile.split('/')[len(outputFile.split('/'))-1]
         print 'outputFileName',__tmpPath+'/'+outputFileName
         output = ROOT.TFile.Open(__tmpPath+'/'+outputFileName,'recreate')
 
         inputTree = input.Get("tree")
+        if not inputTree:
+            inputTree = input.Get("Events")
         nEntries = inputTree.GetEntries()
         for branch in remove_branches:
           if branch and not branch.isspace():
@@ -40,10 +48,18 @@ class CopyTreePSI(object):
         for key in ROOT.gDirectory.GetListOfKeys():
             input.cd()
             obj = key.ReadObj()
-            if obj.GetName() == 'tree':
+            # this contains the event tree, which will be copied skimmed only
+            if obj.GetName() in  ['tree', 'Events']:
                 continue
+            if self.debug:
+                print "DEBUG: clone object ", obj.GetName()
+            # all other objects are just cloned
             output.cd()
-            obj.Write(key.GetName())
+            if obj.IsA().InheritsFrom(ROOT.TTree.Class()):
+                objClone = obj.CloneTree(-1)
+            else:
+                objClone = obj
+            objClone.Write(key.GetName())
         output.Write()
         output.Close()
         input.Close()
@@ -58,10 +74,10 @@ class CopyTreePSI(object):
         # default redirector
         redirector = 'root://xrootd-cms.infn.it/'
         try:
-            if self.config.has_option('Configuration', 'xrootdRedirectorGlobal'):
-                redirector = self.config.get('Configuration', 'xrootdRedirectorGlobal')
-            elif 'XBBXRD' in os.environ:
+            if 'XBBXRD' in os.environ:
                 redirector = os.environ['XBBXRD']
+            elif self.config.has_option('Configuration', 'xrootdRedirectorGlobal'):
+                redirector = self.config.get('Configuration', 'xrootdRedirectorGlobal')
         except:
             print "could not get xrootd redirector, using default one:", redirector
             print "specify redirector in config [Directories] xrootdRedirectorGlobal=.."
@@ -115,6 +131,9 @@ class CopyTreePSI(object):
                 if not fileLocator.isValidRootFile(outputFile):
                     fileLocator.rm(outputFile)
                     inputs.append((whereToLaunch,inputFile,outputFile,skimmingCut,remove_branches))
+                else:
+                    if self.debug:
+                        print("SKIP INPUT:", inputFile)
             else:
                 inputs.append((whereToLaunch,inputFile,outputFile,skimmingCut,remove_branches))
 

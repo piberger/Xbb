@@ -3,6 +3,7 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
+import array
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -14,6 +15,7 @@ from sampleTree import SampleTree as SampleTree
 # ------------------------------------------------------------------------------
 class NewStackMaker:
     def __init__(self, config, var, region, SignalRegion, setup=None, subcut=''):
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.var = var
         self.region = region
@@ -29,37 +31,61 @@ class NewStackMaker:
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
         self.blind = eval(self.config.get(self.configSection,'blind'))
         self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
+        self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
+        self.is2D = True if self.yAxis else False
         self.typLegendDict = eval(config.get('Plot_general','typLegendDict'))
+        self.plotLabels = {}
         if setup is None:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
 
+        # TODO: make simpler
         self.rebin = 1
         self.histogramOptions = {
                 'rebin': 1,
                 'var': self.var,
                 }
-        if self.config.has_option(self.configSection,'rebin'):
-            self.histogramOptions['rebin'] = eval(self.config.get(self.configSection,'rebin'))
-        if self.config.has_option(self.configSection,'nBins'):
-            self.histogramOptions['nBins'] = int(eval(self.config.get(self.configSection,'nBins'))/self.histogramOptions['rebin'])
-        else:
-            self.histogramOptions['nBins'] = int(eval(self.config.get('plotDef:%s'%var,'nBins'))/self.histogramOptions['rebin'])
-        if self.config.has_option(self.configSection,'min'):
-            self.histogramOptions['xMin'] = eval(self.config.get(self.configSection,'min'))
-        else:
-            self.histogramOptions['xMin'] = eval(self.config.get('plotDef:%s'%var,'min'))
-        if self.config.has_option(self.configSection,'max'):
-            self.histogramOptions['xMax'] = eval(self.config.get(self.configSection,'max'))
-        else:
-            self.histogramOptions['xMax'] = eval(self.config.get('plotDef:%s'%var,'max'))
-        self.histogramOptions['treeVar'] = self.config.get('plotDef:%s'%var,'relPath')
 
+        # general event by event weight which is applied to all samples
         if self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
             self.histogramOptions['weight'] = None
+
+        optionNames = {
+                    'treeVar': 'relPath',
+                    'rebin': 'rebin',
+                    'xAxis': 'xAxis',
+                    'yAxis': 'yAxis',
+                    'drawOption': 'drawOption',
+                    'draw': 'draw',
+                    'min': ['min', 'minX'],
+                    'max': ['max', 'maxX'],
+                    'minX': ['minX', 'min'],
+                    'minY': ['minY', 'min'],
+                    'minZ': ['minZ'],
+                    'maxX': ['maxX', 'max'],
+                    'maxY': ['maxY', 'max'],
+                    'maxZ': ['maxZ'],
+                    'nBins': ['nBins', 'nBinsX'],
+                    'nBinsX': ['nBinsX', 'nBins'],
+                    'nBinsY': ['nBinsY', 'nBins'],
+                }
+        numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
+        for optionName, configKeys in optionNames.iteritems():
+            # use the first available option from the config, first look in region definition, afterwards in plot definition
+            configKeysList = configKeys if type(configKeys) == list else [configKeys]
+            for configKey in configKeysList:
+                if self.config.has_option(self.configSection, configKey):
+                    self.histogramOptions[optionName] = self.config.get(self.configSection, configKey)
+                    break
+                elif self.config.has_option('plotDef:%s'%var, configKey):
+                    self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
+                    break
+            # convert numeric options to float/int
+            if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
+                self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
 
         self.groups = {}
         self.histograms = []
@@ -79,7 +105,8 @@ class NewStackMaker:
         except:
             self.outputFileFormats = ["png"]
 
-        print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['xMin'], " max=", self.histogramOptions['xMax'], "nBins=", self.histogramOptions['nBins'])
+        if self.debug:
+            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
 
     # ------------------------------------------------------------------------------
     # draw text
@@ -156,6 +183,12 @@ class NewStackMaker:
         self.canvas.SetFillStyle(4000)
         self.canvas.SetFrameFillStyle(1000)
         self.canvas.SetFrameFillColor(0)
+        self.pads = {}
+        if self.is2D:
+            ROOT.gPad.SetTopMargin(0.05)
+            ROOT.gPad.SetBottomMargin(0.13)
+            ROOT.gPad.SetLeftMargin(0.17)
+            ROOT.gPad.SetRightMargin(0.16)
         return self.canvas
 
     # ------------------------------------------------------------------------------
@@ -175,7 +208,7 @@ class NewStackMaker:
         self.legends['ratio'].SetNColumns(2)
 
         # draw ratio plot
-        self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['xMin'], self.histogramOptions['xMax'], "", self.maxRatioUncert, True)
+        self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
         ksScore = dataHistogram.KolmogorovTest(mcHistogram)
         chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
         print ("INFO: data/MC ratio, KS test:", ksScore, " chi2:", chiScore)
@@ -190,7 +223,7 @@ class NewStackMaker:
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
 
-        self.m_one_line = ROOT.TLine(self.histogramOptions['xMin'], 1, self.histogramOptions['xMax'], 1)
+        self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
         self.m_one_line.Draw("Same")
 
@@ -257,10 +290,10 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.addObject(self.myText("CMS",0.17,0.88,1.04))
+        self.addObject(self.myText("CMS",0.17+(0.03 if self.is2D else 0),0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17, 0.83))
+            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
         except Exception as e:
             print ("WARNING: exception while adding text: ", e)
             pass
@@ -285,7 +318,14 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag, 0.17, 0.78))
+        self.addObject(self.myText(addFlag, 0.17+(0.03 if self.is2D else 0), 0.78))
+
+        try:
+            for labelName, label in self.plotLabels.iteritems():
+                self.addObject(self.myText(label['text'], label['x'], label['y'], label['size']))
+        except:
+            pass
+
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
         #    tAddFlag2 = self.myText(self.addFlag2,0.17,0.73)
@@ -305,7 +345,8 @@ class NewStackMaker:
     # draw the stacked histograms 
     # ------------------------------------------------------------------------------
     def Draw(self, outputFolder='./', prefix='', normalize=False):
-        c = self.initializeCanvas() if normalize else self.initializeSplitCanvas()
+
+        self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
 
         dataGroupName = self.dataGroupName
         # group ("sum") MC+DATA histograms 
@@ -326,6 +367,8 @@ class NewStackMaker:
         if dataGroupName in mcHistogramGroupsToPlot:
             raise Exception("DATA contained in MC groups!")
 
+        c = self.initializeCanvas() if (normalize or self.is2D or dataGroupName not in histogramGroups) else self.initializeSplitCanvas()
+
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
         colorDict = eval(self.config.get('Plot_general', 'colorDict'))
@@ -340,50 +383,100 @@ class NewStackMaker:
                     else:
                         groupedHistograms[groupName].SetFillColor(colorDict[groupName])
                 if groupedHistograms[groupName]:
+                    groupedHistograms[groupName].SetStats(0)
                     if normalize and groupedHistograms[groupName].Integral()>0:
                         groupedHistograms[groupName].Scale(1./groupedHistograms[groupName].Integral())
                         if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
                             maximumNormalized = groupedHistograms[groupName].GetMaximum()
                     allStack.Add(groupedHistograms[groupName])
 
-        # draw stack
-        allStack.Draw("hist" if not normalize else "histnostack")
-        if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
-            yTitle = 'S/(S+B) weighted entries'
+        # draw options
+        drawOption = "hist" if not normalize else "histnostack"
+        if self.is2D:
+            drawOption = self.histogramOptions['drawOption'] if 'drawOption' in self.histogramOptions else 'colz'
+
+        # draw stack/sum
+        if self.is2D:
+            self.plotLabels['topright1'] = {'text': '2Dplot', 'x': 0.69, 'y': 0.9, 'size': 0.7}
+            if 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip() == self.dataGroupName:
+                allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                self.plotLabels['topright1']['text'] = 'DATA'
+            elif 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip().upper() == 'RATIO':
+                allStackData = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                allStackMc = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                allStack = allStackData.Clone('summedRatioHistogram')
+                allStack.Sumw2()
+                allStack.Divide(allStackMc)
+                self.plotLabels['topright1']['text'] = 'DATA/MC'
+                try:
+                    unityPos = 0.33
+                    try:
+                        if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
+                            unityPos = (1.0-self.histogramOptions['minZ'])/(self.histogramOptions['maxZ']-self.histogramOptions['minZ'])
+                    except:
+                        pass
+                    stops = array.array('d', [0.0, unityPos, 1.0])
+                    reds = array.array('d', [0.34, 0.63, 1.0])
+                    greens = array.array('d', [0.34, 0.63, 0])
+                    blues = array.array('d', [0.63, 0.63, 0])
+                    nc = 20
+                    ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
+                    ROOT.gStyle.SetNumberContours(nc)
+                except Exception as e:
+                    print("\x1b[31m",e,"\x1b[0m")
+            else:
+                allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                self.plotLabels['topright1']['text'] = 'MC'
+            allStack.SetStats(0)
+            allStack.SetTitle('')
+        allStack.Draw(drawOption)
+
+        # set axis titles
+        if self.is2D:
+            yTitle = self.yAxis
         else:
-            yTitle = 'Entries'
-        if '/' not in yTitle:
-            if allStack and allStack.GetXaxis():
-                if 'GeV' in self.xAxis:
-                    yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1)) 
-                else:
-                    yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1)) 
-                yTitle = '%s / %s' %(yTitle, yAppend)
-                if 'GeV' in self.xAxis:
-                    yTitle += ' GeV'
+            if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
+                yTitle = 'S/(S+B) weighted entries'
+            else:
+                yTitle = 'Entries'
+            if '/' not in yTitle:
+                if allStack and allStack.GetXaxis():
+                    if 'GeV' in self.xAxis:
+                        yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1))
+                    else:
+                        yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1))
+                    yTitle = '%s / %s' %(yTitle, yAppend)
+                    if 'GeV' in self.xAxis:
+                        yTitle += ' GeV'
         if allStack and allStack.GetXaxis():
             allStack.GetYaxis().SetTitle(yTitle)
-            allStack.GetXaxis().SetRangeUser(self.histogramOptions['xMin'], self.histogramOptions['xMax'])
-            allStack.GetYaxis().SetRangeUser(0,20000)
-        if normalize:
-            Ymax = maximumNormalized * 1.5
-        else:
-            Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
-        if self.log and not self.normalize:
-            allStack.SetMinimum(0.1)
-            Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
-            ROOT.gPad.SetLogy()
-        else:
-            ROOT.gPad.SetLogy(0)
-        allStack.SetMaximum(Ymax)
-        if not normalize:
+            allStack.GetXaxis().SetRangeUser(self.histogramOptions['minX'], self.histogramOptions['maxX'])
+            if not self.is2D:
+                allStack.GetYaxis().SetRangeUser(0,20000)
+        if not self.is2D:
+            if normalize:
+                Ymax = maximumNormalized * 1.5
+            else:
+                Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
+            if self.log and not self.normalize:
+                allStack.SetMinimum(0.1)
+                Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
+                ROOT.gPad.SetLogy()
+            else:
+                ROOT.gPad.SetLogy(0)
+            allStack.SetMaximum(Ymax)
+        if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
             allStack.GetXaxis().SetLabelOffset(999)
             allStack.GetXaxis().SetLabelSize(0)
         else:
             allStack.GetXaxis().SetTitle(self.xAxis)
 
+        if self.is2D:
+            if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
+                allStack.GetZaxis().SetRangeUser(self.histogramOptions['minZ'], self.histogramOptions['maxZ'])
+
         # draw DATA
-        if dataGroupName in groupedHistograms:
+        if dataGroupName in groupedHistograms and not self.is2D:
             drawOption = 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
@@ -392,21 +485,24 @@ class NewStackMaker:
             groupedHistograms[dataGroupName].Draw(drawOption)
 
         # draw ratio plot
-        if not normalize:
-            dataHistogram = groupedHistograms[dataGroupName]
-            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
-            self.drawRatioPlot(dataHistogram, mcHistogram)
+        theErrorGraph = None
+        if not normalize and not self.is2D:
+            if dataGroupName in groupedHistograms:
+                dataHistogram = groupedHistograms[dataGroupName]
+                mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                self.drawRatioPlot(dataHistogram, mcHistogram)
 
-            self.pads['oben'].cd()
-            theErrorGraph = ROOT.TGraphErrors(mcHistogram)
-            theErrorGraph.SetFillColor(ROOT.kGray+3)
-            theErrorGraph.SetFillStyle(3013)
-            theErrorGraph.Draw('SAME2')
-        else:
-            theErrorGraph = None
+                self.pads['oben'].cd()
+                theErrorGraph = ROOT.TGraphErrors(mcHistogram)
+                theErrorGraph.SetFillColor(ROOT.kGray+3)
+                theErrorGraph.SetFillStyle(3013)
+                theErrorGraph.Draw('SAME2')
+            else:
+                print("INFO: no DATA available")
 
         # draw legend
-        self.drawSampleLegend(groupedHistograms, theErrorGraph)
+        if not self.is2D:
+            self.drawSampleLegend(groupedHistograms, theErrorGraph)
 
         # draw various labels
         if not normalize:

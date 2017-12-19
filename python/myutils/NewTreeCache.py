@@ -8,6 +8,7 @@ import sys
 from samplesclass import Sample
 from sampleTree import SampleTree as SampleTree
 from FileLocator import FileLocator
+import resource
 
 # ------------------------------------------------------------------------------
 # TreeCache
@@ -56,13 +57,14 @@ class TreeCache:
     def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder=None, outputFolder=None, chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name='', config=None):
         self.config = config
         self.fileLocator = FileLocator(config=self.config)
+        self.debug = debug or ('XBBDEBUG' in os.environ)
 
         # SAMPLE
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
             splitFilesChunkSize = sample.mergeCachingSize 
-            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getNumberOfParts()
+            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
             self.sample = sample.name
             print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
@@ -94,11 +96,14 @@ class TreeCache:
         # identifier is just used as an arbitrary name for print-out
         cutUsedForIdentifier = (self.minCut if len(self.minCut) < 60 else self.minCut[0:50] + '...').replace(' ', '')
         self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
-        self.debug = debug
         self.sampleTree = None
         self.isCachedChecked = False
 
         self.createFolders()
+
+    # free memory
+    def deleteSampleTree(self):
+        self.sampleTree = None
 
     # file, where skimmed tree is written to
     def getTmpFileName(self):
@@ -251,19 +256,26 @@ class TreeCache:
     # move files from temporary to final location
     def moveFilesToFinalLocation(self):
         success = True
+        # free some memory for file copy command
+        if self.debug:
+            print('DEBUG: max mem used A:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        self.deleteSampleTree()
+        if self.debug:
+            print('DEBUG: max mem used B:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
         for tmpFileName in self.tmpFiles:
             outputFileName = self.outputFolder + '/' + self.tmpFolder.join(tmpFileName.split(self.tmpFolder)[1:])
             print ('copy ', tmpFileName, ' to ', outputFileName)
             if self.fileLocator.fileExists(outputFileName):
                 self.deleteFile(outputFileName)
-            command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
-            print('the command is', command)
-            sys.stdout.flush()
-            returnCode = subprocess.call([command], shell=True)
-            if returnCode != 0:
+            #command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
+            #print('the command is', command)
+            #sys.stdout.flush()
+            #returnCode = subprocess.call([command], shell=True)
+            copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
+            if not copySuccessful:
                 success = False
-                print('\x1b[31mERROR: XRDCP failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
+                print('\x1b[31mERROR: copy failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
                                                                                                 outputfile=outputFileName))
             else:
                 # delete temporary file if copy was successful
