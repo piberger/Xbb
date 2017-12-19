@@ -79,7 +79,7 @@ class MvaTrainingHelper(object):
             self.dataLoader = ROOT.TMVA.DataLoader(".")
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
-        
+
         self.sampleTrees = []
         for addTreeFcn, samples in [
                     [addBackgroundTreeMethod, self.samples['BKG']],

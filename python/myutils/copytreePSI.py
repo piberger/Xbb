@@ -10,7 +10,7 @@ class CopyTreePSI(object):
         self.fileLocator = FileLocator(config=self.config)
 
     def copySingleFile(self, whereToLaunch,inputFile,outputFile,skimmingCut,remove_branches):
-        
+
         if self.debug:
             print("INPUT:", inputFile)
         input = ROOT.TFile.Open(inputFile,'read')

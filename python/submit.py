@@ -243,7 +243,7 @@ submitScriptSpecialOptions = {
 condorBatchGroups = {}
 
 # ------------------------------------------------------------------------------
-# get job queue 
+# get job queue
 # ------------------------------------------------------------------------------
 def getJobQueue():
     if 'condor' in whereToLaunch:
@@ -255,7 +255,7 @@ def getJobQueue():
     return out.split("\n")
 
 # ------------------------------------------------------------------------------
-# wait for other jobs to finish first 
+# wait for other jobs to finish first
 # ------------------------------------------------------------------------------
 def waitFor(jobNameList):
     matches = -1
@@ -378,7 +378,7 @@ if opts.waitFor:
     waitFor(opts.waitFor)
 
 # -----------------------------------------------------------------------------
-# DATASETS: create list of .root files for each dataset 
+# DATASETS: create list of .root files for each dataset
 # -----------------------------------------------------------------------------
 if opts.task == 'datasets':
     dasQuery = config.get("Configuration", "dasQuery")
@@ -442,7 +442,7 @@ if opts.task == 'prep':
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
 # -----------------------------------------------------------------------------
-# SYSNEW: add additional branches and branches for sys variations 
+# SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew':
 
@@ -467,7 +467,7 @@ if opts.task == 'sysnew':
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
 
-            if opts.skipExisting: 
+            if opts.skipExisting:
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
@@ -718,7 +718,7 @@ if opts.task.startswith('rundc'):
         nFound = 0
         nNotFound = 0
         sampleNames = sorted(list(set([sample.name for sample in samples])))
-        for sampleName in sampleNames: 
+        for sampleName in sampleNames:
             line = sampleName.rjust(39) + ' '
             for region in regions:
                 if region in status and sampleName in status[region]:
