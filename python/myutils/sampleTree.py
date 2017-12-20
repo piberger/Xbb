@@ -189,7 +189,7 @@ class SampleTree(object):
                 self.tree.SetCacheSize(50*1024*1024)
 
 
-            # merge nano counting trees 
+            # merge nano counting trees
             if self.nanoTreeCounts:
                 # TODO: per run if possible, sum LHE weights if present
 
@@ -229,7 +229,7 @@ class SampleTree(object):
 
     def delete(self):
         self.callbacks = None
-        # close possible left open files referencing the TChain and delete output trees 
+        # close possible left open files referencing the TChain and delete output trees
         try:
             if self.tree:
                 self.tree.Reset()
@@ -640,7 +640,7 @@ class SampleTree(object):
             for branch in self.newBranches:
                 outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
                 if 'leaflist' in branch:
-                    leafList = branch['leaflist'] 
+                    leafList = branch['leaflist']
                 else:
                     leafList = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
                 outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], leafList)
@@ -745,6 +745,7 @@ class SampleTree(object):
             self.tree = None
             for outputTree in self.outputTrees:
                 outputTree['tree'] = None
+            print('INFO: trees in memory destroyed!')
 
         # callbacks after having written file
         for outputTree in self.outputTrees:

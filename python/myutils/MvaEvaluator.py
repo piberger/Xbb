@@ -41,8 +41,8 @@ class MvaEvaluator:
             for systematic in self.systematics:
                 for j in range(len( self.MVA_Vars['Nominal'])):
                     systematicNameInFormula = systematic
-                    if self.sample.type == 'DATA' and not systematic == 'Nominal': 
+                    if self.sample.type == 'DATA' and not systematic == 'Nominal':
                         systematicNameInFormula = 'Nominal'
                     self.MVA_formulas[systematicNameInFormula][j].GetNdata()
-                    self.MVA_var_buffer[j][0] = self.MVA_formulas[systematicNameInFormula][j].EvalInstance()                
+                    self.MVA_var_buffer[j][0] = self.MVA_formulas[systematicNameInFormula][j].EvalInstance()
                 destinationArray[self.systematics.index(systematic)] = self.reader.EvaluateMVA(self.MVAname)

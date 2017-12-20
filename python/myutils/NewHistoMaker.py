@@ -29,7 +29,7 @@ class NewHistoMaker:
             self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
         is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
         if is2D:
-            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY']) 
+            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY'])
         else:
             self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
         self.histogram.Sumw2()
@@ -58,9 +58,9 @@ class NewHistoMaker:
                 weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
                 print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
 
-            # per sample special weight 
+            # per sample special weight
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
-                specialweight = self.sample.specialweight 
+                specialweight = self.sample.specialweight
                 weightF = "(({weight})*({specialweight}))".format(weight=weightF, specialweight=specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=specialweight))
 

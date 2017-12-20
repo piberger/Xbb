@@ -243,7 +243,7 @@ submitScriptSpecialOptions = {
 condorBatchGroups = {}
 
 # ------------------------------------------------------------------------------
-# get job queue 
+# get job queue
 # ------------------------------------------------------------------------------
 def getJobQueue():
     if 'condor' in whereToLaunch:
@@ -255,7 +255,7 @@ def getJobQueue():
     return out.split("\n")
 
 # ------------------------------------------------------------------------------
-# wait for other jobs to finish first 
+# wait for other jobs to finish first
 # ------------------------------------------------------------------------------
 def waitFor(jobNameList):
     matches = -1
@@ -371,6 +371,33 @@ def submit(job, repDict):
             print "the command is ", command
         subprocess.call([command], shell=True)
 
+def printSamplesStatus(samples, regions, status):
+    print("regions:")
+    for i,region in enumerate(regions):
+        print ('  %02d: %s'%(i, region))
+
+    print("-"*80)
+    header = ' '*40 + ' '.join(['%02d'%x for x in range(len(regions))])
+    print(header)
+    nFound = 0
+    nNotFound = 0
+    sampleNames = sorted(list(set([sample.name for sample in samples])))
+    for sampleName in sampleNames: 
+        line = sampleName.rjust(39) + ' '
+        for region in regions:
+            if region in status and sampleName in status[region]:
+                if status[region][sampleName]:
+                    line += '\x1b[42m\x1b[97m[+]\x1b[0m'
+                    nFound += 1
+                else:
+                    line += '\x1b[41m\x1b[97m[X]\x1b[0m'
+                    nNotFound += 1
+            else:
+                line += '\x1b[45m[?]\x1b[0m'
+        print line
+    print('summary:\n----------\nfound: %d\nnot found:%d'%(nFound, nNotFound))
+    return nFound, nNotFound
+
 # -----------------------------------------------------------------------------
 # check prerequisities
 # -----------------------------------------------------------------------------
@@ -378,7 +405,7 @@ if opts.waitFor:
     waitFor(opts.waitFor)
 
 # -----------------------------------------------------------------------------
-# DATASETS: create list of .root files for each dataset 
+# DATASETS: create list of .root files for each dataset
 # -----------------------------------------------------------------------------
 if opts.task == 'datasets':
     dasQuery = config.get("Configuration", "dasQuery")
@@ -442,7 +469,7 @@ if opts.task == 'prep':
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
 # -----------------------------------------------------------------------------
-# SYSNEW: add additional branches and branches for sys variations 
+# SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew':
 
@@ -467,7 +494,7 @@ if opts.task == 'sysnew':
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
 
-            if opts.skipExisting: 
+            if opts.skipExisting:
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
@@ -584,7 +611,10 @@ if opts.task.startswith('cacheplot'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'plottingSamples')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({
+                'name': sampleIdentifier, 
+                'folder': config.get('Directories', 'plottingSamples')
+            }, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single parts
@@ -655,13 +685,41 @@ if opts.task.startswith('cachedc'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
+        
+    # check existence of cached files before job submission, otherwise it will be checked at the beginning of the job
+    if opts.skipExisting:
+        status = {}
+        for i, region in enumerate(regions):
+            dcMaker = Datacard(config=config, region=region, verbose=False)
+            status[region] = dcMaker.getCacheStatus(useSampleIdentifiers=sampleIdentifiers)
+            print "INFO: done checking files for region\x1b[34m",region, "\x1b[0m(",i, "of", len(regions),")"
+        printSamplesStatus(samples=samples, regions=regions, status=status)
 
     # submit jobs, 1 to n separate jobs per sample
     for sampleIdentifier in sampleIdentifiers:
 
+        # if file existence has already been checked, check if it exists for all the regions 
+        if opts.skipExisting:
+            sampleNames = sorted(list(set([sample.name for sample in samples if sample.identifier == sampleIdentifier])))
+            filesMissing = False
+            for sampleName in sampleNames:
+                for region in regions:
+                    if region in status and sampleName in status[region]:
+                        if not status[region][sampleName]:
+                            filesMissing = True
+                            break
+            if not filesMissing:
+                print 'INFO: SKIP samples:', sampleNames,'files already exist!'
+                continue
+            else:
+                print 'INFO: files do not exist yet!'
+
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({
+                'name': sampleIdentifier, 
+                'folder': sampleFolder
+            }, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
 
         # submit all the single parts
@@ -707,31 +765,7 @@ if opts.task.startswith('rundc'):
         for region in regions:
             dcMaker = Datacard(config=config, region=region, verbose=False)
             status[region] = dcMaker.getCacheStatus(useSampleIdentifiers=sampleIdentifiers)
-
-        print("regions:")
-        for i,region in enumerate(regions):
-            print ('  %02d: %s'%(i, region))
-
-        print("-"*80)
-        header = ' '*40 + ' '.join(['%02d'%x for x in range(len(regions))])
-        print(header)
-        nFound = 0
-        nNotFound = 0
-        sampleNames = sorted(list(set([sample.name for sample in samples])))
-        for sampleName in sampleNames: 
-            line = sampleName.rjust(39) + ' '
-            for region in regions:
-                if region in status and sampleName in status[region]:
-                    if status[region][sampleName]:
-                        line += '\x1b[42m\x1b[97m[+]\x1b[0m'
-                        nFound += 1
-                    else:
-                        line += '\x1b[41m\x1b[97m[X]\x1b[0m'
-                        nNotFound += 1
-                else:
-                    line += '\x1b[45m[?]\x1b[0m'
-            print line
-        print('summary:\n----------\nfound: %d\nnot found:%d'%(nFound, nNotFound))
+        nFound, nNotFound = printSamplesStatus(samples=samples, regions=regions, status=status)
         if nNotFound>0:
             print('run cachedc again!')
             raise Exception("NotCached")
