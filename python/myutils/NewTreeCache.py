@@ -101,7 +101,7 @@ class TreeCache:
         self.isCachedChecked = False
 
         self.createFolders()
-    
+
     # free memory
     def deleteSampleTree(self):
         self.sampleTree = None

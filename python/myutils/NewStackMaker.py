@@ -39,7 +39,7 @@ class NewStackMaker:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
-        
+
         # TODO: make simpler
         self.rebin = 1
         self.histogramOptions = {
@@ -52,7 +52,7 @@ class NewStackMaker:
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
             self.histogramOptions['weight'] = None
-       
+
         optionNames = {
                     'treeVar': 'relPath',
                     'rebin': 'rebin',
@@ -61,7 +61,7 @@ class NewStackMaker:
                     'drawOption': 'drawOption',
                     'draw': 'draw',
                     'min': ['min', 'minX'],
-                    'max': ['max', 'maxX'], 
+                    'max': ['max', 'maxX'],
                     'minX': ['minX', 'min'],
                     'minY': ['minY', 'min'],
                     'minZ': ['minZ'],
@@ -104,7 +104,7 @@ class NewStackMaker:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
-        
+
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
 
@@ -185,10 +185,10 @@ class NewStackMaker:
         self.canvas.SetFrameFillColor(0)
         self.pads = {}
         if self.is2D:
-            ROOT.gPad.SetTopMargin(0.05) 
-            ROOT.gPad.SetBottomMargin(0.13) 
-            ROOT.gPad.SetLeftMargin(0.17) 
-            ROOT.gPad.SetRightMargin(0.16) 
+            ROOT.gPad.SetTopMargin(0.05)
+            ROOT.gPad.SetBottomMargin(0.13)
+            ROOT.gPad.SetLeftMargin(0.17)
+            ROOT.gPad.SetRightMargin(0.16)
         return self.canvas
 
     # ------------------------------------------------------------------------------
@@ -346,7 +346,7 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     def Draw(self, outputFolder='./', prefix='', normalize=False):
 
-        self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms]) 
+        self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
 
         dataGroupName = self.dataGroupName
         # group ("sum") MC+DATA histograms 
@@ -389,7 +389,7 @@ class NewStackMaker:
                         if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
                             maximumNormalized = groupedHistograms[groupName].GetMaximum()
                     allStack.Add(groupedHistograms[groupName])
-        
+
         # draw options
         drawOption = "hist" if not normalize else "histnostack"
         if self.is2D:
@@ -442,9 +442,9 @@ class NewStackMaker:
             if '/' not in yTitle:
                 if allStack and allStack.GetXaxis():
                     if 'GeV' in self.xAxis:
-                        yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1)) 
+                        yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1))
                     else:
-                        yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1)) 
+                        yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1))
                     yTitle = '%s / %s' %(yTitle, yAppend)
                     if 'GeV' in self.xAxis:
                         yTitle += ' GeV'
