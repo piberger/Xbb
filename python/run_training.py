@@ -3,12 +3,15 @@ from __future__ import print_function
 from optparse import OptionParser
 import ROOT
 ROOT.gROOT.SetBatch(True)
-
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
-
-import os,sys,pickle
+import resource
+import os
+import sys
+import pickle
+import glob
+import shutil
 
 class MvaTrainingHelper(object):
 
@@ -79,7 +82,7 @@ class MvaTrainingHelper(object):
             self.dataLoader = ROOT.TMVA.DataLoader(".")
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
-        
+
         self.sampleTrees = []
         for addTreeFcn, samples in [
                     [addBackgroundTreeMethod, self.samples['BKG']],
@@ -122,12 +125,43 @@ class MvaTrainingHelper(object):
 
         return self
 
+    # ----------------------------------------------------------------------------------------------------------------------
+    # backup old .xml and .info files 
+    # ----------------------------------------------------------------------------------------------------------------------
+    def backupOldFiles(self):
+        success = False
+        MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
+        backupDir = MVAdir + 'backup/'
+        try:
+            os.makedirs(backupDir)
+        except:
+            pass
+        freeNumber = 1
+        try:
+            lastUsedBackupDirectories = sorted(glob.glob(backupDir + '/v*/'), key=lambda x: int(x.strip('/').split('/')[-1][1:]), reverse=True)
+            freeNumber = 1 + int(lastUsedBackupDirectories[0].strip('/').split('/')[-1][1:]) if len(lastUsedBackupDirectories) > 0 else 1
+        except Exception as e:
+            print("\x1b[31mERROR: creating backup of MVA files failed!", e, "\x1b[0m")
+            freeNumber = -1
+        if freeNumber > -1:
+            try:
+                fileNamesToBackup = glob.glob(MVAdir + self.factoryname+'_'+self.mvaName + '.*')
+                os.makedirs(backupDir + 'v%d/'%freeNumber)
+                for fileNameToBackup in fileNamesToBackup:
+                    shutil.copy(fileNameToBackup, backupDir + 'v%d/'%freeNumber)
+                success = True
+            except Exception as e:
+                print("\x1b[31mERROR: creating backup of MVA files failed!", e, "\x1b[0m")
+        return success
+
+
     def run(self):
+        self.backupOldFiles()
         # ----------------------------------------------------------------------------------------------------------------------
         # Execute TMVA
         # ----------------------------------------------------------------------------------------------------------------------
         self.factory.Verbose()
-        print ('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
+        print('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
             print("ROOT 5 style TMVA found")
@@ -140,13 +174,17 @@ class MvaTrainingHelper(object):
             print(" settings:   ", self.MVAsettings)
             ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
-        print ('Execute TMVA: TrainAllMethods')
+        print('Execute TMVA: TrainAllMethods')
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.TrainAllMethods()
-        print ('Execute TMVA: TestAllMethods')
+        print('Execute TMVA: TestAllMethods')
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.TestAllMethods()
-        print ('Execute TMVA: EvaluateAllMethods')
+        print('Execute TMVA: EvaluateAllMethods')
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.EvaluateAllMethods()
-        print ('Execute TMVA: output.Write')
+        print('Execute TMVA: output.Write')
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.trainingOutputFile.Close()
         return self
 

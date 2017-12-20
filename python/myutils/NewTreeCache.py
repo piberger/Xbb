@@ -130,7 +130,7 @@ class TreeCache:
             outputFolder=self.outputFolder,
             hash=self.hash,
             part='*' if chunkNumber < 1 else '%d'%chunkNumber,
-            parts='*'
+            parts=self.splitFilesChunks
         )
         cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
@@ -150,7 +150,7 @@ class TreeCache:
             outputFolder=self.outputFolder,
             hash=self.hash,
             part=self.chunkNumber,
-            parts='*'
+            parts=self.splitFilesChunks
         )
         cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         return len(glob.glob(cachedFilesMask)) > 0

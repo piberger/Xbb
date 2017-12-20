@@ -15,7 +15,8 @@ class EWKweights(object):
             self.branchBuffers[wName] = np.zeros(3, dtype=np.float32)
             self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length':3}, 'length': 3})
 
-        self.applyNLO = 'amc' not in sample.identifier 
+        self.applyEWK = ('DY' in sample.identifier and not '10to50' in sample.identifier) or ('WJet' in sample.identifier)
+        self.applyNLO = self.applyEWK and ('amc' not in sample.identifier) 
         self.sys_sample = None
         if 'ZH_HToBB_ZToLL' in sample.identifier and not 'ggZH_HToBB_ZToLL' in sample.identifier:
             self.sys_sample = 'Zll'
@@ -38,7 +39,9 @@ class EWKweights(object):
         return NLOw
 
     def getDYw(self, tree):
-        return 1.0
+        self.processEvent(tree)
+        DYw = self.getNLOw(tree) * self.branchBuffers['EWKw'][0]
+        return DYw
 
     # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
@@ -57,7 +60,7 @@ class EWKweights(object):
             self.branchBuffers['EWKwVJets'][0] = 1.0
             self.branchBuffers['EWKwVJets'][1] = 1.0
             self.branchBuffers['EWKwVJets'][2] = 1.0
-            if len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
+            if self.applyEWK and len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
                 self.branchBuffers['EWKwVJets'][0] = -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
                 self.branchBuffers['EWKwVJets'][1] = self.branchBuffers['EWKwVJets'][0]
                 self.branchBuffers['EWKwVJets'][2] = self.branchBuffers['EWKwVJets'][0]
