@@ -745,6 +745,7 @@ class SampleTree(object):
             self.tree = None
             for outputTree in self.outputTrees:
                 outputTree['tree'] = None
+            print('INFO: trees in memory destroyed!')
 
         # callbacks after having written file
         for outputTree in self.outputTrees:
