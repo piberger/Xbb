@@ -9,6 +9,7 @@ import json
 import NewTreeCache as TreeCache
 from sampleTree import SampleTree as SampleTree
 from NewStackMaker import NewStackMaker as StackMaker
+from NewHistoMaker import NewHistoMaker as HistoMaker
 from BranchList import BranchList
 
 class Datacard(object):
@@ -21,7 +22,7 @@ class Datacard(object):
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
         if returnCode != 0:
-            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
+            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d (already loaded?)\x1b[0m"%returnCode)
         else:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
         
@@ -45,7 +46,8 @@ class Datacard(object):
         if not self.optimisation == '':
             print ('Preparing DC for BDT optimisaiton')
             self.optimisation_training = True
-        print ('optimisation is', self.optimisation)
+        if self.verbose:
+            print ('optimisation is', self.optimisation)
         try:
             os.stat(self.outpath)
         except:
@@ -53,20 +55,22 @@ class Datacard(object):
 
         # parse histogram config:
         self.treevar = config.get('dc:%s'%self.region, 'var')
-        print ('treevar is', self.treevar)
+        if self.verbose:
+            print ('treevar is', self.treevar)
         self.name = config.get('dc:%s'%self.region, 'wsVarName')
         if self.optimisation_training:
             self.treevar = self.optimisation + '.Nominal'
             self.name += '_' + self.optimisation
             if self.UseTrainSample:
                 self.name += '_Train'
-        print ('again, treevar is', self.treevar)
+        if self.verbose:
+            print ('again, treevar is', self.treevar)
 
         # set binning
         self.binning = {
-                'nBins': int(config.get('dc:%s'%self.region, 'range').split(',')[0]),
-                'xMin': float(config.get('dc:%s'%self.region, 'range').split(',')[1]),
-                'xMax': float(config.get('dc:%s'%self.region, 'range').split(',')[2]),
+                'nBinsX': int(config.get('dc:%s'%self.region, 'range').split(',')[0]),
+                'minX': float(config.get('dc:%s'%self.region, 'range').split(',')[1]),
+                'maxX': float(config.get('dc:%s'%self.region, 'range').split(',')[2]),
                 }
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
@@ -79,6 +83,7 @@ class Datacard(object):
         self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
         self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
         self.anType = config.get('dc:%s'%self.region, 'type')
+        self.EvalCut = config.get('Cuts', 'EvalCut')
 
         #new
         try:
@@ -116,12 +121,14 @@ class Datacard(object):
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
-            print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
+            if self.verbose:
+                print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
 
         # read weights
         self.weightF = config.get('Weights', 'weightF')
         self.SBweight = None
-        print ('before adding SBweight, weightF is', self.weightF)
+        if self.verbose:
+            print('before adding SBweight, weightF is', self.weightF)
         if self.anType.lower() == 'mjj':
             print ('Passed mJJ')
             if config.has_option('dc:%s'%self.region, 'SBweight'):
@@ -154,14 +161,16 @@ class Datacard(object):
             self.sysOptions['setup'].append(self.sysOptions['add_signal_as_bkg'])
 
         #Assign Pt region for sys factors
-        print ('Assign Pt region for sys factors')
-        print ('================================\n')
+        if self.verbose:
+            print ('Assign Pt region for sys factors')
+            print ('================================\n')
         self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
         if len(self.ptRegion) != 1:
             print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
         else:
             self.ptRegion = self.ptRegion[0]
-        print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
+        if self.verbose:
+            print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
 
         for outputName, removeSystematics in self.sysOptions['removeWeightSystematics'].iteritems():
             if outputName in self.ROOToutname:
@@ -170,13 +179,15 @@ class Datacard(object):
         #systematics up/down
         self.UD = ['Up', 'Down']
 
-        print ('Parse the sample information')
-        print ('============================\n')
+        if self.verbose:
+            print ('Parse the sample information')
+            print ('============================\n')
         #Parse samples configuration
         self.samplesInfo = ParseInfo(self.samplesInfoDirectory, self.path)
 
-        print ('Get the sample list')
-        print ('===================\n')
+        if self.verbose:
+            print ('Get the sample list')
+            print ('===================\n')
         self.backgrounds = eval(config.get('dc:%s'%self.region, 'background'))
         self.signals = eval(config.get('dc:%s'%self.region, 'signal'))
         self.data_sample_names = eval(config.get('dc:%s'%self.region, 'data'))
@@ -196,8 +207,9 @@ class Datacard(object):
                         NOMsamplesys = sample_type[0]
                         noNom = False
                         for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
-                            print ('nomsample is', nomsample)
-                            print ('signals+backgrounds are', self.signals+self.backgrounds)
+                            if self.verbose:
+                                print ('nomsample is', nomsample)
+                                print ('signals+backgrounds are', self.signals+self.backgrounds)
                             if nomsample not in self.signals+self.backgrounds: noNom = True
                         if noNom: continue
                         DOWNsamplesys = sample_type[1]
@@ -210,13 +222,9 @@ class Datacard(object):
         self.sample_sys_dic = {}
         for sample_sys in self.sample_sys_list:
             self.sample_sys_dic[sample_sys] = False
-        print ("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
-       
+        if self.verbose:
+            print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
 
-        
-
-        self.MC_samples = self.signals + self.backgrounds + self.additionals
-        
         self.samples = {
                 'SIG': self.samplesInfo.get_samples(self.signals),
                 'BKG': self.samplesInfo.get_samples(self.backgrounds),
@@ -241,7 +249,7 @@ class Datacard(object):
                 'systematicsName': 'nominal',
                 'binning': self.binning,
                 'weight': self.weightF,
-                'countHisto': 'CountWeighted',
+                'countHisto': None,
                 'countbin': 0,
                 'blind': self.sysOptions['blind'],
                 'sysType': 'nominal',
@@ -252,8 +260,9 @@ class Datacard(object):
         # contains all systematicDictionaries
         self.systematicsList = [self.systematicsDictionaryNominal]
 
-        print ('Assign the systematics')
-        print ('======================\n')
+        if self.verbose:
+            print ('Assign the systematics')
+            print ('======================\n')
 
         # shape systematics
         for syst in self.systematics:
@@ -327,17 +336,20 @@ class Datacard(object):
         #replace tree variable
         if self.anType.lower() == 'bdt':
             if not 'UD' in syst:
-                print ('treevar was', treevar)
+                if self.verbose:
+                    print ('treevar was', treevar)
+                    print ('.nominal by', '.%s_%s'%(syst, Q))
                 treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
-                print ('.nominal by', '.%s_%s'%(syst, Q))
             else:
                 treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
-                print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
+                if self.verbose:
+                    print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType.lower() == 'mjj':
             if not 'UD' in syst:
-                print ('treevar was', treevar)
+                if self.verbose:
+                    print ('treevar was', treevar)
+                    print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
                 treevar = treevar.replace('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
-                print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
             else:
                 print ('\x1b[31m@ERROR: Why is there UD in sys ? Abort\x1b[0m')
                 raise Exception("DcSystMjjContainsUD")
@@ -370,9 +382,9 @@ class Datacard(object):
     def getCacheStatus(self, useSampleIdentifiers=None):
         allSamples = self.getAllSamples()
         if useSampleIdentifiers:
-            allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers] 
+            allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers]
         cacheStatus = {}
-        for i, sample in enumerate(allSamples): 
+        for i, sample in enumerate(allSamples):
             # get cuts that were used in caching for this sample
             systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
             sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
@@ -383,7 +395,7 @@ class Datacard(object):
                     inputFolder=self.path,
                     config=self.config,
                     debug=self.verbose,
-                )            
+                )
             cacheStatus[sample.name] = tc.isCached()
         return cacheStatus
 
@@ -433,8 +445,22 @@ class Datacard(object):
             sampleTree = tc.getTree()
 
             self.histograms[sample.name] = {}
+            systematicsList = self.getSystematicsList(isData=(sample.type == 'DATA'))
+
+            ## alternative (but slow) way. TODO: use histo maker in a fast way
+            #for systematics in systematicsList:
+            #    histogramOptions = {
+            #                    'rebin': 1,
+            #                    'weight': systematics['weight'],
+            #                    'treeVar': systematics['var'],
+            #                    'uniqueid': True,
+            #                }
+            #    histogramOptions.update(self.binning)
+            #    histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions)
+            #    self.histograms[sample.name][systematics['systematicsName']] = histoMaker.getHistogram(systematics['cut'])
+
             # add all the cuts/weights for the different systematics 
-            for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
+            for systematics in systematicsList:
 
                 # additional BLINDING cut
                 if self.sysOptions['addBlindingCut']:
@@ -445,9 +471,15 @@ class Datacard(object):
                 # prepare histograms
                 histogramName = sample.name + '_' + systematics['systematicsName'] + '_c%d'%histogramCounter
                 histogramCounter += 1
-                self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, self.binning['nBins'], self.binning['xMin'], self.binning['xMax'])
+                self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
 
-                # add
+                # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
+                if 'BDT' in systematics['var'] and sample.type != 'DATA':
+                    systematics['addCut'] = self.EvalCut
+                    systematics['mcRescale'] = 2.0
+                    sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+
+                # add TTreeFormulas
                 sampleTree.addFormula(systematics['cutWithBlinding'], systematics['cutWithBlinding'])
                 if sample.type != 'DATA':
                     sampleTree.addFormula(systematics['weight'], systematics['weight'])
@@ -458,30 +490,43 @@ class Datacard(object):
 
             # get used branches, which are either used in cut, weight or the variable itself
             usedBranchList = BranchList()
-            for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
+            for systematics in systematicsList:
                 usedBranchList.addCut(systematics['cutWithBlinding'])
                 usedBranchList.addCut(systematics['weight'])
                 usedBranchList.addCut(systematics['var'])
+                if 'addCut' in systematics:
+                    usedBranchList.addCut(systematics['addCut'])
 
-            # remove unused branches
+            # enable only used branches
+            usedBranchList.addCut(['evt','run','isData'])
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
-            
-            systematicsToEvaluate = self.getSystematicsList(isData=(sample.type == 'DATA'))
 
             # loop over all events in this sample
             for event in sampleTree:
 
                 # evaluate all systematics for this event
-                for systematics in systematicsToEvaluate:
+                for systematics in systematicsList:
+                    mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
 
                     cutPassed = sampleTree.evaluate(systematics['cutWithBlinding'])
                     if cutPassed:
-                        weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
-                        treeVar = sampleTree.evaluate(systematics['var'])
-                        self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor)
+                        if 'addCut' in systematics:
+                            cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
+                        if cutPassed:
+                            weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                            treeVar = sampleTree.evaluate(systematics['var'])
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale)
+
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
+
+        for systematics in systematicsList:
+            if 'mcRescale' in systematics and systematics['mcRescale'] != 1.0:
+                print("INFO: some samples have been rescaled by \x1b[33m", systematics['mcRescale'], "\x1b[0m!")
+                if 'addCut' in systematics:
+                    print("INFO: and the additional cuts was:", systematics['addCut'])
+                break
 
     def load(self):
 
@@ -517,8 +562,8 @@ class Datacard(object):
 
                     self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
                     self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
-    
-    def splitFilesExist(self, useSampleIdentifier=None): 
+
+    def splitFilesExist(self, useSampleIdentifier=None):
         filesExist = True
         allSamples = self.getAllSamples()
         if useSampleIdentifier:
@@ -588,7 +633,6 @@ class Datacard(object):
                 # add up all the sample histograms for this process and this systematic
                 histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.sysOptions['Group'][k] == sampleGroup] 
 
-                print (sampleGroup," -> GROUPH:", histogramsInGroup)
                 if len(histogramsInGroup) > 0:
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
                     systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
@@ -602,11 +646,11 @@ class Datacard(object):
                 print("Running Statistical uncertainty")
                 threshold =  0.5 #stat error / sqrt(value). It was 0.5
                 print("threshold", threshold)
-                for systematics in systematicsListBeforeBBB: 
+                for systematics in systematicsListBeforeBBB:
                     if 'histograms' in systematics and sampleGroup in systematics['histograms'] and systematics['systematicsName'] == 'nominal':
                         dcProcess = self.sysOptions['Dict'][sampleGroup]
                         hist = systematics['histograms'][sampleGroup]
-                        for bin in range(1, self.binning['nBins'] + 1):
+                        for bin in range(1, self.binning['nBinsX'] + 1):
                             if dcProcess not in binsBelowThreshold.keys():
                                 binsBelowThreshold[dcProcess] = []
                             print ("binsBelowThreshold", binsBelowThreshold)
@@ -707,7 +751,7 @@ class Datacard(object):
                 for dcProcess in dcProcesses:
                     dcRow.append(str(systematicDict[dcProcessSampleGroup[dcProcess]]) if dcProcessSampleGroup[dcProcess] in systematicDict else '-')
                 dcRows.append(dcRow)
-            
+
             # bin by bin
             if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
                 # sort rows for bbb systematics in the same order as the processes and only include the bins below threshold

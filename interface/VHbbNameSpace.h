@@ -542,7 +542,7 @@ double SoverSBWeight(double BDT, int channel) {
     }
     return 1.;
   }
- 
+
   double weight_TTbar_nJetCentral_Down(int nGenTop, int nJetsCentral) {
     if (nGenTop == 2) {
       double sf_njets = 1.2213 * (0.9437417 - 0.02498308*nJetsCentral);

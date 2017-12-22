@@ -68,8 +68,18 @@ class CacheTraining(object):
             treeCaches = []
             self.sampleTree = None
 
-            # for all (sub)samples which come from the same files (sampleIdentifier)
+            # use all (sub)samples which come from the same files (sampleIdentifier)
             subsamples = [x for x in self.samples if x.identifier == sampleToCache]
+
+            # list of branches to keep for use as MVA input variables
+            branchListOfMVAVars = BranchList()
+            for sample in subsamples:
+                for trainingRegion,trainingRegionInfo in self.trainingRegionsDict.iteritems():
+                    for additionalCut in [self.TrainCut, self.EvalCut]:
+                        branchListOfMVAVars.addCut(trainingRegionInfo['vars'])
+            mvaBranches = branchListOfMVAVars.getListOfBranches()
+
+            # loop over all samples
             for sample in subsamples:
 
                 # add cuts for all training regions
@@ -84,9 +94,6 @@ class CacheTraining(object):
                             sampleCuts.append(additionalCut)
                         if trainingRegionInfo['cut']:
                             sampleCuts.append(trainingRegionInfo['cut'])
-
-                        # special branches to keep
-                        mvaBranches = BranchList(trainingRegionInfo['vars']).getListOfBranches() 
 
                         # add cache object
                         tc = TreeCache.TreeCache(

@@ -32,11 +32,12 @@ import resource
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
+        self.saveMemory = saveMemory
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
@@ -188,7 +189,7 @@ class SampleTree(object):
                 self.tree.SetCacheSize(50*1024*1024)
 
 
-            # merge nano counting trees 
+            # merge nano counting trees
             if self.nanoTreeCounts:
                 # TODO: per run if possible, sum LHE weights if present
 
@@ -228,7 +229,7 @@ class SampleTree(object):
 
     def delete(self):
         self.callbacks = None
-        # close possible left open files referencing the TChain and delete output trees 
+        # close possible left open files referencing the TChain and delete output trees
         try:
             if self.tree:
                 self.tree.Reset()
@@ -639,7 +640,7 @@ class SampleTree(object):
             for branch in self.newBranches:
                 outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
                 if 'leaflist' in branch:
-                    leafList = branch['leaflist'] 
+                    leafList = branch['leaflist']
                 else:
                     leafList = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
                 outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], leafList)
@@ -739,6 +740,13 @@ class SampleTree(object):
         print('INFO: files written')
         sys.stdout.flush()
 
+        if self.saveMemory:
+            self.tree.Reset()
+            self.tree = None
+            for outputTree in self.outputTrees:
+                outputTree['tree'] = None
+            print('INFO: trees in memory destroyed!')
+
         # callbacks after having written file
         for outputTree in self.outputTrees:
             if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
@@ -775,30 +783,31 @@ class SampleTree(object):
         return len(self.sampleFileNames)
 
     # return the total scale for the sample, calculated from all count histograms from the TChain
-    def getScale(self, sample, countHistogram="CountWeighted"):
+    def getScale(self, sample, countHistogram=None):
         try:
             sample.xsec = sample.xsec[0]
         except:
             pass
 
-        if not countHistogram:
-            try:
-                posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
-                negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
-                count = posWeight - negWeight
-            except:
-                if self.verbose:
-                    print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
-                try:
-                    count = self.histograms['Count'].GetBinContent(1)
-                except Exception as e:
-                    print ("EXCEPTION:", e)
-                    print ("ERROR: no weight histograms found in sampleTree => terminate")
-                    print ("HISTOGRAMS:", self.histograms)
-                    exit(0)
+        if self.totalNanoTreeCounts:
+            count = self.totalNanoTreeCounts[countHistogram if countHistogram else 'genEventCount']
         else:
-            if self.totalNanoTreeCounts:
-                count = self.totalNanoTreeCounts['genEventCount']
+            if not countHistogram:
+                try:
+                    posWeight = self.histograms['CountPosWeight'].GetBinContent(1)
+                    negWeight = self.histograms['CountNegWeight'].GetBinContent(1)
+                    count = posWeight - negWeight
+                    countHistogram = 'CountPosWeight - CountNegWeight'
+                except:
+                    if self.verbose:
+                        print("sampleTree: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+                    try:
+                        count = self.histograms['Count'].GetBinContent(1)
+                    except Exception as e:
+                        print ("EXCEPTION:", e)
+                        print ("ERROR: no weight histograms found in sampleTree => terminate")
+                        print ("HISTOGRAMS:", self.histograms)
+                        exit(0)
             else:
                 count = self.histograms[countHistogram].GetBinContent(1)
         lumi = float(sample.lumi)

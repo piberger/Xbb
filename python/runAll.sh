@@ -223,7 +223,7 @@ elif [ $task = "reg" ]; then
     python ./only_regression.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "eval" ]; then
-    runCommand="python  ./evaluateMVA.py --discr $MVAList --sampleIdentifier ${sampleIdentifier}" 
+    runCommand="python  ./evaluateMVA.py --discr $MVAList --sampleIdentifier ${sampleIdentifier}"
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
     runCommand="${runCommand} ${config_filenames[@]}"

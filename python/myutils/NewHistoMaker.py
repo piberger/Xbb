@@ -1,6 +1,7 @@
 from __future__ import print_function
 import ROOT
 import TdrStyles
+import os
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -11,22 +12,24 @@ class NewHistoMaker:
 
     def __init__(self, config, sample, sampleTree, histogramOptions):
         NewHistoMaker.instanceCounter += 1
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.sample = sample
         self.sampleTree = sampleTree
         self.histogramOptions = histogramOptions
         self.histogram = None
+        self.EvalCut = config.get('Cuts', 'EvalCut')
         TdrStyles.tdrStyle()
 
     def initializeHistogram(self):
         self.histogramName = (self.histogramOptions['name']+'_') if 'name' in self.histogramOptions else ''
-        self.histogramName += self.sample.name + '_' + self.histogramOptions['var']
+        self.histogramName += self.sample.name + ('_' + self.histogramOptions['var'] if 'var' in self.histogramOptions else '')
         # add unique instance counter to avoid same name for histogram and ROOT complaining
         if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
             self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
         is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
         if is2D:
-            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY']) 
+            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY'])
         else:
             self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
         self.histogram.Sumw2()
@@ -49,9 +52,15 @@ class NewHistoMaker:
             else:
                 weightF = "({weight})".format(weight=self.histogramOptions['weight'] if ('weight' in self.histogramOptions and self.histogramOptions['weight']) else '1') 
 
-            # per sample special weight 
+            # drop training events and rescale MC by 2 for BDT plots
+            if 'BDT' in self.histogramOptions['treeVar'] and self.sample.type != 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.EvalCut)
+                weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
+                print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
+
+            # per sample special weight
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
-                specialweight = self.sample.specialweight 
+                specialweight = self.sample.specialweight
                 weightF = "(({weight})*({specialweight}))".format(weight=weightF, specialweight=specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=specialweight))
 
@@ -61,7 +70,8 @@ class NewHistoMaker:
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:
                 print ("\x1b[31mERROR: error in TTree:Draw! returned {nEvents}\x1b[0m".format(nEvents=nEvents))
-            print("# events:", nEvents)
+            if self.debug:
+                print(selection, " => # events:", nEvents, "weighted:", self.histogram.Integral())
             self.scaleHistogram()
         else:
             print ("ERROR: initialization of histogram failed!")
