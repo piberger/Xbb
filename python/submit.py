@@ -240,6 +240,7 @@ submitScriptSpecialOptions = {
         'cachedc': ' -l h_vmem=6g ',
         #'cacheplot': ' -l h_vmem=6g ',
         #'cachetraining': ' -l h_vmem=6g ',
+        'runtraining': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 

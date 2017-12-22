@@ -155,6 +155,28 @@ double SoverSBWeight(double BDT, int channel) {
         return TMath::Sqrt(dy*dy + dphi*dphi);
   }
 
+  double p_trans_vector(double pt, double eta, double phi,double eta2, double phi2){
+      TVector3 v, v_ref;
+      v.SetPtEtaPhi(pt, eta, phi);
+      v_ref.SetPtEtaPhi(1,eta2,phi2);
+      return v.Pt(v_ref);
+  }
+
+  double p_trans_vector_normed(double eta, double phi,double eta2, double phi2){
+      TVector3 v, v_ref;
+      v.SetPtEtaPhi(1, eta, phi);
+      v_ref.SetPtEtaPhi(1, eta2, phi2);
+      return v.Pt(v_ref);
+  }
+
+  double p_trans_vector_normed(double phi,double phi2){
+      return TMath::Abs(TMath::Sin(phi-phi2));
+  }
+
+  double getPAbs(double pt, double eta)
+  {
+      return pt*TMath::CosH(eta);
+  }
 
   double deltaR2(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
       TLorentzVector j1, j2;
