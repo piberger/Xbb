@@ -1,0 +1,4 @@
+/store/user/arizzi/VHBBHeppyV25b/DoubleMuon/VHBB_HEPPY_V25b_DoubleMuon__Run2016B-03Feb2017_ver1-v1/170301_135242/0000/tree_1.root
+/store/user/arizzi/VHBBHeppyV25b/DoubleMuon/VHBB_HEPPY_V25b_DoubleMuon__Run2016B-03Feb2017_ver1-v1/170301_135242/0000/tree_10.root
+/store/user/arizzi/VHBBHeppyV25b/DoubleMuon/VHBB_HEPPY_V25b_DoubleMuon__Run2016B-03Feb2017_ver1-v1/170301_135242/0000/tree_11.root
+/store/user/arizzi/VHBBHeppyV25b/DoubleMuon/VHBB_HEPPY_V25b_DoubleMuon__Run2016B-03Feb2017_ver1-v1/170301_135242/0000/tree_12.root
