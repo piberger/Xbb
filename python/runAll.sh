@@ -261,6 +261,11 @@ elif [ $task = "runtraining" ]; then
     echo "$runCommand"
     eval "$runCommand"
 
+elif [ $task = "runtraining_scikit" ]; then
+    runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "cacheplot" ]; then
     runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
     if [ "$fileList" ]; then

@@ -835,3 +835,6 @@ class SampleTree(object):
             minCut = "%r"%cuts
         return minCut
 
+    def GetEntries(self):
+        return self.tree.GetEntries()
+

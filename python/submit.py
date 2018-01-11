@@ -583,7 +583,7 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
