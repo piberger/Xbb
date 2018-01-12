@@ -66,7 +66,8 @@ class TreeCache:
             splitFilesChunkSize = sample.mergeCachingSize 
             splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
             self.sample = sample.name
-            print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
+            if self.debug:
+                print ("INFO: use sample=", sample.name, " #parts = ", splitFilesChunks)
         else:
             # sample passed as string
             self.sample = sample
@@ -129,7 +130,7 @@ class TreeCache:
             outputFolder=self.outputFolder,
             hash=self.hash,
             part='*' if chunkNumber < 1 else '%d'%chunkNumber,
-            parts='*'
+            parts=self.splitFilesChunks
         )
         cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         self.cachedFileNames = glob.glob(cachedFilesMask)
@@ -149,7 +150,7 @@ class TreeCache:
             outputFolder=self.outputFolder,
             hash=self.hash,
             part=self.chunkNumber,
-            parts='*'
+            parts=self.splitFilesChunks
         )
         cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
         return len(glob.glob(cachedFilesMask)) > 0

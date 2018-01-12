@@ -22,7 +22,7 @@ class Datacard(object):
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
         if returnCode != 0:
-            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
+            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d (already loaded?)\x1b[0m"%returnCode)
         else:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
         
@@ -46,7 +46,8 @@ class Datacard(object):
         if not self.optimisation == '':
             print ('Preparing DC for BDT optimisaiton')
             self.optimisation_training = True
-        print ('optimisation is', self.optimisation)
+        if self.verbose:
+            print ('optimisation is', self.optimisation)
         try:
             os.stat(self.outpath)
         except:
@@ -54,14 +55,16 @@ class Datacard(object):
 
         # parse histogram config:
         self.treevar = config.get('dc:%s'%self.region, 'var')
-        print ('treevar is', self.treevar)
+        if self.verbose:
+            print ('treevar is', self.treevar)
         self.name = config.get('dc:%s'%self.region, 'wsVarName')
         if self.optimisation_training:
             self.treevar = self.optimisation + '.Nominal'
             self.name += '_' + self.optimisation
             if self.UseTrainSample:
                 self.name += '_Train'
-        print ('again, treevar is', self.treevar)
+        if self.verbose:
+            print ('again, treevar is', self.treevar)
 
         # set binning
         self.binning = {
@@ -118,12 +121,14 @@ class Datacard(object):
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
-            print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
+            if self.verbose:
+                print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
 
         # read weights
         self.weightF = config.get('Weights', 'weightF')
         self.SBweight = None
-        print ('before adding SBweight, weightF is', self.weightF)
+        if self.verbose:
+            print('before adding SBweight, weightF is', self.weightF)
         if self.anType.lower() == 'mjj':
             print ('Passed mJJ')
             if config.has_option('dc:%s'%self.region, 'SBweight'):
@@ -156,14 +161,16 @@ class Datacard(object):
             self.sysOptions['setup'].append(self.sysOptions['add_signal_as_bkg'])
 
         #Assign Pt region for sys factors
-        print ('Assign Pt region for sys factors')
-        print ('================================\n')
+        if self.verbose:
+            print ('Assign Pt region for sys factors')
+            print ('================================\n')
         self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
         if len(self.ptRegion) != 1:
             print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
         else:
             self.ptRegion = self.ptRegion[0]
-        print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
+        if self.verbose:
+            print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
 
         for outputName, removeSystematics in self.sysOptions['removeWeightSystematics'].iteritems():
             if outputName in self.ROOToutname:
@@ -172,13 +179,15 @@ class Datacard(object):
         #systematics up/down
         self.UD = ['Up', 'Down']
 
-        print ('Parse the sample information')
-        print ('============================\n')
+        if self.verbose:
+            print ('Parse the sample information')
+            print ('============================\n')
         #Parse samples configuration
         self.samplesInfo = ParseInfo(self.samplesInfoDirectory, self.path)
 
-        print ('Get the sample list')
-        print ('===================\n')
+        if self.verbose:
+            print ('Get the sample list')
+            print ('===================\n')
         self.backgrounds = eval(config.get('dc:%s'%self.region, 'background'))
         self.signals = eval(config.get('dc:%s'%self.region, 'signal'))
         self.data_sample_names = eval(config.get('dc:%s'%self.region, 'data'))
@@ -198,8 +207,9 @@ class Datacard(object):
                         NOMsamplesys = sample_type[0]
                         noNom = False
                         for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
-                            print ('nomsample is', nomsample)
-                            print ('signals+backgrounds are', self.signals+self.backgrounds)
+                            if self.verbose:
+                                print ('nomsample is', nomsample)
+                                print ('signals+backgrounds are', self.signals+self.backgrounds)
                             if nomsample not in self.signals+self.backgrounds: noNom = True
                         if noNom: continue
                         DOWNsamplesys = sample_type[1]
@@ -212,13 +222,9 @@ class Datacard(object):
         self.sample_sys_dic = {}
         for sample_sys in self.sample_sys_list:
             self.sample_sys_dic[sample_sys] = False
-        print ("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
+        if self.verbose:
+            print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
 
-
-        
-
-        self.MC_samples = self.signals + self.backgrounds + self.additionals
-        
         self.samples = {
                 'SIG': self.samplesInfo.get_samples(self.signals),
                 'BKG': self.samplesInfo.get_samples(self.backgrounds),
@@ -254,8 +260,9 @@ class Datacard(object):
         # contains all systematicDictionaries
         self.systematicsList = [self.systematicsDictionaryNominal]
 
-        print ('Assign the systematics')
-        print ('======================\n')
+        if self.verbose:
+            print ('Assign the systematics')
+            print ('======================\n')
 
         # shape systematics
         for syst in self.systematics:
@@ -329,17 +336,20 @@ class Datacard(object):
         #replace tree variable
         if self.anType.lower() == 'bdt':
             if not 'UD' in syst:
-                print ('treevar was', treevar)
+                if self.verbose:
+                    print ('treevar was', treevar)
+                    print ('.nominal by', '.%s_%s'%(syst, Q))
                 treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
-                print ('.nominal by', '.%s_%s'%(syst, Q))
             else:
                 treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
-                print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
+                if self.verbose:
+                    print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType.lower() == 'mjj':
             if not 'UD' in syst:
-                print ('treevar was', treevar)
+                if self.verbose:
+                    print ('treevar was', treevar)
+                    print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
                 treevar = treevar.replace('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
-                print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
             else:
                 print ('\x1b[31m@ERROR: Why is there UD in sys ? Abort\x1b[0m')
                 raise Exception("DcSystMjjContainsUD")
