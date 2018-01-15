@@ -237,8 +237,8 @@ submitScriptSpecialOptions = {
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
-        #'cacheplot': ' -l h_vmem=6g ',
-        #'cachetraining': ' -l h_vmem=6g ',
+        'cacheplot': ' -l h_vmem=6g ',
+        'cachetraining': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 
@@ -735,6 +735,7 @@ if opts.task.startswith('cachedc'):
                         'splitFilesChunkSize': splitFilesChunkSize,
                     },
                 'batch': opts.task + '_' + sampleIdentifier,
+                'queue': 'short.q',
                 })
             if opts.force:
                 jobDict['arguments']['force'] = ''
