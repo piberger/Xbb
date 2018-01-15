@@ -22,6 +22,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier 
 from sklearn.ensemble import RandomForestClassifier 
 from sklearn.ensemble import ExtraTreesClassifier 
+from sklearn.ensemble import RandomTreesEmbedding
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve
@@ -29,6 +30,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.externals import joblib
 import datetime
 import hashlib
+import random
 
 class MvaTrainingHelper(object):
 
@@ -78,22 +80,24 @@ class MvaTrainingHelper(object):
                 'MVAregionCut': self.treeCutName + ': ' + self.treeCut,
                 #'classifier': 'GradientBoostingClassifier',
                 'classifier': 'RandomForestClassifier',
+                #'classifier': 'ExtraTreesClassifier',
+                #'classifier': 'FT_GradientBoostingClassifier',
                 'max_depth': None,
                 'max_leaf_nodes': None,
                 'class_weight': 'balanced',
                 #'criterion': 'friedman_mse',
                 'criterion': 'gini',
                 #'n_estimators': 3000,
-                'n_estimators': 100,
-                'learning_rate': 0.07,
+                'n_estimators': 400,
+                'learning_rate': 0.1,
                 'algorithm': 'SAMME.R',
-                'min_samples_leaf': 50,
+                'min_samples_leaf': 100,
                 'splitter': 'best',
                 'max_features': 5,
                 'subsample': 0.6,
                 'limit': -1,
                 'additional_signal_weight': 1.0,
-                'min_impurity_split': 0.3,
+                'min_impurity_split': 0.0,
                 'bootstrap': True,
                 }
 
@@ -326,6 +330,7 @@ class MvaTrainingHelper(object):
         randomPermutation = np.random.permutation(nSamples)
         np.take(self.inputDataTraining, randomPermutation, axis=0, out=self.inputDataTraining)
         np.take(self.weightsTraining, randomPermutation, axis=0, out=self.weightsTraining)
+        np.take(self.weightsTrainingOriginal, randomPermutation, axis=0, out=self.weightsTrainingOriginal)
         np.take(self.targetsTraining, randomPermutation, axis=0, out=self.targetsTraining)
 
         # LIMIT number of training samples
@@ -334,6 +339,7 @@ class MvaTrainingHelper(object):
             print("limit training samples to:", limitNumTrainingSamples)
             self.inputDataTraining = self.inputDataTraining[0:limitNumTrainingSamples]
             self.weightsTraining = self.weightsTraining[0:limitNumTrainingSamples]
+            self.weightsTrainingOriginal = self.weightsTrainingOriginal[0:limitNumTrainingSamples]
             self.targetsTraining = self.targetsTraining[0:limitNumTrainingSamples]
         
         # calculate total weights and class_weights
@@ -369,17 +375,17 @@ class MvaTrainingHelper(object):
             print("DO NOT re-weight signals by:", signalReweight) 
             print("DO NOT re-weight background by:", backgroundReweight)
         
-        param_grid = {'learning_rate': [0.5, 0.8, 1.0],
-                      'n_estimators': [50, 200, 500, 1000],
-                      'base_estimator__max_depth': [3, 4, 5],
-                      'base_estimator__min_weight_fraction_leaf': [0.0, 0.01],
-                      'base_estimator__criterion': ['gini', 'entropy'],
-                     }
-        
+        #param_grid = {'learning_rate': [0.5, 0.8, 1.0],
+        #              'n_estimators': [50, 200, 500, 1000],
+        #              'base_estimator__max_depth': [3, 4, 5],
+        #              'base_estimator__min_weight_fraction_leaf': [0.0, 0.01],
+        #              'base_estimator__criterion': ['gini', 'entropy'],
+        #             }
+        # 
         #gs_clf = GridSearchCV(clf, param_grid, verbose=3, fit_params={'sample_weight': self.weightsTraining}).fit(self.inputDataTraining, self.targetsTraining)
         #print("BEST PARAMETERS:", gs_clf.best_params_)
         #print("fitting...")
-
+        print("----------\nFIT\n-----------", self.parameters)
         # TRAINING
         clf = clf.fit(self.inputDataTraining, self.targetsTraining, self.weightsTraining)
         print("*****")
@@ -407,7 +413,7 @@ class MvaTrainingHelper(object):
         h2t = ROOT.TH1D("h2t","h2t",100,0.0,1.0)
         for i in range(len(self.inputDataTraining)):
             result = (results_train[i][1]-minProb)/(maxProb-minProb) 
-            weight = self.weightsTrainingOriginal[i]
+            weight = self.weightsTraining[i]
             if self.targetsTraining[i] == 0:
                 h1t.Fill(result, weight)
             else:
