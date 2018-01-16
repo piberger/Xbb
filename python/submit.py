@@ -635,7 +635,7 @@ if opts.task.startswith('cacheplot'):
             compressedFileList = FileList.compress(splitFilesChunk)
 
             # submit a separate job for all region chunks
-            for regionChunk in regionChunks: 
+            for regionChunkNumber, regionChunk in enumerate(regionChunks): 
                 jobDict = repDict.copy()
                 jobDict.update({
                         'queue': 'short.q',
@@ -654,7 +654,7 @@ if opts.task.startswith('cacheplot'):
                 # pass file list, if only a chunk of it is processed
                 if len(splitFilesChunks) > 1:
                     jobDict['arguments']['fileList'] = compressedFileList
-                jobName = 'plot_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
+                jobName = 'plot_cache_{sample}_part{chunk}_{regionChunkNumber}'.format(sample=sampleIdentifier, chunk=chunkNumber, regionChunkNumber=regionChunkNumber)
                 submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
@@ -751,7 +751,7 @@ if opts.task.startswith('cachedc'):
             compressedFileList = FileList.compress(splitFilesChunk)
 
             # separate job for all region chunks (default: 1 chunk consisting of all regions)
-            for regionChunk in regionChunks:
+            for regionChunkNumber, regionChunk in enumerate(regionChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
                     'arguments':
@@ -770,7 +770,7 @@ if opts.task.startswith('cachedc'):
                 # pass file list, if only a chunk of it is processed
                 if len(splitFilesChunks) > 1:
                     jobDict['arguments']['fileList'] = compressedFileList
-                jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
+                jobName = 'dc_cache_{sample}_part{chunk}_{regionChunkNumber}'.format(sample=sampleIdentifier, chunk=chunkNumber, regionChunkNumber=regionChunkNumber)
                 submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
