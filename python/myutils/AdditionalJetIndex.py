@@ -11,8 +11,16 @@ class AdditionalJetIndex(object):
         self.AJ_treeIdx = None
         self.PS_treeIdx = None
         self.nhj_treeIdx = None
+        self.perpV_treeIdx = None
         self.process_treeIdx = None
+        self.Saj_treeIdx = None
+        self.Maj_treeIdx = None
         self.HVpp_treeIdx = None
+        self.ISR_treeIdx = {}
+        self.Sisr_treeIdx = {}
+        self.Sfsr_treeIdx = {}
+        self.Misr_treeIdx = {}
+        self.Mfsr_treeIdx = {}
 
         #Tree Buffers
         self.AJidx = None
@@ -21,27 +29,38 @@ class AdditionalJetIndex(object):
         self.nhj_idx = None
         self.nhj_dR = None
         self.HVpp = None
-        self.ISR_treeIdx = {}
-        self.Sisr_treeIdx = {}
-        self.Sfsr_treeIdx = {}
+        self.perpV = None
+        self.Saj = None
+        self.Maj = None
+        self.StdAj = None
+        self.nAJ = None
         self.ISRidx = {}
         self.FSRidx = {}
         self.Sisr = {}
         self.Sfsr = {}
+        self.Misr = {}
+        self.Mfsr = {}
+        self.StdIsr = {}
+        self.StdFsr = {}
         self.nISR = {}
         self.nFSR = {}
-        self.cuts = ['advCut','ptCut','dRCut','dRppCut']
+        self.cuts = ['advCut','ptCut','dRCut','dRppCut','perpVCut']
         for cut in self.cuts:
             self.ISR_treeIdx[cut] = None
             self.Sisr_treeIdx[cut] = None
             self.Sfsr_treeIdx[cut] = None
+            self.Misr_treeIdx[cut] = None
+            self.Mfsr_treeIdx[cut] = None
             self.ISRidx[cut] = None
             self.FSRidx[cut] = None
             self.Sisr[cut] = None
             self.Sfsr[cut] = None
+            self.Misr[cut] = None
+            self.Mfsr[cut] = None
+            self.StdIsr[cut] = None
+            self.StdFsr[cut] = None
             self.nISR[cut] = None
             self.nFSR[cut] = None
-        self.nAJ = None
         self.maxnAJ = 8
         self.nJet = 12
 
@@ -52,6 +71,12 @@ class AdditionalJetIndex(object):
         self.branches.append({'name': 'HVcombined_eta', 'formula': lambda tree: self.getHV(tree).Eta(), 'type': 'f'})
         self.branches.append({'name': 'HVcombined_phi', 'formula': lambda tree: self.getHV(tree).Phi(), 'type': 'f'})
         self.branches.append({'name': 'HVcombined_mass', 'formula': lambda tree: self.getHV(tree).M(), 'type': 'f'})
+        self.branches.append({'name': 'SumAddJet_pt', 'formula': lambda tree: self.getSumAJ(tree).Pt(), 'type': 'f'})
+        self.branches.append({'name': 'SumAddJet_eta', 'formula': lambda tree: self.getSumAJ(tree).Eta(), 'type': 'f'})
+        self.branches.append({'name': 'SumAddJet_phi', 'formula': lambda tree: self.getSumAJ(tree).Phi(), 'type': 'f'})
+        self.branches.append({'name': 'SumAddJet_mass', 'formula': lambda tree: self.getSumAJ(tree).M(), 'type': 'f'})
+        self.branches.append({'name': 'AddJet_meanPt', 'formula': lambda tree: self.getMeanAJ(tree), 'type': 'f'})
+        self.branches.append({'name': 'AddJet_stdPt', 'formula': lambda tree: self.getStdAJ(tree), 'type': 'f'})
         self.branches.append({'name': 'nAddJet', 'formula': self.getNAJ, 'type': 'i'})
         self.branches.append({'name': 'rAddJet_idx', 'formula': self.getrAJ, 'type': 'i'})
         wName = 'AddJet_idx'
@@ -60,12 +85,12 @@ class AdditionalJetIndex(object):
         wName = 'Jet_nhJidx'
         self.branchBuffers[wName] = np.zeros(self.maxnAJ, dtype=np.int16)
         self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length': self.nJet}, 'length': self.nJet , 'type': 'i'})
-        wName= 'Jet_nhJdR'
-        self.branchBuffers[wName] = np.zeros(self.maxnAJ, dtype=np.int16)
-        self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length': self.nJet}, 'length': self.nJet , 'type': 'f'})
+        for wName in ['Jet_nhJdR','Jet_perpV']:
+            self.branchBuffers[wName] = np.zeros(self.maxnAJ, dtype=np.int16)
+            self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length': self.nJet}, 'length': self.nJet , 'type': 'f'})
         
         for definition in self.cuts:
-            for wName in ['SumISR_'+definition+'_pt','SumISR_'+definition+'_eta','SumISR_'+definition+'_phi','SumISR_'+definition+'_mass','SumFSR_'+definition+'_pt','SumFSR_'+definition+'_eta','SumFSR_'+definition+'_phi','SumFSR_'+definition+'_mass']:
+            for wName in ['SumISR_'+definition+'_pt','SumISR_'+definition+'_eta','SumISR_'+definition+'_phi','SumISR_'+definition+'_mass','SumFSR_'+definition+'_pt','SumFSR_'+definition+'_eta','SumFSR_'+definition+'_phi','SumFSR_'+definition+'_mass','ISR_'+definition+'_meanPt', 'FSR_'+definition+'_meanPt', 'ISR_'+definition+'_stdPt', 'FSR_'+definition+'_stdPt']:
                 self.branchBuffers[wName] = 0.0
                 self.branches.append({'name': wName, 'formula': self.getCutBranch, 'arguments': {'branch': wName}, 'type': 'f'})
 
@@ -94,10 +119,15 @@ class AdditionalJetIndex(object):
             self.branchBuffers['AddJet_idx'] = self.getAJidx(tree)
             self.branchBuffers['Jet_nhJidx'] = self.getJet_nhJ_idx(tree)
             self.branchBuffers['Jet_nhJdR'] = self.getJet_nhJ_dR(tree)
+            self.branchBuffers['Jet_perpV'] = self.getJet_perpV(tree)
 
             for definition in self.cuts:
                 self.branchBuffers['ISR_'+definition+'_idx'] = self.getISRidx(tree,definition)
                 self.branchBuffers['FSR_'+definition+'_idx'] = self.getFSRidx(tree,definition)
+                self.branchBuffers['ISR_'+definition+'_meanPt'] = self.getMeanISR(tree,definition)
+                self.branchBuffers['FSR_'+definition+'_meanPt'] = self.getMeanFSR(tree,definition)
+                self.branchBuffers['ISR_'+definition+'_stdPt'] = self.getStdISR(tree,definition)
+                self.branchBuffers['FSR_'+definition+'_stdPt'] = self.getStdFSR(tree,definition)
                 self.branchBuffers['SumISR_'+definition+'_pt'] = self.getSumISR(tree,definition).Pt()
                 self.branchBuffers['SumISR_'+definition+'_eta'] = self.getSumISR(tree,definition).Eta()
                 self.branchBuffers['SumISR_'+definition+'_phi'] = self.getSumISR(tree,definition).Phi()
@@ -117,7 +147,10 @@ class AdditionalJetIndex(object):
     def getPtSortedList(self,tree):
         if tree.GetReadEntry() == self.PS_treeIdx:
             return self.PtSL
-        self.PtSL = np.argsort(-np.array(tree.Jet_pt))
+        pt = np.array(tree.Jet_pt)
+        self.mean_pt = np.mean(pt)
+        self.std_pt = np.std(pt, ddof = 0)
+        self.PtSL = np.argsort(-pt)
         self.PS_treeIdx = tree.GetReadEntry()
         return self.PtSL
 
@@ -193,6 +226,20 @@ class AdditionalJetIndex(object):
         self.Sisr[cut] = v
         return v
 
+    def getSumAJ(self,tree):
+        if tree.GetReadEntry() == self.Saj_treeIdx:
+             return self.Saj
+        v = ROOT.TLorentzVector()
+        for idx in self.getAJidx(tree):
+            if idx == -1:
+                break
+            j = ROOT.TLorentzVector()
+            j.SetPtEtaPhiM(tree.Jet_pt[idx],tree.Jet_eta[idx],tree.Jet_phi[idx],tree.Jet_mass[idx])
+            v += j
+        self.Saj_treeIdx = tree.GetReadEntry() 
+        self.Saj = v
+        return v
+
     def getSumFSR(self,tree,cut):
         if tree.GetReadEntry() == self.Sfsr_treeIdx[cut]:
              return self.Sfsr[cut]
@@ -206,6 +253,75 @@ class AdditionalJetIndex(object):
         self.Sfsr_treeIdx[cut] = tree.GetReadEntry() 
         self.Sfsr[cut] = v
         return v
+
+    def getMeanAJ(self,tree):
+        if tree.GetReadEntry() == self.Maj_treeIdx:
+             return self.Maj
+        aj = np.array(self.getAJidx(tree))
+        nans = aj < 0
+        pt = np.ones_like(aj,dtype=np.float)
+        for key,val in enumerate(aj):
+            if val < 0:
+                pt[key] = np.nan
+            else:
+                pt[key] = tree.Jet_pt[val]
+        if np.all(nans):
+            self.Maj = 0
+            self.StdAj = 0
+        else:
+            self.StdAj = np.nanstd(pt)
+            self.Maj = np.nanmean(pt)
+        return self.Maj
+
+    def getMeanISR(self,tree,cut):
+        if tree.GetReadEntry() == self.Misr_treeIdx[cut]:
+             return self.Misr[cut]
+        jets = np.array(self.getISRidx(tree,cut))
+        nans = jets < 0
+        pt = np.ones_like(jets,dtype=np.float)
+        for key,val in enumerate(jets):
+            if val < 0:
+                pt[key] = np.nan
+            else:
+                pt[key] = tree.Jet_pt[val]
+        if np.all(nans):
+            self.Misr[cut] = 0
+            self.StdIsr[cut] = 0
+        else:
+            self.StdIsr[cut] = np.nanstd(pt)
+            self.Misr[cut] = np.nanmean(pt)
+        return self.Misr[cut]
+
+    def getMeanFSR(self,tree,cut):
+        if tree.GetReadEntry() == self.Mfsr_treeIdx[cut]:
+             return self.Mfsr[cut]
+        jets = np.array(self.getFSRidx(tree,cut))
+        nans = jets < 0
+        pt = np.ones_like(jets,dtype=np.float)
+        for key,val in enumerate(jets):
+            if val < 0:
+                pt[key] = np.nan
+            else:
+                pt[key] = tree.Jet_pt[val]
+        if np.all(nans):
+            self.Mfsr[cut] = 0
+            self.StdFsr[cut] = 0
+        else:
+            self.StdFsr[cut] = np.nanstd(pt)
+            self.Mfsr[cut] = np.nanmean(pt)
+        return self.Mfsr[cut]
+
+    def getStdAJ(self,tree):
+        self.getMeanAJ(tree)
+        return self.StdAj
+
+    def getStdISR(self,tree,cut):
+        self.getMeanISR(tree,cut)
+        return self.StdIsr[cut]
+
+    def getStdFSR(self,tree,cut):
+        self.getMeanFSR(tree,cut)
+        return self.StdFsr[cut]
 
     def dR(self,eta1,eta2,phi1,phi2):
         return np.sqrt((eta1 - eta2)**2 + self.dPhi(phi1, phi2)**2)
@@ -263,6 +379,22 @@ class AdditionalJetIndex(object):
                 self.nhj_dR.append(-1)
         return self.nhj_idx
 
+    def getJet_perpV(self,tree):
+        if tree.GetReadEntry() == self.perpV_treeIdx:
+            return self.perpV
+        self.perpV_treeIdx = tree.GetReadEntry()
+        self.perpV = []
+        for idx in range(self.nJet):
+            if idx < tree.nJet:
+                Jet = ROOT.TVector3()
+                V = ROOT.TVector3()
+                Jet.SetPtEtaPhi(1,tree.Jet_eta[idx],tree.Jet_phi[idx])
+                V.SetPtEtaPhi(1,tree.V_new_eta,tree.V_new_phi)
+                self.perpV.append(Jet.Pt(V))
+            else:
+                self.perpV.append(-1)
+        return self.perpV
+
     def getJet_nhJ_dR(self,tree):
         self.getJet_nhJ_idx(tree)
         return self.nhj_dR
@@ -305,23 +437,34 @@ class AdditionalJetIndex(object):
                 fsr1 = dRh < 1.1 and (dRHV < 2.7 or 1.7 < dRHV_ < 3.2)
                 fsr2 = dRh < 0.7 
                 isr_cut = not fsr1 and not fsr2
-            
+                fsr_cut = not isr_cut
+
             if cut == 'ptCut':
                 isr_cut = tree.Jet_pt[idx] > 30
+                fsr_cut = not isr_cut
+
+            if cut == 'perpVCut':
+                dRh = self.getJet_nhJ_dR(tree)[idx]
+                perp = self.getJet_perpV(tree)[idx]
+                isr_cut = dRh >= 0.9
+                #fsr_cut = (dRh-0.6)**2 / 0.3**2 + (np.log10(perp)-2.4)**2 < 1
+                fsr_cut = dRh < 0.9 and (np.log10(perp)/0.15)**2 + (dRh-1.6)**2 > 1 
 
             if cut == 'dRCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
                 isr_cut = dRh > 0.8
-            
+                fsr_cut = not isr_cut
+
             if cut == 'dRppCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
                 pp = self.getJet_HV_pp(tree)[idx]
                 isr_cut = (dRh-0.6)**2 + (np.log10(pp-0.6)/1.5 + 0.1)**2 > 0.3**2
+                fsr_cut = not isr_cut
 
             if isr_cut:
                 self.ISRidx[cut].append(idx)
                 j += 1
-            else:
+            if fsr_cut:
                 self.FSRidx[cut].append(idx)
                 l += 1
         

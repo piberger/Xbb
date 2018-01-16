@@ -39,15 +39,15 @@ vhbbpath= <!Directories|Wdir!>/Xbb
 samplesinfo: <!Directories|vhbbpath!>/python/MarcelZllHbb13TeV2016config/samples_nosplit.ini
 
 ;!! where you want to store the logfiles from job submissions
-logpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//ptV_rp19/Logs/
+logpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//bdt_noCut_cp05/Logs/
 
 ;!! from which samples to plot and where to save the plots
 ;plottingSamples: <!Directories|PREPout!>
-plottingSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR08_weight/
+plottingSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/berger_ajidx/
 ;plottingSamples: <!Directories|MVAout!>
 
 
-plotpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//ptV_rp19/Plots/
+plotpath: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//bdt_noCut_cp05/Plots/
 ;! basedir for tagged folder structure
 
 tagDir: <!Directories|vhbbpath!>/python/<!Directories|Dname!>/
@@ -60,8 +60,8 @@ sampleName = WW_pythia8
 #!! from which samples to make the DCs and where to save the DCs
 ;To make di-jet mass plots
 ;dcSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/sys_v8_allw_addJESsys_sysMinMax_bTagsplit_rmvbr_MVAIDsplit_v2_VV_SBWeightVV_SBWeightVH
-dcSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR08_weight/
-limits: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//ptV_rp19/Limits/
+dcSamples: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR08_weight_fixed/
+limits: /mnt/t3nfs01/data01/shome/mbryner/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//bdt_noCut_cp05/Limits/
 
 
 t3userfolder = root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/<!Configuration|user!>
@@ -71,9 +71,9 @@ PREPin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gape
 PREPout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/ZllHbb13TeV_V25/prep_v8_sigPS/
 
 #!! On which samples to apply the regression and write the sys and where to write the resulting trees:
-
-SYSin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR05_weight/
-SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR08_weight/
+SYSin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/berger_p2/VHbb/ZllHbb13TeV_V25/eval_v8_4_specialweights_correctedewk/
+#SYSin: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/sys_v8_FSR08_weight_fixed/
+SYSout: root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/mbryner/VHbb/ZllHbb13TeV_V25/berger_ajidx/
 
 
 #!! On which samples to evaluate the MVA on and where to write the resulting trees:
