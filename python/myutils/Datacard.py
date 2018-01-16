@@ -14,6 +14,7 @@ from BranchList import BranchList
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
+        self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
         self.config = config
         self.DCtype = 'TH'
@@ -25,7 +26,7 @@ class Datacard(object):
             print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d (already loaded?)\x1b[0m"%returnCode)
         else:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
-        
+
         self.region = region
         self.anaTag = config.get("Analysis", "tag")
         if self.anaTag not in ['7TeV', '8TeV', '13TeV']:
@@ -92,7 +93,7 @@ class Datacard(object):
             self.BDTmin = None
 
         self.keep_branches = eval(config.get('Branches', 'keep_branches'))
-        
+
         #Systematics:
         if config.has_option('LimitGeneral', 'addSample_sys'):
             self.addSample_sys = eval(config.get('LimitGeneral','addSample_sys'))
@@ -232,12 +233,12 @@ class Datacard(object):
                 'ADD': self.samplesInfo.get_samples(self.additionals),
                 }
 
-        if self.verbose:
+        if self.debug:
             print ('sample list')
             print ('===================\n')
             print (json.dumps(self.samples, sort_keys=True, indent=8, default=str))
 
-        if self.verbose:
+        if self.debug:
             print ('systematics')
             print ('===================\n')
             print (json.dumps(self.sysOptions['sys_affecting'], sort_keys=True, indent=8, default=str))
@@ -277,7 +278,7 @@ class Datacard(object):
                     })
                 self.systematicsList.append(systematicsDictionary)
         
-        if self.verbose:
+        if self.debug:
             print ('systematics dict')
             print ('===================\n')
             print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
@@ -394,7 +395,7 @@ class Datacard(object):
                     cutList=sampleCuts,
                     inputFolder=self.path,
                     config=self.config,
-                    debug=self.verbose,
+                    debug=self.debug,
                 )
             cacheStatus[sample.name] = tc.isCached()
         return cacheStatus
@@ -436,7 +437,7 @@ class Datacard(object):
                     inputFolder=self.path,
                     config=self.config,
                     debug=True
-                )            
+                )
 
             if not tc.isCached():
                 print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
@@ -497,10 +498,18 @@ class Datacard(object):
                 if 'addCut' in systematics:
                     usedBranchList.addCut(systematics['addCut'])
 
+            # per sample special weight which is read from the config instead of the .root files 
+            specialweight = None
+            if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
+                sampleTree.addFormula('specialweight', sample.specialweight)
+                usedBranchList.addCut(sample.specialweight)
+                print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
+
             # enable only used branches
             usedBranchList.addCut(['evt','run','isData'])
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
+
 
             # loop over all events in this sample
             for event in sampleTree:
@@ -516,8 +525,8 @@ class Datacard(object):
                         if cutPassed:
                             weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
                             treeVar = sampleTree.evaluate(systematics['var'])
-                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale)
-
+                            specialweight = sampleTree.evaluate('specialweight') if self.config.has_option('Weights', 'useSpecialWeight') else 1.0
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale * specialweight)
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
 
@@ -601,7 +610,6 @@ class Datacard(object):
         if samples is None:
             samples = self.getAllSamples()
 
-
         # open and prepare histogram output files
         histogramFileName = self.getDatacardBaseName(dcName) + '.root'
         print("HISTOGRAM:", histogramFileName)
@@ -620,18 +628,18 @@ class Datacard(object):
         # sample groups for datacard, all samples of each group will be added in a single column
         sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in samples]))
 
-        for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')): 
+        for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
             systematics['histograms'] = {}
 
         for sampleGroup in sampleGroups:
             # adjust name for DC convention
-            for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')): 
+            for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')):
                 # sum histograms of all samples in the datacard group
                 datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
-                datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics) 
+                datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
                 
                 # add up all the sample histograms for this process and this systematic
-                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.sysOptions['Group'][k] == sampleGroup] 
+                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.sysOptions['Group'][k] == sampleGroup]
 
                 if len(histogramsInGroup) > 0:
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
@@ -676,7 +684,7 @@ class Datacard(object):
                                 systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                                 systematicsDictionary.update({
                                         'sysType': 'bbb',
-                                        'systematicsName': '%s_bin%s_%s_%s'%(self.sysOptions['systematicsnaming']['stats'],bin,dcProcess,self.Datacardbin),
+                                        'systematicsName': '%s_bin%s_%s_%s'%(self.sysOptions['systematicsnaming']['stats'], bin, dcProcess, self.Datacardbin),
                                         'dcProcess': dcProcess,
                                         'histograms': {sampleGroup: bbbHistogram},
                                         'binBelowThreshold': belowThreshold,
@@ -732,16 +740,16 @@ class Datacard(object):
 
             # header
             dcRows = []
-            dcRows.append(['bin',''] + [self.Datacardbin for x in range(numProcesses)])
-            dcRows.append(['process',''] + dcProcesses)
+            dcRows.append(['bin', ''] + [self.Datacardbin for x in range(numProcesses)])
+            dcRows.append(['process', ''] + dcProcesses)
 
             # negative or zero for signals, otherwise for backgrounds
-            dcRows.append(['process',''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
+            dcRows.append(['process', ''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
 
             nominalHistograms = [x for x in self.systematicsList if x['sysType'] == 'nominal'][0]['histograms']
             histogramTotals = [nominalHistograms[dcProcessSampleGroup[dcProcess]].Integral() for dcProcess in dcProcesses]
 
-            dcRows.append(['rate',''] + ['%f'%x for x in histogramTotals])
+            dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
             
             # write non-shape systematics
             nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion)))
@@ -761,7 +769,7 @@ class Datacard(object):
                     if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
                         dcRow = [systematicsNameForDC, 'shape']
                         for dcProcess in dcProcesses:
-                            value = '1.0' if dcProcess == systematics['dcProcess'] else  '-'
+                            value = '1.0' if dcProcess == systematics['dcProcess'] else '-'
                             dcRow.append(value)
                         dcRows.append(dcRow)
 
@@ -796,7 +804,7 @@ class Datacard(object):
                     if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
                         dcRow = [systematicsNameForDC, 'shape']
                         
-                        # check if the samples belonging to the current DC process are affected by sample sys 
+                        # check if the samples belonging to the current DC process are affected by sample sys
                         #TODO: too many list levels here, [0] index is not useful
                         sampleSysSamples = [x[0] for x in systematics['samples']]
                         sampleSysSamplesFlat = sum(sampleSysSamples, [])
@@ -818,16 +826,16 @@ class Datacard(object):
                 rateParamRange = eval(self.config.get('Datacard', 'rateParamRange'))
             except:
                 rateParamRange = [0, 10]
-            assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:'+ len(rateParamRange)
+            assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:' + len(rateParamRange)
             for rateParam in rateParams:
                 dictProcs = eval(self.config.get('Datacard', rateParam))
                 for dcProcess in dictProcs.keys():
-                    dcRows.append([rateParam, 'rateParam', self.Datacardbin, dcProcess, str(dictProcs[dcProcess]), '[{minR},{maxR}]'.format(minR=rateParamRange[0], maxR=rateParamRange[1])]) 
+                    dcRows.append([rateParam, 'rateParam', self.Datacardbin, dcProcess, str(dictProcs[dcProcess]), '[{minR},{maxR}]'.format(minR=rateParamRange[0], maxR=rateParamRange[1])])
 
             # write DC txt file 
             nColumns = max([len(dcRow) for dcRow in dcRows])
             nRows = len(dcRows)
-            columnWidths = [max([ (len(dcRows[row][column]) if len(dcRows[row]) > column else 0) for row in range(nRows)])  for column in range(nColumns)]
+            columnWidths = [max([(len(dcRows[row][column]) if len(dcRows[row]) > column else 0) for row in range(nRows)]) for column in range(nColumns)]
 
             for dcRow in dcRows:
                 f.write(' '.join([value.ljust(columnWidths[columnIndex]) for columnIndex, value in enumerate(dcRow)]) + '\n')

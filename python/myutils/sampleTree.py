@@ -10,6 +10,7 @@ from BranchList import BranchList
 from FileLocator import FileLocator
 import array
 import resource
+import gc
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -100,6 +101,8 @@ class SampleTree(object):
 
             # loop over all given .root files 
             for rootFileName in self.sampleFileNames:
+                if self.debug:
+                    print('DEBUG: next file is:', rootFileName, ", check existence")
 
                 # check root file existence, TODO: simplify
                 if os.path.isfile(self.fileLocator.getLocalFileName(rootFileName)) or self.fileLocator.isStoragePath(rootFileName) or self.fileLocator.exists(rootFileName):
@@ -109,6 +112,8 @@ class SampleTree(object):
 
                     # check file validity
                     if input and not input.IsZombie() and input.GetNkeys() > 0 and not input.TestBit(ROOT.TFile.kRecovered):
+                        if self.debug:
+                            print('DEBUG: file exists and is good!')
 
                         # add count histograms, since they are not in the TChain
                         for key in input.GetListOfKeys():
@@ -156,7 +161,9 @@ class SampleTree(object):
                         if self.debug:
                             print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
                         statusCode = self.tree.Add(chainTree)
-
+                        if self.debug:
+                            print ('\x1b[42mDEBUG: ---> %r'%statusCode,'\x1b[0m')
+ 
                         # check for errors in chaining the file
                         if statusCode != 1:
                             print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
@@ -177,7 +184,7 @@ class SampleTree(object):
                 else:
                     print ('\x1b[31mERROR: file is missing: %s\x1b[0m'%rootFileName)
 
-            if self.verbose:
+            if self.verbose or self.debug:
                 print ('INFO: # files chained: %d'%len(self.chainedFiles))
                 if len(self.brokenFiles) > 0:
                     print ('INFO: # files broken : %d'%len(self.brokenFiles))
@@ -510,7 +517,7 @@ class SampleTree(object):
             'tree': None, # will create this tree later, after it is known which branches will be enabled 
             'name': name,
             'fileName': outputFileName,
-            'file': ROOT.TFile.Open(outputFileName, 'recreate'),
+            'file': None, 
             'cut': cut,
             'cutSequence': [],
             'cutSequenceMode': cutSequenceMode,
@@ -520,15 +527,6 @@ class SampleTree(object):
             'passed': 0,
         }
 
-        if not outputTree['file'] or outputTree['file'].IsZombie():
-            print ("\x1b[31mERROR: output file broken\x1b[0m")
-            raise Exception("OutputFileBroken")
-
-        # copy count histograms to output files
-        outputTree['histograms'] = {}
-        for histogramName, histogram in self.histograms.iteritems():
-            outputTree['histograms'][histogramName] = histogram.Clone(histogram.GetName())
-            outputTree['histograms'][histogramName].SetDirectory(outputTree['file'])
 
         self.outputTrees.append(outputTree)
     
@@ -551,7 +549,7 @@ class SampleTree(object):
             if listOfExistingBranches.FindObject(branchName) or '*' in branchName:
                 self.tree.SetBranchStatus(branchName, 1)
                 enabledBranches.append(branchName)
-        print("INFO: reduced number of enabled branches from", len(listOfExistingBranches), " to", len(enabledBranches))
+        print("INFO: reduced number of enabled branches from", len(listOfExistingBranches), " to", len(enabledBranches), " (branches with wildcards may not be correctly counted)")
         if self.verbose:
             print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
 
@@ -561,6 +559,19 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     def process(self):
         if self.debug:
+            rsrc = resource.RLIMIT_DATA
+            # restrict memory
+            #resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
+            soft, hard = resource.getrlimit(rsrc)
+            print('DEBUG: mem limits soft/hard:', soft, hard)
+            rsrc = resource.RLIMIT_AS
+            # restrict memory
+            #resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
+            soft, hard = resource.getrlimit(rsrc)
+            print('DEBUG: AS limits soft/hard:', soft, hard)
+            rsrc = resource.RLIMIT_STACK
+            soft, hard = resource.getrlimit(rsrc)
+            print('DEBUG: stack limits soft/hard:', soft, hard)
             print('DEBUG: max mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         if self.verbose:
             print ('OUTPUT TREES:')
@@ -602,8 +613,22 @@ class SampleTree(object):
 
         # initialize the output trees, this has to be called after the calls to SetBranchStatus
         for outputTree in self.outputTrees:
+            outputTree['file'] = ROOT.TFile.Open(outputTree['fileName'], 'recreate')
+            if not outputTree['file'] or outputTree['file'].IsZombie():
+                print ("\x1b[31mERROR: output file broken\x1b[0m")
+                raise Exception("OutputFileBroken")
+        
+            # copy count histograms to output files
+            outputTree['histograms'] = {}
+            for histogramName, histogram in self.histograms.iteritems():
+                    outputTree['histograms'][histogramName] = histogram.Clone(histogram.GetName())
+                    outputTree['histograms'][histogramName].SetDirectory(outputTree['file'])
+
             # clone tree structure, but don't copy any entries
+            outputTree['file'].cd()
             outputTree['tree'] = self.tree.CloneTree(0)
+            #outputTree['tree'].SetAutoFlush(0)
+            #self.tree.CopyAddresses(outputTree['tree'])
             if not outputTree['tree']:
                 print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
                 # if input tree has 0 entries, don't copy 0 entries to the output tree, but ALL of them instead! (sic!)
@@ -730,6 +755,7 @@ class SampleTree(object):
                 if passedCut:
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
+
         print('INFO: end of processing. time ', time.ctime())
         sys.stdout.flush()
 
@@ -834,4 +860,7 @@ class SampleTree(object):
         else:
             minCut = "%r"%cuts
         return minCut
+
+    def GetEntries(self):
+        return self.tree.GetEntries()
 

@@ -90,7 +90,7 @@ try:
     _configs = pathconfig.get('Configuration', 'List').split(" ")
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
 except:
-    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m") 
+    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
 if debugPrintOUts:
@@ -238,9 +238,9 @@ submitScriptSpecialOptions = {
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
-        #'cacheplot': ' -l h_vmem=6g ',
-        #'cachetraining': ' -l h_vmem=6g ',
         'runtraining': ' -l h_vmem=6g ',
+        'cacheplot': ' -l h_vmem=6g ',
+        'cachetraining': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 
@@ -585,7 +585,7 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
@@ -737,6 +737,7 @@ if opts.task.startswith('cachedc'):
                         'splitFilesChunkSize': splitFilesChunkSize,
                     },
                 'batch': opts.task + '_' + sampleIdentifier,
+                'queue': 'short.q',
                 })
             if opts.force:
                 jobDict['arguments']['force'] = ''
