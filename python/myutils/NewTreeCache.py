@@ -89,7 +89,7 @@ class TreeCache:
         # BRANCHES and chunk information
         self.branches = branches
         self.branchesForHash = None     # for now make hash independent of selecte branches 
-        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branchesForHash, splitFilesChunkSize=splitFilesChunkSize, debug=False).get()
+        self.hash = Hash(sample=sample, minCut=self.minCut, branches=self.branchesForHash, splitFilesChunkSize=splitFilesChunkSize, debug=False, inputPath=self.inputFolder).get()
         self.chunkNumber = chunkNumber
         self.splitFilesChunks = splitFilesChunks if splitFilesChunks > 1 else 1
         self.splitFilesChunkSize = splitFilesChunkSize
