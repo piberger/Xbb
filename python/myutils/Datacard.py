@@ -505,6 +505,8 @@ class Datacard(object):
                 sampleTree.addFormula('specialweight', sample.specialweight)
                 usedBranchList.addCut(sample.specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
+            else:
+                print("INFO: don't use specialweight, weight:", systematics['weight'])
 
             # enable only used branches
             usedBranchList.addCut(['evt','run','isData'])
