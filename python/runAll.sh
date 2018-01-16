@@ -288,7 +288,7 @@ elif [ $task = "runplot" ]; then
     eval "$runCommand"
 
 elif [ $task = "cachedc" ]; then
-    runCommand="python ./cache_dc.py --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
+    runCommand="python ./cache_dc.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
     if [ "$fileList" ]; then
         runCommand="${runCommand} --fileList ${fileList}"
     fi
