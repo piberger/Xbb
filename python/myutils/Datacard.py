@@ -14,6 +14,7 @@ from BranchList import BranchList
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
+        self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
         self.config = config
         self.DCtype = 'TH'
@@ -232,12 +233,12 @@ class Datacard(object):
                 'ADD': self.samplesInfo.get_samples(self.additionals),
                 }
 
-        if self.verbose:
+        if self.debug:
             print ('sample list')
             print ('===================\n')
             print (json.dumps(self.samples, sort_keys=True, indent=8, default=str))
 
-        if self.verbose:
+        if self.debug:
             print ('systematics')
             print ('===================\n')
             print (json.dumps(self.sysOptions['sys_affecting'], sort_keys=True, indent=8, default=str))
@@ -277,7 +278,7 @@ class Datacard(object):
                     })
                 self.systematicsList.append(systematicsDictionary)
         
-        if self.verbose:
+        if self.debug:
             print ('systematics dict')
             print ('===================\n')
             print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
@@ -394,7 +395,7 @@ class Datacard(object):
                     cutList=sampleCuts,
                     inputFolder=self.path,
                     config=self.config,
-                    debug=self.verbose,
+                    debug=self.debug,
                 )
             cacheStatus[sample.name] = tc.isCached()
         return cacheStatus
@@ -497,16 +498,18 @@ class Datacard(object):
                 if 'addCut' in systematics:
                     usedBranchList.addCut(systematics['addCut'])
 
+            # per sample special weight which is read from the config instead of the .root files 
+            specialweight = None
+            if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
+                sampleTree.addFormula('specialweight', sample.specialweight)
+                usedBranchList.addCut(sample.specialweight)
+                print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
+
             # enable only used branches
             usedBranchList.addCut(['evt','run','isData'])
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
 
-            # per sample special weight which is read from the config instead of the .root files 
-            specialweight = None
-            if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
-                sampleTree.addFormula('specialweight', sample.specialweight)
-                print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
 
             # loop over all events in this sample
             for event in sampleTree:
