@@ -90,7 +90,7 @@ try:
     _configs = pathconfig.get('Configuration', 'List').split(" ")
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
 except:
-    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m") 
+    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
 if debugPrintOUts:

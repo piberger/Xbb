@@ -37,7 +37,7 @@ class MvaTrainingHelper(object):
     def __init__(self, config, mvaName):
         self.config = config
         self.samplesPath = config.get('Directories', 'MVAin')
-        self.samplesDefinitions = config.get('Directories','samplesinfo') 
+        self.samplesDefinitions = config.get('Directories','samplesinfo')
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
         self.sampleFilesFolder = config.get('Directories', 'samplefiles')
         self.logpath = config.get('Directories', 'logpath')
@@ -230,12 +230,12 @@ class MvaTrainingHelper(object):
         
         # concatenate all data from different samples
         self.inputDataTraining = np.concatenate(arrayLists['train'], axis=0)
-        self.targetsTraining = np.array(targetLists['train'], dtype=np.float32) 
+        self.targetsTraining = np.array(targetLists['train'], dtype=np.float32)
         self.weightsTraining = np.array(weightLists['train'], dtype=np.float32)
         self.weightsTrainingOriginal = np.array(weightLists['train'], dtype=np.float32)
 
         self.inputDataTest = np.concatenate(arrayLists['eval'], axis=0)
-        self.targetsTest = np.array(targetLists['eval'], dtype=np.float32) 
+        self.targetsTest = np.array(targetLists['eval'], dtype=np.float32)
         self.weightsTest = np.array(weightLists['eval'], dtype=np.float32)
         
         # write numpy arrays to disk
@@ -341,7 +341,7 @@ class MvaTrainingHelper(object):
             self.weightsTraining = self.weightsTraining[0:limitNumTrainingSamples]
             self.weightsTrainingOriginal = self.weightsTrainingOriginal[0:limitNumTrainingSamples]
             self.targetsTraining = self.targetsTraining[0:limitNumTrainingSamples]
-        
+
         # calculate total weights and class_weights
         nSig = len([x for x in self.targetsTraining if x > 0.5])
         nBkg = len([x for x in self.targetsTraining if x < 0.5])
@@ -358,21 +358,21 @@ class MvaTrainingHelper(object):
         weightsBackground.sort()
         totalWeightSignal = sum(weightsSignal)
         totalWeightBackground = sum(weightsBackground)
-        signalReweight = (totalWeightSignal+totalWeightBackground)/totalWeightSignal * self.parameters['additional_signal_weight'] 
+        signalReweight = (totalWeightSignal+totalWeightBackground)/totalWeightSignal * self.parameters['additional_signal_weight']
         backgroundReweight = (totalWeightSignal+totalWeightBackground)/totalWeightBackground
         print("SUM of weights for signal:", totalWeightSignal)
         print("SUM of weights for background:", totalWeightBackground)
         
         if applyClassWeights:
-            print("re-weight signals by:", signalReweight) 
-            print("re-weight background by:", backgroundReweight) 
+            print("re-weight signals by:", signalReweight)
+            print("re-weight background by:", backgroundReweight)
             for i in range(len(self.weightsTraining)):
                 if self.targetsTraining[i] < 0.5:
-                    self.weightsTraining[i] *= backgroundReweight 
+                    self.weightsTraining[i] *= backgroundReweight
                 else:
-                    self.weightsTraining[i] *= signalReweight 
+                    self.weightsTraining[i] *= signalReweight
         else:
-            print("DO NOT re-weight signals by:", signalReweight) 
+            print("DO NOT re-weight signals by:", signalReweight)
             print("DO NOT re-weight background by:", backgroundReweight)
         
         #param_grid = {'learning_rate': [0.5, 0.8, 1.0],
@@ -381,7 +381,7 @@ class MvaTrainingHelper(object):
         #              'base_estimator__min_weight_fraction_leaf': [0.0, 0.01],
         #              'base_estimator__criterion': ['gini', 'entropy'],
         #             }
-        # 
+        #
         #gs_clf = GridSearchCV(clf, param_grid, verbose=3, fit_params={'sample_weight': self.weightsTraining}).fit(self.inputDataTraining, self.targetsTraining)
         #print("BEST PARAMETERS:", gs_clf.best_params_)
         #print("fitting...")
@@ -412,7 +412,7 @@ class MvaTrainingHelper(object):
         h1t = ROOT.TH1D("h1t","h1t",100,0.0,1.0)
         h2t = ROOT.TH1D("h2t","h2t",100,0.0,1.0)
         for i in range(len(self.inputDataTraining)):
-            result = (results_train[i][1]-minProb)/(maxProb-minProb) 
+            result = (results_train[i][1]-minProb)/(maxProb-minProb)
             weight = self.weightsTraining[i]
             if self.targetsTraining[i] == 0:
                 h1t.Fill(result, weight)
@@ -426,7 +426,7 @@ class MvaTrainingHelper(object):
             if i % 10000 == 0:
                 print ("step ", i)
             try:
-                result = (results[i][1]-minProb)/(maxProb-minProb) 
+                result = (results[i][1]-minProb)/(maxProb-minProb)
                 weight = self.weightsTest[i]
                 if self.targetsTest[i] == 0:
                     h1.Fill(result, weight)
@@ -437,7 +437,7 @@ class MvaTrainingHelper(object):
                 pass
 
         timestamp = str(datetime.datetime.now()).split('.')[0].replace(' ','_').replace(':','-') + '_' + self.getHash()
-        
+
         # ROC curve
         print("calculating auc...")
         auc = roc_auc_score(self.targetsTest, results[:,1], sample_weight=self.weightsTest)
@@ -462,13 +462,12 @@ class MvaTrainingHelper(object):
             c1.SaveAs(self.logpath + '/scikit_comp_bdt_roc_' + timestamp + '.root')
         except Exception as e:
             print(e)
-    
 
         h1.Scale(1.0/h1.Integral())
         h2.Scale(1.0/h2.Integral())
         h1t.Scale(1.0/h1t.Integral())
         h2t.Scale(1.0/h2t.Integral())
-        
+
         maximum = max(h1.GetBinContent(h1.GetMaximumBin()), h2.GetBinContent(h2.GetMaximumBin()),h1t.GetBinContent(h1t.GetMaximumBin()),h2t.GetBinContent(h2t.GetMaximumBin()))
         h2.SetLineColor(ROOT.kRed)
         c1=ROOT.TCanvas("c1","c1",500,500)
@@ -479,7 +478,7 @@ class MvaTrainingHelper(object):
         h2t.SetFillStyle( 3001)
         h2t.SetFillColorAlpha(ROOT.kOrange-3, 0.5)
         h2t.SetLineColorAlpha(ROOT.kOrange-3, 0.5)
-        h1t.SetTitle("Overtraining check") 
+        h1t.SetTitle("Overtraining check")
         h1t.Draw("hist")
         h2t.Draw("hist;same")
         h1.Draw("hist;same")
@@ -508,7 +507,7 @@ class MvaTrainingHelper(object):
                 fprStepCounter += 1
                 if fprStepCounter>= len(fprStepsForEfficiencies):
                     break
-        
+
         tprStepsForEfficiencies = [0.1, 0.2, 0.5, 0.75, 0.9, 0.95, 0.99]
         tprStepCounter = 0
         for i in range(len(tpr)):
@@ -517,7 +516,7 @@ class MvaTrainingHelper(object):
                 tprStepCounter += 1
                 if tprStepCounter>= len(tprStepsForEfficiencies):
                     break
-        
+
         print("feature importances:")
         maxImportance = max(clf.feature_importances_)
         html.append("<h4>feature importance:</h4>")
