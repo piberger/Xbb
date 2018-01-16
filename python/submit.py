@@ -47,7 +47,8 @@ parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait f
 
 (opts, args) = parser.parse_args(sys.argv)
 
-
+submitScriptRunAllLocally = False
+submitScriptSubmitAll = False
 debugPrintOUts = opts.verbose
 
 if opts.tag == "":
@@ -279,6 +280,8 @@ def waitFor(jobNameList):
 # ------------------------------------------------------------------------------
 def submit(job, repDict):
     global counter
+    global submitScriptSubmitAll
+    global submitScriptRunAllLocally
     repDict['job'] = job
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
@@ -360,12 +363,19 @@ def submit(job, repDict):
     # RUN command
     # -----------------------------------------------------------------------------
     if command:
-        if opts.interactive:
+        if opts.interactive and not submitScriptSubmitAll:
             print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
-            answer = raw_input().strip()
-            if answer.lower() in ['no', 'n', 'skip']:
+            if submitScriptRunAllLocally:
+                answer = 'l'
+            else:
+                answer = raw_input().strip()
+            if answer.lower() in ['no', 'n']:
                 return
-            elif answer.lower() in ['l', 'local']:
+            elif answer.lower() == 's':
+                submitScriptSubmitAll = True
+            elif answer.lower() in ['l', 'local', 'a']:
+                if answer.lower() == 'a':
+                    submitScriptRunAllLocally = True
                 print "run locally"
                 command = 'sh {runscript}'.format(runscript=runScript)
         else:
@@ -546,6 +556,14 @@ if opts.task.startswith('cachetraining'):
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
+    # per job parallelization parameter can split regions into several job
+    if opts.parallel:
+        regionChunkSize = int(opts.parallel)
+        regionChunks = [trainingRegions[i:i + regionChunkSize] for i in xrange(0, len(trainingRegions), regionChunkSize)]
+    else:
+        # default is all at once
+        regionChunks = [trainingRegions]
+    
     # submit separate jobs for all samples
     for sampleIdentifier in sampleIdentifiers:
 
@@ -556,27 +574,29 @@ if opts.task.startswith('cachetraining'):
         
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
-            jobDict = repDict.copy()
-            jobDict.update({
-                'queue': 'short.q',
-                'arguments':
-                    {
-                        'trainingRegions': ','.join(trainingRegions),
-                        'sampleIdentifier': sampleIdentifier,
-                        'chunkNumber': chunkNumber,
-                        'splitFilesChunks': len(splitFilesChunks),
-                        'splitFilesChunkSize': splitFilesChunkSize,
-                    },
-                'batch': opts.task + '_' + sampleIdentifier,
-                })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            # pass file list, if only a chunk of it is processed
-            if len(splitFilesChunks) > 1:
-                compressedFileList = FileList.compress(splitFilesChunk)
-                jobDict['arguments']['fileList'] = compressedFileList
-            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
-            submit(jobName, jobDict)
+
+            for regionChunkNumber, regionChunk in enumerate(regionChunks):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'queue': 'short.q',
+                    'arguments':
+                        {
+                            'trainingRegions': ','.join(regionChunk),
+                            'sampleIdentifier': sampleIdentifier,
+                            'chunkNumber': chunkNumber,
+                            'splitFilesChunks': len(splitFilesChunks),
+                            'splitFilesChunkSize': splitFilesChunkSize,
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                # pass file list, if only a chunk of it is processed
+                if len(splitFilesChunks) > 1:
+                    compressedFileList = FileList.compress(splitFilesChunk)
+                    jobDict['arguments']['fileList'] = compressedFileList
+                jobName = 'training_cache_{sample}_part{part}_{regionChunkNumber}'.format(sample=sampleIdentifier, part=chunkNumber, regionChunkNumber=regionChunkNumber)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # RUNTRAINING: train mva, outputs .xml file. Needs cachetraining before.
