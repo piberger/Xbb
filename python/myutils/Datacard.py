@@ -502,6 +502,12 @@ class Datacard(object):
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
 
+            # per sample special weight which is read from the config instead of the .root files 
+            specialweight = None
+            if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
+                sampleTree.addFormula('specialweight', sample.specialweight)
+                print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
+
             # loop over all events in this sample
             for event in sampleTree:
 
@@ -516,8 +522,8 @@ class Datacard(object):
                         if cutPassed:
                             weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
                             treeVar = sampleTree.evaluate(systematics['var'])
-                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale)
-
+                            specialweight = sampleTree.evaluate('specialweight') if self.config.has_option('Weights', 'useSpecialWeight') else 1.0
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale * specialweight)
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
 
