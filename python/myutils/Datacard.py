@@ -11,6 +11,7 @@ from sampleTree import SampleTree as SampleTree
 from NewStackMaker import NewStackMaker as StackMaker
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from BranchList import BranchList
+import array
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
@@ -73,6 +74,7 @@ class Datacard(object):
                 'minX': float(config.get('dc:%s'%self.region, 'range').split(',')[1]),
                 'maxX': float(config.get('dc:%s'%self.region, 'range').split(',')[2]),
                 }
+        self.variableBins = None
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
         self.ROOToutname = config.get('dc:%s'%self.region, 'dcName')
@@ -85,12 +87,6 @@ class Datacard(object):
         self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
         self.anType = config.get('dc:%s'%self.region, 'type')
         self.EvalCut = config.get('Cuts', 'EvalCut')
-
-        #new
-        try:
-            self.BDTmin = eval(config.get('LimitGeneral', 'BDTmin'))
-        except:
-            self.BDTmin = None
 
         self.keep_branches = eval(config.get('Branches', 'keep_branches'))
 
@@ -243,6 +239,7 @@ class Datacard(object):
             print ('===================\n')
             print (json.dumps(self.sysOptions['sys_affecting'], sort_keys=True, indent=8, default=str))
 
+        # define the nominal
         self.systematicsDictionaryNominal = {
                 'cut': self.treecut,
                 'var': self.treevar,
@@ -258,7 +255,7 @@ class Datacard(object):
                 'sample_sys_dic': self.sample_sys_dic,
                 }
         
-        # contains all systematicDictionaries
+        # contains all systematicDictionaries, first entry will be nominal
         self.systematicsList = [self.systematicsDictionaryNominal]
 
         if self.verbose:
@@ -321,6 +318,120 @@ class Datacard(object):
                                 systematicsDictionary['sample_sys_dic'][sampleName] = value
 
                 self.systematicsList.append(systematicsDictionary)
+        
+        # compute variable bin sizes to have minimum number of significance in highest BDT bin
+        # rescaling of BDT score is not done anymore.
+        if self.sysOptions['rebin_active']:
+            self.calcBinning()
+            
+
+    def calcBinning(self):
+        temporaryBins = 1000
+        targetBins = self.binning['nBinsX'] 
+        tolerance = 0.35
+        samples = self.samples['BKG'] 
+        totalBG = None
+
+        # make a histogramm with entries of ALL BKG samples
+        for i, sample in enumerate(samples): 
+            print("INFO: Add BKG sample ", i, " of ", len(samples))
+            # get cuts that were used in caching for this sample
+            systematicsCuts = [x['cut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))]
+            sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    config=self.config,
+                    debug=False
+                )
+            if not tc.isCached():
+                print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
+                raise Exception("NotCached")
+            sampleTree = tc.getTree()
+            systematics = self.systematicsList[0] # nominal TODO
+            histogramOptions = {
+                            'rebin': 1,
+                            'weight': systematics['weight'],
+                            'treeVar': systematics['var'],
+                            'uniqueid': True,
+                            'nBinsX': temporaryBins,
+                            'minX': -1.0,
+                            'maxX': 1.0,
+                        }
+            # get histogram for this sample and add it to histogram for BKG
+            histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions)
+            if not totalBG:
+                totalBG = histoMaker.getHistogram(systematics['cut']).Clone()
+            else:
+                totalBG.Add(histoMaker.getHistogram(systematics['cut']))
+
+        # TODO!
+        # here comes
+        # MOMS SPAGHETTI
+        ErrorR=0
+        ErrorL=0
+        TotR=0
+        TotL=0
+        binR=temporaryBins
+        binL=1
+        rel=1.0
+        print ("START loop from right")
+        #print "totalBG.Draw("","")",totalBG.Integral()
+        #---- from right
+        while rel > tolerance :
+            TotR+=totalBG.GetBinContent(binR)
+            ErrorR=sqrt(ErrorR**2+totalBG.GetBinError(binR)**2)
+            binR-=1
+            if binR < 0: break
+            if TotR < 1.: continue
+            print ('binR is', binR)
+            print ('TotR is', TotR)
+            print ('ErrorR is', ErrorR)
+            if not TotR <= 0 and not ErrorR == 0:
+                rel=ErrorR/TotR
+                print ('rel is',  rel)
+        print ('upper bin is %s'%binR)
+        print ("END loop from right")
+
+        #---- from left
+
+        rel=1.0
+        print ("START loop from left")
+        while rel > tolerance:
+            TotL+=totalBG.GetBinContent(binL)
+            ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
+            binL+=1
+            if binL > temporaryBins: break
+            if TotL < 1.: continue
+            if not TotL <= 0 and not ErrorL == 0:
+                rel=ErrorL/TotL
+                print (rel)
+        #it's the lower edge
+        print ("STOP loop from left")
+        binL+=1
+        print ('lower bin is %s'%binL)
+
+        inbetween=binR-binL
+        stepsize=int(inbetween)/(targetBins-2)
+        modulo = int(inbetween)%(targetBins-2)
+
+        print ('stepsize %s'% stepsize)
+        print ('modulo %s'%modulo)
+        binlist=[binL]
+        for i in range(0,targetBins-3):
+            binlist.append(binlist[-1]+stepsize)
+        binlist.append(binR)
+        # add remainder to the last bin lower edge, to have equal sized bins (except first bin and the last one, which is larger anyway)
+        binlist[-1]+=modulo
+        binlist.append(temporaryBins+1)
+        print ('binning set to %s'%binlist)
+
+        # TODO !!!! TODO !!!
+        self.variableBins = array.array('d',[self.binning['minX']+[totalBG.GetBinLowEdge(i) for i in binlist])
+        print("NEW bins:", self.variableBins)
+
 
     def getSystematicsList(self, isData=False):
         if isData:
@@ -472,7 +583,8 @@ class Datacard(object):
                 # prepare histograms
                 histogramName = sample.name + '_' + systematics['systematicsName'] + '_c%d'%histogramCounter
                 histogramCounter += 1
-                self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
+                self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, len(self.variableBins)-1, self.variableBins) if self.variableBins else ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
+                self.histograms[sample.name][systematics['systematicsName']].Sumw2()
 
                 # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
                 if 'BDT' in systematics['var'] and sample.type != 'DATA':
@@ -513,7 +625,6 @@ class Datacard(object):
             listOfBranchesToKeep = usedBranchList.getListOfBranches()
             sampleTree.enableBranches(listOfBranchesToKeep)
 
-
             # loop over all events in this sample
             for event in sampleTree:
 
@@ -541,7 +652,6 @@ class Datacard(object):
                 break
 
     def load(self):
-
         self.histograms = {}
         allSamples = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
