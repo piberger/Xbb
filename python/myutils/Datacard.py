@@ -429,7 +429,7 @@ class Datacard(object):
         print ('binning set to %s'%binlist)
 
         # TODO !!!! TODO !!!
-        self.variableBins = array.array('d',[self.binning['minX']+[totalBG.GetBinLowEdge(i) for i in binlist])
+        self.variableBins = array.array('d',[self.binning['minX']]+[totalBG.GetBinLowEdge(i) for i in binlist])
         print("NEW bins:", self.variableBins)
 
 
