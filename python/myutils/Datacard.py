@@ -113,7 +113,7 @@ class Datacard(object):
         self.sysOptions = {}
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
-                'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
+                'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
                 'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals' 
                 ]
         for sysOptionName in sysOptionNames:
@@ -145,7 +145,10 @@ class Datacard(object):
             if self.sysOptions['blind']:
                 print ('@WARNING: Changing blind to false since you are running for control region.')
             self.sysOptions['blind'] = False
-            self.sysOptions['binstat'] = False
+            
+            # binstat_cr can be used to disable BBB in CR
+            if self.sysOptions['binstat_cr']:
+                self.sysOptions['binstat'] = self.sysOptions['binstat_cr']
 
         if self.sysOptions['blind']:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
