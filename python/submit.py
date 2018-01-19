@@ -41,12 +41,14 @@ parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true"
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
+parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 
 (opts, args) = parser.parse_args(sys.argv)
 
-
+submitScriptRunAllLocally = False
+submitScriptSubmitAll = False
 debugPrintOUts = opts.verbose
 
 if opts.tag == "":
@@ -90,7 +92,7 @@ try:
     _configs = pathconfig.get('Configuration', 'List').split(" ")
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
 except:
-    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m") 
+    print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
 if debugPrintOUts:
@@ -237,8 +239,8 @@ submitScriptSpecialOptions = {
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
-        #'cacheplot': ' -l h_vmem=6g ',
-        #'cachetraining': ' -l h_vmem=6g ',
+        'cacheplot': ' -l h_vmem=6g ',
+        'cachetraining': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 
@@ -278,6 +280,8 @@ def waitFor(jobNameList):
 # ------------------------------------------------------------------------------
 def submit(job, repDict):
     global counter
+    global submitScriptSubmitAll
+    global submitScriptRunAllLocally
     repDict['job'] = job
     counter += 1
     repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
@@ -359,12 +363,19 @@ def submit(job, repDict):
     # RUN command
     # -----------------------------------------------------------------------------
     if command:
-        if opts.interactive:
+        if opts.interactive and not submitScriptSubmitAll:
             print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
-            answer = raw_input().strip()
-            if answer.lower() in ['no', 'n', 'skip']:
+            if submitScriptRunAllLocally:
+                answer = 'l'
+            else:
+                answer = raw_input().strip()
+            if answer.lower() in ['no', 'n']:
                 return
-            elif answer.lower() in ['l', 'local']:
+            elif answer.lower() == 's':
+                submitScriptSubmitAll = True
+            elif answer.lower() in ['l', 'local', 'a']:
+                if answer.lower() == 'a':
+                    submitScriptRunAllLocally = True
                 print "run locally"
                 command = 'sh {runscript}'.format(runscript=runScript)
         else:
@@ -411,6 +422,10 @@ if opts.task == 'datasets':
     dasQuery = config.get("Configuration", "dasQuery")
     datasetsFileName = config.get("Configuration", "datasets")
     samplefiles = config.get('Directories', 'samplefiles')
+    try:
+        os.makedirs(samplefiles)
+    except:
+        pass
     with open(datasetsFileName, 'r') as datasetsFile:
         datasets = datasetsFile.readlines()
     for dataset in datasets:
@@ -541,6 +556,14 @@ if opts.task.startswith('cachetraining'):
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
     
+    # per job parallelization parameter can split regions into several job
+    if opts.parallel:
+        regionChunkSize = int(opts.parallel)
+        regionChunks = [trainingRegions[i:i + regionChunkSize] for i in xrange(0, len(trainingRegions), regionChunkSize)]
+    else:
+        # default is all at once
+        regionChunks = [trainingRegions]
+    
     # submit separate jobs for all samples
     for sampleIdentifier in sampleIdentifiers:
 
@@ -551,27 +574,29 @@ if opts.task.startswith('cachetraining'):
         
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
-            jobDict = repDict.copy()
-            jobDict.update({
-                'queue': 'short.q',
-                'arguments':
-                    {
-                        'trainingRegions': ','.join(trainingRegions),
-                        'sampleIdentifier': sampleIdentifier,
-                        'chunkNumber': chunkNumber,
-                        'splitFilesChunks': len(splitFilesChunks),
-                        'splitFilesChunkSize': splitFilesChunkSize,
-                    },
-                'batch': opts.task + '_' + sampleIdentifier,
-                })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            # pass file list, if only a chunk of it is processed
-            if len(splitFilesChunks) > 1:
-                compressedFileList = FileList.compress(splitFilesChunk)
-                jobDict['arguments']['fileList'] = compressedFileList
-            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
-            submit(jobName, jobDict)
+
+            for regionChunkNumber, regionChunk in enumerate(regionChunks):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'queue': 'short.q',
+                    'arguments':
+                        {
+                            'trainingRegions': ','.join(regionChunk),
+                            'sampleIdentifier': sampleIdentifier,
+                            'chunkNumber': chunkNumber,
+                            'splitFilesChunks': len(splitFilesChunks),
+                            'splitFilesChunkSize': splitFilesChunkSize,
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                # pass file list, if only a chunk of it is processed
+                if len(splitFilesChunks) > 1:
+                    compressedFileList = FileList.compress(splitFilesChunk)
+                    jobDict['arguments']['fileList'] = compressedFileList
+                jobName = 'training_cache_{sample}_part{part}_{regionChunkNumber}'.format(sample=sampleIdentifier, part=chunkNumber, regionChunkNumber=regionChunkNumber)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # RUNTRAINING: train mva, outputs .xml file. Needs cachetraining before.
@@ -583,7 +608,7 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
@@ -609,6 +634,14 @@ if opts.task.startswith('cacheplot'):
     # submit jobs, 1 to n separate jobs per sample
     for sampleIdentifier in sampleIdentifiers:
 
+        # per job parallelization parameter can split regions into several job
+        if opts.parallel:
+            regionChunkSize = int(opts.parallel)
+            regionChunks = [regions[i:i + regionChunkSize] for i in xrange(0, len(regions), regionChunkSize)]
+        else:
+            # default is all at once
+            regionChunks = [regions]
+
         # number of files to process per job 
         splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
@@ -616,30 +649,33 @@ if opts.task.startswith('cacheplot'):
                 'folder': config.get('Directories', 'plottingSamples')
             }, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
-        
+            
         # submit all the single parts
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
             compressedFileList = FileList.compress(splitFilesChunk)
-            jobDict = repDict.copy()
-            jobDict.update({
-                    'queue': 'short.q',
-                    'arguments':
-                        {
-                        'regions': ','.join(regions),
-                        'sampleIdentifier': sampleIdentifier,
-                        'chunkNumber': chunkNumber,
-                        'splitFilesChunks': len(splitFilesChunks),
-                        'splitFilesChunkSize': splitFilesChunkSize,
-                        },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            # pass file list, if only a chunk of it is processed
-            if len(splitFilesChunks) > 1:
-                jobDict['arguments']['fileList'] = compressedFileList
-            jobName = 'plot_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
-            submit(jobName, jobDict)
+
+            # submit a separate job for all region chunks
+            for regionChunkNumber, regionChunk in enumerate(regionChunks): 
+                jobDict = repDict.copy()
+                jobDict.update({
+                        'queue': 'short.q',
+                        'arguments':
+                            {
+                            'regions': ','.join(regionChunk),
+                            'sampleIdentifier': sampleIdentifier,
+                            'chunkNumber': chunkNumber,
+                            'splitFilesChunks': len(splitFilesChunks),
+                            'splitFilesChunkSize': splitFilesChunkSize,
+                            },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                # pass file list, if only a chunk of it is processed
+                if len(splitFilesChunks) > 1:
+                    jobDict['arguments']['fileList'] = compressedFileList
+                jobName = 'plot_cache_{sample}_part{chunk}_{regionChunkNumber}'.format(sample=sampleIdentifier, chunk=chunkNumber, regionChunkNumber=regionChunkNumber)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
@@ -694,6 +730,14 @@ if opts.task.startswith('cachedc'):
             status[region] = dcMaker.getCacheStatus(useSampleIdentifiers=sampleIdentifiers)
             print "INFO: done checking files for region\x1b[34m",region, "\x1b[0m(",i, "of", len(regions),")"
         printSamplesStatus(samples=samples, regions=regions, status=status)
+    
+    # per job parallelization parameter can split regions into several job
+    if opts.parallel:
+        regionChunkSize = int(opts.parallel)
+        regionChunks = [regions[i:i + regionChunkSize] for i in xrange(0, len(regions), regionChunkSize)]
+    else:
+        # default is all at once
+        regionChunks = [regions]
 
     # submit jobs, 1 to n separate jobs per sample
     for sampleIdentifier in sampleIdentifiers:
@@ -725,24 +769,29 @@ if opts.task.startswith('cachedc'):
         # submit all the single parts
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
             compressedFileList = FileList.compress(splitFilesChunk)
-            jobDict = repDict.copy()
-            jobDict.update({
-                'arguments':
-                    {
-                        'sampleIdentifier': sampleIdentifier,
-                        'chunkNumber': chunkNumber,
-                        'splitFilesChunks': len(splitFilesChunks),
-                        'splitFilesChunkSize': splitFilesChunkSize,
-                    },
-                'batch': opts.task + '_' + sampleIdentifier,
-                })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            # pass file list, if only a chunk of it is processed
-            if len(splitFilesChunks) > 1:
-                jobDict['arguments']['fileList'] = compressedFileList
-            jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
-            submit(jobName, jobDict)
+
+            # separate job for all region chunks (default: 1 chunk consisting of all regions)
+            for regionChunkNumber, regionChunk in enumerate(regionChunks):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments':
+                        {
+                            'regions': ','.join(regionChunk),
+                            'sampleIdentifier': sampleIdentifier,
+                            'chunkNumber': chunkNumber,
+                            'splitFilesChunks': len(splitFilesChunks),
+                            'splitFilesChunkSize': splitFilesChunkSize,
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    'queue': 'short.q',
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                # pass file list, if only a chunk of it is processed
+                if len(splitFilesChunks) > 1:
+                    jobDict['arguments']['fileList'] = compressedFileList
+                jobName = 'dc_cache_{sample}_part{chunk}_{regionChunkNumber}'.format(sample=sampleIdentifier, chunk=chunkNumber, regionChunkNumber=regionChunkNumber)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # RUNDC: produce DC .txt and .root files. Needs cachedc before.

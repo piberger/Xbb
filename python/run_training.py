@@ -146,6 +146,7 @@ class MvaTrainingHelper(object):
         if freeNumber > -1:
             try:
                 fileNamesToBackup = glob.glob(MVAdir + self.factoryname+'_'+self.mvaName + '.*')
+                fileNamesToBackup += glob.glob(MVAdir + '/../mvatraining_MVA_ZllBDT_*.root')
                 os.makedirs(backupDir + 'v%d/'%freeNumber)
                 for fileNameToBackup in fileNamesToBackup:
                     shutil.copy(fileNameToBackup, backupDir + 'v%d/'%freeNumber)
@@ -156,15 +157,19 @@ class MvaTrainingHelper(object):
 
 
     def run(self):
+        print('backing up old BDT files')
         self.backupOldFiles()
         # ----------------------------------------------------------------------------------------------------------------------
         # Execute TMVA
         # ----------------------------------------------------------------------------------------------------------------------
         self.factory.Verbose()
         print('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
+        weightF = self.config.get('Weights','weightF')
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
             print("ROOT 5 style TMVA found")
+            self.factory.SetSignalWeightExpression(weightF)
+            self.factory.SetBackgroundWeightExpression(weightF)
         except:
             print("ROOT 6 style TMVA found, using data loader object!!! >_<")
             print(" weights dir:", ROOT.TMVA.gConfig().GetIONames().fWeightFileDir)
@@ -173,6 +178,8 @@ class MvaTrainingHelper(object):
             print(" name:       ", self.mvaName)
             print(" settings:   ", self.MVAsettings)
             ROOT.TMVA.gConfig().GetIONames().fWeightFileDir = 'weights'
+            self.dataLoader.SetSignalWeightExpression(weightF)
+            self.dataLoader.SetBackgroundWeightExpression(weightF)
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
         print('Execute TMVA: TrainAllMethods')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))

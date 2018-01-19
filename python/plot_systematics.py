@@ -25,7 +25,7 @@ masses = ['125']
 #channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
 #vhbb_TH_ZuuMass_highpt.root
 #channels = ['ZuuMass_highpt']
-channels = ['ZeeBDT_lowpt']
+channels = ['ZeeBDT_lowpt', 'ZuuBDT_lowpt','ZuuBDT_highpt']
 #channels = ['ZeeBDT_lowpt']
 #channels = ['Zee_CRZlight_lowpt']
 #channels = ['Zuu_CRZlight_lowpt']
@@ -63,7 +63,8 @@ channels = ['ZeeBDT_lowpt']
 #path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_M/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
-path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
+path_ = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25/rundc-all-test12/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -137,9 +138,9 @@ for mass in masses:
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
-            input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
+            input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits//'
 
-            input_ = '%svhbb_TH_%s.root'%(path_,channel)
+            input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
 
             #'ZeeMass_lowpt':'ZeeMass_lowpt',if not 'ZeeBDT_lowpt' in input_: continue
@@ -152,6 +153,7 @@ for mass in masses:
             input = TFile.Open(path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root','read')
             print 'open', path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root'
 
+        print 'input:', input
         print 'The MCs are'
         for MC in MCs:
             #if not 'Top' in MC: continue
