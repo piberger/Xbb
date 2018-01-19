@@ -107,6 +107,16 @@ class FileLocator(object):
             server = self.xrootdRedirectors[0].split('://')[1].split('/')[0].split(':')[0].strip()
         return server
 
+    def getRedirector(self, path):
+        if '://' in path:
+            redirector = path.split('://')[0] + '://' + path.split('://')[1].split('/')[0]
+        else:
+            redirector = None
+        return redirector
+
+    def addRedirector(self, redirector, filename):
+        return redirector + '/' + filename if redirector else filename
+
     def remoteDirectoryExists(self, path):
         statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
         result = self.runCommand(statCommand)

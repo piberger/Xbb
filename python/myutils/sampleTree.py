@@ -282,9 +282,11 @@ class SampleTree(object):
                 sampleName = self.samples['name']
             sampleFolder = self.samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
+            redirector = self.fileLocator.getRedirector(sampleFolder)
             if self.verbose:
                 print ("INFO: use ", samplesMask)
             sampleFileNames = glob.glob(samplesMask)
+            sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
         # given argument is a single file name -> read this .txt file 
