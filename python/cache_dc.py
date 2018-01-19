@@ -74,6 +74,8 @@ class CacheDatacards(object):
                     branchList.addCut([x['cut'] for x in dcMaker.getSystematicsList()])
                     branchList.addCut([x['var'] for x in dcMaker.getSystematicsList()])
                     branchList.addCut([x['weight'] for x in dcMaker.getSystematicsList()])
+                    branchList.addCut(self.config.get('Weights', 'weightF'))
+                    branchList.addCut(eval(self.config.get('Branches', 'keep_branches')))
                     branchesToKeep = branchList.getListOfBranches()
 
                     # arbitrary (optional) name for the output tree, used for print-out (the TreeCache object has no idea what it is doing, e.g. dc, plot etc.)
