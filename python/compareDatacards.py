@@ -156,7 +156,7 @@ class DatacardReader(object):
         
         subHeader  = ['']*(len(headerRow)) 
         subHeader[index1] = '<b>compare this<b>'
-        subHeader[index2] = '<b>reference<b>'
+        subHeader[index2] = '<div style="color:blue;font-weight:bold;">reference (blue line)</div>'
         rows.append('<tr><td>'+ '</td><td>'.join(subHeader) + '</td></tr>')
 
         for binName in bins:
@@ -168,27 +168,28 @@ class DatacardReader(object):
                     if hmax > maximum:
                         maximum = hmax
 
-            for x in observations:
+            for xi, x in enumerate(observations):
                 if isinstance(x[binName], ROOT.TH1):
                     c1 = ROOT.TCanvas("c1","c1",500,500)
                     first = True
-                    for y in observations:
-                        y[binName].SetStats(0)
-                        y[binName].GetYaxis().SetRangeUser(0, maximum*1.1)
-                        if x==y:
-                            pass
-                        else:
-                            y[binName].SetLineColor(ROOT.kBlue)
-                            y[binName].SetFillStyle(0)
-                            y[binName].SetMarkerStyle(0)
-                            y[binName].SetMarkerSize(0)
-                            y[binName].DrawCopy("same;hist" if not first else "hist")
-                            y[binName].SetFillColor(ROOT.kGray)
-                            y[binName].SetFillStyle(3018)
-                            y[binName].Draw("e2same")
+                    for yi, y in enumerate(observations):
+                        if yi == index2-1:
+                            y[binName].SetStats(0)
+                            y[binName].GetYaxis().SetRangeUser(0, maximum*1.1)
+                            if x==y:
+                                pass
+                            else:
+                                y[binName].SetLineColor(ROOT.kBlue)
+                                y[binName].SetFillStyle(0)
+                                y[binName].SetMarkerStyle(0)
+                                y[binName].SetMarkerSize(0)
+                                y[binName].DrawCopy("same;hist" if not first else "hist")
+                                y[binName].SetFillColor(ROOT.kGray)
+                                y[binName].SetFillStyle(3018)
+                                y[binName].Draw("e2same")
 
-                            first = False
-                    x[binName].SetLineColor(ROOT.kRed)
+                                first = False
+                    x[binName].SetLineColor(ROOT.kBlue if xi ==index2-1 else ROOT.kRed)
                     x[binName].SetMarkerStyle(20)
                     x[binName].SetMarkerSize(1)
                     x[binName].DrawCopy("same;E0" if not first else "E0")
