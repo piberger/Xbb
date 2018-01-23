@@ -16,8 +16,6 @@ class DatacardReader(object):
         with open(self.fileName, 'r') as inputFile:
             self.lines = inputFile.readlines()
             self.shapes = {}
-
-            #shapes *                 ch1_Zmm_SIG_low   vhbb_TH_BDT_Zuu_LowPt.root ZuuLowPt_13TeV/$PROCESS
             for line in self.lines:
                 lineParts = [x.strip() for x in line.split(' ') if len(x.strip()) > 0]
                 if lineParts[0] == 'shapes':
@@ -219,25 +217,20 @@ class DatacardReader(object):
         html += '\n</table>\n'
         return html 
 
-subfolderName = 'dc_comparison_180123_reshape'
-fileNames = [
-                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180111_TEST13_newdc_with_old_samples/vhbb_DC_TH_M125_Zll_CRnSR.txt', 
-                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180114_TEST15_modified_CRZlight_loosebtag/vhbb_DC_TH_M125_Zll_CRnSR.txt',   
-                #'/mnt/t3nfs01/data01/shome/berger_p2//VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180115_TEST19_stweight_fix/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                #'/mnt/t3nfs01/data01/shome/berger_p2//VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST20_stweight_fix_retraining/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST22_stweight_fix_retraining_bbb_dy50/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180111_TEST_DAVID/vhbb_Zll.txt',
-                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180123_TEST30_reshape/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180123_GAEL2016_redo/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-            ]
+if len(sys.argv) < 3:
+    print("how to use:    ",sys.argv[0], " outputFolder path/to/reference/vhbb_DC_TH_M125_Zll_CRnSR.txt other/path/vhbb_DC_TH_M125_Zll_CRnSR.txt [...]")
+    sys.exit(1)
+
+subfolderName = sys.argv[1]
+fileNames = sys.argv[2:]
 datacardReaders = [DatacardReader(fileName) for fileName in fileNames]
 observations = [datacardReader.getObservation() for datacardReader in datacardReaders]
 rates = [datacardReader.getRates() for datacardReader in datacardReaders]
 shapes = [datacardReader.getShapes() for datacardReader in datacardReaders]
 shapesData = [datacardReader.getShapesData() for datacardReader in datacardReaders]
 
-indexCompare = 1
-indexReference = 2
+indexCompare = 2
+indexReference = 1
 
 #DatacardReader.display(observations)
 #DatacardReader.display(rates)
