@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 import ROOT
 ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
@@ -16,6 +17,7 @@ from myutils.LeptonWeights import LeptonWeights
 from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
 from myutils.DYspecialWeight import DYspecialWeight
+from myutils.PerSampleWeight import PerSampleWeight
 
 argv = sys.argv
 parser = OptionParser()
@@ -39,6 +41,7 @@ if len(filelist) > 0:
 else:
     print ''
 
+debug = 'XBBDEBUG' in os.environ
 config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
@@ -149,6 +152,16 @@ for fileName in filelist:
             if sample.type != 'DATA':
                 dyWeight = DYspecialWeight(tree=sampleTree.tree, sample=sample)
                 sampleTree.addOutputBranches(dyWeight.getBranches())
+        
+        for collection in collections:
+            if '.' in collection: 
+                section = collection.split('.')[0]
+                key = collection.split('.')[1]
+                pyCode = config.get(section, key)
+                if debug:
+                    print("\x1b[33mDEBUG: " + collection + ": run PYTHON code:\n"+pyCode+"\x1b[0m")
+                wObject = eval(pyCode)
+                sampleTree.addOutputBranches(wObject.getBranches())
 
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
