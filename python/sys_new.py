@@ -18,6 +18,7 @@ from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
 from myutils.DYspecialWeight import DYspecialWeight
 from myutils.PerSampleWeight import PerSampleWeight
+from myutils.Skim import Skim
 
 argv = sys.argv
 parser = OptionParser()
@@ -160,8 +161,21 @@ for fileName in filelist:
                 pyCode = config.get(section, key)
                 if debug:
                     print("\x1b[33mDEBUG: " + collection + ": run PYTHON code:\n"+pyCode+"\x1b[0m")
+
+                # get object
                 wObject = eval(pyCode)
-                sampleTree.addOutputBranches(wObject.getBranches())
+
+                # pass the tree if needed to finalize initialization
+                if hasattr(wObject, "setTree") and callable(getattr(wObject, "setTree")):
+                    wObject.setTree(sampleTree.tree)
+
+                # add callbacks if the objects provides any
+                if hasattr(wObject, "processEvent") and callable(getattr(wObject, "processEvent")):
+                    sampleTree.addCallback('event', wObject.processEvent)
+
+                # add branches
+                if hasattr(wObject, "getBranches") and callable(getattr(wObject, "getBranches")):
+                    sampleTree.addOutputBranches(wObject.getBranches())
 
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
