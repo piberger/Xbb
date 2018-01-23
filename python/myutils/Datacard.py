@@ -119,7 +119,7 @@ class Datacard(object):
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
-            if self.verbose:
+            if self.debug:
                 print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
 
         # read weights
@@ -325,11 +325,6 @@ class Datacard(object):
 
                 self.systematicsList.append(systematicsDictionary)
         
-        # compute variable bin sizes to have minimum number of significance in highest BDT bin
-        # rescaling of BDT score is not done anymore.
-        if self.sysOptions['rebin_active']:
-            self.calcBinning()
-            
 
     def calcBinning(self):
         temporaryBins = 1000
@@ -383,7 +378,8 @@ class Datacard(object):
         binR=temporaryBins
         binL=1
         rel=1.0
-        print ("START loop from right")
+        if self.verbose:
+            print ("START loop from right")
         #print "totalBG.Draw("","")",totalBG.Integral()
         #---- from right
         while rel > tolerance :
@@ -392,19 +388,23 @@ class Datacard(object):
             binR-=1
             if binR < 0: break
             if TotR < 1.: continue
-            print ('binR is', binR)
-            print ('TotR is', TotR)
-            print ('ErrorR is', ErrorR)
+            if self.verbose:
+                print ('binR is', binR)
+                print ('TotR is', TotR)
+                print ('ErrorR is', ErrorR)
             if not TotR <= 0 and not ErrorR == 0:
                 rel=ErrorR/TotR
-                print ('rel is',  rel)
-        print ('upper bin is %s'%binR)
-        print ("END loop from right")
+                if self.verbose:
+                    print ('rel is',  rel)
+        if self.verbose:
+            print ('upper bin is %s'%binR)
+            print ("END loop from right")
 
         #---- from left
 
         rel=1.0
-        print ("START loop from left")
+        if self.verbose:
+            print ("START loop from left")
         while rel > tolerance:
             TotL+=totalBG.GetBinContent(binL)
             ErrorL=sqrt(ErrorL**2+totalBG.GetBinError(binL)**2)
@@ -415,16 +415,18 @@ class Datacard(object):
                 rel=ErrorL/TotL
                 print (rel)
         #it's the lower edge
-        print ("STOP loop from left")
         binL+=1
-        print ('lower bin is %s'%binL)
+        if self.verbose:
+            print ("STOP loop from left")
+            print ('lower bin is %s'%binL)
 
         inbetween=binR-binL
         stepsize=int(inbetween)/(targetBins-2)
         modulo = int(inbetween)%(targetBins-2)
 
-        print ('stepsize %s'% stepsize)
-        print ('modulo %s'%modulo)
+        if self.verbose:
+            print ('stepsize %s'% stepsize)
+            print ('modulo %s'%modulo)
         binlist=[binL]
         for i in range(0,targetBins-3):
             binlist.append(binlist[-1]+stepsize)
@@ -432,11 +434,13 @@ class Datacard(object):
         # add remainder to the last bin lower edge, to have equal sized bins (except first bin and the last one, which is larger anyway)
         binlist[-1]+=modulo
         binlist.append(temporaryBins+1)
-        print ('binning set to %s'%binlist)
+        if self.verbose:
+            print ('binning set to %s'%binlist)
 
         # TODO !!!! TODO !!!
         self.variableBins = array.array('d',[self.binning['minX']]+[totalBG.GetBinLowEdge(i) for i in binlist])
-        print("NEW bins:", self.variableBins)
+        if self.verbose:
+            print("INFO: new bins boundaries:", self.variableBins)
 
     def getSystematicsList(self, isData=False):
         if isData:
@@ -453,17 +457,17 @@ class Datacard(object):
         #replace tree variable
         if self.anType.lower() == 'bdt':
             if not 'UD' in syst:
-                if self.verbose:
+                if self.debug:
                     print ('treevar was', treevar)
                     print ('.nominal by', '.%s_%s'%(syst, Q))
                 treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
             else:
                 treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
-                if self.verbose:
+                if self.debug:
                     print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType.lower() == 'mjj':
             if not 'UD' in syst:
-                if self.verbose:
+                if self.debug:
                     print ('treevar was', treevar)
                     print ('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
                 treevar = treevar.replace('_reg_mass', '_reg_mass_corr%s%s'%(syst, Q))
@@ -517,6 +521,10 @@ class Datacard(object):
         return cacheStatus
 
     def run(self, useSampleIdentifiers=None):
+        # compute variable bin sizes to have minimum number of significance in highest BDT bin
+        # rescaling of BDT score is not done anymore.
+        if self.sysOptions['rebin_active']:
+            self.calcBinning()
 
         # select samples to use
         allSamples = self.getAllSamples()
