@@ -15,6 +15,7 @@ import array
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
+        self.reshapeBins = True
         self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
         self.config = config
@@ -114,7 +115,7 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals' 
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins' 
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -147,8 +148,10 @@ class Datacard(object):
             self.sysOptions['blind'] = False
             
             # binstat_cr can be used to disable BBB in CR
-            if self.sysOptions['binstat_cr']:
+            if self.sysOptions['binstat_cr'] is not None:
                 self.sysOptions['binstat'] = self.sysOptions['binstat_cr']
+        print("INFO: bin-by-bin:", self.sysOptions['binstat'])
+
 
         if self.sysOptions['blind']:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
@@ -435,7 +438,6 @@ class Datacard(object):
         self.variableBins = array.array('d',[self.binning['minX']]+[totalBG.GetBinLowEdge(i) for i in binlist])
         print("NEW bins:", self.variableBins)
 
-
     def getSystematicsList(self, isData=False):
         if isData:
             return [x for x in self.systematicsList if x['sysType'] == 'nominal']
@@ -633,8 +635,6 @@ class Datacard(object):
 
                 # evaluate all systematics for this event
                 for systematics in systematicsList:
-                    mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
-
                     cutPassed = sampleTree.evaluate(systematics['cutWithBlinding'])
                     if cutPassed:
                         if 'addCut' in systematics:
@@ -643,7 +643,12 @@ class Datacard(object):
                             weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
                             treeVar = sampleTree.evaluate(systematics['var'])
                             specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * sampleScaleFactor * mcRescale * specialweight)
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                            
+            # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
+            for systematics in systematicsList:
+                mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
+                self.histograms[sample.name][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
 
@@ -759,7 +764,19 @@ class Datacard(object):
 
                 if len(histogramsInGroup) > 0:
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
-                    systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
+                    if self.sysOptions['reshapeBins']:
+                        nB = systematics['histograms'][sampleGroup].GetXaxis().GetNbins()
+                        x0 = systematics['histograms'][sampleGroup].GetXaxis().GetBinLowEdge(1)
+                        x1 = systematics['histograms'][sampleGroup].GetXaxis().GetBinUpEdge(nB)
+                        th = ROOT.TH1F(systematics['histograms'][sampleGroup].GetName(),systematics['histograms'][sampleGroup].GetTitle(),nB,x0,x1)
+                        th.Sumw2()
+                        for i in range(nB):
+                            th.SetBinContent(1+i,systematics['histograms'][sampleGroup].GetBinContent(1+i))
+                            th.SetBinError(1+i,systematics['histograms'][sampleGroup].GetBinError(1+i))
+                        th.SetDirectory(rootFileSubdir)
+                        systematics['histograms'][sampleGroup] = th
+                    else:
+                        systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:

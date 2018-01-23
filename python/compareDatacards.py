@@ -106,9 +106,25 @@ class DatacardReader(object):
         histograms = ['-']
         histos = [self.getHisto(self.shapes[bins[i]]['file'], self.shapes[bins[i]]['histogram'].replace('$PROCESS', processes[i])) for i in range(1, len(bins))]
         histograms += histos
+        
+        return {bins[i] + ':' + processes[i]: histograms[i] for i in range(len(bins))}
+    
+    def getShapesData(self):
+        binRow = self.find('bin')
+        observationRow = self.find('observation', start=binRow)
+        binRow = self.find('bin', start=observationRow)
+        processRow = self.find('process', start=binRow)
+        ratesRow = self.find('rate', start=processRow)
+        print(binRow, processRow, ratesRow)
+        bins = self.translate(self.get(binRow))
+        processes = self.translate(self.get(processRow))
+        rates = self.get(ratesRow)
+        histograms = ['-']
        
         # DATA
         binsUnique = list(set(bins))
+        bins = ['-']
+        processes = ['-']
         for binU in binsUnique:
             if binU != 'bin':
                 bins.append(binU)
@@ -165,10 +181,20 @@ class DatacardReader(object):
                             pass
                         else:
                             y[binName].SetLineColor(ROOT.kBlue)
-                            y[binName].Draw("same;hist" if not first else "hist")
+                            y[binName].SetFillStyle(0)
+                            y[binName].SetMarkerStyle(0)
+                            y[binName].SetMarkerSize(0)
+                            y[binName].DrawCopy("same;hist" if not first else "hist")
+                            y[binName].SetFillColor(ROOT.kGray)
+                            y[binName].SetFillStyle(3018)
+                            y[binName].Draw("e2same")
+
                             first = False
                     x[binName].SetLineColor(ROOT.kRed)
-                    x[binName].Draw("same;E" if not first else "E")
+                    x[binName].SetMarkerStyle(20)
+                    x[binName].SetMarkerSize(1)
+                    x[binName].DrawCopy("same;E0" if not first else "E0")
+                    x[binName].DrawCopy("same;p")
 
                     outFile = 'histo%d.png'%DatacardReader.histoCounter
                     c1.SaveAs(DatacardReader.subfolder + '/' + outFile)
@@ -193,19 +219,25 @@ class DatacardReader(object):
         html += '\n</table>\n'
         return html 
 
-subfolderName = 'dc_comparison_180116'
+subfolderName = 'dc_comparison_180123_reshape'
 fileNames = [
                 #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180111_TEST13_newdc_with_old_samples/vhbb_DC_TH_M125_Zll_CRnSR.txt', 
                 #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180114_TEST15_modified_CRZlight_loosebtag/vhbb_DC_TH_M125_Zll_CRnSR.txt',   
                 #'/mnt/t3nfs01/data01/shome/berger_p2//VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180115_TEST19_stweight_fix/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                '/mnt/t3nfs01/data01/shome/berger_p2//VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST20_stweight_fix_retraining/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST22_stweight_fix_retraining_bbb_dy50/vhbb_DC_TH_M125_Zll_CRnSR.txt',
-                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180111_TEST_DAVID/vhbb_Zll.txt',
+                #'/mnt/t3nfs01/data01/shome/berger_p2//VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST20_stweight_fix_retraining/vhbb_DC_TH_M125_Zll_CRnSR.txt',
+                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180116_TEST22_stweight_fix_retraining_bbb_dy50/vhbb_DC_TH_M125_Zll_CRnSR.txt',
+                #'/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180111_TEST_DAVID/vhbb_Zll.txt',
+                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180123_TEST30_reshape/vhbb_DC_TH_M125_Zll_CRnSR.txt',
+                '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V25/180123_GAEL2016_redo/vhbb_DC_TH_M125_Zll_CRnSR.txt',
             ]
 datacardReaders = [DatacardReader(fileName) for fileName in fileNames]
 observations = [datacardReader.getObservation() for datacardReader in datacardReaders]
 rates = [datacardReader.getRates() for datacardReader in datacardReaders]
 shapes = [datacardReader.getShapes() for datacardReader in datacardReaders]
+shapesData = [datacardReader.getShapesData() for datacardReader in datacardReaders]
+
+indexCompare = 1
+indexReference = 2
 
 #DatacardReader.display(observations)
 #DatacardReader.display(rates)
@@ -217,10 +249,11 @@ except:
 with open(subfolderName + '/index.html', 'w') as outputFile:
     outputFile.write('<html><head><title>Datacard comparison</title></head><body>')
     outputFile.write('<h3>DATA</h3>')
-    outputFile.write(DatacardReader.getHTML(observations, 2, 3))
+    outputFile.write(DatacardReader.getHTML(observations, indexCompare, indexReference))
+    outputFile.write(DatacardReader.getHTML(shapesData, indexCompare, indexReference))
     outputFile.write('<h3>MC</h3>')
-    outputFile.write(DatacardReader.getHTML(rates, 2, 3))
-    outputFile.write(DatacardReader.getHTML(shapes, 2, 3))
+    outputFile.write(DatacardReader.getHTML(rates, indexCompare, indexReference))
+    outputFile.write(DatacardReader.getHTML(shapes, indexCompare, indexReference))
 
 
 
