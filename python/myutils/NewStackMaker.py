@@ -449,7 +449,7 @@ class NewStackMaker:
                     if 'GeV' in self.xAxis:
                         yTitle += ' GeV'
         if allStack and allStack.GetXaxis():
-            allStack.GetYaxis().SetTitle(yTitle)
+            allStack.GetYaxis().SetTitle(yTitle if yTitle else '-')
             allStack.GetXaxis().SetRangeUser(self.histogramOptions['minX'], self.histogramOptions['maxX'])
             if not self.is2D:
                 allStack.GetYaxis().SetRangeUser(0,20000)
