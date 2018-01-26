@@ -232,6 +232,10 @@ class FileLocator(object):
                     localFileName = localFileName.replace(redirector, '')
             if localFileName.startswith('/store/'):
                 localFileName = self.pnfsStoragePath + localFileName.strip()
+
+            if '://' in localFileName:
+                localFileName = '/'.join(localFileName.split('://')[1].split('/')[1:])
+
             return localFileName
         else:
             print ("\x1b[31mERROR: invalid file name\x1b[0m")
