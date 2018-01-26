@@ -240,7 +240,7 @@ submitScriptSpecialOptions = {
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
+        'runtraining': ' -l h_vmem=20g ',
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
         }
@@ -610,7 +610,7 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'bigmem.q'})
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
