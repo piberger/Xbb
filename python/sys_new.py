@@ -193,8 +193,17 @@ for fileName in filelist:
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)
 
-        fileLocator.cp(tmpFileName, outputFileName)
-        fileLocator.rm(tmpFileName)
+        try:
+            fileLocator.cp(tmpFileName, outputFileName)
+        except Exception as e:
+            print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
+            print e
+
+        try:
+            fileLocator.rm(tmpFileName)
+        except Exception as e:
+            print "ERROR: could not delete file on scratch!"
+            print e
 
         print 'copy ', tmpFileName, outputFileName
 
