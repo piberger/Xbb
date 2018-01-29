@@ -11,4 +11,4 @@ before_install:
     - docker pull rootproject/root-ubuntu16:snapshot
 
 script:
-    - docker run --rm  --privileged=true -v $TRAVIS_BUILD_DIR:/home/builder/Xbb -it rootproject/root-ubuntu16:snapshot /bin/bash -c "source /usr/local/bin/thisroot.sh;cd;cd Xbb/python/test;python ./run_all.py"
+    - docker run --rm --privileged=true -v $TRAVIS_BUILD_DIR:/home/builder/Xbb -it rootproject/root-ubuntu16:snapshot /bin/bash -c "source /usr/local/bin/thisroot.sh;cd;cd Xbb/python/test;export SCRATCH_DIR=/home/builder/;python ./run_all.py"
