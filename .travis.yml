@@ -11,4 +11,4 @@ before_install:
     - docker pull rootproject/root-ubuntu16:snapshot
 
 script:
-    - docker run --rm -it rootproject/root-ubuntu16:snapshot /bin/bash -c "source /usr/local/bin/thisroot.sh;cd;git clone https://github.com/piberger/Xbb.git;cd Xbb; git checkout -b test_branch_travis $TRAVIS_BRANCH; cd python/test;python ./run_all.py"
+    - docker run --rm -v $TRAVIS_BUILD_DIR:/home/builder/Xbb -it rootproject/root-ubuntu16:snapshot /bin/bash -c "source /usr/local/bin/thisroot.sh;cd;cd Xbb/python/test;python ./run_all.py"
