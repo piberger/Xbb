@@ -752,7 +752,7 @@ class SampleTree(object):
                     raise Exception("InvalidCutSequenceMode")
 
                 # fill event if it passed the selection
-                if not passedCut:
+                if passedCut:
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
 
