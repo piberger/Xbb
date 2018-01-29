@@ -68,29 +68,6 @@ class FileLocator(object):
         else:
             return False
 
-    def getDeletionCommand(self, path):
-        localName = self.getLocalFileName(path)
-        if ('/' + localName.strip().strip('/')).startswith(self.pnfsPrefix):
-            if self.xrootdRedirectors and len(self.xrootdRedirectors) > 0:
-                serverName = self.xrootdRedirectors[0].split('root://')[1].split(':')[0]
-                return self.remoteRm.format(server=serverName, path=localName)
-            else:
-                raise Exception("NoRedirectorSpecified")
-        else:
-            return "rm {file}".format(file=localName)
-
-    def getMakedirCommand(self, path):
-        localName = self.getLocalFileName(path)
-        print (localName, "<-", path)
-        if ('/' + localName.strip().strip('/')).startswith(self.pnfsPrefix):
-            if self.xrootdRedirectors and len(self.xrootdRedirectors) > 0:
-                serverName = self.xrootdRedirectors[0].split('root://')[1].split(':')[0]
-                return self.remoteMkdir.format(server=serverName, file=localName)
-            else:
-                raise Exception("NoRedirectorSpecified")
-        else:
-            return "mkdir {file}".format(file=localName)
-
     def runCommand(self, command):
         if self.debug:
             print ("RUN: \x1b[32m",command,"\x1b[0m")
@@ -113,9 +90,6 @@ class FileLocator(object):
         else:
             redirector = None
         return redirector
-
-    def addRedirector(self, redirector, filename):
-        return redirector + '/' + filename if redirector else filename
 
     def remoteDirectoryExists(self, path):
         statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
@@ -203,6 +177,18 @@ class FileLocator(object):
         # only xrootd protocol supported at the moment
         return self.getXrootdFileName(path)
 
+    def removeRedirector(self, fileName):
+        if '://' in fileName:
+            fileName = '/'.join(fileName.split('://')[1].split('/')[1:])
+        return fileName
+
+    def addRedirector(self, redirector=None, fileName=None):
+        if redirector is None:
+            redirector = self.xrootdRedirectors[0]
+        if fileName is None:
+            fileName = ""
+        return redirector + '/' + fileName
+
     # ------------------------------------------------------------------------------
     # get file name WITH redirector
     # ------------------------------------------------------------------------------
@@ -213,9 +199,7 @@ class FileLocator(object):
         if self.isPnfs(xrootdFileName):
             # replace already existing redirectors with primary one
             if self.xrootdRedirectors:
-                for redirector in self.xrootdRedirectors:
-                    xrootdFileName = xrootdFileName.replace(redirector, '')
-                xrootdFileName = self.xrootdRedirectors[0] + xrootdFileName
+                xrootdFileName = self.addRedirector(fileName=self.removeRedirector(xrootdFileName), redirector=self.xrootdRedirectors[0])
             return xrootdFileName.strip()
         else:
             return xrootdFileName.strip()
@@ -226,16 +210,9 @@ class FileLocator(object):
     # ------------------------------------------------------------------------------
     def getLocalFileName(self, rawFileName):
         if rawFileName:
-            localFileName = rawFileName.strip()
-            if self.xrootdRedirectors:
-                for redirector in self.xrootdRedirectors:
-                    localFileName = localFileName.replace(redirector, '')
+            localFileName = self.removeRedirector(rawFileName.strip())
             if localFileName.startswith('/store/'):
                 localFileName = self.pnfsStoragePath + localFileName.strip()
-
-            if '://' in localFileName:
-                localFileName = '/'.join(localFileName.split('://')[1].split('/')[1:])
-
             return localFileName
         else:
             print ("\x1b[31mERROR: invalid file name\x1b[0m")
