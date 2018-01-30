@@ -42,7 +42,7 @@ class BTagWeights(object):
                 }
             }
         self.btag_calibrators = {}
-        for algo in ["CSV", "CMVAV2"]:
+        for algo in ["CSV","CMVAV2"]:
             for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
                 print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
                 self.btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(3, syst)
@@ -206,14 +206,19 @@ class BTagWeights(object):
         # if current entry has not been processed yet
         if currentEntry != self.lastEntry:
             self.lastEntry = currentEntry
-            self.MakeSysRefMap(tree)
+            #self.MakeSysRefMap(tree)
 
             jets_csv = []
             jets_cmva = []
 
             for i in range(tree.nJet):
-                if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+		try:
+                 if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
                     jet_cmva = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVAV2[i])
+                    jets_cmva.append(jet_cmva)
+		except:
+		 if (tree.Jet_bReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+                    jet_cmva = Jet(tree.Jet_bReg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVA[i])
                     jets_cmva.append(jet_cmva)
 
             ptmin = 20.

@@ -42,9 +42,9 @@ samplesinfo: <!Directories|vhbbpath!>/python/LxplusNanosZllconfig/samples_nospli
 
 ;!! where you want to store the logfiles from job submissions
 ;these lines are automatically written by the submit script!
-logpath: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cacheplot1/Logs/
-plotpath: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cacheplot1/Plots/
-limits: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cacheplot1/Limits/
+logpath: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cachingTest/Logs/
+plotpath: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cachingTest/Plots/
+limits: /afs/cern.ch/work/l/legianni/VHbb_new/CMSSW_9_4_0_pre3/src//Xbb/python/newlogs//cachingTest/Limits/
 
 ;!! from which samples to plot and where to save the plots
 ;plottingSamples: <!Directories|PREPout!>
@@ -77,8 +77,8 @@ PREPout: root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/hbb/ntuples/NanoT
 #SYSout: root://eosuser.cern.ch//eos/user/l/legianni/pnfs/VHbb/LxplusZlltest/full/sys/v1_vtype/
 
 # 2)
-SYSin: root://eosuser.cern.ch//eos/user/l/legianni/pnfs/VHbb/LxplusZlltest/full/sys/v1_vtype/ 
-SYSout: root://eosuser.cern.ch//eos/user/l/legianni/pnfs/VHbb/LxplusZlltest/full/sys/v1_vtype_sys_v2/
+SYSin: root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/hbb/ntuples/NanoTest/pnfs/VHbb/ZllCRs/prep/v1/ 
+SYSout: root://eoscms.cern.ch//eos/cms/store/group/phys_higgs/hbb/ntuples/NanoTest/pnfs/VHbb/ZllCRs/sysnew/v1/
 #SYSout: root://cmseos.fnal.gov//store/user/legianni/pnfs/VHbb/LxplusZlltest/full/sys/v1_vtype_sys_v2/
 
 #!! On which samples to evaluate the MVA on and where to write the resulting trees:
