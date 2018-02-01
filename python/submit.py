@@ -187,6 +187,13 @@ print 'whereToLaunch', whereToLaunch
 print 'run_locally', run_locally
 
 # ------------------------------------------------------------------------------
+# CHECK PARAMETERS
+# ------------------------------------------------------------------------------
+# disable job grouping in batches for interactive mode
+if opts.interactive:
+    opts.condorNobatch = True
+
+# ------------------------------------------------------------------------------
 # CREATE DIRECTORIES
 # ------------------------------------------------------------------------------
 fileLocator = FileLocator(config=config)

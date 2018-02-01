@@ -103,7 +103,7 @@ class NewStackMaker:
         try:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
-            self.outputFileFormats = ["png"]
+            self.outputFileFormats = ["png", "C"]
 
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])

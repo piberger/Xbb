@@ -203,6 +203,7 @@ class SampleTree(object):
 
                 # print summary table
                 countBranches = self.totalNanoTreeCounts.keys()
+		print (countBranches)
                 depth = None
                 for key,values in self.nanoTreeCounts.iteritems():
                     if type(values[0]) in [int, float, long]:
@@ -219,6 +220,8 @@ class SampleTree(object):
                 self.histograms['Runs'] = ROOT.TTree('Runs', 'count histograms for nano')
                 nanoTreeCountBuffers = {}
                 for key, value in self.totalNanoTreeCounts.iteritems():
+                    print (key,"   ", value, "   here print key and value   ")
+		    if (key=='run' and len(countBranches)==1): value=1
                     if type(value) == int:
                         typeCode = 'i'
                     elif type(value) == long:

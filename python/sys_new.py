@@ -11,6 +11,7 @@ from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
 from myutils.TTWeights import TTWeights
+from myutils.TheaCorr_msoftdrop import TheaCorr_msoftdrop
 from myutils.EWKweights import EWKweights
 from myutils.BTagWeights import BTagWeights
 from myutils.LeptonWeights import LeptonWeights
@@ -98,14 +99,20 @@ for fileName in filelist:
         # correct Vtype for V25 HEPPY ntuples
         # ------------------------------------------------------------------------------------------
         if 'vtype' in collections:
+
+	    print "vTypeCorrector"	
             vTypeCorrector = VtypeCorrector(tree=sampleTree.tree, channel=channel)
 
+		
+	    print "sample tree"	
             # (optional) allows the event to be skipped if recomputed vtype does not match
-            sampleTree.addCallback('event', vTypeCorrector.processEvent)
+            #sampleTree.addCallback('event', vTypeCorrector.processEvent)
 
-            # get list of new branches to add
+            print "newbranches"
+	    # get list of new branches to add
             newBranches = vTypeCorrector.getBranches()
 
+	    print "adddbranches"
             # add the new list of branches
             sampleTree.addOutputBranches(newBranches)
 
@@ -126,6 +133,11 @@ for fileName in filelist:
         # ------------------------------------------------------------------------------------------
         # weights
         # ------------------------------------------------------------------------------------------
+        
+        if 'msd_corr' in collections:
+            #if sample.type != 'DATA':
+             theaCorr_msoftdrop = TheaCorr_msoftdrop()
+             sampleTree.addOutputBranches(theaCorr_msoftdrop.getBranches())
         if 'ttw' in collections or 'weights' in collections:
             if sample.type != 'DATA':
                 ttWeights = TTWeights()

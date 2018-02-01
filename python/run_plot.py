@@ -113,6 +113,17 @@ class PlotHelper(object):
         for var in self.vars:
             self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
             self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
+        
+        ####cose Leonardo
+        print (self.plotPath)
+        newFile=ROOT.TFile(self.plotPath+"/histograms_"+self.region+".root", "recreate")
+        newFile.cd()
+        for var in self.vars:
+	    print (self.histogramStacks[var])
+            for histo in self.histogramStacks[var].histograms:
+                print (histo['histogram'].GetName())
+                histo['histogram'].Write()
+        newFile.Close()
 
         return self
 
