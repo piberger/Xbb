@@ -8,7 +8,7 @@ Produce superimposed normalised histograms for tree processed by Xbb and AT. All
 
 ## You can find the Xbb and AT directorie in
 
-/afs/cern.ch/work/g/gaperrin/public/Xbb_AT_Sync/Wlv
+/afs/cern.ch/work/g/gaperrin/public/Xbb_AT_Sync/Zll
 
 ### Iteration corresponding to current commit:
 
