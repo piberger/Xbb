@@ -10,8 +10,3 @@ Produce superimposed normalised histograms for tree processed by Xbb and AT. All
 
 /afs/cern.ch/work/g/gaperrin/public/Xbb_AT_Sync/Wlv
 
-### Iteration corresponding to current commit:
-
-https://gaperrin.web.cern.ch/gaperrin/Xbb/share/2018/SyncZll/01_02_17/plots/
-
-
