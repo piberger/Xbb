@@ -44,7 +44,7 @@ class AdditionalJetIndex(object):
         self.StdFsr = {}
         self.nISR = {}
         self.nFSR = {}
-        self.cuts = ['advCut','ptCut','dRCut','dRppCut','perpVCut']
+        self.cuts = ['advCut','ptCut','dRCut','dRppCut','perpVCut','pt25','pt35','combo']
         for cut in self.cuts:
             self.ISR_treeIdx[cut] = None
             self.Sisr_treeIdx[cut] = None
@@ -162,7 +162,7 @@ class AdditionalJetIndex(object):
         self.AJ_treeIdx = tree.GetReadEntry()
         j = 0
         for jet_idx in self.getPtSortedList(tree):
-            if jet_idx < tree.nJet and abs(tree.Jet_eta[jet_idx]) < 5.2 and tree.Jet_puId[jet_idx] >= 4 and jet_idx != tree.hJCMVAV2idx[0] and jet_idx != tree.hJCMVAV2idx[1]:
+            if jet_idx < tree.nJet and abs(tree.Jet_eta[jet_idx]) < 5.2 and tree.Jet_puId[jet_idx] == 7 and jet_idx != tree.hJCMVAV2idx[0] and jet_idx != tree.hJCMVAV2idx[1]:
                 self.AJidx.append(jet_idx)
                 j += 1
         self.nAJ = j
@@ -443,6 +443,14 @@ class AdditionalJetIndex(object):
                 isr_cut = tree.Jet_pt[idx] > 30
                 fsr_cut = not isr_cut
 
+            if cut == 'pt25':
+                isr_cut = tree.Jet_pt[idx] > 25
+                fsr_cut = not isr_cut
+
+            if cut == 'pt35':
+                isr_cut = tree.Jet_pt[idx] > 35
+                fsr_cut = not isr_cut
+
             if cut == 'perpVCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
                 perp = self.getJet_perpV(tree)[idx]
@@ -453,6 +461,11 @@ class AdditionalJetIndex(object):
             if cut == 'dRCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
                 isr_cut = dRh > 0.8
+                fsr_cut = not isr_cut
+
+            if cut == 'combo':
+                dRh = self.getJet_nhJ_dR(tree)[idx]
+                isr_cut = dRh > 0.8 and tree.Jet_pt[idx] > 30
                 fsr_cut = not isr_cut
 
             if cut == 'dRppCut':
