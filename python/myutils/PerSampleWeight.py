@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import os
+
+# ------------------------------------------------------------------------------
+# this class can be used to set a branch to a fixed value for certain samples
+# ------------------------------------------------------------------------------
+class PerSampleWeight(object):
+
+    def __init__(self, branchName, sample, affectedSampleNames, weightAffected=1.0, weightUnaffected=0.0):
+        self.weight = weightAffected if sample.name in affectedSampleNames else weightUnaffected
+        self.branches = [{'name': branchName, 'formula': self.getTheWeight}]
+        self.debug = 'XBBDEBUG' in os.environ
+        if self.debug:
+            print("DEBUG: sample {sampleName} will get the weight {branchName}={weight}".format(sampleName=sample.name, weight=self.weight, branchName=branchName))
+
+    def getBranches(self):
+        return self.branches
+
+    def getTheWeight(self, tree):
+        return self.weight
+

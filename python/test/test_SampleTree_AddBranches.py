@@ -6,6 +6,7 @@ import ROOT
 import random
 sys.path.append('../')
 from myutils.sampleTree import SampleTree as SampleTree
+import os
 
 # this does some stuff
 #  and can go to a separate file in a real application
@@ -33,7 +34,7 @@ class BlablaCorrector(object):
 
 class TestSampleTreeAddBranchesMethods(unittest.TestCase):
 
-    scratchDirectory = '.'
+    scratchDirectory = os.environ['SCRATCH_DIR'] if 'SCRATCH_DIR' in os.environ else '.' 
 
     def getTree(self):
         fileNames = [TestSampleTreeAddBranchesMethods.scratchDirectory + '/tree_%d.root'%i for i in range(1)]
@@ -79,7 +80,7 @@ class TestSampleTreeAddBranchesMethods(unittest.TestCase):
         # compare histograms of tree with new branches with expected result
         newSampleTree = SampleTree([TestSampleTreeAddBranchesMethods.scratchDirectory + '/tree_withaddedbranches.root'])
         newTree = newSampleTree.tree
-        outfile = ROOT.TFile.Open('histograms.root', 'recreate')
+        outfile = ROOT.TFile.Open(TestSampleTreeAddBranchesMethods.scratchDirectory + '/histograms.root', 'recreate')
         h1 = ROOT.TH1F('h1', 'h1', 200, 0, 200)
         h2 = ROOT.TH1F('h2', 'h2', 200, 0, 200)
 

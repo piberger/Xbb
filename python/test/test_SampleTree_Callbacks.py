@@ -5,11 +5,12 @@ import sys
 import random
 sys.path.append('../')
 from myutils.sampleTree import SampleTree as SampleTree
+import os
 
 
 class TestSampleTreeCallbacksMethods(unittest.TestCase):
 
-    scratchDirectory = '.'
+    scratchDirectory = os.environ['SCRATCH_DIR'] if 'SCRATCH_DIR' in os.environ else '.'
 
     def setUp(self):
         self.nEventsFound = 0

@@ -147,6 +147,10 @@ python - << END
 import myutils
 parser = myutils.BetterConfigParser()
 parser.read('${tag}config/paths.ini')
+try:
+  parser.read('${tag}config/volatile.ini')
+except:
+  pass
 print parser.get('Directories', 'logpath')
 END
 )

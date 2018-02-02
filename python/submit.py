@@ -125,20 +125,34 @@ if not opts.ftag == '':
         except:
             os.mkdir(DirStruct[keys])
 
+    # new behavior: write special .ini file, which is not under version control and is always recreated again
+    with open("{tag}config/volatile.ini".format(tag=opts.tag), "w") as outputFile:
+        outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
+        outputFile.write('[Directories]\n')
+        outputFile.write('plotpath: %s\n'%DirStruct['plotpath'])
+        outputFile.write('logpath: %s\n'%DirStruct['logpath'])
+        outputFile.write('limits: %s\n'%DirStruct['limitpath'])
+
+    # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!) 
     pathfile = open('%sconfig/paths.ini'%opts.tag)
     buffer = pathfile.readlines()
     pathfile.close()
-    os.rename('%sconfig/paths.ini'%opts.tag,'%sconfig/paths.ini.bkp'%opts.tag)
-    pathfile = open('%sconfig/paths.ini'%opts.tag,'w')
+    volatilePathsFound = False
     for line in buffer:
-        if line.startswith('plotpath'):
-            line = 'plotpath: %s\n'%DirStruct['plotpath']
-        elif line.startswith('logpath'):
-            line = 'logpath: %s\n'%DirStruct['logpath']
-        elif line.startswith('limits'):
-            line = 'limits: %s\n'%DirStruct['limitpath']
-        pathfile.write(line)
-    pathfile.close()
+        if line.startswith('plotpath') or line.startswith('logpath') or line.startswith('limits'):
+            volatilePathsFound = True
+    if volatilePathsFound:
+        os.rename('%sconfig/paths.ini'%opts.tag,'%sconfig/paths.ini.bkp'%opts.tag)
+        pathfile = open('%sconfig/paths.ini'%opts.tag,'w')
+        for line in buffer:
+            if line.startswith('plotpath'):
+                line = 'plotpath: %s\n'%DirStruct['plotpath']
+            elif line.startswith('logpath'):
+                line = 'logpath: %s\n'%DirStruct['logpath']
+            elif line.startswith('limits'):
+                line = 'limits: %s\n'%DirStruct['limitpath']
+            pathfile.write(line)
+        pathfile.close()
 
     # copy config files
     for item in configs:

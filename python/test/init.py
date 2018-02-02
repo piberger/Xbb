@@ -4,11 +4,12 @@ import unittest
 import ROOT
 import random
 from array import array
+import os
 
 class TestInit(unittest.TestCase):
 
     def test_Init(self):
-        scratchDirectory = '.'
+        scratchDirectory = os.environ['SCRATCH_DIR'] if 'SCRATCH_DIR' in os.environ else '.' 
 
         def make_tree(fileName, numEvents=10000, offset=0):
 

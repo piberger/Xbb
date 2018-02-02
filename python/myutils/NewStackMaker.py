@@ -355,6 +355,7 @@ class NewStackMaker:
         for histogramGroup in histogramGroups:
             histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group'] == histogramGroup]
             groupedHistograms[histogramGroup] = NewStackMaker.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
+            groupedHistograms[histogramGroup].SetStats(0)
 
         # MC histograms, defined in setup
         mcHistogramGroups = list(set([histogram['group'] for histogram in self.histograms if histogram['group']!=dataGroupName]))
@@ -394,6 +395,23 @@ class NewStackMaker:
         drawOption = "hist" if not normalize else "histnostack"
         if self.is2D:
             drawOption = self.histogramOptions['drawOption'] if 'drawOption' in self.histogramOptions else 'colz'
+
+        # save histogram of all added signal samples as TH1 object to separate .root file
+        fileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix + '_SIGNAL_HISTOGRAM', prefixSeparator='_' if len(prefix)>0 else '', var=self.var+'_SIGNAL_HISTOGRAM', ext='root')
+        tf1 = ROOT.TFile.Open(fileName, 'recreate')
+        print("INFO: write histogram to:", fileName)
+        clonedHist = None
+        for histogram in self.histograms:
+            if histogram['group'] in ['ZHbb']:
+                if not clonedHist:
+                    clonedHist = histogram['histogram'].Clone('zh_and_ggzh')
+                else:
+                    clonedHist.Add(histogram['histogram'])
+        if clonedHist:
+            clonedHist.SetDirectory(tf1)
+        tf1.Write()
+        tf1.Close()
+
 
         # draw stack/sum
         if self.is2D:
@@ -449,7 +467,7 @@ class NewStackMaker:
                     if 'GeV' in self.xAxis:
                         yTitle += ' GeV'
         if allStack and allStack.GetXaxis():
-            allStack.GetYaxis().SetTitle(yTitle)
+            allStack.GetYaxis().SetTitle(yTitle if yTitle else '-')
             allStack.GetXaxis().SetRangeUser(self.histogramOptions['minX'], self.histogramOptions['maxX'])
             if not self.is2D:
                 allStack.GetYaxis().SetRangeUser(0,20000)
