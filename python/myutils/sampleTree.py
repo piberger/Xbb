@@ -341,6 +341,12 @@ class SampleTree(object):
             raise Exception("SampleTreeAddTTreeFormulaFailed")
 
     # ------------------------------------------------------------------------------
+    # return list of formulas 
+    # ------------------------------------------------------------------------------
+    def getFormulas(self):
+        return self.formulas
+
+    # ------------------------------------------------------------------------------
     # add a new branch
     # ------------------------------------------------------------------------------
     def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None):

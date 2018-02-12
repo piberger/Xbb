@@ -234,6 +234,14 @@ elif [ $task = "eval" ]; then
     echo "$runCommand"
     eval "$runCommand"
 
+elif [ $task = "eval_scikit" ]; then
+    runCommand="python  ./evaluateMVA_scikit.py --discr $MVAList --sampleIdentifier ${sampleIdentifier}"
+    if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "singleeval" ]; then
     echo "python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist ...(${#filelist} char)"
     python ./evaluateMVA.py --discr $MVAList --samples $sample ${config_filenames[@]} --filelist $filelist
