@@ -333,6 +333,13 @@ class SampleTree(object):
     def addFormula(self, formulaName, formula=None):
         if formula is None:
             formula = formulaName
+
+        # there might be an undocumented limit on the length of cutstrings in ROOT...
+        if len(formula) > 1023:
+            print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
+            print(" WARNING !!! ROOT.TTreeFormula of length > 1023, this might cause problems !!")
+            print("------------------------------------------------------------------------------\x1b[0m")
+
         self.formulaDefinitions.append({'name': formulaName, 'formula': formula})
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
         if self.formulas[formulaName].GetNdim() == 0:
