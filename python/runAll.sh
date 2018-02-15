@@ -66,6 +66,9 @@ while [ $# -gt 0 ]; do
     --force)
       force="1"
       ;;
+    --expectedSignificance)
+      expectedSignificance="1"
+      ;;
     --verbose)
       verbose="1"
       ;;
@@ -270,6 +273,9 @@ elif [ $task = "cachetraining" ]; then
 
 elif [ $task = "runtraining" ]; then
     runCommand="python ./run_training.py --trainingRegions ${trainingRegions} ${config_filenames[@]}"
+    if [ "$expectedSignificance" = "1" ]; then
+        runCommand="${runCommand} --expectedSignificance"
+    fi
     echo "$runCommand"
     eval "$runCommand"
 

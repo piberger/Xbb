@@ -337,7 +337,8 @@ class SampleTree(object):
         # there might be an undocumented limit on the length of cutstrings in ROOT...
         if len(formula) > 1023:
             print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
-            print(" WARNING !!! ROOT.TTreeFormula of length > 1023, this might cause problems !!")
+            print(" WARNING !!! ROOT.TTreeFormula of length %d, this might cause problems !!"%len(formula))
+            print(" reduce length of formulas if problems occur, e.g. by passing lists of cut formulas!")
             print("------------------------------------------------------------------------------\x1b[0m")
 
         self.formulaDefinitions.append({'name': formulaName, 'formula': formula})
