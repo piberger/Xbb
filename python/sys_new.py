@@ -16,6 +16,7 @@ from myutils.LeptonWeights import LeptonWeights
 from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
 from myutils.DYspecialWeight import DYspecialWeight
+from myutils.ApplySkim import ApplySkim
 
 argv = sys.argv
 parser = OptionParser()
@@ -118,6 +119,13 @@ for fileName in filelist:
         if 'addbranches' in collections:
             writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
             sampleTree.addOutputBranches(writeNewVariables)
+
+        # ------------------------------------------------------------------------------------------
+        # Apply skim to all the samples
+        # ------------------------------------------------------------------------------------------
+        if 'applySkim' in collections:
+            applySkim = ApplySkim(tree = sampleTree.tree, skim = config.get("Analysis", "sysSkim"))
+            sampleTree.addCallback('event', applySkim.processEvent)
         
         # ------------------------------------------------------------------------------------------
         # weights
