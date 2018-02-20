@@ -111,6 +111,10 @@ class VtypeCorrector(object):
                 if Vtype_new_ != 2 and Vtype_new_ != 3:
                     self.n_vtype_events_skipped += 1
                     isGoodEvent = False
+            elif self.channel.lower() == 'zvv':
+                if (Vtype_new_ != 2 and Vtype_new_ != 3 and Vtype_new_ != 4) or tree.V_pt < 170:
+                    self.n_vtype_events_skipped += 1
+                    isGoodEvent = False
 
             if isGoodEvent:
                 if Vtype_new_ == tree.Vtype:

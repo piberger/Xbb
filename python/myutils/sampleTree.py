@@ -105,10 +105,9 @@ class SampleTree(object):
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
                 # check root file existence, TODO: simplify
-                if os.path.isfile(self.fileLocator.getLocalFileName(rootFileName)) or self.fileLocator.isStoragePath(rootFileName) or self.fileLocator.exists(rootFileName):
-                    if '://' not in rootFileName and (self.fileLocator.isStoragePath(rootFileName) or self.fileLocator.isPnfs(rootFileName)): 
-                        rootFileName = self.fileLocator.getXrootdFileName(rootFileName)
-                    input = ROOT.TFile.Open(rootFileName, 'read')
+                if self.fileLocator.exists(rootFileName):
+                    remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
+                    input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
                     # check file validity
                     if input and not input.IsZombie() and input.GetNkeys() > 0 and not input.TestBit(ROOT.TFile.kRecovered):
@@ -157,7 +156,7 @@ class SampleTree(object):
                         input.Close()
 
                         # add file to chain
-                        chainTree = '%s/%s'%(rootFileName, self.treeName)
+                        chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
                         if self.debug:
                             print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
                         statusCode = self.tree.Add(chainTree)
@@ -194,7 +193,6 @@ class SampleTree(object):
 
             if self.tree:
                 self.tree.SetCacheSize(50*1024*1024)
-
 
             # merge nano counting trees
             if self.nanoTreeCounts:
@@ -282,9 +280,11 @@ class SampleTree(object):
                 sampleName = self.samples['name']
             sampleFolder = self.samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
+            redirector = self.fileLocator.getRedirector(sampleFolder)
             if self.verbose:
                 print ("INFO: use ", samplesMask)
             sampleFileNames = glob.glob(samplesMask)
+            sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
         # given argument is a single file name -> read this .txt file 
@@ -330,13 +330,29 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add a TTreeFormula connected to the TChain
     # ------------------------------------------------------------------------------
-    def addFormula(self, formulaName, formula):
+    def addFormula(self, formulaName, formula=None):
+        if formula is None:
+            formula = formulaName
+
+        # there might be an undocumented limit on the length of cutstrings in ROOT...
+        if len(formula) > 1023:
+            print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
+            print(" WARNING !!! ROOT.TTreeFormula of length %d, this might cause problems !!"%len(formula))
+            print(" reduce length of formulas if problems occur, e.g. by passing lists of cut formulas!")
+            print("------------------------------------------------------------------------------\x1b[0m")
+
         self.formulaDefinitions.append({'name': formulaName, 'formula': formula})
         self.formulas[formulaName] = ROOT.TTreeFormula(formulaName, formula, self.tree) 
         if self.formulas[formulaName].GetNdim() == 0:
             print("DEBUG: formula is:", formula)
             print("\x1b[31mERROR: adding the tree formula failed! Check branches of input tree and loaded namespaces.\x1b[0m")
             raise Exception("SampleTreeAddTTreeFormulaFailed")
+
+    # ------------------------------------------------------------------------------
+    # return list of formulas
+    # ------------------------------------------------------------------------------
+    def getFormulas(self):
+        return self.formulas
 
     # ------------------------------------------------------------------------------
     # add a new branch
@@ -448,7 +464,6 @@ class SampleTree(object):
     def GetListOfBranches(self):
         return self.tree.GetListOfBranches()
 
-
     # ------------------------------------------------------------------------------
     # handle 'tree-typed' cuts, passed as dictionary:
     # e.g. cut = {'OR': [{'AND': ["pt>20","eta<3"]}, "data==1"]}
@@ -526,7 +541,6 @@ class SampleTree(object):
             'callbacks': callbacks,
             'passed': 0,
         }
-
 
         self.outputTrees.append(outputTree)
     
@@ -788,7 +802,6 @@ class SampleTree(object):
             passedSelectionFraction = 100.0*outputTree['passed']/self.eventsRead if self.eventsRead>0 else '?'
             print (' > \x1b[34m{name}\x1b[0m {passed} ({fraction}%) => {outputFile}'.format(name=outputTree['name'], passed=outputTree['passed'], fraction=passedSelectionFraction, outputFile=outputTree['fileName']))
         sys.stdout.flush()
-
 
     @staticmethod
     def countSampleFiles(samples):
