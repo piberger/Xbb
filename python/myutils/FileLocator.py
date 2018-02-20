@@ -80,8 +80,10 @@ class FileLocator(object):
     def getRemoteFileserver(self, path=None):
         if path and '://' in path:
             server = path.split('://')[1].split('/')[0].split(':')[0].strip()
-        else:
+        elif self.xrootdRedirectors:
             server = self.xrootdRedirectors[0].split('://')[1].split('/')[0].split(':')[0].strip()
+        else:
+            server = ""
         return server
 
     def getRedirector(self, path):
