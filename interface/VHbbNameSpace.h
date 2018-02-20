@@ -238,6 +238,22 @@ double SoverSBWeight(double BDT, int channel) {
     return (H1+H2).M();
   }
 
+  double SumJet_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+
+    TLorentzVector H1, H2;
+
+    H1.SetPtEtaPhiM(hJet1_pt, hJet1_eta, hJet1_phi, hJet1_mass);
+    H2.SetPtEtaPhiM(hJet2_pt, hJet2_eta, hJet2_phi, hJet2_mass);
+
+    return (H1+H2).Pt();
+  }
+
+  double DiffSumToJet_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+    return SumJet_pt( hJet1_eta,  hJet1_phi,  hJet1_pt,  hJet1_mass, hJet2_eta, hJet2_phi, hJet2_pt, hJet2_mass) - hJet1_pt;
+  }
+
   double Hmass_3j(double h_eta, double h_phi, double h_pt, double h_mass,
 		  double aJet_eta, double aJet_phi, double aJet_pt, double aJet_mass) {
 

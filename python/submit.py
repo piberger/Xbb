@@ -178,6 +178,7 @@ if opts.override_to_run_locally and opts.override_to_run_in_batch:
     print 'both override_to_run_locally and override_to_run_in_batch ativated, using str(config.get("Configuration","run_locally")) instead'
 elif opts.override_to_run_locally:
     run_locally = 'True'
+    submitScriptRunAllLocally = True
     print 'using override_to_run_locally to override str(config.get("Configuration","run_locally"))'
 elif opts.override_to_run_in_batch:
     run_locally = 'False'

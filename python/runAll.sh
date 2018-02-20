@@ -199,8 +199,10 @@ elif [ $task = "mergesingleprep" ]; then
     python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "trainReg" ]; then
-    echo "python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
-    python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
+    runCommand="python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
+    echo "$runCommand"
+    eval "$runCommand"
 
 elif [ $task = "sys" ]; then
     runCommand="python ./write_regression_systematics.py --samples ${sampleIdentifier}"
