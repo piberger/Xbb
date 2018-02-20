@@ -126,6 +126,7 @@ for fileName in filelist:
                 # pass the tree and other variables if needed to finalize initialization
                 if hasattr(wObject, "customInit") and callable(getattr(wObject, "customInit")):
                     wObject.customInit({'config': config,
+                                        'sampleTree': sampleTree,
                                         'tree': sampleTree.tree,
                                         'sample': sample,
                                         'channel': channel,
