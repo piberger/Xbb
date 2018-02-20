@@ -378,7 +378,7 @@ def submit(job, repDict):
     # -----------------------------------------------------------------------------
     if command:
         if opts.interactive and not submitScriptSubmitAll:
-            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
+            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)"
             if submitScriptRunAllLocally:
                 answer = 'l'
             else:
@@ -913,7 +913,7 @@ if opts.task == 'sys' or opts.task == 'syseval':
 # -----------------------------------------------------------------------------
 # EVALUATION OF EVENT BY EVENT BDT SCORE
 # -----------------------------------------------------------------------------
-if opts.task == 'eval':
+if opts.task == 'eval' or opts.task.startswith('eval_'):
     #repDict['queue'] = 'long.q'
     path = config.get("Directories", "MVAin")
     pathOUT = config.get("Directories", "MVAout")
@@ -953,6 +953,57 @@ if opts.task == 'eval':
                 submit(jobName, jobDict)
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
+# -----------------------------------------------------------------------------
+# summary: print list of cuts for CR+SR
+# TODO: this should also run some basic checks on the configuration
+# -----------------------------------------------------------------------------
+if opts.task == 'summary':
+    print "-"*80
+    print " paths" 
+    print "-"*80
+    for path in ['PREPout', 'SYSin', 'SYSout', 'MVAin', 'MVAout', 'tmpSamples', 'samplesinfo']:
+        try:
+            print "%s:"%path, "\x1b[34m", config.get('Directories', path) ,"\x1b[0m"
+        except:
+            print "\x1b[31mERROR: did not find path in config section [Directories]:",path,"\x1b[0m"
+
+    print "-"*80
+    print " pre-selection ('prep')"
+    print "-"*80
+
+    cutDict = {}
+    samplesinfo=config.get('Directories','samplesinfo')
+    info = ParseInfo(samplesinfo, '')
+    # don't look at subsamples, because they have the same pre-selection cut
+    samples = [x for x in info if not x.subsample]
+    for sample in samples:
+        if sample.addtreecut not in cutDict:
+            cutDict[sample.addtreecut] = []
+        cutDict[sample.addtreecut].append(sample.identifier)
+    for preselectionCut, listOfSamples in cutDict.iteritems():
+        print "SAMPLES: \x1b[34m", ','.join(listOfSamples), "\x1b[0m"
+        print "CUT: \x1b[32m", preselectionCut,"\x1b[0m"
+        print "-"*40
+        
+    print "-"*80
+    print " CR and SR definitions:"
+    print "-"*80
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    # submit all the plot regions as separate jobs
+    for region in regions:
+        try:
+            regionCut = config.get("Cuts", region)
+        except:
+            regionCut = "\x1b[31mregion cut missing in cuts.ini!\x1b[0m"
+        print " \x1b[33m",region,"\x1b[0m"
+        print "  - cut:\x1b[34m", regionCut, "\x1b[0m"
+    print "-"*80
+    print " weight " 
+    print "-"*80
+    try:
+        print config.get('Weights', 'weightF')
+    except:
+        print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:
@@ -967,3 +1018,4 @@ if 'condor' in whereToLaunch:
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
+

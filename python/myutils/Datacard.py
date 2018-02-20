@@ -182,13 +182,13 @@ class Datacard(object):
         #systematics up/down
         self.UD = ['Up', 'Down']
 
-        if self.verbose:
+        if self.debug:
             print ('Parse the sample information')
             print ('============================\n')
         #Parse samples configuration
         self.samplesInfo = ParseInfo(self.samplesInfoDirectory, self.path)
 
-        if self.verbose:
+        if self.debug:
             print ('Get the sample list')
             print ('===================\n')
         self.backgrounds = eval(config.get('dc:%s'%self.region, 'background'))
@@ -210,7 +210,7 @@ class Datacard(object):
                         NOMsamplesys = sample_type[0]
                         noNom = False
                         for nomsample in NOMsamplesys: #This is for mergesyscachingdcsplit. Doesn't add the sys if nom is not present
-                            if self.verbose:
+                            if self.debug:
                                 print ('nomsample is', nomsample)
                                 print ('signals+backgrounds are', self.signals+self.backgrounds)
                             if nomsample not in self.signals+self.backgrounds: noNom = True
@@ -225,7 +225,7 @@ class Datacard(object):
         self.sample_sys_dic = {}
         for sample_sys in self.sample_sys_list:
             self.sample_sys_dic[sample_sys] = False
-        if self.verbose:
+        if self.debug:
             print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
 
         self.samples = {
@@ -264,7 +264,7 @@ class Datacard(object):
         # contains all systematicDictionaries, first entry will be nominal
         self.systematicsList = [self.systematicsDictionaryNominal]
 
-        if self.verbose:
+        if self.verbose or self.debug:
             print ('Assign the systematics')
             print ('======================\n')
 
@@ -324,6 +324,9 @@ class Datacard(object):
                                 systematicsDictionary['sample_sys_dic'][sampleName] = value
 
                 self.systematicsList.append(systematicsDictionary)
+        if self.debug or self.verbose:
+            print('INFO: datacard initialization complete!')
+            print('INFO: {nSys} systematics for {nSamples} samples'.format(nSys=len(self.systematicsList), nSamples=sum([len(x) for k,x in self.samples.iteritems()])))
         
 
     def calcBinning(self):
