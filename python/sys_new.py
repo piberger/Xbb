@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 import ROOT
 ROOT.gROOT.SetBatch(True)
 from optparse import OptionParser
@@ -17,6 +18,8 @@ from myutils.JetEnergySystematics import JetEnergySystematics
 from myutils.WPtReweight import WPtReweight
 from myutils.DYspecialWeight import DYspecialWeight
 from myutils.ApplySkim import ApplySkim
+from myutils.PerSampleWeight import PerSampleWeight
+from myutils.Skim import Skim
 
 argv = sys.argv
 parser = OptionParser()
@@ -40,6 +43,7 @@ if len(filelist) > 0:
 else:
     print ''
 
+debug = 'XBBDEBUG' in os.environ
 config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
@@ -158,6 +162,29 @@ for fileName in filelist:
                 dyWeight = DYspecialWeight(tree=sampleTree.tree, sample=sample)
                 sampleTree.addOutputBranches(dyWeight.getBranches())
 
+        for collection in collections:
+            if '.' in collection:
+                section = collection.split('.')[0]
+                key = collection.split('.')[1]
+                pyCode = config.get(section, key)
+                if debug:
+                    print("\x1b[33mDEBUG: " + collection + ": run PYTHON code:\n"+pyCode+"\x1b[0m")
+
+                # get object
+                wObject = eval(pyCode)
+
+                # pass the tree if needed to finalize initialization
+                if hasattr(wObject, "setTree") and callable(getattr(wObject, "setTree")):
+                    wObject.setTree(sampleTree.tree)
+
+                # add callbacks if the objects provides any
+                if hasattr(wObject, "processEvent") and callable(getattr(wObject, "processEvent")):
+                    sampleTree.addCallback('event', wObject.processEvent)
+
+                # add branches
+                if hasattr(wObject, "getBranches") and callable(getattr(wObject, "getBranches")):
+                    sampleTree.addOutputBranches(wObject.getBranches())
+
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
             for br in bl_branch:
@@ -174,8 +201,17 @@ for fileName in filelist:
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)
 
-        fileLocator.cp(tmpFileName, outputFileName)
-        fileLocator.rm(tmpFileName)
+        try:
+            fileLocator.cp(tmpFileName, outputFileName)
+        except Exception as e:
+            print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
+            print e
+
+        try:
+            fileLocator.rm(tmpFileName)
+        except Exception as e:
+            print "ERROR: could not delete file on scratch!"
+            print e
 
         print 'copy ', tmpFileName, outputFileName
 

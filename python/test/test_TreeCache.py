@@ -11,11 +11,11 @@ import os
 class TestTreeCacheMethods(unittest.TestCase):
 
     def setUp(self):
-        self.scratchDirectory = '.'
+        self.scratchDirectory = os.environ['SCRATCH_DIR'] if 'SCRATCH_DIR' in os.environ else '.'
         self.sampleName = 'SomeSampleWhichWillBeCached'
         self.someCut = "nJet==5&&Sum$(Jet)>500"
-        self.tmpDir = 'tmp/'
-        self.cacheDir = 'cache/'
+        self.tmpDir = self.scratchDirectory + '/tmp/'
+        self.cacheDir = self.scratchDirectory + '/cache/'
         try:
             os.mkdir(self.tmpDir)
         except:
@@ -38,7 +38,7 @@ class TestTreeCacheMethods(unittest.TestCase):
         tc = TreeCache.TreeCache(
             sample=self.sampleName,
             cutList=[self.someCut],
-            inputFolder='.',
+            inputFolder=self.scratchDirectory,
             tmpFolder=self.tmpDir,
             outputFolder=self.cacheDir,
             branches=['a', 'b', 'c'],
@@ -51,7 +51,7 @@ class TestTreeCacheMethods(unittest.TestCase):
         tc2 = TreeCache.TreeCache(
             sample=self.sampleName,
             cutList=[self.someCut],
-            inputFolder='.',
+            inputFolder=self.scratchDirectory,
             tmpFolder=self.tmpDir,
             outputFolder=self.cacheDir,
             debug=False
@@ -74,7 +74,7 @@ class TestTreeCacheMethods(unittest.TestCase):
         tc2 = TreeCache.TreeCache(
             sample='ThisSampleDoesNotExistInCache',
             cutList=[self.someCut],
-            inputFolder='.',
+            inputFolder=self.scratchDirectory,
             tmpFolder=self.tmpDir,
             outputFolder=self.cacheDir,
             debug=False

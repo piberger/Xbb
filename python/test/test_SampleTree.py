@@ -5,11 +5,11 @@ import sys
 import random
 sys.path.append('../')
 from myutils.sampleTree import SampleTree as SampleTree
-
+import os
 
 class TestSampleTreeMethods(unittest.TestCase):
 
-    scratchDirectory = '.'
+    scratchDirectory = os.environ['SCRATCH_DIR'] if 'SCRATCH_DIR' in os.environ else '.'
 
     def getTree(self):
         fileNames = [TestSampleTreeMethods.scratchDirectory + '/tree_%d.root'%i for i in range(10)]
