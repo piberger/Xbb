@@ -89,7 +89,7 @@ for fileName in filelist:
         # all = ['Sys.Vtype', 'Sys.Leptons', ...]
         collectionsListsReplaced = []
         for collection in collections:
-            if '.' in collection: 
+            if '.' in collection:
                 section = collection.split('.')[0]
                 key = collection.split('.')[1]
                 listExpression = config.get(section, key).strip()

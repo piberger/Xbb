@@ -10,7 +10,7 @@ class JetEnergySystematics(object):
 
     def __init__(self, channel='', weights=None):
         self.channel = channel
-        self.regWeightFileName = weights 
+        self.regWeightFileName = weights
 
     def customInit(self, initVars):
         self.config = initVars['config']

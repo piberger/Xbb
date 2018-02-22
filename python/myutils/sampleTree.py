@@ -349,7 +349,7 @@ class SampleTree(object):
             raise Exception("SampleTreeAddTTreeFormulaFailed")
 
     # ------------------------------------------------------------------------------
-    # return list of formulas 
+    # return list of formulas
     # ------------------------------------------------------------------------------
     def getFormulas(self):
         return self.formulas

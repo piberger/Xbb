@@ -14,8 +14,8 @@ class WPtReweight(object):
         branchName = 'FitCorr' 
         self.branchBuffers[branchName] = array.array('f', [1.0, 0.0, 0.0])
         self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':3}, 'length': 3})
-        
-    def customInit(self, initVars):    
+
+    def customInit(self, initVars):
         self.sample = initVars['sample']
         self.channel = initVars['channel']
         self.tree = initVars['tree']
