@@ -22,7 +22,7 @@ class TestXrootdMethods(unittest.TestCase):
             tree1 = self.getTree(path1)
             print ("ENTRIES:", tree1.GetEntries())
             self.assertEqual(tree1.GetEntries(), 48442)
-            
+
             fileLocator = FileLocator()
 
             path2 = fileLocator.removeRedirector(path1)

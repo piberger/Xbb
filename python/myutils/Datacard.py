@@ -115,7 +115,7 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins' 
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins'
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -655,7 +655,7 @@ class Datacard(object):
                             treeVar = sampleTree.evaluate(systematics['var'])
                             specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
                             self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
-                            
+
             # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
             for systematics in systematicsList:
                 mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0

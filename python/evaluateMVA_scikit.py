@@ -77,7 +77,7 @@ class SciKitEvaluator(object):
                 if variable not in self.sampleTree.getFormulas():
                     self.sampleTree.addFormula(variable)
 
-        # define output branches to store MVA scores 
+        # define output branches to store MVA scores
         self.sampleTree.addOutputBranch(
                     branchName=self.name,
                     branchType='f',
@@ -131,14 +131,14 @@ for fileName in filelist:
 
         classifiers = opts.discr.split(',')
         for classifier in classifiers:
-            varset = config.get(classifier, 'treeVarSet') 
+            varset = config.get(classifier, 'treeVarSet')
             if sample.type == 'DATA':
                 variables = {x: config.get(varset, systematics[0]).split(' ') for x in systematics}
             else:
                 variables = {x: config.get(varset,x).split(' ') for x in systematics}
             sciKitEvaluator = SciKitEvaluator(
-                        name=classifier, 
-                        sampleTree=sampleTree, 
+                        name=classifier,
+                        sampleTree=sampleTree,
                         classifier=config.get(classifier, 'classifier'),
                         scaler=config.get(classifier, 'scaler'),
                         outputscaler=config.get(classifier, 'outputscaler'),
