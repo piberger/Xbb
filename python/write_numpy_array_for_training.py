@@ -45,8 +45,8 @@ class SampleTreesToNumpyConverter(object):
                     'BKG_DY2b': eval(self.config.get('Plot_general', 'DY2b')),
                     'BKG_DY1b': eval(self.config.get('Plot_general', 'DY1b')),
                     'BKG_DY0b': eval(self.config.get('Plot_general', 'DYlight')),
-                    'SIG_ggZH': eval(self.config.get('Plot_general', 'allSIG')),
-                    'SIG_qqZH': eval(self.config.get('Plot_general', 'allSIG')),
+                    'SIG_ggZH': eval(self.config.get('Plot_general', 'ggZH')),
+                    'SIG_qqZH': eval(self.config.get('Plot_general', 'qqZH')),
                 }
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
 

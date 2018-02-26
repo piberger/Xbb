@@ -430,6 +430,7 @@ class NewStackMaker:
                 self.plotLabels['topright1']['text'] = 'MC'
             allStack.SetStats(0)
             allStack.SetTitle('')
+        ROOT.gPad.SetLogy(0)
         allStack.Draw(drawOption)
 
         # set axis titles
