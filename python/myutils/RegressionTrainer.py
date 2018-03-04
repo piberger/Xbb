@@ -27,7 +27,8 @@ class RegressionTrainer():
         self.__trainCut = config.get("TrainRegression","trainCut")
         self.__testCut = config.get("TrainRegression","testCut")
         self.__config = config
-
+        self.__useVarAbbr = int(config.get("TrainRegression","useVarAbbr"))
+        print self.__useVarAbbr
         fnameOutput='weights/training_Reg_%s.root' %(self.__title)
         self.output = ROOT.TFile.Open(fnameOutput, "RECREATE")
         self.factory = ROOT.TMVA.Factory('MVA', self.output, '!V:!Silent:!Color:!DrawProgressBar:Transformations=I:AnalysisType=Regression')
@@ -139,14 +140,27 @@ class RegressionTrainer():
         self.__apply = []
         p = re.compile(r'hJCidx\w+')
         self.factory.Verbose()
+        
         if self.dataLoader:
             for var in self.__varsList:
-                self.dataLoader.AddVariable(var+":="+self.__varsDict[var],'D')
+                if self.__useVarAbbr == 1:
+                    variable = "%s:=%s" % (var, self.__varsDict[var])
+                elif self.__useVarAbbr == 2:
+                    variable = var
+                else:
+                    variable = self.__varsDict[var]
+                self.dataLoader.AddVariable(variable, 'D')
             self.dataLoader.AddTarget( self.__target )
             self.factory.BookMethod(self.dataLoader,ROOT.TMVA.Types.kBDT,'BDT_REG_%s'%(self.__title),self.__regOptions) # book an MVA method
         else:
             for var in self.__varsList:
-                self.factory.AddVariable(var+":="+self.__varsDict[var], 'D')
+                if self.__useVarAbbr == 1:
+                    variable = "%s:=%s" % (var, self.__varsDict[var])
+                elif self.__useVarAbbr == 2:
+                    variable = var
+                else:
+                    variable = self.__varsDict[var]
+                self.factory.AddVariable(variable, 'D')
             self.factory.AddTarget( self.__target )
             self.factory.BookMethod(ROOT.TMVA.Types.kBDT,'BDT_REG_%s'%(self.__title),self.__regOptions) # book an MVA method
         for var in self.__varsList:

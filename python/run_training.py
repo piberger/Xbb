@@ -12,6 +12,7 @@ import sys
 import pickle
 import glob
 import shutil
+import numpy as np
 
 class MvaTrainingHelper(object):
 
@@ -27,8 +28,10 @@ class MvaTrainingHelper(object):
 
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
         self.MVAtype = config.get(mvaName, 'MVAtype')
-        self.MVAsettings = config.get(mvaName,'MVAsettings')
+        self.MVAsettingsRaw = config.get(mvaName,'MVAsettings')
+        self.MVAsettings = self.MVAsettingsRaw
         self.mvaName = mvaName
+        self.mvaNameRaw = mvaName
 
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
@@ -48,6 +51,10 @@ class MvaTrainingHelper(object):
         self.treeCutName = config.get(mvaName, 'treeCut')
         self.treeCut = config.get('Cuts', self.treeCutName)
 
+        try:
+            self.nRuns = int(config.get(mvaName, 'nRuns'))
+        except:
+            self.nRuns = 1
         self.TrainCut = config.get('Cuts', 'TrainCut') 
         self.EvalCut = config.get('Cuts', 'EvalCut')
         print("TRAINING CUT:", self.TrainCut)
@@ -67,6 +74,19 @@ class MvaTrainingHelper(object):
         else:
             print ("\x1b[31mERROR: initialization of MvaTrainingHelper failed!\x1b[0m") 
 
+
+    def evalMvaSettings(self):
+
+        if 'np.random' in self.MVAsettingsRaw:
+            settings = self.MVAsettingsRaw.split(':')
+            for i in range(len(settings)):
+                val = settings[i].split('=')
+                if len(val) > 1:
+                    val[1]=str(eval(val[1].strip()))
+                settings[i] = "=".join(val)
+                self.MVAsettings = ":".join(settings)
+            self.mvaName = self.mvaNameRaw + hex(hash(self.MVAsettings))[2:]
+        return self
 
     def prepare(self):
         # ----------------------------------------------------------------------------------------------------------------------
@@ -156,7 +176,7 @@ class MvaTrainingHelper(object):
         return success
 
 
-    def run(self):
+    def book(self):
         print('backing up old BDT files')
         self.backupOldFiles()
         # ----------------------------------------------------------------------------------------------------------------------
@@ -181,6 +201,9 @@ class MvaTrainingHelper(object):
             self.dataLoader.SetSignalWeightExpression(weightF)
             self.dataLoader.SetBackgroundWeightExpression(weightF)
             self.factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
+        return self
+
+    def run(self):
         print('Execute TMVA: TrainAllMethods')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.TrainAllMethods()
@@ -241,6 +264,10 @@ if len(trainingRegions) > 1:
     exit(1)
 for trainingRegion in trainingRegions:
     th = MvaTrainingHelper(config=config, mvaName=trainingRegion)
-    th.prepare().run()
-    th.printInfo()
+    th.evalMvaSettings()
+    print(th.MVAsettings)
+    th.prepare()
+    for i in range(th.nRuns):
+        th.evalMvaSettings().book().printInfo()
+    th.run()
 

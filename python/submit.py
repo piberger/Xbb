@@ -394,7 +394,7 @@ def submit(job, repDict):
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
-                command = 'sh {runscript}'.format(runscript=runScript)
+                command = 'sh {runscript} | tee {logfile}'.format(runscript=runScript,logfile=outOutputPath)
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)

@@ -254,6 +254,14 @@ double SoverSBWeight(double BDT, int channel) {
     return SumJet_pt( hJet1_eta,  hJet1_phi,  hJet1_pt,  hJet1_mass, hJet2_eta, hJet2_phi, hJet2_pt, hJet2_mass) - hJet1_pt;
   }
 
+  double FSRCorr_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+      if(deltaR(hJet1_eta,hJet1_phi, hJet2_eta, hJet2_phi) > 0.9)
+      {
+          return 0;
+      }
+      return SumJet_pt( hJet1_eta,  hJet1_phi,  hJet1_pt,  hJet1_mass, hJet2_eta, hJet2_phi, hJet2_pt, hJet2_mass) - hJet1_pt;
+  }
   double Hmass_3j(double h_eta, double h_phi, double h_pt, double h_mass,
 		  double aJet_eta, double aJet_phi, double aJet_pt, double aJet_mass) {
 

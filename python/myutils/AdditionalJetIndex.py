@@ -9,7 +9,9 @@ class AdditionalJetIndex(object):
         #Tree idex Buffer
         self.HV_treeIdx = None
         self.AJ_treeIdx = None
+        self.HF_treeIdx = None
         self.PS_treeIdx = None
+        self.HjF_treeIdx = None
         self.nhj_treeIdx = None
         self.perpV_treeIdx = None
         self.process_treeIdx = None
@@ -26,6 +28,8 @@ class AdditionalJetIndex(object):
         self.AJidx = None
         self.PtSL = None
         self.HV = None
+        self.HF = None
+        self.HjF = None
         self.nhj_idx = None
         self.nhj_dR = None
         self.HVpp = None
@@ -44,7 +48,7 @@ class AdditionalJetIndex(object):
         self.StdFsr = {}
         self.nISR = {}
         self.nFSR = {}
-        self.cuts = ['advCut','ptCut','dRCut','dRppCut','perpVCut','pt25','pt35','combo']
+        self.cuts = ['perpVCut2','ptCut','dRCut','perpVCut','pt25','pt35','combo']
         for cut in self.cuts:
             self.ISR_treeIdx[cut] = None
             self.Sisr_treeIdx[cut] = None
@@ -67,10 +71,18 @@ class AdditionalJetIndex(object):
         #Branches
         self.branches = []
         self.branchBuffers = {}
-        self.branches.append({'name': 'HVcombined_pt', 'formula': lambda tree: self.getHV(tree).Pt(), 'type': 'f'})
-        self.branches.append({'name': 'HVcombined_eta', 'formula': lambda tree: self.getHV(tree).Eta(), 'type': 'f'})
-        self.branches.append({'name': 'HVcombined_phi', 'formula': lambda tree: self.getHV(tree).Phi(), 'type': 'f'})
-        self.branches.append({'name': 'HVcombined_mass', 'formula': lambda tree: self.getHV(tree).M(), 'type': 'f'})
+        #self.branches.append({'name': 'HVcombined_pt', 'formula': lambda tree: self.getHV(tree).Pt(), 'type': 'f'})
+        #self.branches.append({'name': 'HVcombined_eta', 'formula': lambda tree: self.getHV(tree).Eta(), 'type': 'f'})
+        #self.branches.append({'name': 'HVcombined_phi', 'formula': lambda tree: self.getHV(tree).Phi(), 'type': 'f'})
+        #self.branches.append({'name': 'HVcombined_mass', 'formula': lambda tree: self.getHV(tree).M(), 'type': 'f'})
+        self.branches.append({'name': 'HCMVAV2_reg_wFSR_pt', 'formula': lambda tree: self.getHF(tree).Pt(), 'type': 'f'})
+        self.branches.append({'name': 'HCMVAV2_reg_wFSR_eta', 'formula': lambda tree: self.getHF(tree).Eta(), 'type': 'f'})
+        self.branches.append({'name': 'HCMVAV2_reg_wFSR_phi', 'formula': lambda tree: self.getHF(tree).Phi(), 'type': 'f'})
+        self.branches.append({'name': 'HCMVAV2_reg_wFSR_mass', 'formula': lambda tree: self.getHF(tree).M(), 'type': 'f'})
+        self.branches.append({'name': 'hJetCMVAV2_pt_reg_wFSR_0', 'formula': lambda tree: self.getHjF(tree)[0], 'type': 'f'})
+        self.branches.append({'name': 'hJetCMVAV2_pt_reg_wFSR_1', 'formula': lambda tree: self.getHjF(tree)[2], 'type': 'f'})
+        self.branches.append({'name': 'hJetCMVAV2_eta_reg_wFSR_0', 'formula': lambda tree: self.getHjF(tree)[1], 'type': 'f'})
+        self.branches.append({'name': 'hJetCMVAV2_eta_reg_wFSR_1', 'formula': lambda tree: self.getHjF(tree)[3], 'type': 'f'})
         self.branches.append({'name': 'SumAddJet_pt', 'formula': lambda tree: self.getSumAJ(tree).Pt(), 'type': 'f'})
         self.branches.append({'name': 'SumAddJet_eta', 'formula': lambda tree: self.getSumAJ(tree).Eta(), 'type': 'f'})
         self.branches.append({'name': 'SumAddJet_phi', 'formula': lambda tree: self.getSumAJ(tree).Phi(), 'type': 'f'})
@@ -182,6 +194,54 @@ class AdditionalJetIndex(object):
         self.HV = h+v
         return self.HV
     
+    def getHF(self,tree):
+        if tree.GetReadEntry() == self.HF_treeIdx:
+            if self.HF is not None:
+                return self.HF
+        self.HF_treeIdx = tree.GetReadEntry()
+        h = ROOT.TLorentzVector()
+        h.SetPtEtaPhiM(tree.HCMVAV2_reg_pt,tree.HCMVAV2_reg_eta,tree.HCMVAV2_reg_phi,tree.HCMVAV2_reg_mass)
+        f = ROOT.TLorentzVector()
+        fsridx = self.getFSRidx(tree,'dRCut')[0]
+        if fsridx < 0:
+            self.HF = h
+            return h
+        f.SetPtEtaPhiM(tree.Jet_pt[fsridx],tree.Jet_eta[fsridx],tree.Jet_phi[fsridx],tree.Jet_mass[fsridx])
+        self.HF = h+f
+        return self.HF
+
+    def getHjF(self,tree):
+        if tree.GetReadEntry() == self.HjF_treeIdx:
+            if self.HjF is not None:
+                return self.HjF
+        self.HjF_treeIdx = tree.GetReadEntry()
+        fsridx = self.getFSRidx(tree,'dRCut')[0]
+        if fsridx < 0:
+            self.HjF = (tree.hJetCMVAV2_pt_reg_0, tree.Jet_eta[tree.hJCMVAV2idx[0]], tree.hJetCMVAV2_pt_reg_1, tree.Jet_eta[tree.hJCMVAV2idx[1]])
+            return self.HjF
+        f = ROOT.TLorentzVector()
+        f.SetPtEtaPhiM(tree.Jet_pt[fsridx],tree.Jet_eta[fsridx],tree.Jet_phi[fsridx],tree.Jet_mass[fsridx])
+        nhJ_idx = self.getJet_nhJ_idx(tree)[fsridx]
+        if nhJ_idx == tree.hJCMVAV2idx[0]:
+            h0 = ROOT.TLorentzVector()
+            h0.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_0,tree.Jet_eta[tree.hJCMVAV2idx[0]],tree.Jet_phi[tree.hJCMVAV2idx[0]],tree.Jet_mass[tree.hJCMVAV2idx[0]]*tree.hJetCMVAV2_pt_reg_0/tree.Jet_pt[tree.hJCMVAV2idx[0]])
+            h0pt = (h0+f).Pt()
+            h0eta = (h0+f).Eta()
+            h1pt = tree.hJetCMVAV2_pt_reg_1
+            h1eta = tree.Jet_eta[tree.hJCMVAV2idx[1]]
+
+        if nhJ_idx == tree.hJCMVAV2idx[1]:
+            h1 = ROOT.TLorentzVector()
+            h1.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_1,tree.Jet_eta[tree.hJCMVAV2idx[1]],tree.Jet_phi[tree.hJCMVAV2idx[1]],tree.Jet_mass[tree.hJCMVAV2idx[1]]*tree.hJetCMVAV2_pt_reg_1/tree.Jet_pt[tree.hJCMVAV2idx[1]])
+            h1pt = (h1+f).Pt()
+            h1eta = (h1+f).Eta()
+            h0pt = tree.hJetCMVAV2_pt_reg_0
+            h0eta = tree.Jet_eta[tree.hJCMVAV2idx[0]]
+
+        self.HjF = (h0pt,h0eta,h1pt,h1eta)
+
+        return self.HjF
+
     def getNISR(self,tree,cut):
         self.getISRidx(tree,cut)
         return self.nISR[cut]
@@ -450,6 +510,13 @@ class AdditionalJetIndex(object):
             if cut == 'pt35':
                 isr_cut = tree.Jet_pt[idx] > 35
                 fsr_cut = not isr_cut
+
+            if cut == 'perpVCut2':
+                dRh = self.getJet_nhJ_dR(tree)[idx]
+                perp = self.getJet_perpV(tree)[idx]
+                isr_cut = dRh >= 0.9
+                #fsr_cut = (dRh-0.6)**2 / 0.3**2 + (np.log10(perp)-2.4)**2 < 1
+                fsr_cut = dRh < 0.9 and (np.log10(perp)/0.15)**2 + (dRh-1.75)**2 > 1 
 
             if cut == 'perpVCut':
                 dRh = self.getJet_nhJ_dR(tree)[idx]
