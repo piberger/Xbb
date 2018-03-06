@@ -349,7 +349,7 @@ class SampleTree(object):
             raise Exception("SampleTreeAddTTreeFormulaFailed")
 
     # ------------------------------------------------------------------------------
-    # return list of formulas 
+    # return list of formulas
     # ------------------------------------------------------------------------------
     def getFormulas(self):
         return self.formulas
@@ -829,7 +829,9 @@ class SampleTree(object):
             pass
 
         if self.totalNanoTreeCounts:
-            count = self.totalNanoTreeCounts[countHistogram if countHistogram else 'genEventCount']
+            if not countHistogram:
+                countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else 'genEventSumw'
+            count = self.totalNanoTreeCounts[countHistogram]
         else:
             if not countHistogram:
                 try:

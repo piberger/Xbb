@@ -89,7 +89,7 @@ for fileName in filelist:
         # all = ['Sys.Vtype', 'Sys.Leptons', ...]
         collectionsListsReplaced = []
         for collection in collections:
-            if '.' in collection: 
+            if '.' in collection:
                 section = collection.split('.')[0]
                 key = collection.split('.')[1]
                 listExpression = config.get(section, key).strip()
@@ -126,6 +126,7 @@ for fileName in filelist:
                 # pass the tree and other variables if needed to finalize initialization
                 if hasattr(wObject, "customInit") and callable(getattr(wObject, "customInit")):
                     wObject.customInit({'config': config,
+                                        'sampleTree': sampleTree,
                                         'tree': sampleTree.tree,
                                         'sample': sample,
                                         'channel': channel,

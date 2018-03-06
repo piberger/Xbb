@@ -80,7 +80,7 @@ class MvaTrainingHelper(object):
         self.varsets = ['X', 'y', 'sample_weight']
         self.trainCut = config.get('Cuts', 'TrainCut') 
         self.evalCut = config.get('Cuts', 'EvalCut')
-        
+
         print("TRAINING CUT:", self.trainCut)
         print("TEST CUT:", self.evalCut)
 
@@ -113,7 +113,7 @@ class MvaTrainingHelper(object):
                 'min_impurity_split': 0.0,
                 'bootstrap': True,
                 }
-        
+
         # load parameters from config in a format similar to Root TMVA parameter string
         self.MVAsettingsEvaluated = []
         for mvaSetting in self.MVAsettings.split(':'):
@@ -238,8 +238,8 @@ class MvaTrainingHelper(object):
                     'sample_weight': np.array(weightLists['train'], dtype=np.float32),
                     },
                 'test': {
-                    'X': np.concatenate(arrayLists['test'], axis=0), 
-                    'y': np.array(targetLists['test'], dtype=np.float32), 
+                    'X': np.concatenate(arrayLists['test'], axis=0),
+                    'y': np.array(targetLists['test'], dtype=np.float32),
                     'sample_weight': np.array(weightLists['test'], dtype=np.float32),
                     },
                 }
@@ -248,21 +248,21 @@ class MvaTrainingHelper(object):
         self.writeNumpyArrays(cachedFilesPath)
 
         return self
-        
+
     def verify_data(self):
         valid = True
-        for dataset in self.datasets: 
+        for dataset in self.datasets:
             for var in self.varsets:
                 print("DEBUG: self.data['{dataset}']['{var}'].shape = {shape}".format(dataset=dataset, var=var, shape=self.data[dataset][var].shape))
 
         for dataset in self.datasets:
             for i in range(len(self.varsets)-1):
                 valid = valid and self.data[dataset][self.varsets[i]].shape[0] == self.data[dataset][self.varsets[i+1]].shape[0]
-        return valid 
+        return valid
 
     def run(self):
 
-        if not self.verify_data(): 
+        if not self.verify_data():
             print ("\x1b[31mERROR: training input data array shapes are incompatible!\x1b[0m")
             raise Exception("BadTrainingInputData")
 
@@ -322,12 +322,12 @@ class MvaTrainingHelper(object):
                 applyClassWeights = True
             clf = make_pipeline(rt, clf0)
         elif self.parameters['classifier'] == 'XGBClassifier':
-            clf = XGBClassifier( 
-                    learning_rate=self.parameters['learning_rate'], 
-                    max_depth=self.parameters['max_depth'], 
+            clf = XGBClassifier(
+                    learning_rate=self.parameters['learning_rate'],
+                    max_depth=self.parameters['max_depth'],
                     n_estimators=self.parameters['n_estimators'],
                     objective='binary:logitraw',
-                    colsample_bytree=self.parameters['colsample_bytree'], 
+                    colsample_bytree=self.parameters['colsample_bytree'],
                     subsample=self.parameters['subsample'],
                     min_child_weight=self.parameters['min_child_weight'],
                     gamma=self.parameters['gamma'] if 'gamma' in self.parameters else 0.0,
@@ -343,28 +343,28 @@ class MvaTrainingHelper(object):
         elif self.parameters['classifier'] in ['SVC', 'LinearSVC']:
             '''
             clf = SVC(
-                        C=1.0, 
-                        cache_size=4000, 
-                        class_weight='balanced', 
-                        coef0=0.0, 
-                        decision_function_shape='ovr', 
-                        degree=3, 
-                        gamma='auto', 
-                        kernel='rbf', 
-                        max_iter=100000, 
-                        probability=False, 
-                        random_state=None, 
-                        shrinking=True, 
-                        tol=0.001, 
+                        C=1.0,
+                        cache_size=4000,
+                        class_weight='balanced',
+                        coef0=0.0,
+                        decision_function_shape='ovr',
+                        degree=3,
+                        gamma='auto',
+                        kernel='rbf',
+                        max_iter=100000,
+                        probability=False,
+                        random_state=None,
+                        shrinking=True,
+                        tol=0.001,
                         verbose=True
                     )
             '''
             bagged = int(self.parameters['bagged']) if 'bagged' in self.parameters else False
             if self.parameters['classifier'] == 'LinearSVC':
                 clf = LinearSVC(
-                            class_weight='balanced', 
+                            class_weight='balanced',
                             dual=self.parameters['dual'],
-                            max_iter=self.parameters['max_iter'], 
+                            max_iter=self.parameters['max_iter'],
                             C=self.parameters['C'],
                             penalty=self.parameters['penalty'],
                             loss=self.parameters['loss'],
@@ -374,23 +374,23 @@ class MvaTrainingHelper(object):
             else:
                 # classifier='SVC':C=random.choice([1.0, 10.0, 100.0, 500.0, 1000.0]):kernel=random.choice(['rbf','poly','linear']):degree=random.choice([2,3,4]):gamma=random.choice(['auto', 0.1, 0.3, 0.6]):shrinking=random.choice([True, False]):max_iter=10000:penalty=random.choice(['l1','l2']):tol=random.choice([0.005, 0.001, 0.0005, 0.0001]):cache_size=1000
                 clf =  SVC(
-                        C=self.parameters['C'], 
-                        cache_size=self.parameters['cache_size'], 
-                        class_weight='balanced', 
-                        coef0=0.0, 
-                        decision_function_shape='ovr', 
-                        degree=self.parameters['degree'], 
-                        gamma=self.parameters['gamma'], 
-                        kernel=self.parameters['kernel'], 
-                        max_iter=self.parameters['max_iter'], 
-                        probability=False, 
-                        random_state=None, 
-                        shrinking=self.parameters['shrinking'], 
-                        tol=self.parameters['tol'], 
+                        C=self.parameters['C'],
+                        cache_size=self.parameters['cache_size'],
+                        class_weight='balanced',
+                        coef0=0.0,
+                        decision_function_shape='ovr',
+                        degree=self.parameters['degree'],
+                        gamma=self.parameters['gamma'],
+                        kernel=self.parameters['kernel'],
+                        max_iter=self.parameters['max_iter'],
+                        probability=False,
+                        random_state=None,
+                        shrinking=self.parameters['shrinking'],
+                        tol=self.parameters['tol'],
                         verbose=True
                     )
 
-            if bagged: 
+            if bagged:
                 n_estimators = bagged
                 if 'bag_oversampling' in self.parameters:
                     n_estimators = int(n_estimators * self.parameters['bag_oversampling'])
@@ -398,7 +398,7 @@ class MvaTrainingHelper(object):
                 clf0 = clf
                 clf = BaggingClassifier(
                         clf0,
-                        max_samples=1.0 / bagged, 
+                        max_samples=1.0 / bagged,
                         max_features=self.parameters['baggedfeatures'] if 'baggedfeatures' in self.parameters else 1.0,
                         bootstrap_features=self.parameters['bootstrapfeatures'] if 'bootstrapfeatures' in self.parameters else False,
                         n_estimators=n_estimators,
@@ -418,11 +418,11 @@ class MvaTrainingHelper(object):
                     learning_rate=self.parameters['learning_rate'], 
                     algorithm=self.parameters['algorithm'],
                 )
-        
+
         #with open("/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25//test-scikit-svm/Logs//../cache/b7d92f50a52f8474e66cf4e2c3ad3fa4725aa489e7a6b288e4ed3855//clf2018-01-31_18-22-38_be9479a2.pkl","rb") as inputFile:
         #    clf = pickle.load(inputFile)
 
-        # preprocessing 
+        # preprocessing
         print("transformation...")
 
         if 'scaler' in self.parameters:
@@ -525,7 +525,7 @@ class MvaTrainingHelper(object):
             print("DO NOT re-weight signals by:", signalReweight)
         print("...")
         # TRAINING
-        
+
         learningCurve = []
         if self.parameters['classifier'] == 'XGBClassifier':
             clf = clf.fit(self.data['train']['X'], self.data['train']['y'], self.data['train']['sample_weight'], verbose=True)
@@ -602,9 +602,13 @@ class MvaTrainingHelper(object):
         h2t = ROOT.TH1D("h2t","h2t",50,0.0,1.0)
         for i in range(len(self.data['train']['X'])):
             result = (results_train[i][1]-minProb)/(maxProb-minProb)
+<<<<<<< HEAD
             if useSqrt:
                 result = math.sqrt(result)
             weight = self.data['train']['sample_weight'][i] 
+=======
+            weight = self.data['train']['sample_weight'][i]
+>>>>>>> 3df7e0593230ea62b87aaf5ce1c88e6efb9e41a8
             if self.data['train']['y'][i] < 0.5:
                 h1t.Fill(result, weight)
             else:
@@ -753,9 +757,13 @@ class MvaTrainingHelper(object):
 
         classifierOutputPath = self.getCachedNumpyArrayPath()
         classifierFileName = classifierOutputPath + '/clf' + timestamp + '.pkl'
+<<<<<<< HEAD
         joblib.dump(clf, classifierFileName) 
         joblib.dump(self.scaler, classifierOutputPath + '/clf' + timestamp + '_scaler.pkl') 
 
+=======
+        joblib.dump(clf, classifierFileName)
+>>>>>>> 3df7e0593230ea62b87aaf5ce1c88e6efb9e41a8
         html.append('<h3>classifier dump</h3>' + classifierFileName)
 
         html.append('</body></html>')

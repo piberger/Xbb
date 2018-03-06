@@ -133,7 +133,7 @@ if not opts.ftag == '':
         outputFile.write('logpath: %s\n'%DirStruct['logpath'])
         outputFile.write('limits: %s\n'%DirStruct['limitpath'])
 
-    # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!) 
+    # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!)
     pathfile = open('%sconfig/paths.ini'%opts.tag)
     buffer = pathfile.readlines()
     pathfile.close()
@@ -455,9 +455,44 @@ if opts.task == 'datasets':
             datasetFile.write(out)
 
 # -----------------------------------------------------------------------------
+# summary: To check prep, sysnew and eval step
+# At the end of the prep, sysnew and eval, a table witht the number of files missing BEFORE the submission
+# -----------------------------------------------------------------------------
+
+def PrintProcessedFiles(path, subfolder, sampleFileList, prepOUT = None):
+
+    n_missing_files = 0
+    n_total_files = len(sampleFileList)
+
+    for sampleFile in  sampleFileList:
+        #if step == sys:
+        filename=fileLocator.getFilenameAfterPrep(sampleFile)
+        FileExist = fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=subfolder, filename=filename))
+        #print 'yeah'
+        #FileExist = fileLocator.remoteFileExists("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=subfolder, filename=filename))
+
+        if not FileExist:
+            #If prepOUT is not None: checking the sysnew step or the eval step. Need to check if the broken/missing file in the SYSout/MVAout was in the PREPout to start with. If not, this file will NOT be reported ass missing.
+            if prepOUT:
+                FileExist = fileLocator.remoteFileExists("{path}/{subfolder}/{filename}".format(path=prepOUT, subfolder=subfolder, filename=filename))
+                if FileExist:
+                    n_missing_files += 1
+                else:
+                    n_total_files -= 1
+            else:
+                n_missing_files += 1
+
+    #if n_missing_files == 0:
+    #    print "\x1b[32m All files for",  subfolder, "were already produced. Nothing to submit \x1b[0m.."
+    #else:
+    #    print "\x1b[36m", n_missing_files,"/", len(sampleFileList), "\x1b[0m missing files for sample \x1b[36m", subfolder, " \x1b[0m.."
+
+    return [n_missing_files, n_total_files]
+
+# -----------------------------------------------------------------------------
 # PREP: copy skimmed ntuples to local storage
 # -----------------------------------------------------------------------------
-if opts.task == 'prep':
+if opts.task == 'prep' or opts.task == 'checkprep':
 
     pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
@@ -468,12 +503,21 @@ if opts.task == 'prep':
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
+    # for checksysnew step: dic contains missing number of files for each sample
+    missingFiles = {}
+
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
         sampleFileList = filelist(samplefiles, sampleIdentifier)
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
+
+        # for checksysnew step: only list of missing files are printed. No jobs are submited
+        if opts.task == 'checkprep':
+            print "going to check \x1b[36m", len(sampleFileList), "\x1b[0m files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+            missingFiles[sampleIdentifier] =  PrintProcessedFiles(pathOUT, sampleIdentifier, sampleFileList)
+            continue
 
         print "going to submit \x1b[36m", len(splitFilesChunks), "\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
         # submit a job for a chunk of N files
@@ -498,11 +542,27 @@ if opts.task == 'prep':
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
+    print '\n================'
+    print 'SUMMARY: checkprep'
+    print '==================\n'
+
+    # printing the content of missingFiles
+    if opts.task == 'checkprep':
+        for sampleIdentifier in sampleIdentifiers:
+            n_missing_files = missingFiles[sampleIdentifier][0]
+            n_total_files = missingFiles[sampleIdentifier][1]
+            if n_missing_files == 0:
+                print "\x1b[32m All files for \x1b[36m", sampleIdentifier, "\x1b[32m were already produced. Nothing to submit \x1b[0m.."
+            else:
+                print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+
 # -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
-if opts.task == 'sysnew':
+if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
+    # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
+    prepOUT = config.get("Directories", "PREPout")
     path = config.get("Directories", "SYSin")
     pathOUT = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
@@ -513,6 +573,9 @@ if opts.task == 'sysnew':
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
+    # for checksysnew step: dic contains missing number of files for each sample
+    missingFiles = {}
+
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
         sampleFileList = filelist(samplefiles, sampleIdentifier)
@@ -520,7 +583,15 @@ if opts.task == 'sysnew':
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
+        # for checksysnew step: only list of missing files are printed. No jobs are submited
+        if opts.task == 'checksysnew':
+            print "going to check \x1b[36m", len(sampleFileList), "\x1b[0m files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+            missingFiles[sampleIdentifier] =  PrintProcessedFiles(pathOUT, sampleIdentifier, sampleFileList, prepOUT)
+            continue
+
         print "going to submit \x1b[36m", len(splitFilesChunks), "\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+
+        # for sysnew
         # submit a job for a chunk of N files
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
 
@@ -545,6 +616,21 @@ if opts.task == 'sysnew':
                 submit(jobName, jobDict)
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
+
+    # printing the content of missingFiles
+    print '\n=================='
+    print 'SUMMARY: checksysnew'
+    print '====================\n'
+
+    if opts.task == 'checksysnew':
+        for sampleIdentifier in sampleIdentifiers:
+            #print 'sampleIdentifier is', sampleIdentifier
+            n_missing_files = missingFiles[sampleIdentifier][0]
+            n_total_files = missingFiles[sampleIdentifier][1]
+            if n_missing_files == 0:
+                print "\x1b[32m All files for \x1b[36m", sampleIdentifier, "\x1b[32m were already produced wrt the current prepOUT path \x1b[0m.."
+            else:
+                print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files wrt the current prepOUT path for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
 
 # -----------------------------------------------------------------------------
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 
@@ -960,7 +1046,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 # -----------------------------------------------------------------------------
 if opts.task == 'summary':
     print "-"*80
-    print " paths" 
+    print " paths"
     print "-"*80
     for path in ['PREPout', 'SYSin', 'SYSout', 'MVAin', 'MVAout', 'tmpSamples', 'samplesinfo']:
         try:
@@ -985,7 +1071,7 @@ if opts.task == 'summary':
         print "SAMPLES: \x1b[34m", ','.join(listOfSamples), "\x1b[0m"
         print "CUT: \x1b[32m", preselectionCut,"\x1b[0m"
         print "-"*40
-        
+
     print "-"*80
     print " CR and SR definitions:"
     print "-"*80
@@ -999,7 +1085,7 @@ if opts.task == 'summary':
         print " \x1b[33m",region,"\x1b[0m"
         print "  - cut:\x1b[34m", regionCut, "\x1b[0m"
     print "-"*80
-    print " weight " 
+    print " weight "
     print "-"*80
     try:
         print config.get('Weights', 'weightF')
