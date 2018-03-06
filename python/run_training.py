@@ -177,8 +177,8 @@ class MvaTrainingHelper(object):
 
 
     def book(self):
-        print('backing up old BDT files')
-        self.backupOldFiles()
+        #print('backing up old BDT files')
+        #self.backupOldFiles()
         # ----------------------------------------------------------------------------------------------------------------------
         # Execute TMVA
         # ----------------------------------------------------------------------------------------------------------------------
