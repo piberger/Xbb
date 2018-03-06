@@ -7,6 +7,7 @@ from optparse import OptionParser
 from myutils.FileList import FileList
 from myutils import BetterConfigParser, ParseInfo, LeptonSF
 from myutils.FileLocator import FileLocator
+import importlib
 from myutils.sampleTree import SampleTree
 from myutils.VtypeCorrector import VtypeCorrector
 from myutils.AdditionalJetIndex import AdditionalJetIndex
@@ -94,81 +95,54 @@ for fileName in filelist:
         if not sampleTree.tree:
             print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
             continue
-        
-        # ------------------------------------------------------------------------------------------
-        # correct Vtype for V25 HEPPY ntuples
-        # ------------------------------------------------------------------------------------------
-        if 'vtype' in collections:
-            vTypeCorrector = VtypeCorrector(tree=sampleTree.tree, channel=channel)
 
-            # (optional) allows the event to be skipped if recomputed vtype does not match
-            sampleTree.addCallback('event', vTypeCorrector.processEvent)
-
-            # get list of new branches to add
-            newBranches = vTypeCorrector.getBranches()
-
-            # add the new list of branches
-            sampleTree.addOutputBranches(newBranches)
-
-        # ------------------------------------------------------------------------------------------
-        # this is just a TEST
-        # ------------------------------------------------------------------------------------------
-        if 'ajidx' in collections:
-            ajIndexCalculator = AdditionalJetIndex()
-            sampleTree.addOutputBranches(ajIndexCalculator.getBranches())
-
-        # ------------------------------------------------------------------------------------------
-        # add variables defined in the config
-        # ------------------------------------------------------------------------------------------
-        if 'addbranches' in collections:
-            writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
-            sampleTree.addOutputBranches(writeNewVariables)
-        
-        # ------------------------------------------------------------------------------------------
-        # weights
-        # ------------------------------------------------------------------------------------------
-        if 'ttw' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                ttWeights = TTWeights()
-                sampleTree.addOutputBranches(ttWeights.getBranches())
-        if 'ewkw' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                ewkWeights = EWKweights(tree=sampleTree.tree, sample=sample)
-                sampleTree.addOutputBranches(ewkWeights.getBranches())
-        if 'btag' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                btagWeights = BTagWeights(tree=sampleTree.tree, sample=sample)
-                sampleTree.addOutputBranches(btagWeights.getBranches())
-        if 'leptonsf' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                leptonWeights = LeptonWeights(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
-                sampleTree.addOutputBranches(leptonWeights.getBranches())
-        if 'jes' in collections or 'weights' in collections:
-            jetEnergySystematics = JetEnergySystematics(tree=sampleTree.tree, sample=sample, config=config, channel=channel)
-            sampleTree.addOutputBranches(jetEnergySystematics.getBranches())
-        if 'wptreweight' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                wptReweight = WPtReweight(tree=sampleTree.tree, sample=sample, channel=channel)
-                sampleTree.addOutputBranches(wptReweight.getBranches())
-        if 'dyspecialweight' in collections or 'weights' in collections:
-            if sample.type != 'DATA':
-                dyWeight = DYspecialWeight(tree=sampleTree.tree, sample=sample)
-                sampleTree.addOutputBranches(dyWeight.getBranches())
-        
+        # lists of single modules can be given instead of a module, "--addCollections Sys.all"
+        # [Sys]
+        # all = ['Sys.Vtype', 'Sys.Leptons', ...]
+        collectionsListsReplaced = []
         for collection in collections:
-            if '.' in collection: 
+            if '.' in collection:
+                section = collection.split('.')[0]
+                key = collection.split('.')[1]
+                listExpression = config.get(section, key).strip()
+                if listExpression.startswith('[') and listExpression.endswith(']'):
+                    listParsed = eval(listExpression)
+                    for i in listParsed:
+                        collectionsListsReplaced.append(i)
+                else:
+                    collectionsListsReplaced.append(collection)
+            else:
+                collectionsListsReplaced.append(collection)
+        collections = collectionsListsReplaced
+
+        # to use this syntax, use "--addCollections Sys.Vtype" for a config file entry like this:
+        # [Sys]
+        # Vtype = VtypeCorrector.VtypeCorrector(channel='Zll')
+        # (instead of passing the tree in the constructor, the setTree method can be used)
+        for collection in collections:
+            if '.' in collection:
                 section = collection.split('.')[0]
                 key = collection.split('.')[1]
                 pyCode = config.get(section, key)
+
+                # import module from myutils
+                moduleName = pyCode.split('(')[0].split('.')[0].strip()
                 if debug:
+                    print "DEBUG: import module:", moduleName
                     print("\x1b[33mDEBUG: " + collection + ": run PYTHON code:\n"+pyCode+"\x1b[0m")
+                globals()[moduleName] = importlib.import_module(".{module}".format(module=moduleName), package="myutils")
 
                 # get object
                 wObject = eval(pyCode)
 
-                # pass the tree if needed to finalize initialization
-                if hasattr(wObject, "setTree") and callable(getattr(wObject, "setTree")):
-                    wObject.setTree(sampleTree.tree)
+                # pass the tree and other variables if needed to finalize initialization
+                if hasattr(wObject, "customInit") and callable(getattr(wObject, "customInit")):
+                    wObject.customInit({'config': config,
+                                        'sampleTree': sampleTree,
+                                        'tree': sampleTree.tree,
+                                        'sample': sample,
+                                        'channel': channel,
+                                        })
 
                 # add callbacks if the objects provides any
                 if hasattr(wObject, "processEvent") and callable(getattr(wObject, "processEvent")):
@@ -177,6 +151,11 @@ for fileName in filelist:
                 # add branches
                 if hasattr(wObject, "getBranches") and callable(getattr(wObject, "getBranches")):
                     sampleTree.addOutputBranches(wObject.getBranches())
+
+        # TODO: this can also be made a separate module
+        if 'addbranches' in collections:
+            writeNewVariables = eval(config.get("Regression", "writeNewVariablesDict"))
+            sampleTree.addOutputBranches(writeNewVariables)
 
         if 'removebranches' in collections:
             bl_branch = eval(config.get('Branches', 'useless_branch'))
@@ -210,8 +189,6 @@ for fileName in filelist:
 
         print 'copy ', tmpFileName, outputFileName
 
-        if 'vtype' in collections:
-            vTypeCorrector.printStatistics()
     else:
         print 'SKIP:', localFileName
 
