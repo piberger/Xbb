@@ -27,26 +27,36 @@ class SampleTreesToNumpyConverter(object):
         self.samplesPath = config.get('Directories', 'MVAin')
         self.samplesDefinitions = config.get('Directories','samplesinfo')
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
+
+        # region
         self.treeCutName = config.get(mvaName, 'treeCut')
         self.treeCut = config.get('Cuts', self.treeCutName)
+
+        # split in train/eval sets
         self.trainCut = config.get('Cuts', 'TrainCut') 
         self.evalCut = config.get('Cuts', 'EvalCut')
+        # rescale MC by 2 because of train/eval split
         self.globalRescale = 2.0
+
+        # variables and systematics
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
-        self.MVA_Vars = {}
-        self.systematics = ['JER_Up','JER_Down','PileUpDataMC_Up','PileUpDataMC_Down','PileUpPtRef_Up','PileUpPtRef_Down','PileUpPtBB_Up','PileUpPtBB_Down','PileUpPtEC1_Up','PileUpPtEC1_Down','RelativeJEREC1_Up','RelativeJEREC1_Down','RelativeFSR_Up','RelativeFSR_Down','RelativeStatFSR_Up','RelativeStatFSR_Down','RelativeStatEC_Up','RelativeStatEC_Down','RelativePtBB_Up','RelativePtBB_Down','RelativePtEC1_Up','RelativePtEC1_Down','AbsoluteScale_Up','AbsoluteScale_Down','AbsoluteMPFBias_Up','AbsoluteMPFBias_Down','AbsoluteStat_Up','AbsoluteStat_Down','SinglePionECAL_Up','SinglePionECAL_Down','SinglePionHCAL_Up','SinglePionHCAL_Down','Fragmentation_Up','Fragmentation_Down']
-        self.MVA_Vars['Nominal'] = [x for x in config.get(self.treeVarSet, 'Nominal').strip().split(' ') if len(x.strip()) > 0]
+        self.systematics = config.get('systematics', 'systematics')
+        self.MVA_Vars = {'Nominal': [x for x in config.get(self.treeVarSet, 'Nominal').strip().split(' ') if len(x.strip()) > 0]}
         for sys in self.systematics:
             self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
+
+        # samples
         self.sampleNames = {
-                    'BKG_TT': eval(self.config.get('Plot_general', 'TT')),
-                    'BKG_ST': eval(self.config.get('Plot_general', 'ST')),
-                    'BKG_VV': eval(self.config.get('Plot_general', 'VV')),
-                    'BKG_DY2b': eval(self.config.get('Plot_general', 'DY2b')),
-                    'BKG_DY1b': eval(self.config.get('Plot_general', 'DY1b')),
-                    'BKG_DY0b': eval(self.config.get('Plot_general', 'DYlight')),
-                    'SIG_ggZH': eval(self.config.get('Plot_general', 'ggZH')),
-                    'SIG_qqZH': eval(self.config.get('Plot_general', 'qqZH')),
+#                   'BKG_TT': eval(self.config.get('Plot_general', 'TT')),
+#                   'BKG_ST': eval(self.config.get('Plot_general', 'ST')),
+#                   'BKG_VV': eval(self.config.get('Plot_general', 'VV')),
+#                   'BKG_DY2b': eval(self.config.get('Plot_general', 'DY2b')),
+#                   'BKG_DY1b': eval(self.config.get('Plot_general', 'DY1b')),
+#                   'BKG_DY0b': eval(self.config.get('Plot_general', 'DYlight')),
+#                   'SIG_ggZH': eval(self.config.get('Plot_general', 'ggZH')),
+#                   'SIG_qqZH': eval(self.config.get('Plot_general', 'qqZH')),
+                    'SIG_ALL': eval(self.config.get('Plot_general', 'allSIG')),
+                    'BKG_ALL': eval(self.config.get('Plot_general', 'allBKG')),
                 }
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
 
@@ -153,6 +163,7 @@ class SampleTreesToNumpyConverter(object):
                     'testCut': self.evalCut,
                     'samples': self.sampleNames,
                     'weightF': weightF,
+                    'variables': ' '.join(self.MVA_Vars['Nominal'])
                     }
                 }
         # add systematics variations
