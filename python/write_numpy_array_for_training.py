@@ -40,7 +40,7 @@ class SampleTreesToNumpyConverter(object):
 
         # variables and systematics
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
-        self.systematics = config.get('systematics', 'systematics')
+        self.systematics = config.get('systematics', 'systematics').strip().split(' ')
         self.MVA_Vars = {'Nominal': [x for x in config.get(self.treeVarSet, 'Nominal').strip().split(' ') if len(x.strip()) > 0]}
         for sys in self.systematics:
             self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
@@ -170,9 +170,11 @@ class SampleTreesToNumpyConverter(object):
         for sys in systematics:
             self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
 
-        with open('./scikit_input.dmp', 'wb') as outputFile:
+        numpyOutputFileName = './' + self.mvaName + '.dmp'
+        with open(numpyOutputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
         print(self.data['meta'])
+        print("written to:\x1b[34m", numpyOutputFileName, " \x1b[0m")
 
 # read arguments
 argv = sys.argv
