@@ -257,6 +257,7 @@ submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(n
 submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
+        'runtraining': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
         'cacheplot': ' -l h_vmem=6g ',
