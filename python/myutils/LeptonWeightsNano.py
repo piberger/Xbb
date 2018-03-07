@@ -254,8 +254,8 @@ class LeptonWeights(object):
                         self.weight.append(lepCorr.get_2D(vLeptons[1].eta, vLeptons[0].eta))
                     #1-D binned SF
                     else:
-                        self.weight.append(lepCorr.get_1D(tree.vLeptons[0].eta))
-                        self.weight.append(lepCorr.get_1D(tree.vLeptons[1].eta))
+                        self.weight.append(lepCorr.get_1D(vLeptons[0].eta))
+                        self.weight.append(lepCorr.get_1D(vLeptons[1].eta))
 
                     if tree.Vtype == 0:
                         #IDISO
