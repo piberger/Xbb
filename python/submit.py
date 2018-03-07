@@ -15,6 +15,12 @@ from myutils import BetterConfigParser, ParseInfo
 from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
 
+try:
+    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+        print "\x1b[31mWARNING: unsupported Python version! Python 2.7+ is needed!\x1b[0m"
+except:
+    print "unable to detect python version!"
+
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
