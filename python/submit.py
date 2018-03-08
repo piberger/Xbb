@@ -162,7 +162,9 @@ if not opts.ftag == '':
 
     # copy config files
     for item in configs:
-        shutil.copyfile(item, '%s/%s/%s'%(tagDir, opts.ftag, item.replace(opts.tag, '')))
+        # if relative path to other config folder, just take file name
+        destConfigFileName = item.split('/')[-1]
+        shutil.copyfile(item, '%s/%s/%s'%(tagDir, opts.ftag, destConfigFileName))
 
 if debugPrintOUts:
     print configs
