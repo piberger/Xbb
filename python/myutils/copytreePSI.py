@@ -119,7 +119,12 @@ class CopyTreePSI(object):
         inputs=[]
         filenames=[]
         for inputFile in inputFiles:
-            subfolder = inputFile.split('/')[-4]
+
+            # this allows to have duplicate tree names, e.g. to import 2 trees which are both called tree_1.root
+            if config.has_option('Configuration', 'AllowDuplicateTrees') and eval(config.get('Configuration', 'AllowDuplicateTrees')):
+                subfolder = '_'.join(inputFile.split('/')[-4:-1])
+            else:
+                subfolder = inputFile.split('/')[-4]
             filename = inputFile.split('/')[-1]
             filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
             if filename in filenames: continue
