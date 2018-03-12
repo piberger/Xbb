@@ -13,9 +13,9 @@ class TTWeights(object):
         self.sampleTree = initVars['sampleTree']
         if self.sample.isMC():
             if self.nano:
-                self.sampleTree.addFormula("nTop", "Sum$(GenPart_pdgId==6)")
-                self.sampleTree.addFormula("top0_pt","MinIf$(GenPart_pt,GenPart_pdgId==6)")
-                self.sampleTree.addFormula("top1_pt","MaxIf$(GenPart_pt,GenPart_pdgId==6)")
+                self.sampleTree.addFormula("nTop", "Sum$(GenPart_pdgId==6&&GenPart_genPartIdxMother==0)")
+                self.sampleTree.addFormula("top0_pt","MinIf$(GenPart_pt,GenPart_pdgId==6&&GenPart_genPartIdxMother==0)")
+                self.sampleTree.addFormula("top1_pt","MaxIf$(GenPart_pt,GenPart_pdgId==6&&GenPart_genPartIdxMother==0)")
             else:
                 self.sampleTree.addFormula("nTop", "nGenTop")
                 self.sampleTree.addFormula("top0_pt","GenTop_pt[0]")
