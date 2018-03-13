@@ -1088,6 +1088,20 @@ if opts.task == 'summary':
         print "-"*40
 
     print "-"*80
+    print " plot samples"
+    print "-"*80
+    plotSamples = eval(config.get('Plot_general', 'samples'))
+    samplesUsed = [x for x in info if x.name in plotSamples]
+    sampleIdentifiersUsed = sorted(list(set([x.identifier for x in samplesUsed])))
+    for sampleIdentifier in sampleIdentifiersUsed:
+        print sampleIdentifier
+        for sample in samplesUsed:
+            if sample.identifier == sampleIdentifier:
+                print " >>> ", sample.name
+    
+
+
+    print "-"*80
     print " CR and SR definitions:"
     print "-"*80
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
