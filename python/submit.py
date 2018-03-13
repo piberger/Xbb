@@ -581,6 +581,12 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
+    # check for empty list of collections to add
+    addCollections = opts.addCollections
+    if not addCollections or len(addCollections.strip())<1:
+        print "\x1b[31mWARNING: No collections specified, using the default \x1b[32m'Sys.all'\x1b[31m instead, to force adding nothing, use \x1b[32m--addCollections None\x1b[31m!\x1b[0m"
+        addCollections = 'Sys.all'
+
     # for checksysnew step: dic contains missing number of files for each sample
     missingFiles = {}
 
@@ -614,7 +620,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                     'arguments':{
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
-                        'addCollections': opts.addCollections,
+                        'addCollections': addCollections,
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
                     })
@@ -1072,9 +1078,10 @@ if opts.task == 'summary':
     # don't look at subsamples, because they have the same pre-selection cut
     samples = [x for x in info if not x.subsample]
     for sample in samples:
-        if sample.addtreecut not in cutDict:
-            cutDict[sample.addtreecut] = []
-        cutDict[sample.addtreecut].append(sample.identifier)
+        addTreeCut = sample.addtreecut.replace(' ','')
+        if addTreeCut not in cutDict:
+            cutDict[addTreeCut] = []
+        cutDict[addTreeCut].append(sample.identifier)
     for preselectionCut, listOfSamples in cutDict.iteritems():
         print "SAMPLES: \x1b[34m", ','.join(listOfSamples), "\x1b[0m"
         print "CUT: \x1b[32m", preselectionCut,"\x1b[0m"
