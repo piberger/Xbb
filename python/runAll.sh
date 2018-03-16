@@ -84,6 +84,9 @@ while [ $# -gt 0 ]; do
     --splitFilesChunkSize=*)
       splitFilesChunkSize="${1#*=}"
       ;;
+    --scan=*)
+      scan="${1#*=}"
+      ;;
     --chunkNumber=*)
       chunkNumber="${1#*=}"
       ;;
@@ -278,6 +281,7 @@ elif [ $task = "runtraining" ]; then
     if [ "$expectedSignificance" = "1" ]; then
         runCommand="${runCommand} --expectedSignificance"
     fi
+    if [ "$scan" ]; then runCommand="${runCommand} --scan ${scan}"; fi
     echo "$runCommand"
     eval "$runCommand"
 

@@ -44,6 +44,7 @@ parser.add_option("-l", "--limit", dest="limit", default=None, help="max number 
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
+parser.add_option("-m", "--scan", dest="mvaScan", default=None, help="Scan MVA Settings for runtraining with the given number as number of runs")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -255,7 +256,7 @@ submitScriptSpecialOptions = {
         'singleeval': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=20g ',
+        'runtraining': ' -l h_vmem=6g ',
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
         }
@@ -711,7 +712,9 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'bigmem.q'})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        if opts.mvaScan is not None:
+            jobDict['arguments']['scan'] = opts.mvaScan
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
