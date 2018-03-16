@@ -84,7 +84,7 @@ class MvaTrainingHelper(object):
             self.MVAsettings = ":".join(settings)
             self.mvaName = self.mvaNameRaw + hex(hash(self.MVAsettings))[2:]
             #self.dictSettings[self.mvaName] = dictSettings
-            self.dictSettings[self.mvaName] = {"settings":self.MVAsettings}
+        self.dictSettings[self.mvaName] = {"settings":self.MVAsettings}
         return self
 
     def prepare(self):
@@ -327,11 +327,11 @@ class MvaTrainingHelper(object):
 
     def ranking(self):
 
-            ranked = sorted(self.dictSettings.items(), key = (lambda x: x[1]["ES_diffRel"]))
-            for method, dictSetting in ranked:
-                print("Method: {}, ROCinteg: {:5.4f} ({:5.4f}) -> {:3.2f}%, ES: {:4.3f} ({:4.3f}) -> {:3.2f}%, KS-test B (S): {:5.4f} ({:5.4f})".format(method,dictSetting["ROCint_test"],dictSetting["ROCint_train"],dictSetting["ROCint_diffRel"],dictSetting["ES_test"],dictSetting["ES_train"],dictSetting["ES_diffRel"],dictSetting["KS_B"],dictSetting["KS_S"]))
-                print("Settings: {}".format(dictSetting["settings"]))
-            pickle.dump(self.dictSettings,open(self.trainingOutputFileName[:-5]+".p","wb"))
+        ranked = sorted(self.dictSettings.items(), key = (lambda x: x[1]["ES_diffRel"]))
+        for method, dictSetting in ranked:
+            print("Method: {}, ROCinteg: {:5.4f} ({:5.4f}) -> {:3.2f}%, ES: {:4.3f} ({:4.3f}) -> {:3.2f}%, KS-test B (S): {:5.4f} ({:5.4f})".format(method,dictSetting["ROCint_test"],dictSetting["ROCint_train"],dictSetting["ROCint_diffRel"],dictSetting["ES_test"],dictSetting["ES_train"],dictSetting["ES_diffRel"],dictSetting["KS_B"],dictSetting["KS_S"]))
+            print("Settings: {}".format(dictSetting["settings"]))
+        pickle.dump(self.dictSettings,open(self.trainingOutputFileName[:-5]+".p","wb"))
 
     def estimateExpectedSignificance(self):
         print("INFO: open ", self.trainingOutputFileName)
@@ -353,7 +353,7 @@ class MvaTrainingHelper(object):
             esTest, sTest, bTest = self.getExpectedSignificance(testTree, 15, -0.8, 0.8)
             print("---- ~nominal TRAINING (without correct normalization) -----")
             trainTree = rootFile.Get('./TrainTree')
-            esTrain, sTrain, bTrain = self.getExpectedSignificance(trainTree, 15, -0.8, 0.8)
+            (esTrain, rocTrain), sTrain, bTrain = self.getExpectedSignificance(trainTree, 15, -0.8, 0.8, getRocInt = True)
 
             # the tree ./TrainTree contains the input events for training AFTER re-balancing the classes
             # therefore for SIG/BKG separately the normalization is fixed to the one of the TEST events
@@ -362,6 +362,12 @@ class MvaTrainingHelper(object):
             print("---- ~nominal TRAINING -----")
             trainTree = rootFile.Get('./TrainTree')
             esTrain, sTrain, bTrain = self.getExpectedSignificance(trainTree, 15, -0.8, 0.8, rescaleSig=rescaleSig, rescaleBkg=rescaleBkg)
+            key = self.mvaName
+            self.dictSettings[key]["ES_diffRel"]=100.*(esTrain-esTest)/esTest
+            self.dictSettings[key]["ES_train"]=esTrain
+            self.dictSettings[key]["ES_test"]=esTest
+            self.dictSettings[key]["ROCint_train"]=rocTrain
+            self.dictSettings[key]["ROCint_diffRel"]=100.*(rocTrain - self.dictSettings[key]["ROCint_test"])/self.dictSettings[key]["ROCint_test"]
         else:
             trainTree = rootFile.Get('./TrainTree')
             for key, val in self.dictSettings.items():
@@ -377,7 +383,8 @@ class MvaTrainingHelper(object):
                 self.dictSettings[key]["ROCint_train"]=rocTrain
                 self.dictSettings[key]["ROCint_diffRel"]=100.*(rocTrain - self.dictSettings[key]["ROCint_test"])/self.dictSettings[key]["ROCint_test"]
                 #print("settings: %s, overtraining: %10.4f"%(self.mvaName,(esTrain-esTest)/sTest))
-            self.ranking()
+        self.ranking()
+
 # read arguments
 argv = sys.argv
 parser = OptionParser()
