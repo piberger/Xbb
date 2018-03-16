@@ -33,10 +33,12 @@ class ParseInfo:
         "sample_path" contains the path where the samples are stored (PREPin). 
         "samples_config" is the "samples_nosplit.cfg" file. Depending of the variable "run_on_files" defined in "samples_nosplit.cfg", 
         the sample list are generated from the input folder (PREPin) or the list in "samples_nosplit.cfg" '''
-        
-        print "Start getting infos on all the samples (ParseInfo)"
-        print "==================================================\n"
-        print 'samples_config is', samples_config
+
+        self.debug = 'XBBDEBUG' in os.environ
+        if self.debug:
+            print "Start getting infos on all the samples (ParseInfo)"
+            print "==================================================\n"
+            print 'samples_config is', samples_config
         try:
             os.stat(samples_config)
         except:
@@ -52,38 +54,42 @@ class ParseInfo:
         config = BetterConfigParser()
         config.read(samples_config)
 
+        # TODO: 08.03.2018: newprefix and weightexpression needed?
         newprefix=config.get('General','newprefix')
         lumi=float(config.get('General','lumi'))
         weightexpression=config.get('General','weightexpression')
 
         self._samplelist = []
-
-        #!! Store the list of input samples in __fileslist. Reads them directly from the folder defined in PREPin  
         self.__fileslist=[]
-        # print 'T3',T3,'samples_path',samples_path,'t3_path',t3_path
-        if T3:
-            ls = os.popen("ls "+t3_path)
-        else:
-            ls = os.popen("ls "+samples_path)
     
-  #print 'will start the loop over the lines.'
-  #print ls.read()
-        for line in ls.readlines():
-    #print 'loop over the lines'
-                if('.root' in line):
-                        truncated_line = line[line.rfind('/')+1:]
-                        _p = findnth(truncated_line,'.',2)
-                        self.__fileslist.append(truncated_line[_p+1:truncated_line.rfind('.')])
-      #print 'added a new line !'
+        # TODO: 08.03.2018: clean up this file !!!!!!
 
-        print '@DEBUG: ' + str(self.__fileslist)
+        if samples_path:
+            #!! Store the list of input samples in __fileslist. Reads them directly from the folder defined in PREPin  
+            # print 'T3',T3,'samples_path',samples_path,'t3_path',t3_path
+            if T3:
+                ls = os.popen("ls "+t3_path)
+            else:
+                ls = os.popen("ls "+samples_path)
+        
+      #print 'will start the loop over the lines.'
+      #print ls.read()
+            for line in ls.readlines():
+        #print 'loop over the lines'
+                    if('.root' in line):
+                            truncated_line = line[line.rfind('/')+1:]
+                            _p = findnth(truncated_line,'.',2)
+                            self.__fileslist.append(truncated_line[_p+1:truncated_line.rfind('.')])
+          #print 'added a new line !'
 
-  #Deleteme: Do a loop to check on __fileslist
-  #Start the loop
-  #for i in range(0,len(self.__fileslist)):
-    #print 'Is the ',i ,'th file None ? Answer:', (self.__fileslist[i] == None) 
+            print '@DEBUG: ' + str(self.__fileslist)
 
-  #End Deleteme
+      #Deleteme: Do a loop to check on __fileslist
+      #Start the loop
+      #for i in range(0,len(self.__fileslist)):
+        #print 'Is the ',i ,'th file None ? Answer:', (self.__fileslist[i] == None) 
+
+      #End Deleteme
 
         run_on_fileList = eval(config.get('Samples_running','run_on_fileList'))#Evaluate run_on_fileList from samples_nosplit.cfg 
 
@@ -186,8 +192,9 @@ class ParseInfo:
                     newsample.sf = eval((config.get(sample, 'SF')))
                 newsample.group = config.get(sample,'sampleGroup')
                 self._samplelist.append(newsample)
-        print "Finished getting infos on all the samples (ParseInfo)"
-        print "=====================================================\n"
+        if self.debug:
+            print "Finished getting infos on all the samples (ParseInfo)"
+            print "=====================================================\n"
 
     def __iter__(self):
         for sample in self._samplelist:

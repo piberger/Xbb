@@ -13,7 +13,8 @@ class Jet :
 
 class BTagWeights(object):
 
-    def __init__(self):
+    def __init__(self, nano=False):
+        self.nano = nano
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
@@ -84,6 +85,12 @@ class BTagWeights(object):
                         branchName = "bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir 
                         self.branchBuffers[branchName] = array.array('f', [0])
                         self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
+
+    def customInit(self, initVars):
+        sample = initVars['sample']
+        self.isData = sample.type == 'DATA'
+        if self.isData:
+            self.branches = []
 
     def getBranches(self):
         return self.branches
@@ -203,17 +210,23 @@ class BTagWeights(object):
         isGoodEvent = True
         currentEntry = tree.GetReadEntry()
         # if current entry has not been processed yet
-        if currentEntry != self.lastEntry:
+        if currentEntry != self.lastEntry and not self.isData:
             self.lastEntry = currentEntry
-            self.MakeSysRefMap(tree)
+            #self.MakeSysRefMap(tree)
 
             jets_csv = []
             jets_cmva = []
 
-            for i in range(tree.nJet):
-                if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
-                    jet_cmva = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVAV2[i])
-                    jets_cmva.append(jet_cmva)
+            if self.nano:
+                for i in range(tree.nJet):
+                    if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+                        jet_cmva = Jet(tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVA[i])
+                        jets_cmva.append(jet_cmva)
+            else:
+                for i in range(tree.nJet):
+                    if (tree.Jet_pt_reg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+                        jet_cmva = Jet(tree.Jet_pt_reg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVAV2[i])
+                        jets_cmva.append(jet_cmva)
 
             ptmin = 20.
             ptmax = 1000.

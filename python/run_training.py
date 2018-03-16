@@ -111,6 +111,9 @@ class MvaTrainingHelper(object):
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
 
+        # DEBUG: restrict memory
+        # resource.setrlimit(resource.RLIMIT_AS, (4.0*1024*1024*1024, 5.0*1024*1024*1024))
+
         self.sampleTrees = []
         for addTreeFcn, samples in [
                     [addBackgroundTreeMethod, self.samples['BKG']],
@@ -135,11 +138,17 @@ class MvaTrainingHelper(object):
                             debug=True
                         )
                     sampleTree = tc.getTree()
+                    sampleTree.tree.SetCacheSize(32*1024)
+
+                    # prevent garbage collection
                     self.sampleTrees.append(sampleTree)
                     if sampleTree:
                         treeScale = sampleTree.getScale(sample) * self.globalRescale
+
+                        # only non-empty trees can be added
                         if sampleTree.tree.GetEntries() > 0:
                             addTreeFcn(sampleTree.tree, treeScale, ROOT.TMVA.Types.kTraining if additionalCut == self.TrainCut else ROOT.TMVA.Types.kTesting)
+                            print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
@@ -185,13 +194,21 @@ class MvaTrainingHelper(object):
 
 
     def book(self):
-        #print('backing up old BDT files')
-        #self.backupOldFiles()
+        backupFiles = False
+        try:
+            backupFiles = eval(self.config.get('MVAGeneral', 'backupWeights'))
+        except:
+            pass
+        if backupFiles:
+            print('backing up old BDT files')
+            self.backupOldFiles()
         # ----------------------------------------------------------------------------------------------------------------------
         # Execute TMVA
         # ----------------------------------------------------------------------------------------------------------------------
         self.factory.Verbose()
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         print('Execute TMVA: factory.BookMethod("%s", "%s", "%s")'%(self.MVAtype, self.mvaName, self.MVAsettings))
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         weightF = self.config.get('Weights','weightF')
         try:
             self.factory.BookMethod(self.MVAtype, self.mvaName, self.MVAsettings)
@@ -217,18 +234,22 @@ class MvaTrainingHelper(object):
                     self.evalMvaSettings().factory.BookMethod(self.dataLoader, self.MVAtype, self.mvaName, self.MVAsettings)
                 except:
                     pass
+        sys.stdout.flush()
         return self
 
     def run(self):
         print('Execute TMVA: TrainAllMethods')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.TrainAllMethods()
+        sys.stdout.flush()
         print('Execute TMVA: TestAllMethods')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.TestAllMethods()
+        sys.stdout.flush()
         print('Execute TMVA: EvaluateAllMethods')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.EvaluateAllMethods()
+        sys.stdout.flush()
         print('Execute TMVA: output.Write')
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.trainingOutputFile.Close()
@@ -237,10 +258,10 @@ class MvaTrainingHelper(object):
             self.dictSettings[mvaName]["KS_S"]=method.GetKSTrainingVsTest('S','')
             self.dictSettings[mvaName]["KS_B"]=method.GetKSTrainingVsTest('B','')
             self.dictSettings[mvaName]["ROCint_test"]=method.GetROCIntegral()
-            dataset = method.Data()
-            dataset.SetCurrentType(ROOT.TMVA.Types.kTraining)
-            results = (dataset.GetResults(mvaName,ROOT.TMVA.Types.kTraining,ROOT.TMVA.Types.kClassification))
-            results.__class__ = ROOT.TMVA.ResultsClassification
+            #dataset = method.Data()
+            #dataset.SetCurrentType(ROOT.TMVA.Types.kTraining)
+            #results = (dataset.GetResults(mvaName,ROOT.TMVA.Types.kTraining,ROOT.TMVA.Types.kClassification))
+            #results.__class__ = ROOT.TMVA.ResultsClassification
             #mvaRes = results.GetValueVector()
             #mvaResType = results.GetValueVectorTypes()
             #try:

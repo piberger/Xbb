@@ -65,6 +65,7 @@ class CopyTreePSI(object):
         input.Close()
         tmpFile = __tmpPath+'/'+outputFileName
         self.fileLocator.cp(source=tmpFile, target=outputFile)
+        print 'copy to final location:\x1b[34m', outputFile, '\x1b[0m'
         self.fileLocator.rm(tmpFile)
 
     def copySingleFileOneInput(self, inputs):
@@ -119,13 +120,8 @@ class CopyTreePSI(object):
         inputs=[]
         filenames=[]
         for inputFile in inputFiles:
-            subfolder = inputFile.split('/')[-4]
-            filename = inputFile.split('/')[-1]
-            filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
-            if filename in filenames: continue
-            filenames.append(filename)
-            hash = hashlib.sha224(filename).hexdigest()
-            outputFile = "%s/%s/%s" %(pathOUT,folderName,filename.replace('.root','')+'_'+str(hash)+'.root')
+            fileName = fileLocator.getFilenameAfterPrep(inputFile)
+            outputFile = "%s/%s/%s" %(pathOUT,folderName,fileName)
             
             if fileLocator.exists(outputFile):
                 if not fileLocator.isValidRootFile(outputFile):
