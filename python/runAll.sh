@@ -166,7 +166,7 @@ if [ ! -d $logpath ]; then
 fi
 
 # The MVA list, only compute for the eval steps!
-if [[ $string = *"eval"* ]]; then
+#if [[ $string = *"eval"* ]]; then
 MVAList=$(
 python << END
 import myutils
@@ -178,7 +178,8 @@ config.read(configList)
 print config.get('MVALists', 'List_for_submitscript')
 END
 )
-fi
+echo "MVAList: ${MVAList}";
+#fi
 
 #-------------------------------------------------
 # Run Task

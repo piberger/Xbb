@@ -25,6 +25,7 @@ class MvaTrainingHelper(object):
         self.samplesDefinitions = config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
 
+        self.MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
         self.sampleFilesFolder = config.get('Directories', 'samplefiles')
 
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
@@ -55,10 +56,10 @@ class MvaTrainingHelper(object):
             self.nRuns = int(scan)
             print("MVA Setting Scan will be performed with {} runs".format(scan))
             self.scanSettings = config.get('MVAGeneral', 'Settings_Scan')
-            self.dictSettings = {}
         else:
             self.nRuns = 1
             self.nFactories = 1
+        self.dictSettings = {}
         self.TrainCut = config.get('Cuts', 'TrainCut') 
         self.EvalCut = config.get('Cuts', 'EvalCut')
         print("TRAINING CUT:", self.TrainCut)
@@ -167,8 +168,7 @@ class MvaTrainingHelper(object):
     # ----------------------------------------------------------------------------------------------------------------------
     def backupOldFiles(self):
         success = False
-        MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
-        backupDir = MVAdir + 'backup/'
+        backupDir = self.MVAdir + 'backup/'
         try:
             os.makedirs(backupDir)
         except:
@@ -182,8 +182,8 @@ class MvaTrainingHelper(object):
             freeNumber = -1
         if freeNumber > -1:
             try:
-                fileNamesToBackup = glob.glob(MVAdir + self.factoryname+'_'+self.mvaName + '.*')
-                fileNamesToBackup += glob.glob(MVAdir + '/../mvatraining_MVA_ZllBDT_*.root')
+                fileNamesToBackup = glob.glob(self.MVAdir + self.factoryname+'_'+self.mvaName + '.*')
+                fileNamesToBackup += glob.glob(self.MVAdir + '/../mvatraining_MVA_ZllBDT_*.root')
                 os.makedirs(backupDir + 'v%d/'%freeNumber)
                 for fileNameToBackup in fileNamesToBackup:
                     shutil.copy(fileNameToBackup, backupDir + 'v%d/'%freeNumber)
@@ -250,9 +250,6 @@ class MvaTrainingHelper(object):
         print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
         self.factory.EvaluateAllMethods()
         sys.stdout.flush()
-        print('Execute TMVA: output.Write')
-        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
-        self.trainingOutputFile.Close()
         for mvaName, settings in self.dictSettings.items():
             method = self.factory.GetMethod(".",mvaName)
             self.dictSettings[mvaName]["KS_S"]=method.GetKSTrainingVsTest('S','')
@@ -272,16 +269,14 @@ class MvaTrainingHelper(object):
             #   self.dictSettings[mvaName]["ROCint_train"] = 0
             #   self.dictSettings[mvaName]["ROCint_diffRel"] = 0
             #   print("ROCCurve failed")
-#    dataset = method.Data()
-        #    dataset.
-        #    res_train = dataset.GetResults(mvaName,self.MVAtype,ROOT.TMVA.Types.kTraining)
-        #    res_test = dataset.GetResults(mvaName,self.MVAtype,ROOT.TMVA.Types.kTesting)
+        print('Execute TMVA: output.Write')
+        print('max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
+        self.trainingOutputFile.Close()
         return self
 
     def printInfo(self):
         #WRITE INFOFILE
-        MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
-        infofile = open(MVAdir+self.factoryname+'_'+self.mvaName+'.info','w')
+        infofile = open(self.MVAdir+self.factoryname+'_'+self.mvaName+'.info','w')
         print ('@DEBUG: output infofile name')
         print (infofile)
 
@@ -290,7 +285,7 @@ class MvaTrainingHelper(object):
         info.factorysettings=self.factorysettings
         info.MVAtype=self.MVAtype
         info.MVAsettings=self.MVAsettings
-        info.weightfilepath=MVAdir
+        info.weightfilepath=self.MVAdir
         info.path=self.samplesPath
         info.varset=self.treeVarSet
         info.vars=self.MVA_Vars['Nominal']
@@ -352,7 +347,9 @@ class MvaTrainingHelper(object):
         for method, dictSetting in ranked:
             print("Method: {}, ROCinteg: {:5.4f} ({:5.4f}) -> {:3.2f}%, ES: {:4.3f} ({:4.3f}) -> {:3.2f}%, KS-test B (S): {:5.4f} ({:5.4f})".format(method,dictSetting["ROCint_test"],dictSetting["ROCint_train"],dictSetting["ROCint_diffRel"],dictSetting["ES_test"],dictSetting["ES_train"],dictSetting["ES_diffRel"],dictSetting["KS_B"],dictSetting["KS_S"]))
             print("Settings: {}".format(dictSetting["settings"]))
-        pickle.dump(self.dictSettings,open(self.trainingOutputFileName[:-5]+".p","wb"))
+        pickle_file = open(self.MVAdir+self.trainingOutputFileName[:-5]+".p","w")
+        pickle.dump(self.dictSettings,pickle_file)
+        pickle_file.close()
 
     def estimateExpectedSignificance(self):
         print("INFO: open ", self.trainingOutputFileName)
@@ -391,6 +388,7 @@ class MvaTrainingHelper(object):
             self.dictSettings[key]["ROCint_diffRel"]=100.*(rocTrain - self.dictSettings[key]["ROCint_test"])/self.dictSettings[key]["ROCint_test"]
         else:
             trainTree = rootFile.Get('./TrainTree')
+            print("Estimating expected significance for all methods")
             for key, val in self.dictSettings.items():
                 self.mvaName = key
                 esTest, sTest, bTest = self.getExpectedSignificance(testTree, 15, -0.8, 0.8,verbose=False)
