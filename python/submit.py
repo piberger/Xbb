@@ -50,6 +50,7 @@ parser.add_option("-l", "--limit", dest="limit", default=None, help="max number 
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
+parser.add_option("-m", "--scan", dest="mvaScan", default=None, help="Scan MVA Settings for runtraining with the given number as number of runs")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -186,6 +187,7 @@ if opts.override_to_run_locally and opts.override_to_run_in_batch:
     print 'both override_to_run_locally and override_to_run_in_batch ativated, using str(config.get("Configuration","run_locally")) instead'
 elif opts.override_to_run_locally:
     run_locally = 'True'
+    submitScriptRunAllLocally = True
     print 'using override_to_run_locally to override str(config.get("Configuration","run_locally"))'
 elif opts.override_to_run_in_batch:
     run_locally = 'False'
@@ -258,10 +260,12 @@ submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
 submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
 submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
+        'sysnew': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
         'runtraining': ' -l h_vmem=6g ',
         'eval': ' -l h_vmem=4g ',
         'cachedc': ' -l h_vmem=6g ',
+        'runtraining': ' -l h_vmem=6g ',
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
         }
@@ -400,7 +404,7 @@ def submit(job, repDict):
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
-                command = 'sh {runscript}'.format(runscript=runScript)
+                command = 'sh {runscript} | tee {logfile}'.format(runscript=runScript,logfile=outOutputPath)
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
@@ -724,6 +728,8 @@ if opts.task.startswith('runtraining'):
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
         jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        if opts.mvaScan is not None:
+            jobDict['arguments']['scan'] = opts.mvaScan
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 

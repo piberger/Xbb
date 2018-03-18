@@ -84,6 +84,9 @@ while [ $# -gt 0 ]; do
     --splitFilesChunkSize=*)
       splitFilesChunkSize="${1#*=}"
       ;;
+    --scan=*)
+      scan="${1#*=}"
+      ;;
     --chunkNumber=*)
       chunkNumber="${1#*=}"
       ;;
@@ -163,7 +166,7 @@ if [ ! -d $logpath ]; then
 fi
 
 # The MVA list, only compute for the eval steps!
-if [[ $string = *"eval"* ]]; then
+#if [[ $string = *"eval"* ]]; then
 MVAList=$(
 python << END
 import myutils
@@ -175,7 +178,8 @@ config.read(configList)
 print config.get('MVALists', 'List_for_submitscript')
 END
 )
-fi
+echo "MVAList: ${MVAList}";
+#fi
 
 #-------------------------------------------------
 # Run Task
@@ -207,8 +211,10 @@ elif [ $task = "mergesingleprep" ]; then
     python ./myutils/mergetreePSI.py --samples $sample ${config_filenames[@]}
 
 elif [ $task = "trainReg" ]; then
-    echo "python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
-    python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}
+    runCommand="python ./trainRegression.py --config ${tag}config/regression.ini ${config_filenames[@]}"
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
+    echo "$runCommand"
+    eval "$runCommand"
 
 elif [ $task = "sys" ]; then
     runCommand="python ./write_regression_systematics.py --samples ${sampleIdentifier}"
@@ -281,6 +287,7 @@ elif [ $task = "runtraining" ]; then
     if [ "$expectedSignificance" = "1" ]; then
         runCommand="${runCommand} --expectedSignificance"
     fi
+    if [ "$scan" ]; then runCommand="${runCommand} --scan ${scan}"; fi
     echo "$runCommand"
     eval "$runCommand"
 
