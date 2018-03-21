@@ -105,7 +105,20 @@ double SoverSBWeight(double BDT, int channel) {
 
     }
 
+  TLorentzVector getTLorentzVector(double pt, double eta, double phi, double mass){
+      TLorentzVector v;
+      v.SetPtEtaPhiM(pt, eta, phi, mass);
+      return v;
+  }
 
+  double Alt(bool crit, double val1, double val2){
+      if(crit){
+          return val1;
+      }
+      else{
+          return val2;
+      }
+  }
 
   double deltaPhi(double phi1, double phi2) {
     double result = phi1 - phi2;
@@ -123,6 +136,53 @@ double SoverSBWeight(double BDT, int channel) {
     return TMath::Sqrt(deta*deta + dphi*dphi);
   }
 
+  double deltaR_(double eta1, double phi1, double eta2, double phi2) {
+    // calculates deltaR of 1 with the opposite of 2
+    double deta = eta1 + eta2;
+    double dphi = deltaPhi(phi1, phi2+TMath::Pi());
+    return TMath::Sqrt(deta*deta + dphi*dphi);
+  }
+
+  double deltaR2(TLorentzVector& j1, TLorentzVector& j2) {
+        double dphi, dy;
+        dphi = deltaPhi(j1.Phi(), j2.Phi());
+        if (std::isinf(j1.Rapidity()) || std::isinf(j2.Rapidity())){
+            dy = 10;
+        }
+        else { 
+            dy = j1.Rapidity()-j2.Rapidity();
+        }
+        return TMath::Sqrt(dy*dy + dphi*dphi);
+  }
+
+  double pt_rel(double eta, double phi,double eta2, double phi2){
+      TVector3 v, v_ref;
+      v.SetPtEtaPhi(1, eta, phi);
+      //v.SetMag(1);
+      v_ref.SetPtEtaPhi(1,eta2,phi2);
+      //v_ref.SetMag(1);
+      return v.Pt(v_ref);
+  }
+
+  double getPAbs(double pt, double eta)
+  {
+      return pt*TMath::CosH(eta);
+  }
+
+  double deltaR2(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2, eta2, phi2, mass2);
+      return deltaR2(j1, j2);
+  }
+  
+  double deltaR2_(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2,-eta2, phi2+TMath::Pi(), mass2);
+      return deltaR2(j1, j2);
+  }
+  
   double HJetVarByCSV(double CSVj1, double Varj1, double CSVj2, double Varj2, bool pickhighestBtag) {
     if ((CSVj1 > CSVj2) && pickhighestBtag) {
       return Varj1;
@@ -169,6 +229,30 @@ double SoverSBWeight(double BDT, int channel) {
     return (H1+H2).M();
   }
 
+  double SumJet_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+
+    TLorentzVector H1, H2;
+
+    H1.SetPtEtaPhiM(hJet1_pt, hJet1_eta, hJet1_phi, hJet1_mass);
+    H2.SetPtEtaPhiM(hJet2_pt, hJet2_eta, hJet2_phi, hJet2_mass);
+
+    return (H1+H2).Pt();
+  }
+
+  double DiffSumToJet_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+    return SumJet_pt( hJet1_eta,  hJet1_phi,  hJet1_pt,  hJet1_mass, hJet2_eta, hJet2_phi, hJet2_pt, hJet2_mass) - hJet1_pt;
+  }
+
+  double FSRCorr_pt(double hJet1_eta, double hJet1_phi, double hJet1_pt, double hJet1_mass,
+		    double hJet2_eta, double hJet2_phi, double hJet2_pt, double hJet2_mass) {
+      if(deltaR(hJet1_eta,hJet1_phi, hJet2_eta, hJet2_phi) > 0.9)
+      {
+          return 0;
+      }
+      return SumJet_pt( hJet1_eta,  hJet1_phi,  hJet1_pt,  hJet1_mass, hJet2_eta, hJet2_phi, hJet2_pt, hJet2_mass) - hJet1_pt;
+  }
   double Hmass_3j(double h_eta, double h_phi, double h_pt, double h_mass,
 		  double aJet_eta, double aJet_phi, double aJet_pt, double aJet_mass) {
 
@@ -259,6 +343,25 @@ double SoverSBWeight(double BDT, int channel) {
 
     return cosTheta;
   }
+  
+  double normPProd(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2) {
+      TLorentzVector j1, j2;
+      j1.SetPtEtaPhiM(pt, eta, phi, mass);
+      j2.SetPtEtaPhiM(pt2,eta2, phi2, mass2);
+      double pp = j1 * j2;
+      return pp / (pt * mass2);
+  }
+
+  double deltaRu_vpw(double pt, double eta, double phi, double mass, double pt2, double eta2, double phi2, double mass2,double pt3, double eta3, double phi3, double mass3){
+      //Returns deltaR2 of (u, v+w)
+      TLorentzVector u,v,w,x;
+      u.SetPtEtaPhiM(pt, eta, phi,  mass);
+      v.SetPtEtaPhiM( pt2,  eta2,  phi2,  mass2);
+      w.SetPtEtaPhiM(pt3,  eta3,  phi3,  mass3);
+      x = v + w;
+      return deltaR2(u, x);
+  }
+
 
   double metCorSysShift(double met, double metphi, int Nvtx, int EVENT_run) {
     double metx = met * cos(metphi);
