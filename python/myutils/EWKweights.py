@@ -5,12 +5,16 @@ import array
 
 class EWKweights(object):
 
-    def __init__(self, sample=None):
+    def __init__(self,  boost=False, sample=None):
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
-        self.branches.append({'name': 'NLOw', 'formula': self.getNLOw})
-        self.branches.append({'name': 'DYw', 'formula': self.getDYw})
+        self.boost = boost
+
+        #NLOw is not defined in booseted topologie
+        if self.boost == False:
+            self.branches.append({'name': 'NLOw', 'formula': self.getNLOw})
+            self.branches.append({'name': 'DYw', 'formula': self.getDYw})
         for wName in ['EWKw', 'EWKwSIG', 'EWKwVJets']:
             self.branchBuffers[wName] = np.zeros(3, dtype=np.float32)
             self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length':3}, 'length': 3})
