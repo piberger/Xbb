@@ -223,10 +223,13 @@ class Datacard(object):
             self.sample_sys_list = None
         #Create dictonary to "turn of" all the sample systematic (for nominal)
         self.sample_sys_dic = {}
-        for sample_sys in self.sample_sys_list:
-            self.sample_sys_dic[sample_sys] = False
-        if self.debug:
-            print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
+        if self.sample_sys_list:
+            for sample_sys in self.sample_sys_list:
+                self.sample_sys_dic[sample_sys] = False
+            if self.debug:
+                print("\x1b[34msample_sys_list\x1b[0m =", self.sample_sys_list)
+        else:
+            self.sample_sys_dic = None
 
         self.samples = {
                 'SIG': self.samplesInfo.get_samples(self.signals),
@@ -301,29 +304,30 @@ class Datacard(object):
                 self.systematicsList.append(systematicsDictionary)
 
         # sample systematics
-        for sampleSystematicName, sampleSystematicSamples in self.sysOptions['sample_sys_info'].iteritems(): #loop over the systematics
-            for Q in self.UD:
-                systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
-                systematicsDictionary.update({
-                        'sysType': 'sample',
-                        'samples': sampleSystematicSamples, 
-                        'name': sampleSystematicName,
-                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q) 
-                    })
-                # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
-                for sampleSystematicSample in sampleSystematicSamples:
-                    for sample_type in sampleSystematicSample:
-                        sampleSystematicVariationTypes = {
-                                0: False,          # nominal
-                                1: (Q == 'Down'),  # down variation
-                                2: (Q == 'Up'),    # up variation
-                            }
-                        # mark nominal/up/down variations in sample_sys_dic
-                        for index, value in sampleSystematicVariationTypes.iteritems():
-                            for sampleName in sample_type[index]:
-                                systematicsDictionary['sample_sys_dic'][sampleName] = value
+        if self.sysOptions['sample_sys_info']:
+            for sampleSystematicName, sampleSystematicSamples in self.sysOptions['sample_sys_info'].iteritems(): #loop over the systematics
+                for Q in self.UD:
+                    systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
+                    systematicsDictionary.update({
+                            'sysType': 'sample',
+                            'samples': sampleSystematicSamples,
+                            'name': sampleSystematicName,
+                            'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q)
+                        })
+                    # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
+                    for sampleSystematicSample in sampleSystematicSamples:
+                        for sample_type in sampleSystematicSample:
+                            sampleSystematicVariationTypes = {
+                                    0: False,          # nominal
+                                    1: (Q == 'Down'),  # down variation
+                                    2: (Q == 'Up'),    # up variation
+                                }
+                            # mark nominal/up/down variations in sample_sys_dic
+                            for index, value in sampleSystematicVariationTypes.iteritems():
+                                for sampleName in sample_type[index]:
+                                    systematicsDictionary['sample_sys_dic'][sampleName] = value
 
-                self.systematicsList.append(systematicsDictionary)
+                    self.systematicsList.append(systematicsDictionary)
         if self.debug or self.verbose:
             print('INFO: datacard initialization complete!')
             print('INFO: {nSys} systematics for {nSamples} samples'.format(nSys=len(self.systematicsList), nSamples=sum([len(x) for k,x in self.samples.iteritems()])))
