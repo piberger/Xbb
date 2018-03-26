@@ -545,6 +545,8 @@ if opts.task == 'prep' or opts.task == 'checkprep':
                     },
                     'batch': 'prep_' + sampleIdentifier,
                     })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
                 jobName = 'prep_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
                 submit(jobName, jobDict)
             else:
