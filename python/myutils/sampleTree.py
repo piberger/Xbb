@@ -44,6 +44,7 @@ class SampleTree(object):
         self.samples = samples
         self.tree = None
         self.fileLocator = FileLocator(config=self.config)
+        self.sampleIdentifier = None
 
         # process only partial sample root file list
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -152,7 +153,8 @@ class SampleTree(object):
                                     self.histograms[histogramName].SetDirectory(0)
                                 else:
                                     if self.debug:
-                                        print("DEBUG: omitting object ", obj, " since it is neither TH1 or TTree!")
+                                        print("DEBUG: omitting object ", obj, type(obj), " since it is neither TH1 or TTree!")
+
                         input.Close()
 
                         # add file to chain
@@ -205,13 +207,14 @@ class SampleTree(object):
                 countBranches = self.totalNanoTreeCounts.keys()
                 depth = None
                 for key,values in self.nanoTreeCounts.iteritems():
-                    if type(values[0]) in [int, float, long]:
+                    if values and len(values)>1 and type(values[0]) in [int, float, long]:
                         depth = len(values)
                         break
                 print("-"*160)
                 print("tree".ljust(25), ''.join([countBranch.ljust(25) for countBranch in countBranches]))
-                for treeNum in range(depth):
-                    print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
+                if depth:
+                    for treeNum in range(depth):
+                        print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
                 print("\x1b[34m","sum".ljust(24), ''.join([('%r'%self.totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
                 print("-"*160)
 
@@ -220,7 +223,8 @@ class SampleTree(object):
                 nanoTreeCountBuffers = {}
                 for key, value in self.totalNanoTreeCounts.iteritems():
                     if type(value) == int:
-                        typeCode = 'i'
+                        # 64 bit signed int
+                        typeCode = 'L'
                     elif type(value) == long:
                         typeCode = 'L'
                     elif type(value) == float:
@@ -278,6 +282,7 @@ class SampleTree(object):
                 sampleName = self.samples['sample'].identifier
             else:
                 sampleName = self.samples['name']
+            self.sampleIdentifier = sampleName
             sampleFolder = self.samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             redirector = self.fileLocator.getRedirector(sampleFolder)
@@ -829,7 +834,13 @@ class SampleTree(object):
             pass
 
         if self.totalNanoTreeCounts:
-            count = self.totalNanoTreeCounts[countHistogram if countHistogram else 'genEventCount']
+            if self.config.has_option('Configuration', 'countsFromAutoPU') and eval(self.config.get('Configuration', 'countsFromAutoPU')):
+                count = self.histograms['autoPU'].GetEntries()
+                countHistogram = "autoPU.GetEntries()"
+            else:
+                if not countHistogram:
+                    countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else 'genEventSumw'
+                count = self.totalNanoTreeCounts[countHistogram]
         else:
             if not countHistogram:
                 try:
@@ -849,6 +860,21 @@ class SampleTree(object):
                         exit(0)
             else:
                 count = self.histograms[countHistogram].GetBinContent(1)
+
+        # override event counts: config needs a section 'EventCounts' with sample identifier strings as keys and the new count as value
+        # [EventCounts]
+        # SampleIdentifier = 12345
+        try:
+            if self.sampleIdentifier and self.config.has_section('EventCounts') and self.config.has_option('EventCounts', self.sampleIdentifier):
+                countNew = eval(self.config.get('EventCounts', self.sampleIdentifier))
+                print("\x1b[97m\x1b[41mINFO: overwrite event counts with values from config!!!\n value from file:", count, "\n value from config:", countNew," <--- will be used!\x1b[0m")
+                count = countNew
+            #else:
+            #    print("--> don't overwrite counts!", self.sampleIdentifier, self.config.has_section('EventCounts'), self.config.has_option('EventCounts', self.sampleIdentifier))
+        except Exception as e:
+            print("\x1b[31mException:",e," -> overwriting of event counts has been disabled\x1b[0m")
+
+
         lumi = float(sample.lumi)
         theScale = lumi * sample.xsec * sample.sf / float(count)
 
