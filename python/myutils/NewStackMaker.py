@@ -53,7 +53,10 @@ class NewStackMaker:
                 }
 
         # general event by event weight which is applied to all samples
-        if self.config.has_option('Weights','weightF'):
+        #  for special plots of weights itself, weightF can be defined in the plot definition
+        if self.config.has_option('plotDef:%s'%self.var,'weightF'):
+            self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weightF')
+        elif self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
             self.histogramOptions['weight'] = None
@@ -99,7 +102,7 @@ class NewStackMaker:
         self.collectedObjects = []
         self.dataTitle = 'Data'
         self.maxRatioUncert = 0.5
-        self.lumi = self.config.get('Plot_general','lumi')
+        self.lumi = self.config.get('General','lumi')
         self.ratioError = None
         self.ratioPlot = None
         if SignalRegion:

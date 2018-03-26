@@ -52,7 +52,7 @@ class PlotHelper(object):
         # load samples
         self.data = eval(self.config.get(self.configSection, 'Datas')) # read the data corresponding to each CR (section)
         self.mc = eval(self.config.get('Plot_general', 'samples')) # read the list of mc samples
-        self.total_lumi = eval(self.config.get('Plot_general', 'lumi'))
+        self.total_lumi = eval(self.config.get('General', 'lumi'))
         self.signalRegion = False
         if self.config.has_option(self.configSection, 'Signal'):
             self.mc.append(self.config.get(self.configSection, 'Signal'))
