@@ -14,7 +14,7 @@ from sampleTree import SampleTree as SampleTree
 # stacked histogram
 # ------------------------------------------------------------------------------
 class NewStackMaker:
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut=''):
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.var = var
@@ -39,6 +39,11 @@ class NewStackMaker:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
+        if not title:
+            if self.config.has_option('Plot_general', 'title'):
+                title = eval(self.config.get('Plot_general', 'title'))
+
+        self.plotTitle = title if title else "CMS"
 
         # TODO: make simpler
         self.rebin = 1
@@ -291,7 +296,7 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.addObject(self.myText("CMS",0.17+(0.03 if self.is2D else 0),0.88,1.04))
+        self.addObject(self.myText(self.plotTitle,0.17+(0.03 if self.is2D else 0),0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
             self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
@@ -431,6 +436,7 @@ class NewStackMaker:
                 self.plotLabels['topright1']['text'] = 'MC'
             allStack.SetStats(0)
             allStack.SetTitle('')
+        ROOT.gPad.SetLogy(0)
         allStack.Draw(drawOption)
 
         # set axis titles
@@ -551,4 +557,10 @@ class NewStackMaker:
             #print('groupName is', key)
             print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
 
-
+        # save data histogram
+        if dataGroupName in groupedHistograms:
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext="root")
+            dataOutputFile = ROOT.TFile.Open(outputFileName, "recreate")
+            groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
+            dataOutputFile.Write()
+            dataOutputFile.Close()
