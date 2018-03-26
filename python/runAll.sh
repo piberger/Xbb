@@ -163,7 +163,7 @@ if [ ! -d $logpath ]; then
 fi
 
 # The MVA list, only compute for the eval steps!
-if [[ $string = *"eval"* ]]; then
+if [[ $task = *"eval"* ]]; then
 MVAList=$(
 python << END
 import myutils
