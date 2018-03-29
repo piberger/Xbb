@@ -362,7 +362,7 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add a new branch
     # ------------------------------------------------------------------------------
-    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None):
+    def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None, arrayStyle=False):
         # this is needed to overwrite the branch if it already exists!
         self.addBranchToBlacklist(branchName)
 
@@ -378,6 +378,8 @@ class SampleTree(object):
             newBranch = {'name': branchName, 'formula': formulaName, 'type': branchType, 'length': length}
         if leaflist:
             newBranch['leaflist'] = leaflist
+        if arrayStyle:
+            newBranch['arrayStyle'] = True
         self.newBranches.append(newBranch)
 
     # ------------------------------------------------------------------------------
@@ -393,6 +395,7 @@ class SampleTree(object):
                 length=branchDict['length'] if 'length' in branchDict else 1,
                 arguments=branchDict['arguments'] if 'arguments' in branchDict else None,
                 leaflist=branchDict['leaflist'] if 'leaflist' in branchDict else None,
+                arrayStyle=branchDict['arrayStyle'] if 'arrayStyle' in branchDict else False,
             )
 
     # ------------------------------------------------------------------------------
@@ -717,7 +720,7 @@ class SampleTree(object):
             # fill branches
             for branch in self.newBranches:
                 # evaluate result either as function applied on the tree entry or as TTreeFormula
-                if branch['length'] == 1:
+                if branch['length'] == 1 and not 'arrayStyle' in branch:
                     if 'function' in branch:
                         if 'arguments' in branch:
                             branchResult = branch['function'](event, arguments=branch['arguments'])
@@ -783,6 +786,7 @@ class SampleTree(object):
             outputTree['file'].Write()
             outputTree['file'].Close()
         print('INFO: files written')
+        print('INFO: saveMemory is ', self.saveMemory)
         sys.stdout.flush()
 
         if self.saveMemory:

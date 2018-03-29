@@ -27,6 +27,13 @@ class FileLocator(object):
                 print("WARNING: no pnfs storage path given!")
             self.pnfsStoragePath = None
 
+        self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config.has_option('Configuration', 'usePythonXrootD') else False
+        if self.usePythonXrootD:
+            from XRootD import client
+            self.client = client.FileSystem(self.xrootdRedirectors[0].strip('/'))
+        else:
+            self.client = None
+
         self.storagePathPrefix = '/store/'
         self.pnfsPrefix = '/pnfs/'
         # TODO: use XrootD python bindings
@@ -111,8 +118,14 @@ class FileLocator(object):
         return result==0
 
     def remoteCopy(self, source, target):
-        command = self.remoteCp.format(source=source, target=target)
-        result = self.runCommand(command)
+        if self.client:
+            status,_ = self.client.copy(source, target, force=False)
+            if self.debug:
+                print('DEBUG:', status.message, 'copy from', source, 'to', target)
+            result = 0 if status.ok else 5
+        else:
+            command = self.remoteCp.format(source=source, target=target)
+            result = self.runCommand(command)
         return result==0
 
     def cp(self, source, target):
