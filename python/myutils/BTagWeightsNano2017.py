@@ -4,7 +4,7 @@ import numpy as np
 import array
 import os
 
-class Jet :
+class Jet:
     def __init__(self, pt, eta, fl, csv) :
         self.pt = pt
         self.eta = eta
@@ -16,11 +16,12 @@ class Jet :
 
 class BTagWeights(object):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, includeFixPtEtaBins=False):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False):
         self.method = method
         self.calibName = calibName
         self.includeFixPtEtaBins = includeFixPtEtaBins
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
+        self.jetBtagBranchName = jetBtagBranchName
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
@@ -144,8 +145,8 @@ class BTagWeights(object):
 
 
         # pt ranges for bc SF: needed to avoid out_of_range exceptions
-        pt_range_high_bc = 670.-1e-02 if "CSV" in algo else 320.-1e-02
-        pt_range_low_bc = 30.+1e-02
+        pt_range_high_bc = 10000 #670.-1e-02 if "CSV" in algo else 320.-1e-02
+        pt_range_low_bc = 20 #30.+1e-02
 
         # b or c jets
         if fl>=4:
@@ -171,13 +172,13 @@ class BTagWeights(object):
         #print 'gonna add the jet SF'
         for jet in jets:
             #print 'ptmin', ptmin, 'ptmax', ptmax, 'etamin', etamin, 'etamax', etamax
-            #print 'jet: pt', jet.pt, 'eta', jet.eta
             if (jet.pt > ptmin and jet.pt < ptmax and abs(jet.eta) > etamin and abs(jet.eta) < etamax):
-                #print syst, '!'
+                #print syst, '!', self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="", shape_corr=True), jet.pt, 'jet: pt', jet.pt, 'eta', jet.eta, 'fl', jet.hadronFlavour
                 weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="", shape_corr=True)
             else:
-                #print 'central !'
+                #print 'central !',self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True), jet.pt
                 weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True)
+        #print '--->',weight
         return weight
 
     # compute all the btag weights
@@ -190,8 +191,8 @@ class BTagWeights(object):
 
             jets_cmva = []
             for i in range(tree.nJet):
-                if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i]):
-                    jet_cmva = Jet(tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVA[i])
+                if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
+                    jet_cmva = Jet(tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
                     jets_cmva.append(jet_cmva)
 
             ptmin = 20.
