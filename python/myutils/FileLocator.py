@@ -8,7 +8,7 @@ import hashlib
 
 class FileLocator(object):
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, xrootdRedirector=None, usePythonXrootD=True):
         self.config = config
         self.debug = 'XBBDEBUG' in os.environ
         try:
@@ -20,6 +20,8 @@ class FileLocator(object):
                 print (e)
                 print("WARNING: no xrootd redirector given!")
             self.xrootdRedirectors = None
+
+        # needed for cases there are /store/ path accessible locally but with additional prefix path
         try:
             self.pnfsStoragePath = self.config.get('Configuration', 'pnfsStoragePath').strip()
         except:
@@ -27,15 +29,33 @@ class FileLocator(object):
                 print("WARNING: no pnfs storage path given!")
             self.pnfsStoragePath = None
 
-        self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config.has_option('Configuration', 'usePythonXrootD') else False
-        if self.usePythonXrootD:
+        # if redirector is given as argument, use it as the main redirector
+        if xrootdRedirector:
+            if self.xrootdRedirectors:
+                self.xrootdRedirectors = [xrootdRedirector]+self.xrootdRedirectors
+            else:
+                self.xrootdRedirectors = [xrootdRedirector]
+
+        # use python bindings for xrootd (can be disabled setting the 'usePythonXrootD' option to False
+        self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config and self.config.has_option('Configuration', 'usePythonXrootD') else False
+        if self.usePythonXrootD or usePythonXrootD:
             from XRootD import client
-            self.client = client.FileSystem(self.xrootdRedirectors[0].strip('/'))
+            self.server = self.xrootdRedirectors[0].strip('/')
+            self.client = client.FileSystem(self.server)
+            if self.debug:
+                print('DEBUG: initialized xrootd client, server:', self.server)
+                print('DEBUG: client:', self.client)
         else:
             self.client = None
+            self.server = None
 
+        # prefixes to distinguish remote file paths from local ones
         self.storagePathPrefix = '/store/'
         self.pnfsPrefix = '/pnfs/'
+        self.remotePrefixes = [self.storagePathPrefix, self.pnfsPrefix]
+        if self.config and self.config.has_option('Configuration', 'remotePrefixes'):
+            self.remotePrefixes = self.config.get('Configuration', 'remotePrefixes').split(',')
+
         # TODO: use XrootD python bindings
         self.remoteStatDirectory = 'xrdfs {server} stat -q IsDir {path}'
         self.remoteStatFile = 'xrdfs {server} stat {path}'
@@ -64,8 +84,9 @@ class FileLocator(object):
     def isPnfs(self, path):
         return self.pnfsPrefix in path
 
+    # check if the path is remote (= has to be accessed via xrootd)
     def isRemotePath(self, path):
-        return self.isPnfs(path) or '://' in path 
+        return self.isPnfs(path) or self.isStoragePath(path) or '://' in path
 
     def isValidRootFile(self, path):
         f = ROOT.TFile.Open(path, 'read')
@@ -108,9 +129,18 @@ class FileLocator(object):
         return result==0
 
     def remoteFileExists(self, path):
-        statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
-        result = self.runCommand(statCommand)
-        return result==0
+        if self.client:
+            pathOnServer = self.removeRedirector(path.strip())
+            response = self.client.stat(pathOnServer)
+            existing = response[0].ok
+            if self.debug:
+                print('DEBUG: remoteFileExists("' + pathOnServer + '")')
+                print('DEBUG: remoteFileExists() returned', response[0])
+        else:
+            statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
+            result = self.runCommand(statCommand)
+            existing = result==0
+        return existing
 
     def remoteFileRm(self, path):
         command = self.remoteRm.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
@@ -153,6 +183,8 @@ class FileLocator(object):
             try:
                 os.mkdir(path)
                 status = True
+                if self.debug:
+                    print('DEBUG: created the local directory:', path)
             except:
                 pass
         else:
@@ -212,8 +244,12 @@ class FileLocator(object):
     def getXrootdFileName(self, rawFileName):
         xrootdFileName = rawFileName.strip()
         if self.isStoragePath(xrootdFileName):
-            xrootdFileName = self.pnfsStoragePath + xrootdFileName.strip()
-        if self.isPnfs(xrootdFileName):
+            if self.pnfsStoragePath:
+                xrootdFileName = self.pnfsStoragePath + xrootdFileName.strip()
+            if self.xrootdRedirectors:
+                xrootdFileName = self.addRedirector(fileName=self.removeRedirector(xrootdFileName), redirector=self.xrootdRedirectors[0])
+            return xrootdFileName.strip()
+        elif self.isPnfs(xrootdFileName):
             # replace already existing redirectors with primary one
             if self.xrootdRedirectors:
                 xrootdFileName = self.addRedirector(fileName=self.removeRedirector(xrootdFileName), redirector=self.xrootdRedirectors[0])
