@@ -40,7 +40,7 @@ class SampleTree(object):
         self.config = config
         self.saveMemory = saveMemory
         self.outputTreeBasketSize = None
-        if self.config.has_option('Configuration', 'outputTreeBasketSize'):
+        if self.config and self.config.has_option('Configuration', 'outputTreeBasketSize'):
             self.outputTreeBasketSize = eval(self.config.get('Configuration', 'outputTreeBasketSize'))
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
