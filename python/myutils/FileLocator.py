@@ -38,16 +38,19 @@ class FileLocator(object):
 
         # use python bindings for xrootd (can be disabled setting the 'usePythonXrootD' option to False
         self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config and self.config.has_option('Configuration', 'usePythonXrootD') else False
+        self.client = None
+        self.server = None
         if self.usePythonXrootD or usePythonXrootD:
-            from XRootD import client
-            self.server = self.xrootdRedirectors[0].strip('/')
-            self.client = client.FileSystem(self.server)
-            if self.debug:
-                print('DEBUG: initialized xrootd client, server:', self.server)
-                print('DEBUG: client:', self.client)
-        else:
-            self.client = None
-            self.server = None
+            try:
+                from XRootD import client
+                self.server = self.xrootdRedirectors[0].strip('/')
+                self.client = client.FileSystem(self.server)
+                if self.debug:
+                    print('DEBUG: initialized xrootd client, server:', self.server)
+                    print('DEBUG: client:', self.client)
+            except:
+                if self.debug:
+                    print('DEBUG: xrootd could not be initialized, remote file access will not work.')
 
         # prefixes to distinguish remote file paths from local ones
         self.storagePathPrefix = '/store/'
