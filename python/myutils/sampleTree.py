@@ -39,6 +39,9 @@ class SampleTree(object):
         self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
         self.saveMemory = saveMemory
+        self.outputTreeBasketSize = None
+        if self.config.has_option('Configuration', 'outputTreeBasketSize'):
+            self.outputTreeBasketSize = eval(self.config.get('Configuration', 'outputTreeBasketSize'))
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
         self.samples = samples
@@ -583,12 +586,12 @@ class SampleTree(object):
         if self.debug:
             rsrc = resource.RLIMIT_DATA
             # restrict memory
-            #resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
+            # resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
             soft, hard = resource.getrlimit(rsrc)
             print('DEBUG: mem limits soft/hard:', soft, hard)
             rsrc = resource.RLIMIT_AS
             # restrict memory
-            #resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
+            # resource.setrlimit(rsrc, (2.0*1024*1024*1024, 6*1024*1024*1024))
             soft, hard = resource.getrlimit(rsrc)
             print('DEBUG: AS limits soft/hard:', soft, hard)
             rsrc = resource.RLIMIT_STACK
@@ -648,8 +651,9 @@ class SampleTree(object):
             # clone tree structure, but don't copy any entries
             outputTree['file'].cd()
             outputTree['tree'] = self.tree.CloneTree(0)
-            #outputTree['tree'].SetAutoFlush(0)
-            #self.tree.CopyAddresses(outputTree['tree'])
+            # can be used to reduce memory consumption
+            if self.outputTreeBasketSize:
+                outputTree['tree'].SetBasketSize("*", self.outputTreeBasketSize)
             if not outputTree['tree']:
                 print ("\x1b[31mWARNING: output tree broken. try to recover!\x1b[0m")
                 # if input tree has 0 entries, don't copy 0 entries to the output tree, but ALL of them instead! (sic!)
