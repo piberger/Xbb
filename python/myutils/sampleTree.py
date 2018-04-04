@@ -33,7 +33,7 @@ import gc
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None):
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
@@ -43,7 +43,7 @@ class SampleTree(object):
         self.disableBranchesInOutput = True
         self.samples = samples
         self.tree = None
-        self.fileLocator = FileLocator(config=self.config)
+        self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         self.sampleIdentifier = None
 
         # process only partial sample root file list
@@ -616,10 +616,9 @@ class SampleTree(object):
             for formula in self.formulaDefinitions:
                 listOfBranchesToKeep += BranchList(formula['formula']).getListOfBranches()
 
-        # ALWAYS keep the branches stated in config
+        # keep the branches stated in config, (unless they will be recomputed)
         if self.config:
             listOfBranchesToKeep += eval(self.config.get('Branches', 'keep_branches'))
-
         listOfBranchesToKeep = list(set(listOfBranchesToKeep))
 
         # disable the branches in the input if there is no output tree which wants to have all branches
