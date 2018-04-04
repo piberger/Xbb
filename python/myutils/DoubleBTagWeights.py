@@ -41,10 +41,9 @@ class DoubleBTagWeights(object):
                 bbtag = bbtag_new
                 index = i
 
-        if index == -1:
-            if not tree.nFatjetAK08ungroomed == 0:
-                print "@ERROR: index not maximised. Exiting"
-                sys.exit()
+        if index == -1 and not tree.nFatjetAK08ungroomed == 0:
+            print "@ERROR: index not maximised. Exiting"
+            sys.exit()
 
         #Fill the double b tagger
         for b in self.bname:
