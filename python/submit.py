@@ -553,12 +553,11 @@ if opts.task == 'prep' or opts.task == 'checkprep':
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
-    print '\n================'
-    print 'SUMMARY: checkprep'
-    print '==================\n'
-
     # printing the content of missingFiles
     if opts.task == 'checkprep':
+        print '\n================'
+        print 'SUMMARY: checkprep'
+        print '==================\n'
         for sampleIdentifier in sampleIdentifiers:
             n_missing_files = missingFiles[sampleIdentifier][0]
             n_total_files = missingFiles[sampleIdentifier][1]
@@ -613,11 +612,15 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
 
             if opts.skipExisting:
+                # skip, if all output files exist
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+                # skip, if all input files do not exist/are broken
+                allInputFilesMissing = all([not fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
+                allInputFilesMissing = False
 
-            if not skipChunk or opts.force:
+            if (not skipChunk and not allInputFilesMissing) or opts.force:
                 jobDict = repDict.copy()
                 jobDict.update({
                     'arguments':{
@@ -632,14 +635,16 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
                 submit(jobName, jobDict)
             else:
-                print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
-
-    # printing the content of missingFiles
-    print '\n=================='
-    print 'SUMMARY: checksysnew'
-    print '====================\n'
+                if allInputFilesMissing:
+                    print "\x1b[31mSKIP: chunk %d, all input files of this chunk are missing!\x1b[0m"%chunkNumber
+                else:
+                    print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
 
     if opts.task == 'checksysnew':
+        # printing the content of missingFiles
+        print '\n=================='
+        print 'SUMMARY: checksysnew'
+        print '====================\n'
         for sampleIdentifier in sampleIdentifiers:
             #print 'sampleIdentifier is', sampleIdentifier
             n_missing_files = missingFiles[sampleIdentifier][0]
@@ -1124,9 +1129,10 @@ if opts.task == 'summary':
     except:
         print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
 
+# checks file status for several steps/folders at once
 if opts.task == 'status':
     fileLocator = FileLocator(config=config)
-    path = config.get("Directories", "SYSin")
+    path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
@@ -1157,8 +1163,6 @@ if opts.task == 'status':
             for x in sampleStatus:
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
-            
-
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:
