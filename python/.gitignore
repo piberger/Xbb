@@ -11,6 +11,7 @@ luca
 !json
 !*config/*
 *config/*.swp
+*config/volatile.ini
 */*.swo
 !csv/*
 csv/*.d
