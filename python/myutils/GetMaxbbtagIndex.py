@@ -26,10 +26,10 @@ class GetMaxbbtagIndex(object):
 
     def processEvent(self, tree):
 
-        bbtagindex = -1
+        bbtagindex = 0
         bbtag = -99
 
-        ptindex = -1
+        ptindex = 0
         pt = -99
 
         for i in range(tree.nFatjetAK08ungroomed):
@@ -42,15 +42,6 @@ class GetMaxbbtagIndex(object):
             if pt_new > pt:
                 pt = pt_new
                 ptindex = i
-
-        #In case no minimal bbtagindex was found, put it to 0
-        if bbtagindex == -1 or ptindex == -1:
-            if not tree.nFatjetAK08ungroomed == 0:
-                print "@ERROR: bbtagindex or ptindex not maximised. Exiting"
-                sys.exit()
-            else:
-                bbtagindex = 0
-                ptindex = 0
 
         self.branchBuffers['Maxbbtagidx'][0] = bbtagindex
         self.branchBuffers['Maxptidx'][0] = ptindex
