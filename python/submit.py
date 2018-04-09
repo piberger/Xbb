@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import signal
 import ROOT
+import fnmatch
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -297,6 +298,24 @@ def waitFor(jobNameList):
                     break
         if matches > 0:
             time.sleep(30)
+
+# ------------------------------------------------------------------------------
+# filter sample list with simple wildcard (*) syntax, used for -S option 
+# ------------------------------------------------------------------------------
+def filterSampleList(sampleIdentifiers, samplesList):
+    if samplesList and len([x for x in samplesList if x]) > 0:
+        filteredList = []
+        for expr in samplesList:
+            if expr in sampleIdentifiers:
+                filteredList.append(expr)
+            elif '*' in expr:
+                for sampleIdentifier in sampleIdentifiers:
+                    if fnmatch.fnmatch(sampleIdentifier, expr):
+                        filteredList.append(sampleIdentifier)
+        filteredList = list(set(filteredList))
+        return filteredList
+    else:
+        return sampleIdentifiers
 
 # ------------------------------------------------------------------------------
 # STANDARD WORKFLOW SUBMISSION FUNCTION
@@ -805,18 +824,26 @@ if opts.task.startswith('cacheplot'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+
+    if opts.parallel:
+        plotVarChunks = [plotVars[i:i + opts.parallel] for i in xrange(0, len(plotVars), opts.parallel)]
+    else:
+        plotVarChunks = [plotVars]
 
     # submit all the plot regions as separate jobs
     for region in regions:
-        jobDict = repDict.copy()
-        jobDict.update({
-            'arguments':
-                {
-                    'regions': region,
-                }
-            })
-        jobName = 'plot_run_{region}'.format(region=region)
-        submit(jobName, jobDict)
+        for j, plotVarList in enumerate(plotVarChunks):
+            jobDict = repDict.copy()
+            jobDict.update({
+                'arguments':
+                    {
+                        'regions': region,
+                        'vars': ','.join(plotVarList),
+                    }
+                })
+            jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
+            submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
@@ -1135,12 +1162,12 @@ if opts.task == 'status':
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
-    
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList) 
+
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
     basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+
+    maxPrintoutLen = 50
 
     # process all sample identifiers (correspond to folders with ROOT files)
     fileStatus = {}
@@ -1155,14 +1182,50 @@ if opts.task == 'status':
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
                 fileStatus[folder][sampleIdentifier].append(fileLocator.exists(localFilePath))
-    for folder, folderStatus in fileStatus.iteritems():
+    for folder in foldersToCheck:
+        folderStatus = fileStatus[folder]
         print "---",folder,"---"
         for sampleIdentifier, sampleStatus in folderStatus.iteritems():
-            sampleShort = (sampleIdentifier if len(sampleIdentifier)<30 else sampleIdentifier[:30]).ljust(31)
+            sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
             for x in sampleStatus:
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+
+# outputs a simple python code to read the whole sample as chain
+if opts.task == 'sample':
+    fileLocator = FileLocator(config=config)
+    path = config.get("Directories", "PREPout")
+    samplefiles = config.get('Directories','samplefiles')
+    info = ParseInfo(samplesinfo, path)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+    foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
+    print "folders:", foldersToCheck
+    basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+
+    for folder in foldersToCheck:
+        path = basePaths[folder]
+        for sampleIdentifier in sampleIdentifiers:
+            splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=-1, config=config).getSampleFileNameChunks()
+
+            print "----",sampleIdentifier,"----"
+            print "# BEGINNING OF PYTHON FILE"
+            print "import ROOT"
+            print "from myutils.sampleTree import SampleTree"
+            print "sampleFiles = ["
+            for sampleFileName in splitFilesChunks[0]:
+                print "    '{fileName}',".format(fileName=sampleFileName)
+            print "]"
+            print "sampleTree = SampleTree(sampleFiles, treeName='Events')" 
+            print "print 'number of events:', sampleTree.GetEntries()"
+            print "# example how to loop over all events"
+            print "# alternatively, the TChain object can be accessed as sampleTree.tree"
+            print "#for event in sampleTree:"
+            print "#if event.Vtype == 1:"
+            print "#    print 'Vtype 1 event', event.event"
+            print "# END OF PYTHON FILE"
+            print "-"*20
+
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:
