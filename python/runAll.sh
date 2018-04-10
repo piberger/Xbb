@@ -166,7 +166,7 @@ if [ ! -d $logpath ]; then
 fi
 
 # The MVA list, only compute for the eval steps!
-#if [[ $string = *"eval"* ]]; then
+if [[ $task = *"eval"* ]]; then
 MVAList=$(
 python << END
 import myutils
@@ -188,6 +188,7 @@ if [ $task = "prep" ]; then
     runCommand="python ./prepare_environment_with_config.py --sampleIdentifier ${sampleIdentifier}"
     if [ "$fileList" ]; then runCommand="${runCommand} --fileList ${fileList}"; fi
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
+    if [ "$force" = "1" ]; then runCommand="${runCommand} --force"; fi
     runCommand="${runCommand} ${config_filenames[@]}"
     echo "$runCommand"
     eval "$runCommand"
