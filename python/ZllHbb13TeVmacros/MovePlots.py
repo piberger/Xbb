@@ -42,8 +42,6 @@ print 'Output folder is', _output
 def MakeSubFolders(_input, RegionList=None):
 
     #I am in macro location
-    current_ = os.getcwd()
-    os.chdir(_input)
     #I am in Plots
     if args.name is None:
         _plotfolder = _input.split('/')[-2]
@@ -155,6 +153,8 @@ RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lo
               ('all','all'),('nivf2','nivf2'),('HTL400','HLT400'),('HTL400nivf2','HTL400nivf2')\
               ]
 
+current_ = os.getcwd()
+os.chdir(_input)
 if args.do_inp:
     if args.region:
         MakeSubFolders(_input, RegionList)

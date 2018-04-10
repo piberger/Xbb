@@ -182,7 +182,6 @@ double SoverSBWeight(double BDT, int channel) {
       j2.SetPtEtaPhiM(pt2,-eta2, phi2+TMath::Pi(), mass2);
       return deltaR2(j1, j2);
   }
-  
   double HJetVarByCSV(double CSVj1, double Varj1, double CSVj2, double Varj2, bool pickhighestBtag) {
     if ((CSVj1 > CSVj2) && pickhighestBtag) {
       return Varj1;
