@@ -4,6 +4,8 @@ ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
 import array
+import time
+import subprocess
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -120,11 +122,11 @@ class NewStackMaker:
     # draw text
     # ------------------------------------------------------------------------------
     @staticmethod
-    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8):
+    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8, color=ROOT.kBlack):
         ROOT.gPad.Update()
         text = ROOT.TLatex()
         text.SetNDC()
-        text.SetTextColor(ROOT.kBlack)
+        text.SetTextColor(color)
         text.SetTextSize(text.GetTextSize()*size)
         text.DrawLatex(ndcX,ndcY,txt)
         return text
@@ -333,6 +335,14 @@ class NewStackMaker:
                 self.addObject(self.myText(label['text'], label['x'], label['y'], label['size']))
         except:
             pass
+
+        try:
+            if self.config.has_option('Plot_general', 'additionalText'):
+                additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+                for j, additionalTextLine in enumerate(additionalTextLines):
+                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6, ROOT.kBlue))
+        except Exception as e:
+            print(e)
 
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
