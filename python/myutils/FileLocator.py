@@ -274,3 +274,7 @@ class FileLocator(object):
             print ("\x1b[31mERROR: invalid file name\x1b[0m")
             raise Exception("InvalidFileName")
 
+    def getXrootdRedirector(self):
+        return self.xrootdRedirectors[0] if self.xrootdRedirectors and len(self.xrootdRedirectors)>0 else None
+
+
