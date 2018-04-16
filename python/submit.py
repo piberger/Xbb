@@ -953,13 +953,7 @@ if opts.task.startswith('rundc'):
     
     regions = Datacard.getRegions(config=config)
     samples = Datacard.getSamples(config=config, regions=regions)
-
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
-
-    # only process given samples (if option is present)
-    samplesToUse = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    if len(samplesToUse) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToUse]
+    sampleIdentifiers = sorted(filterSampleList(list(set([sample.identifier for sample in samples])), samplesList))
 
     # check existence of cached files
     if opts.checkCached:
@@ -974,22 +968,24 @@ if opts.task.startswith('rundc'):
 
     # submit all the DC regions as separate jobs
     for region in regions:
-        # submit separate jobs for either sampleIdentifiers
-        for sampleIdentifier in sampleIdentifiers:
-            jobDict = repDict.copy()
-            jobDict.update({
-                'queue': 'short.q',
-                'arguments':
-                    {
-                        'regions': region,
-                        'sampleIdentifier': sampleIdentifier,
-                    },
-                'batch': opts.task + '_' + sampleIdentifier,
-                })
-            if opts.force:
-                jobDict['arguments']['force'] = ''
-            jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-            submit(jobName, jobDict)
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            # submit separate jobs for either sampleIdentifiers
+            for sampleIdentifier in sampleIdentifiers:
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'queue': 'short.q',
+                    'arguments':
+                        {
+                            'regions': region,
+                            'sampleIdentifier': sampleIdentifier,
+                        },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # MERGEDC: merge DC .root files for all samples per region and produce combined
