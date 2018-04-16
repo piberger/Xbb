@@ -23,34 +23,35 @@ except:
     print "unable to detect python version!"
 
 parser = OptionParser()
-parser.add_option("-T", "--tag", dest="tag", default="8TeV",
-                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
-parser.add_option("-J", "--task", dest="task", default="",
-                      help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
-parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
-parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
-parser.add_option("-F", "--folderTag", dest="ftag", default="",
-                      help="Creats a new folder structure for outputs or uses an existing one with the given name")
-parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
-                      help="Number of events per file when splitting or number of files when using single file workflow.")
-parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
-                      help="Activate verbose flag for debug printouts")
-parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
-                      help="Override run_locally option to run locally")
+parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
-parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
-parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
-                      help="Force overwriting of files if they already exist")
-parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
-                      help="don't submit jobs if output files already exist")
 parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true", default=False,
                       help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
+parser.add_option("-F", "--folderTag", dest="ftag", default="",
+                      help="Creats a new folder structure for outputs or uses an existing one with the given name")
+parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
+                      help="Force overwriting of files if they already exist")
+parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
+parser.add_option("-J", "--task", dest="task", default="",
+                      help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
+parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
+                      help="don't submit jobs if output files already exist")
+parser.add_option("-L", "--local", dest="override_to_run_locally", action="store_true", default=False,
+                      help="Override run_locally option to run locally")
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
+parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
+                      help="Number of events per file when splitting or number of files when using single file workflow.")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
-parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
+parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
+parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
+parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
+parser.add_option("-T", "--tag", dest="tag", default="8TeV",
+                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
+parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
+                      help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 
 (opts, args) = parser.parse_args(sys.argv)
@@ -833,17 +834,21 @@ if opts.task.startswith('runplot'):
 
     # submit all the plot regions as separate jobs
     for region in regions:
-        for j, plotVarList in enumerate(plotVarChunks):
-            jobDict = repDict.copy()
-            jobDict.update({
-                'arguments':
-                    {
-                        'regions': region,
-                        'vars': ','.join(plotVarList),
-                    }
-                })
-            jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
-            submit(jobName, jobDict)
+
+        # if --regions is given, only plot those regions 
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            for j, plotVarList in enumerate(plotVarChunks):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments':
+                        {
+                            'regions': region,
+                            'vars': ','.join(plotVarList),
+                        }
+                    })
+                jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
+                submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
