@@ -129,11 +129,12 @@ class NewStackMaker:
     # draw text
     # ------------------------------------------------------------------------------
     @staticmethod
-    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8, color=ROOT.kBlack):
+    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8, color=None):
         ROOT.gPad.Update()
         text = ROOT.TLatex()
         text.SetNDC()
-        text.SetTextColor(color)
+        if color:
+            text.SetTextColor(color)
         text.SetTextSize(text.GetTextSize()*size)
         text.DrawLatex(ndcX,ndcY,txt)
         return text
@@ -385,7 +386,7 @@ class NewStackMaker:
             if self.config.has_option('Plot_general', 'additionalText'):
                 additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
                 for j, additionalTextLine in enumerate(additionalTextLines):
-                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6, ROOT.kBlue))
+                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
         except Exception as e:
             print(e)
 

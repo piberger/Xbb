@@ -85,7 +85,7 @@ signal.signal(signal.SIGINT, signal_handler)
 en = opts.tag
 
 #create the list with the samples to run over
-samplesList = opts.samples.split(",")
+samplesList = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
 timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
 
 if debugPrintOUts:
@@ -598,8 +598,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
@@ -871,8 +870,7 @@ if opts.task.startswith('cachedc'):
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
