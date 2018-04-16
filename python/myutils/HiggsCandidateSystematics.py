@@ -10,7 +10,7 @@ class HiggsCandidateSystematics(object):
         self.debug = False
         self.lastEntry = -1
         self.nJet = -1
-        self.nJetMax = 100
+        self.nJetMax = 256
         self.branches = []
         self.branchBuffers = {}
         self.addSystematics = addSystematics
@@ -113,7 +113,7 @@ class HiggsCandidateSystematics(object):
 
             # min/max variations for Jet pt/mass
             self.nJet = tree.nJet
-            for i in range(self.nJet):
+            for i in range(min(self.nJet, self.nJetMax)):
                 ptList = [tree.Jet_Pt[i]]
                 massList = [tree.Jet_mass[i]]
                 if self.addSystematics and self.sample.type != 'DATA':
