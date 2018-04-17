@@ -827,7 +827,7 @@ if opts.task.startswith('runplot'):
     plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
 
     if opts.parallel:
-        plotVarChunks = [plotVars[i:i + opts.parallel] for i in xrange(0, len(plotVars), opts.parallel)]
+        plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
     else:
         plotVarChunks = [plotVars]
 
