@@ -32,7 +32,7 @@ class GetMaxbbtagIndex(object):
         ptindex = 0
         pt = -99
 
-        for i in range(tree.nFatjetAK08ungroomed):
+        for i in range(min(tree.nFatjetAK08ungroomed,6)):
             bbtag_new = tree.FatjetAK08ungroomed_bbtag[i]
             pt_new = tree.FatjetAK08ungroomed_pt[i]
             if bbtag_new > bbtag:
