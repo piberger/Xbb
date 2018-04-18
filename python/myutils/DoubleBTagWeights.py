@@ -40,44 +40,44 @@ class DoubleBTagWeights(object):
     def processEvent(self, tree):
 
         #Fill the double b tagger
-        for b in self.bname:
-            for i in range(tree.nFatjetAK08ungroomed):
-                self.branchBuffers[b][i] = self.getBBtagSF(b, tree.FatjetAK08ungroomed_pt[i])
-            for i in range(tree.nFatjetAK08ungroomed, 6):
+        for i in range(min(tree.nFatjetAK08ungroomed,6)):
+            DoubleB  = self.getBBtagSF(tree.FatjetAK08ungroomed_pt[i])
+            index_ = 0
+            for b in self.bname:
+                self.branchBuffers[b][i] = DoubleB[index_]
+                #print 'DoubleB is', DoubleB
+                index_ += 1
+        for i in range(tree.nFatjetAK08ungroomed, 6):
+            for b in self.bname:
                 self.branchBuffers[b][i] = 1.0
 
         return True
 
-    def getBBtagSF(self, Wp, pt):
+    #def getBBtagSF(self, Wp, pt):
+    def getBBtagSF(self, pt):
         index = -1
-        if pt > 250 and pt < 350:
+        if pt < 350:
             index = 0
         elif pt > 350 and pt < 430:
             index = 1
-        elif pt > 350:
+        elif pt > 430:
             index = 2
-        elif pt < 250:
-            index = 0
 
-        indexsys = -1
+        #if 'DoubleBLWeight' in Wp:
+        SFL = [[0.96, 1., 1.01], [0.99, 1.04, 1.03], [0.94, 0.97, 0.97]]
+        #elif 'DoubleBM1Weight' in Wp:
+        SFM1 = [[0.93, 1.01, 0.99], [0.96, 1.04, 1.01], [0.91, 0.98, 0.95]]
+        #elif 'DoubleBM2Weight' in Wp:
+        SFM2 = [[0.92, 1.01, 0.92], [0.95, 1.04, 0.95], [0.89, 0.97, 0.87]]
+        #elif 'DoubleBTWeight' in Wp:
+        SFT = [[0.85, 0.91, 0.91], [0.88, 0.94, 0.94], [0.82, 0.87, 0.87]]
 
-        if 'Up' in Wp:
-            indexsys = 1
-        elif 'Down' in Wp:
-            indexsys = 2
-        else: indexsys = 0
+        Nom     = [SFL[0][index], SFM1[0][index], SFM2[0][index], SFT[0][index]]
+        Up      = [SFL[1][index], SFM1[1][index], SFM2[1][index], SFT[1][index]]
+        Down    = [SFL[2][index], SFM1[2][index], SFM2[2][index], SFT[2][index]]
 
-        SF = []
+        return Nom+Up+Down
 
-        if 'DoubleBLWeight' in Wp:
-            SF = [[0.96, 1., 1.01], [0.99, 1.04, 1.03], [0.94, 0.97, 0.97]]
-        elif 'DoubleBM1Weight' in Wp:
-            SF = [[0.93, 1.01, 0.99], [0.96, 1.04, 1.01], [0.91, 0.98, 0.95]]
-        elif 'DoubleBM2Weight' in Wp:
-            SF = [[0.92, 1.01, 0.92], [0.95, 1.04, 0.95], [0.89, 0.97, 0.87]]
-        elif 'DoubleBTWeight' in Wp:
-            SF = [[0.85, 0.91, 0.91], [0.88, 0.94, 0.94], [0.82, 0.87, 0.87]]
-
-        return SF[indexsys][index]
+        #return SF[indexsys][index]
 
 
