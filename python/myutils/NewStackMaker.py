@@ -561,9 +561,10 @@ class NewStackMaker:
             print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
 
         # save data histogram
-        if dataGroupName in groupedHistograms:
-            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext="root")
-            dataOutputFile = ROOT.TFile.Open(outputFileName, "recreate")
-            groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
-            dataOutputFile.Write()
-            dataOutputFile.Close()
+        if self.config.has_option('Plot_general','saveDataHistograms') and eval(self.config.get('Plot_general','saveDataHistograms')):
+            if dataGroupName in groupedHistograms:
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext="root")
+                dataOutputFile = ROOT.TFile.Open(outputFileName, "recreate")
+                groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
+                dataOutputFile.Write()
+                dataOutputFile.Close()
