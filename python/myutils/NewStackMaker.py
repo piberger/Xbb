@@ -58,6 +58,8 @@ class NewStackMaker:
         #  for special plots of weights itself, weightF can be defined in the plot definition
         if self.config.has_option('plotDef:%s'%self.var,'weightF'):
             self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weightF')
+        elif self.config.has_option('plotDef:%s'%self.var,'weight'):
+            self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weight')
         elif self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
