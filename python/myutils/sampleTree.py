@@ -408,6 +408,8 @@ class SampleTree(object):
     def next(self):
         self.treeIterator.next()
         self.eventsRead += 1
+        if self.debug and self.eventsRead % 1000 == 0:
+            print('DEBUG: %d events read'%self.eventsRead)
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
