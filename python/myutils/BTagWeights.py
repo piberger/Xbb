@@ -101,12 +101,6 @@ class BTagWeights(object):
         if arguments:
             return self.branchBuffers[arguments][0]
 
-    # read from buffers which have been filled in processEvent()    
-    def getVectorBranch(self, event, arguments=None, destinationArray=None):
-        self.processEvent(event)
-        for i in range(arguments['length']):
-            destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
-
     # depending on flavour, only a sample of systematics matter
     def applies(self, flavour, syst):
         if flavour==5 and syst not in ["central", "up_jes", "down_jes",  "up_lf", "down_lf",  "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2"]:

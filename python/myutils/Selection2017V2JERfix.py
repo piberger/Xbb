@@ -68,7 +68,7 @@ class Selection2017V2JERfix(object):
 
                 # calculate ~fixed smeared by unsmearing unmatched jets 
                 # Alt$(Jet_genJetIdx[hJidx[1]],0) >=0 ? Jet_Pt[hJidx[1]] : Jet_pt[hJidx[1]]
-                self.branchBuffers['Jet_PtFixed'][i] = tree.Jet_Pt[i] if tree.Jet_genJetIdx[i] >= 0 else tree.Jet_pt[i]
+                self.branchBuffers['Jet_PtFixed'][i] = tree.Jet_Pt[i] if self.sample.type == 'DATA' or tree.Jet_genJetIdx[i] >= 0 else tree.Jet_pt[i]
 
                 if tree.Jet_lepFilter[i] and tree.Jet_puId[i]>0 and tree.Jet_jetId[i]>0 and abs(tree.Jet_eta[i])<2.5 and self.branchBuffers['Jet_PtFixed'][i] > 20:
                     higgsJets.append(Jet(self.branchBuffers['Jet_PtFixed'][i], tree.Jet_eta[i], tree.Jet_phi[i], tree.Jet_mass[i], btag=tree.Jet_btagDeepB[i], index=i))
