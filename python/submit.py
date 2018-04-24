@@ -531,9 +531,7 @@ if opts.task == 'prep' or opts.task == 'checkprep':
     pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
     info = ParseInfo(samplesinfo, pathOUT)
-    sampleIdentifiers = info.getSampleIdentifiers()
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
@@ -646,6 +644,7 @@ if opts.task == 'hadd':
                 if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
                     jobDict = repDict.copy()
                     jobDict.update({
+                        'queue': 'short.q',
                         'arguments':{
                             'sampleIdentifier': sampleIdentifier,
                             'fileList': FileList.compress(fileNames),
@@ -1105,9 +1104,7 @@ if opts.task == 'sys' or opts.task == 'syseval':
     path = config.get("Directories", "SYSin")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = info.getSampleIdentifiers() 
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -1137,10 +1134,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
     pathOUT = config.get("Directories", "MVAout")
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
-    sampleIdentifiers = info.getSampleIdentifiers()
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesList]
-
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # process all sample identifiers (correspond to folders with ROOT files)
