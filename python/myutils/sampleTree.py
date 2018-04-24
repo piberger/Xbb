@@ -108,8 +108,8 @@ class SampleTree(object):
                 if self.debug:
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
-                # check root file existence, TODO: simplify
-                if self.fileLocator.exists(rootFileName):
+                # check root file existence
+                if self.fileLocator.exists(rootFileName, attempts=5):
                     remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
@@ -686,11 +686,14 @@ class SampleTree(object):
                     outputTree['cutSequence'].append(formulaName)
 
         # prepare memory for new branches to be written
+        pyTypes = {'O': 'i'}
         for outputTree in self.outputTrees:
             outputTree['newBranchArrays'] = {}
             outputTree['newBranches'] = {}
             for branch in self.newBranches:
-                outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
+                # convert ROOT type convention to python array type convetion if necessary
+                pyType = pyTypes[branch['type']] if branch['type'] in pyTypes else branch['type'] 
+                outputTree['newBranchArrays'][branch['name']] = array.array(pyType, [0] * branch['length'])
                 if 'leaflist' in branch:
                     leafList = branch['leaflist']
                 else:
