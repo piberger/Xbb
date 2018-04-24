@@ -16,7 +16,8 @@ class Jet:
 
 class BTagWeights(object):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt"):
+        self.jetPtBranchName = jetPtBranchName
         self.method = method
         self.calibName = calibName
         self.includeFixPtEtaBins = includeFixPtEtaBins
@@ -190,9 +191,10 @@ class BTagWeights(object):
             self.lastEntry = currentEntry
 
             jets_cmva = []
+            treeJet_Pt = getattr(tree, self.jetPtBranchName)
             for i in range(tree.nJet):
-                if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
-                    jet_cmva = Jet(tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
+                if (tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
+                    jet_cmva = Jet(tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
                     jets_cmva.append(jet_cmva)
 
             ptmin = 20.
@@ -265,8 +267,9 @@ class BTagEventWeightFromJetSF(object):
     
     def getBTagEventWeight(self, tree):
         weight = 1.0
+        treeJet_Pt = getattr(tree, self.jetPtBranchName)
         for i in range(tree.nJet):
-            if tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i]:
+            if tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i]:
                 weight *= tree.Jet_btagSF[i]
         return weight
 

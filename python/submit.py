@@ -8,6 +8,7 @@ import subprocess
 import signal
 import ROOT
 import fnmatch
+import hashlib
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -267,6 +268,7 @@ submitScriptSpecialOptions = {
         'cachedc': ' -l h_vmem=6g ',
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
+        'hadd': ' -l h_vmem=6g ',
         }
 condorBatchGroups = {}
 
@@ -401,7 +403,9 @@ def submit(job, repDict):
             qsubOptions += submitScriptSpecialOptions[opts.task]
 
         command = submitScriptTemplate.format(options=qsubOptions, logfile=outOutputPath, runscript=runScript)
-        dump_config(configs, "%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
+        dumpConfigFileName = "%(logpath)s/%(timestamp)s_%(task)s.config" %(repDict)
+        if not os.path.isfile(dumpConfigFileName):
+            dump_config(configs, dumpConfigFileName)
 
     # -----------------------------------------------------------------------------
     # RUN command
@@ -587,6 +591,81 @@ if opts.task == 'prep' or opts.task == 'checkprep':
                 print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
 
 # -----------------------------------------------------------------------------
+# HADD: this can merge files partially to avoid too many small trees
+# -----------------------------------------------------------------------------
+if opts.task == 'hadd':
+    from hadd import PartialFileMerger
+
+    inputPath = config.get("Directories", "HADDin")
+    outputPath = config.get("Directories", "HADDout")
+
+    samplefiles = config.get('Directories', 'samplefiles')
+    info = ParseInfo(samplesinfo, inputPath)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+
+    samplefilesMerged = samplefiles + '/merged/'
+    fileLocator.makedirs(samplefilesMerged)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    for sampleIdentifier in sampleIdentifiers:
+
+        chunkSize = 10
+        if config.has_section('Hadd') and config.has_option('Hadd', sampleIdentifier):
+            chunkSize = int(config.get('Hadd', sampleIdentifier).strip())
+            print "INFO: chunkSize read from config => ", chunkSize
+
+        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        if opts.limit and len(sampleFileList) > int(opts.limit):
+            sampleFileList = sampleFileList[0:int(opts.limit)]
+        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
+
+        mergedFileNames = []
+        for i, splitFilesChunk in enumerate(splitFilesChunks):
+
+            # only give good files to hadd
+            fileNames = []
+            for fileName in splitFilesChunk:
+                fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
+                #if fileLocator.isValidRootFile(fileNameAfterPrep):
+                if fileLocator.exists(fileNameAfterPrep):
+                    fileNames.append(fileName)
+                    print ".",
+                else:
+                    print "x",
+            print "INFO: #files=", len(splitFilesChunk), ", good=", len(fileNames)
+
+            # 'fake' filenames to write into text file for merged files
+            partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+            mergedFileName = partialFileMerger.getMergedFakeFileName()
+            mergedFileNames.append(mergedFileName)
+
+            outputFileName = partialFileMerger.getOutputFileName()
+
+            if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
+                jobDict = repDict.copy()
+                jobDict.update({
+                    'arguments':{
+                        'sampleIdentifier': sampleIdentifier,
+                        'fileList': FileList.compress(fileNames),
+                        'chunkNumber': i,
+                    },
+                    'batch': opts.task + '_' + sampleIdentifier,
+                    })
+                if opts.force:
+                    jobDict['arguments']['force'] = ''
+                jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
+                submit(jobName, jobDict)
+
+        # write text file for merged files
+        mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
+        with open(mergedFileListFileName, 'w') as mergedFileListFile:
+            mergedFileListFile.write('\n'.join(mergedFileNames))
+
+        print "INFO: hadd {sample}: {a} => {b}".format(sample=sampleIdentifier, a=len(sampleFileList), b=len(splitFilesChunks))
+        print "INFO:  > {mergedFileListFileName}".format(mergedFileListFileName=mergedFileListFileName)
+
+
+# -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew' or opts.task == 'checksysnew':
@@ -597,7 +676,6 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     pathOUT = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = info.getSampleIdentifiers() 
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
@@ -634,6 +712,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 # skip, if all output files exist
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
                 # skip, if all input files do not exist/are broken
+                #allInputFilesMissing = False
                 allInputFilesMissing = all([not fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
@@ -767,8 +846,7 @@ if opts.task.startswith('cacheplot'):
     samples = info.get_samples(sampleNames + dataSampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -1176,7 +1254,10 @@ if opts.task == 'status':
     for sampleIdentifier in sampleIdentifiers:
         for x in foldersToCheck:
             fileStatus[x][sampleIdentifier] = []
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            sampleFileList = []
         for sampleFileName in sampleFileList:
             localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
             for folder in foldersToCheck:

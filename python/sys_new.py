@@ -68,9 +68,6 @@ print 'collections to add:', collections
 
 for fileName in filelist:
     localFileName = fileLocator.getFilenameAfterPrep(fileName)
-    print "FN:", fileName
-    print "LF:", localFileName
-    
     inputFileName = "{path}/{subfolder}/{filename}".format(path=pathIN, subfolder=sample.identifier, filename=localFileName)
     outputFileName = "{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sample.identifier, filename=localFileName)
     tmpFileName = "{path}/{subfolder}/{filename}".format(path=tmpDir, subfolder=sample.identifier, filename=localFileName)

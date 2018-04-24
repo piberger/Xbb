@@ -290,6 +290,18 @@ elif [ $task = "runtraining_scikit" ]; then
     echo "$runCommand"
     eval "$runCommand"
 
+elif [ $task = "hadd" ]; then
+    runCommand="python ./hadd.py --sampleIdentifier ${sampleIdentifier} --chunkNumber ${chunkNumber}"
+    if [ "$fileList" ]; then
+        runCommand="${runCommand} --fileList ${fileList}"
+    fi
+    if [ "$force" = "1" ]; then
+        runCommand="${runCommand} --force"
+    fi
+    runCommand="${runCommand} ${config_filenames[@]}"
+    echo "$runCommand"
+    eval "$runCommand"
+
 elif [ $task = "cacheplot" ]; then
     runCommand="python ./cache_plot.py --regions ${regions} --sampleIdentifier ${sampleIdentifier} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
     if [ "$fileList" ]; then
