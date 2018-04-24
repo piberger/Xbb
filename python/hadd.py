@@ -58,6 +58,14 @@ class PartialFileMerger(object):
         if self.useChain:
             # use sampleTree class (can e.g. drop branches at the same time)
             sampleTree = SampleTree(inputFileNames, config=self.config)
+
+            try:
+                removeBranches = eval(self.config.get('General', 'remove_branches'))
+                for removeBranch in removeBranches:
+                    sampleTree.addBranchToBlacklist(removeBranch)
+                    print("DEBUG: disable branch ", removeBranch)
+            except Exception as e:
+                print("DEBUG: could not disable branch:", e)
             sampleTree.addOutputTree(outputFileName, cut='1', branches='*')
             sampleTree.process()
             result = 0
