@@ -51,6 +51,7 @@ parser.add_option("-S","--samples",dest="samples",default="", help="samples you 
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
+parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
@@ -634,27 +635,30 @@ if opts.task == 'hadd':
                     print "x",
             print "INFO: #files=", len(splitFilesChunk), ", good=", len(fileNames)
 
-            # 'fake' filenames to write into text file for merged files
-            partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
-            mergedFileName = partialFileMerger.getMergedFakeFileName()
-            mergedFileNames.append(mergedFileName)
+            if len(fileNames) > 0:
+                # 'fake' filenames to write into text file for merged files
+                partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+                mergedFileName = partialFileMerger.getMergedFakeFileName()
+                mergedFileNames.append(mergedFileName)
 
-            outputFileName = partialFileMerger.getOutputFileName()
+                outputFileName = partialFileMerger.getOutputFileName()
 
-            if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
-                jobDict = repDict.copy()
-                jobDict.update({
-                    'arguments':{
-                        'sampleIdentifier': sampleIdentifier,
-                        'fileList': FileList.compress(fileNames),
-                        'chunkNumber': i,
-                    },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    })
-                if opts.force:
-                    jobDict['arguments']['force'] = ''
-                jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
-                submit(jobName, jobDict)
+                if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'arguments':{
+                            'sampleIdentifier': sampleIdentifier,
+                            'fileList': FileList.compress(fileNames),
+                            'chunkNumber': i,
+                        },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
+                    submit(jobName, jobDict)
+            else:
+                print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
 
         # write text file for merged files
         mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
@@ -1238,7 +1242,7 @@ if opts.task == 'summary':
 if opts.task == 'status':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "PREPout")
-    samplefiles = config.get('Directories','samplefiles')
+    samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList) 
 
