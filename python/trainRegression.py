@@ -10,6 +10,8 @@ parser.add_option("-v", "--verbose", action="store_true", dest="verbose", defaul
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
                       help="configuration file")
 
+parser.add_option("-F", "--force", action="store_true", default=False, dest="forceCaching",
+                      help="force (re-)caching")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
     opts.config = "config"
@@ -21,6 +23,6 @@ config.read(opts.config)
 print "config",config
 
 print "Launching RegressionTrainer"
-RegTrainer = RegressionTrainer(config)
+RegTrainer = RegressionTrainer(config,forceCaching=opts.forceCaching)
 RegTrainer.train()
 

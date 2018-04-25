@@ -21,47 +21,67 @@ class JetEnergySystematics(object):
         
         self.doGroup = False
         self.isVerbose = False
-
+        
         #regWeight = './reg/ttbar-G25-500k-13d-300t.weights.xml'
-        regWeight = self.regWeightFileName if self.regWeightFileName else './csv/gravall-v25.weights.xml'
+        #regWeight = './csv/gravall-v25.weights.xml'
+        regWeight = self.regWeightFileName if self.regWeightFileName else config.get("TrainRegression","regWeight")
         #regWeight = './reg/TMVARegression_BDTG.weights.xml'
-        self.regVars = ["Jet_pt",
-                   "nPVs",
-                   "Jet_eta",
-                   "Jet_mt",
-                   "Jet_leadTrackPt",
-                   "Jet_leptonPtRel",
-                   "Jet_leptonPt",
-                   "Jet_leptonDeltaR",
-                   "Jet_neHEF",
-                   "Jet_neEmEF",
-                   "Jet_vtxPt",
-                   "Jet_vtxMass",
-                   "Jet_vtx3dL",
-                   "Jet_vtxNtrk",
-                   "Jet_vtx3deL"
-                   #"met_pt",
-                   #"Jet_met_proj"
-                   ]
-        self.regDict = {"Jet_pt":"Jet_pt[hJCMVAV2idx[0]]",
-                   #"Jet_corr":"Jet_corr[hJCMVAV2idx[0]]"
-                   "nPVs":"nPVs",
-                   "Jet_eta":"Jet_eta[hJCMVAV2idx[0]]",
-                   "Jet_mt":"Jet_mt[hJCMVAV2idx[0]]",
-                   "Jet_leadTrackPt": "Jet_leadTrackPt[hJCMVAV2idx[0]]",
-                   "Jet_leptonPtRel":"Jet_leptonPtRel[hJCMVAV2idx[0]]",
-                   "Jet_leptonPt":"Jet_leptonPt[hJCMVAV2idx[0]]",
-                   "Jet_leptonDeltaR":"Jet_leptonDeltaR[hJCMVAV2idx[0]]",
-                   "Jet_neHEF":"Jet_neHEF[hJCMVAV2idx[0]]",
-                   "Jet_neEmEF":"Jet_neEmEF[hJCMVAV2idx[0]]",
-                   "Jet_vtxPt":"Jet_vtxPt[hJCMVAV2idx[0]]",
-                   "Jet_vtxMass":"Jet_vtxMass[hJCMVAV2idx[0]]",
-                   "Jet_vtx3dL":"Jet_vtx3dl[hJCMVAV2idx[0]]",
-                   "Jet_vtxNtrk":"Jet_vtxNtrk[hJCMVAV2idx[0]]",
-                   "Jet_vtx3deL":"Jet_vtx3deL[hJCMVAV2idx[0]]"
-                   #"met_pt":"met_pt[hJCMVAV2idx[0]]",
-                   #"Jet_met_proj":"Jet_met_proj[hJCMVAV2idx[0]]"
-                   }
+        self.regVars = eval(config.get("TrainRegression","regVars")) #attention: the var names and assigned expressions are still partitally hard coded in processEvent() !!!!!!!!
+        self.regDict = eval(config.get("TrainRegression","regDict"))
+        self.useVarAbbr = int(config.get("TrainRegression","useVarAbbr"))
+        self.regDef = eval(config.get("TrainRegression","regDef"))
+#        self.regVars = ["Jet_pt",
+#                   "nPVs",
+#                   "Jet_eta",
+#                   "Jet_mt",
+#                   "Jet_leadTrackPt",
+#                   "Jet_leptonPtRel",
+#                   "Jet_leptonPt",
+#                   "Jet_leptonDeltaR",
+#                   "Jet_neHEF",
+#                   "Jet_neEmEF",
+#                   "Jet_vtxPt",
+#          #         "Jet_vtxMass",
+#                   "Jet_vtx3dL",
+#                   "Jet_vtxNtrk",
+#                   "Jet_vtx3deL"
+#                   #"met_pt",
+#                   #"Jet_met_proj"
+#                   ]
+#        regDict = {'Jet_leadTrackPt': 'Alt$(Jet_leadTrackPt[hJCidx],0)',
+#                'Jet_vtxNtrk': 'Alt$(Jet_vtxNtracks[hJCidx],0)',
+#                'Jet_eta': 'Alt$(Jet_eta[hJCidx],0)',
+#                "Jet_vtx3deL": 'Alt$(Jet_vtx3DSig[hJCidx],0)',
+#                "Jet_pt": 'Alt$(Jet_pt[hJCidx],0)',
+#                "Jet_neEmEF": 'Alt$(Jet_neEmEF[hJCidx],0)',
+#                "Jet_leptonPtRel": 'max(Alt$(Jet_leptonPtRel[hJCidx],0),0)',
+#                "Jet_leptonPt": 'max(Alt$(Jet_leptonPt[hJCidx],0),0)',
+#                "Jet_vtxPt": 'Alt$(Jet_vtxPt[hJCidx],0)'
+#                "Jet_vtx3dL":'max(Alt$(Jet_vtx3DVal[hJCidx],0),0)',
+#                "Jet_mt":'VHbb::evalMtFromPtEtaPhiM(Alt$(Jet_pt[hJCidx],0),Alt$(Jet_eta[hJCidx],0),Alt$(Jet_phi[hJCidx],0),Alt$(Jet_mass[hJCidx],0))'
+#                "Jet_neHEF":'Alt$(Jet_neHEF[hJCidx],0)'
+#                "Jet_leptonDeltaR": 'max(Alt$(Jet_leptonDeltaR[hJCidx],0),0)',
+#                'nPVs': 'nPVs'}
+
+        #        self.regDict = {"Jet_pt":"Jet_pt[hJCMVAV2idx[0]]",
+#                   #"Jet_corr":"Jet_corr[hJCMVAV2idx[0]]"
+#                   "nPVs":"nPVs",
+#                   "Jet_eta":"Jet_eta[hJCMVAV2idx[0]]",
+#                   "Jet_mt":"Jet_mt[hJCMVAV2idx[0]]",
+#                   "Jet_leadTrackPt": "Jet_leadTrackPt[hJCMVAV2idx[0]]",
+#                   "Jet_leptonPtRel":"Jet_leptonPtRel[hJCMVAV2idx[0]]",
+#                   "Jet_leptonPt":"Jet_leptonPt[hJCMVAV2idx[0]]",
+#                   "Jet_leptonDeltaR":"Jet_leptonDeltaR[hJCMVAV2idx[0]]",
+#                   "Jet_neHEF":"Jet_neHEF[hJCMVAV2idx[0]]",
+#                   "Jet_neEmEF":"Jet_neEmEF[hJCMVAV2idx[0]]",
+#                   "Jet_vtxPt":"Jet_vtxPt[hJCMVAV2idx[0]]",
+#         #          "Jet_vtxMass":"Jet_vtxMass[hJCMVAV2idx[0]]",
+#                   "Jet_vtx3dL":"Jet_vtx3dl[hJCMVAV2idx[0]]",
+#                   "Jet_vtxNtrk":"Jet_vtxNtrk[hJCMVAV2idx[0]]",
+#                   "Jet_vtx3deL":"Jet_vtx3deL[hJCMVAV2idx[0]]"
+#                   #"met_pt":"met_pt[hJCMVAV2idx[0]]",
+#                   #"Jet_met_proj":"Jet_met_proj[hJCMVAV2idx[0]]"
+#                   }
         if self.doGroup:
             self.JECsys = [
                 "JER",
@@ -174,10 +194,15 @@ class JetEnergySystematics(object):
 
     def addVarsToReader(self, reader,theVars):
         for key in self.regVars:
+            if self.useVarAbbr == 2:
+                var = key
+            elif self.useVarAbbr == 1:
+                var = "%s:=%s" % (key, self.regDict[key])
+            else:
+                var = self.regDict[key]
             #print key
-            #var = regDict[key]
             theVars[key] = array.array( 'f', [ 0 ] )
-            reader.AddVariable(key,theVars[key])
+            reader.AddVariable(var,theVars[key])
         return
 
     def getBranches(self):
@@ -208,36 +233,26 @@ class JetEnergySystematics(object):
             Reg_var_list = []
             for j in xrange(min(tree.nJet,21)):
                 reg_var_dic = {}
-                reg_var_dic['Jet_pt']= tree.Jet_pt[j]
-                #print 'when filling list, pt is', reg_var_dic['Jet_pt']
-                reg_var_dic['Jet_ptRaw']= tree.Jet_rawPt[j]
-                reg_var_dic['Jet_eta'] = tree.Jet_eta[j]
-                reg_var_dic['Jet_m']= tree.Jet_mass[j]
-                reg_var_dic['Jet_phi']= tree.Jet_phi[j]
-                reg_var_dic['hJ'] = hJ.SetPtEtaPhiM(reg_var_dic['Jet_pt'], reg_var_dic['Jet_eta'], reg_var_dic['Jet_phi'], reg_var_dic['Jet_m'])
-                reg_var_dic['Jet_e']= hJ.E()
-                reg_var_dic['Jet_chEmEF']=tree.Jet_chEmEF[j]
-                reg_var_dic['Jet_chHEF']=tree.Jet_chHEF[j]
-                reg_var_dic['Jet_rawPt']= tree.Jet_rawPt[j]
-                reg_var_dic['Jet_chMult']= tree.Jet_chMult[j]
+                Jet_pt = tree.Jet_pt[j]
+                Jet_eta = tree.Jet_eta[j]
+                Jet_m = tree.Jet_mass[j]
+                Jet_phi = tree.Jet_phi[j]
 
-                #regVars are here
-                reg_var_dic['Jet_vtx3deL']= max(0.,tree.Jet_vtx3DSig[j])
-                reg_var_dic['Jet_vtxNtrk']= max(0.,tree.Jet_vtxNtracks[j])
-                reg_var_dic['Jet_vtx3dL']= max(0.,tree.Jet_vtx3DVal[j])
-                reg_var_dic['Jet_vtxMass']= max(0.,tree.Jet_vtxMass[j])
-                reg_var_dic['Jet_vtxPt']= max(0.,tree.Jet_vtxPt[j])
-                reg_var_dic['Jet_neEmEF']=tree.Jet_neEmEF[j]
-                reg_var_dic['Jet_neHEF']=tree.Jet_neHEF[j]
-                reg_var_dic['Jet_leptonDeltaR']= max(0.,tree.Jet_leptonDeltaR[j])
-                reg_var_dic['Jet_leptonPt']= max(0.,tree.Jet_leptonPt[j])
-                reg_var_dic['Jet_leptonPtRel']= max(0.,tree.Jet_leptonPtRel[j])
-                reg_var_dic['Jet_leadTrackPt']= max(0.,tree.Jet_leadTrackPt[j])
-                reg_var_dic['Jet_mt']= hJ.Mt()
-                reg_var_dic['Jet_eta']= tree.Jet_eta[j]
-                reg_var_dic['nPVs']=tree.nPVs
-                #reg_var_dic['met_pt']=tree.met_pt
-                #reg_var_dic['Jet_met_proj']=projectionMETOntoJet(tree.met_pt, tree.met_phi, reg_var_dic['Jet_pt'], reg_var_dic['Jet_phi'])
+                #fill definitions from regression.ini
+                for var in self.regVars:
+                    reg_var_dic[var] = self.regDef[var](tree,j)
+
+                #these are the regVars of which the definition is not given in the config but is done here
+                reg_var_dic['hJ'] = hJ.SetPtEtaPhiM(Jet_pt, Jet_eta, Jet_phi, Jet_m)
+                #reg_var_dic['Jet_e'] = hJ.E()
+                reg_var_dic['Jet_mt'] = hJ.Mt()
+                #reg_var_dic['Jet_met_proj']=projectionMETOntoJet(tree.met_pt, tree.met_phi, Jet_pt, Jet_phi)
+                
+                #these variables are used for further calculations and therefore always need to be defined
+                reg_var_dic['Jet_m']= Jet_m
+                reg_var_dic['Jet_phi'] = Jet_phi
+                reg_var_dic['Jet_pt'] = Jet_pt
+                reg_var_dic['Jet_eta'] = Jet_eta
 
                 Reg_var_list.append(reg_var_dic)
 
