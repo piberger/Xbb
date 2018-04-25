@@ -46,6 +46,7 @@ parser.add_option("-l", "--limit", dest="limit", default=None, help="max number 
 parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
                       help="Number of events per file when splitting or number of files when using single file workflow.")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
+parser.add_option("-q", "--queue", dest="queue", default="all.q", help="queue")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
@@ -247,7 +248,7 @@ repDict = {
     'logpath': logPath,
     'job': '',
     'task': opts.task,
-    'queue': 'all.q',
+    'queue': opts.queue,
     'timestamp': timestamp,
     'additional': '',
     'job_id': 'noid',
@@ -422,11 +423,13 @@ def submit(job, repDict):
                 return
             elif answer.lower() == 's':
                 submitScriptSubmitAll = True
-            elif answer.lower() in ['l', 'local', 'a']:
+            elif answer.lower() in ['l', 'local', 'a','d']:
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
                 command = 'sh {runscript}'.format(runscript=runScript)
+                if answer.lower() == 'd':
+                    command = "XBBDEBUG=1 " + command
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
