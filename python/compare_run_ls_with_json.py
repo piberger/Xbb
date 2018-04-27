@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 import json
 
-runLsList = 'existing_lumis_pp_DoubleMuon.txt'
-runLsList2 = 'existing_lumis_pp_DoubleEG.txt'
+#runLsList = 'existing_lumis_pp_DoubleMuon.txt'
+#runLsList2 = 'existing_lumis_pp_DoubleEG.txt'
+#jsonFile = '2017_json.txt'
 
-jsonFile = '2017_json.txt'
+runLsList = 'existing_lumis_nano_DoubleMuon_300122to300237.txt'
+runLsList2 = 'existing_lumis_nano_DoubleEG_300122to300237.txt'
+jsonFile = '2017_json_300122to300237.txt'
 
 def runLsListToDict(existingData):
     existingDataDict = {}

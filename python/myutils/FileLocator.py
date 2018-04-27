@@ -5,12 +5,14 @@ import sys
 import subprocess
 import ROOT
 import hashlib
+from time import sleep
 
 class FileLocator(object):
 
     def __init__(self, config=None, xrootdRedirector=None, usePythonXrootD=True):
         self.config = config
         self.debug = 'XBBDEBUG' in os.environ
+        self.timeBetweenAttempts = 30
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             if len(self.xrootdRedirectors) < 1:
@@ -103,8 +105,8 @@ class FileLocator(object):
         else:
             return False
 
-    def runCommand(self, command):
-        if self.debug:
+    def runCommand(self, command, forceDebug=False):
+        if self.debug or forceDebug:
             print ("RUN: \x1b[32m",command,"\x1b[0m")
             return subprocess.call([command], shell=True)
         else:
@@ -150,20 +152,20 @@ class FileLocator(object):
         result = self.runCommand(command)
         return result==0
 
-    def remoteCopy(self, source, target):
+    def remoteCopy(self, source, target, force=False):
         if self.client:
-            status,_ = self.client.copy(source, target, force=False)
+            status,_ = self.client.copy(source, target, force=force)
             if self.debug:
-                print('DEBUG:', status.message, 'copy from', source, 'to', target)
+                print('DEBUG:', status.message, 'copy from', source, 'to', target, " force=", force)
             result = 0 if status.ok else 5
         else:
             command = self.remoteCp.format(source=source, target=target)
             result = self.runCommand(command)
         return result==0
 
-    def cp(self, source, target):
+    def cp(self, source, target, force=False):
         if self.isRemotePath(source) or self.isRemotePath(target):
-            return self.remoteCopy(source, target)
+            return self.remoteCopy(source, target, force=force)
         else:
             shutil.copyfile(source, target)
             return True
@@ -174,11 +176,21 @@ class FileLocator(object):
         else:
             os.remove(path)
 
-    def exists(self, path):
-        if self.isRemotePath(path):
-            return self.remoteFileExists(path)
-        else:
-            return os.path.exists(path)
+    def exists(self, path, attempts=1):
+        attemptsLeft = attempts
+        found = False
+        while attemptsLeft > 0:
+            attemptsLeft -= 1
+            found = self.remoteFileExists(path) if self.isRemotePath(path) else os.path.exists(path)
+            if found:
+                return True
+            if attemptsLeft > 0:
+                print('INFO: file was not found:'+path+', trying %d more times...'%attemptsLeft)
+                if self.timeBetweenAttempts:
+                    print('INFO: wait 30 seconds before trying again')
+                    sleep(self.timeBetweenAttempts)
+
+        return found
 
     def mkdir(self, path):
         status = False
@@ -273,4 +285,8 @@ class FileLocator(object):
         else:
             print ("\x1b[31mERROR: invalid file name\x1b[0m")
             raise Exception("InvalidFileName")
+
+    def getXrootdRedirector(self):
+        return self.xrootdRedirectors[0] if self.xrootdRedirectors and len(self.xrootdRedirectors)>0 else None
+
 

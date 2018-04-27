@@ -1,12 +1,12 @@
- 
+
  =======================================================
-  This is HAWK, version 2.0.1                       
-   released January 20, 2015                        
-  authors: A. Denner, S. Dittmaier,                 
-           S. Kallweit, A. Muck                     
+  This is HAWK, version 2.0.1
+   released January 20, 2015
+  authors: A. Denner, S. Dittmaier,
+           S. Kallweit, A. Muck
  =======================================================
- 
- pdfname = NNPDF23_nlo_as_0118_qed.LHgrid  
+
+ pdfname = NNPDF23_nlo_as_0118_qed.LHgrid
  *************************************
  *       LHAPDF Version 5.9.1        *
  *   Configured for the following:   *
@@ -16,21 +16,21 @@
  *************************************
 
  >>>>>> PDF description: <<<<<<
- NNPDF23_nlo_as_0118_qed.LHgrid                                  
- NNPDF2.3QED NLO, arxiv:1308.0598                                
- NLO QCD + LO QED PDF set, alphas(MZ)=0.118                      
- NNPDF Collaboration: R.D. Ball, V. Bertone,                     
- S. Carrazza, L. Del Debbio, S. Forte,                           
- A. Guffanti, N.P. Hartland, J. Rojo                             
- This set has          100  member PDF                           
- mem=0 --> average on replicas.                                  
- Evolution: pol. interpolation on the LH grid.                   
+ NNPDF23_nlo_as_0118_qed.LHgrid
+ NNPDF2.3QED NLO, arxiv:1308.0598
+ NLO QCD + LO QED PDF set, alphas(MZ)=0.118
+ NNPDF Collaboration: R.D. Ball, V. Bertone,
+ S. Carrazza, L. Del Debbio, S. Forte,
+ A. Guffanti, N.P. Hartland, J. Rojo
+ This set has          100  member PDF
+ mem=0 --> average on replicas.
+ Evolution: pol. interpolation on the LH grid.
  >>>>>>                   <<<<<<
 
 
  date: 14.12.2015 ,    time: 09.18.56 hour,    cpu:   0 h  0 m  2 s
 
- Process: p p  -> l+ l- H     
+ Process: p p  -> l+ l- H
 
  SM parameters: (masses and widths in GeV)
  -----------------------------------------
@@ -43,10 +43,10 @@
    v(2,1) = (-.225000,0.000000),   v(2,2) = (0.974359,0.000000),   v(2,3) = (0.000000,0.000000),
    v(3,1) = (0.000000,0.000000),   v(3,2) = (0.000000,0.000000),   v(3,3) = (1.000000,0.000000),
 
- 
+
                        Monte Carlo
                        ===========
- Input process:  proton proton -> anti-mu mu h0                              
+ Input process:  proton proton -> anti-mu mu h0
 
  Initializing Random Number Generator
  RANLUX LUXURY LEVEL SET BY RLUXGO : 3     P= 223
@@ -55,12 +55,12 @@
  Number of weighted events   =  100000000   (1.000E+08)
  Collider CMS energy         =     13.00000 TeV
 
-   QCD factorization scale   =     216.1534806    
-   QED factorization scale   =     216.1534806    
-   QCD renormalization scale =     216.1534806    
+   QCD factorization scale   =     216.1534806
+   QED factorization scale   =     216.1534806
+   QCD renormalization scale =     216.1534806
 
          sppbar= 0: p p initial state
-           spdf=99: LHApdf: NNPDF23_nlo_as_0118_qed.LHgrid  
+           spdf=99: LHApdf: NNPDF23_nlo_as_0118_qed.LHgrid
                     pdfset   0
        sbarelep= 1: no lepton recombination with photons: bare leptons
             sew= 1: electroweak corrections included
@@ -68,11 +68,11 @@
            sqcd= 1: QCD corrections included
           sbini= 0: initial bottoms not included in LO
           sbfin= 0: final bottoms not included in LO
-       sfactqed= 2: DIS factorization for QED  
+       sfactqed= 2: DIS factorization for QED
        sfactqcd= 1: MSbar factorization for QCD
            shtr= 0: on-shell Higgs boson
        sbarelep= 1: no lepton recombination with photons: bare leptons
-          scuts= 1: with separation cuts: (3=l+, 4=l-) 
+          scuts= 1: with separation cuts: (3=l+, 4=l-)
  pT(3)      >    15.00000 GeV
  pT(4)      >    15.00000 GeV
  y(3)       <     2.50000
@@ -80,7 +80,7 @@
  mass(3,4)  >  5625.00000 GeV
  mass(l,l)) <   105.00000 GeV
 
-    events  :     intermediate results     :     preliminary results 
+    events  :     intermediate results     :     preliminary results
    1000000  :     14.25036 +-     0.03189  :     14.25036 +-     0.03189
    2000000  :     14.32547 +-     0.02659  :     14.28791 +-     0.02076
    3000000  :     14.32370 +-     0.03247  :     14.29984 +-     0.01757
@@ -182,7 +182,7 @@
   99000000  :     14.28531 +-     0.03108  :     14.28502 +-     0.00269
  100000000  :     14.28335 +-     0.02521  :     14.28500 +-     0.00267
 
- Summary of results for p p  -> l+ l- H     
+ Summary of results for p p  -> l+ l- H
             Born cross section:   13.14482168     +/-   0.1379502208E-02
         complete cross section:   14.28500127     +/-   0.2672350104E-02
     QCD corr. to cross section:   2.353535179     +/-   0.2110571853E-02
@@ -204,9 +204,9 @@
            total ew correction: -0.9230673667E-01 +/-   0.9335512493E-04
        virt+real ew correction: -0.9246133726E-01 +/-   0.8391661599E-04
     incoming photon correction:  0.1546005886E-03 +/-   0.1151691380E-05
- 
+
  The following histograms have been produced:
- 
+
   histogram  1  dat.pth              :      0.00 < x <   500.00
   histogram  2  dat.yh               :     -5.00 < x <     5.00
   histogram  3  dat.etah             :     -5.00 < x <     5.00

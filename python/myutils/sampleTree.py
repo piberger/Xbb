@@ -108,8 +108,8 @@ class SampleTree(object):
                 if self.debug:
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
-                # check root file existence, TODO: simplify
-                if self.fileLocator.exists(rootFileName):
+                # check root file existence
+                if self.fileLocator.exists(rootFileName, attempts=5):
                     remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
@@ -408,6 +408,8 @@ class SampleTree(object):
     def next(self):
         self.treeIterator.next()
         self.eventsRead += 1
+        if self.debug and self.eventsRead % 1000 == 0:
+            print('DEBUG: %d events read'%self.eventsRead)
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
@@ -557,7 +559,10 @@ class SampleTree(object):
     
     # these branches are ALWAYS removed (e.g. because they will be recomputed), even when they are in the 'keep_branches' list
     def addBranchToBlacklist(self, branchName):
-        self.removeBranches.append(branchName)
+        if branchName != '*':
+            self.removeBranches.append(branchName)
+        else:
+            print("WARNING: can't add branch '*' to blacklist => igonre it!")
 
     # wrapper to enable/disable branches in the TChain
     def SetBranchStatus(self, branchName, branchStatus):
@@ -628,11 +633,14 @@ class SampleTree(object):
         if '*' not in listOfBranchesToKeep and len(listOfBranchesToKeep) > 0:
             self.enableBranches(listOfBranchesToKeep)
         else:
-            print("INFO: keep all branches")
+            if len(self.removeBranches) < 1:
+                print("INFO: keep all branches")
+            else:
+                print("INFO: keep all branches but the following:")
+                print("INFO:", ", ".join(self.removeBranches))
 
         # now disable all branches, which will be e.g. recomputed
         for branchName in self.removeBranches:
-            print ("INFO: but remove", branchName)
             self.SetBranchStatus(branchName, 0)
 
         # initialize the output trees, this has to be called after the calls to SetBranchStatus
@@ -684,11 +692,14 @@ class SampleTree(object):
                     outputTree['cutSequence'].append(formulaName)
 
         # prepare memory for new branches to be written
+        pyTypes = {'O': 'i'}
         for outputTree in self.outputTrees:
             outputTree['newBranchArrays'] = {}
             outputTree['newBranches'] = {}
             for branch in self.newBranches:
-                outputTree['newBranchArrays'][branch['name']] = array.array(branch['type'], [0] * branch['length'])
+                # convert ROOT type convention to python array type convetion if necessary
+                pyType = pyTypes[branch['type']] if branch['type'] in pyTypes else branch['type']
+                outputTree['newBranchArrays'][branch['name']] = array.array(pyType, [0] * branch['length'])
                 if 'leaflist' in branch:
                     leafList = branch['leaflist']
                 else:
@@ -910,3 +921,13 @@ class SampleTree(object):
     def GetEntries(self):
         return self.tree.GetEntries()
 
+    def Print(self):
+        print("\x1b[34m\x1b[1m---- SampleTree ----")
+        print("# this snippet below can be used to load this sample:")
+        print("import ROOT")
+        print("from myutils.sampleTree import SampleTree")
+        print("sampleTree = SampleTree([")
+        for fileName in self.sampleFileNames:
+            print("    '" + fileName + "',")
+        print("], treeName='Events', xrootdRedirector='" + self.fileLocator.getXrootdRedirector() + "')")
+        print("---- end ----\x1b[0m")
