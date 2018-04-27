@@ -4,6 +4,8 @@ ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
 import array
+import time
+import subprocess
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -56,6 +58,8 @@ class NewStackMaker:
         #  for special plots of weights itself, weightF can be defined in the plot definition
         if self.config.has_option('plotDef:%s'%self.var,'weightF'):
             self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weightF')
+        elif self.config.has_option('plotDef:%s'%self.var,'weight'):
+            self.histogramOptions['weight'] = self.config.get('plotDef:%s'%self.var,'weight')
         elif self.config.has_option('Weights','weightF'):
             self.histogramOptions['weight'] = self.config.get('Weights','weightF')
         else:
@@ -96,6 +100,13 @@ class NewStackMaker:
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
 
+        # region/variable specific blinding cut
+        if self.config.has_option(self.configSection, 'blindCuts'):
+            blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
+            if self.var in blindCuts:
+                self.histogramOptions['blindCut'] = blindCuts[self.var]
+                print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut']))
+
         self.groups = {}
         self.histograms = []
         self.legends = {}
@@ -121,11 +132,12 @@ class NewStackMaker:
     # draw text
     # ------------------------------------------------------------------------------
     @staticmethod
-    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8):
+    def myText(txt="CMS Preliminary", ndcX=0.0, ndcY=0.0, size=0.8, color=None):
         ROOT.gPad.Update()
         text = ROOT.TLatex()
         text.SetNDC()
-        text.SetTextColor(ROOT.kBlack)
+        if color:
+            text.SetTextColor(color)
         text.SetTextSize(text.GetTextSize()*size)
         text.DrawLatex(ndcX,ndcY,txt)
         return text
@@ -137,6 +149,7 @@ class NewStackMaker:
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
+
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = histoMaker.getHistogram()
         self.histograms.append({
@@ -218,6 +231,7 @@ class NewStackMaker:
 
         # draw ratio plot
         self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
+
         ksScore = dataHistogram.KolmogorovTest(mcHistogram)
         chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
         print ("INFO: data/MC ratio, KS test:", ksScore, " chi2:", chiScore)
@@ -231,6 +245,42 @@ class NewStackMaker:
             self.ratioError.Draw('SAME2')
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
+
+        # blinded region
+        if 'blindCut' in self.histogramOptions:
+
+            # check if the blinding cut has the simple form var<num
+            isSimpleCut = False
+            print("DEBUG:", self.histogramOptions['blindCut'], self.histogramOptions['treeVar'], self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']))
+            if self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']):
+                cond = self.histogramOptions['blindCut'].split(self.histogramOptions['treeVar'])[1]
+                print("DEBUG: cond=", cond)
+                if cond.startswith('<'):
+                    num = cond.replace('<=','').replace('<','')
+                    print("DEBUG: num=",num)
+                    try:
+                        blindingCutThreshold = float(num)
+                        isSimpleCut = True
+                    except:
+                        pass
+
+            if isSimpleCut:
+                blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+                for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                    binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                    value = 1.1
+                    if binLowEdgeValue >= blindingCutThreshold:
+                        error = 0.6
+                    else:
+                        error = 0.0
+                    blindedRegion.SetBinContent(1+i, value)
+                    blindedRegion.SetBinError(1+i, error)
+                blindedRegion.SetFillColor(ROOT.kRed)
+                blindedRegion.SetFillStyle(3018)
+                blindedRegion.SetMarkerSize(0)
+                blindedRegion.Draw("SAME E2")
+                self.addObject(blindedRegion)
+                print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
@@ -334,6 +384,14 @@ class NewStackMaker:
                 self.addObject(self.myText(label['text'], label['x'], label['y'], label['size']))
         except:
             pass
+
+        try:
+            if self.config.has_option('Plot_general', 'additionalText'):
+                additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+                for j, additionalTextLine in enumerate(additionalTextLines):
+                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
+        except Exception as e:
+            print(e)
 
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:

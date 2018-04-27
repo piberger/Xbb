@@ -57,10 +57,10 @@ sinthetac=0.225d0            ! sine of the Cabibbo angle
 #ecut(higgs)=0d0              ! energy cut on Higgs
 #mlcut(higgs)=1d-2            ! minimal invariant mass of Higgs
 #mucut(higgs)=1d30            ! maximal invariant mass of Higgs
- 
 
-# recombination and cuts for WH/ZH 
-sbarelep=1                   ! leptons are isolated from collinear photons 
+
+# recombination and cuts for WH/ZH
+sbarelep=1                   ! leptons are isolated from collinear photons
 dgammaparameter=0.1d0        ! D parameter of lepton-photon recombination
 scuts=1                      ! standard cuts for detected leptons
 ptcut(lep)=15d0              ! pt cut on leptons
@@ -88,7 +88,7 @@ ecut(higgs)=0d0              ! energy cut on Higgs
 shtr=0                       ! on-shell Higgs boson (1 for off-shell, 2 for decay)
 shbw=1                       ! off-shell propagator according to arXiV:1107.0683, eq. (4.6)
 sgh=2                        ! Higgs-boson width according to complex-mass scheme
-gh=0.00421d0                 ! Higgs width (for MH=126 GeV) 
+gh=0.00421d0                 ! Higgs width (for MH=126 GeV)
 Hbr=1d0                      ! branching ratio for Higgs decay into singletts
 ptcut(decp)=0d0              ! pt cut on Higgs decay products
 ycut(decp)=1d10              ! y cut on Higgs decay products
@@ -140,7 +140,7 @@ sbfin=0                      ! final b quarks included
 # input for anomalous HVV couplings
 shvv=0                       ! anomalous HVV couplings in-/excluded
 rsm=1d0                      ! rescaling factor of SM HVV coupling
-d=0.00d0                     ! parameter d from hep-ph/0609075 
+d=0.00d0                     ! parameter d from hep-ph/0609075
 db=0.00d0                    ! parameter d_b from hep-ph/0609075
 dt=0.00d0                    ! parameter tilde d from hep-ph/0609075
 dtb=0.00d0                   ! parameter tilde d_b from hep-ph/0609075
