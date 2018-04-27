@@ -6,7 +6,6 @@ import numpy as np
 class DoubleBTagWeights(object):
 
     def __init__(self):
-        #print 'CREATING DoubleBTagWeights'
         self.branchBuffers = {}
         self.branches = []
 
