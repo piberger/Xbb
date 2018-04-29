@@ -46,6 +46,7 @@ parser.add_option("-l", "--limit", dest="limit", default=None, help="max number 
 parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
                       help="Number of events per file when splitting or number of files when using single file workflow.")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
+parser.add_option("-q", "--queue", dest="queue", default="all.q", help="queue")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
@@ -84,6 +85,10 @@ def signal_handler(signal, frame):
     print('\n----------------------------\n')
     sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
+
+# split list into sublists of given length
+def partitionFileList(sampleFileList, chunkSize=1):
+    return [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
 en = opts.tag
 
@@ -249,7 +254,7 @@ repDict = {
     'logpath': logPath,
     'job': '',
     'task': opts.task,
-    'queue': 'all.q',
+    'queue': opts.queue,
     'timestamp': timestamp,
     'additional': '',
     'job_id': 'noid',
@@ -426,11 +431,14 @@ def submit(job, repDict):
                 return
             elif answer.lower() == 's':
                 submitScriptSubmitAll = True
-            elif answer.lower() in ['l', 'local', 'a']:
+            elif answer.lower() in ['l', 'local', 'a','d']:
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
+
                 command = 'sh {runscript} | tee {logfile}'.format(runscript=runScript,logfile=outOutputPath)
+                if answer.lower() == 'd':
+                    command = "XBBDEBUG=1 " + command
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
@@ -778,8 +786,7 @@ if opts.task.startswith('cachetraining'):
     samples = info.get_samples(allBackgrounds + allSignals)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
-    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    sampleIdentifiers = filterSampleList(list(set([sample.identifier for sample in samples])), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -1145,16 +1152,14 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-
-        # get partitioned list of existing sample files in input folder
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=chunkSize, config=config).getSampleFileNameChunks()
+        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize) 
 
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
             # check existence of OUTPUT files
             if opts.skipExisting:
-                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileName.split('/')[-1])) for fileName in splitFilesChunk])
+                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
 
@@ -1171,6 +1176,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
                 submit(jobName, jobDict)
             else:
                 print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
+
 # -----------------------------------------------------------------------------
 # summary: print list of cuts for CR+SR
 # TODO: this should also run some basic checks on the configuration
