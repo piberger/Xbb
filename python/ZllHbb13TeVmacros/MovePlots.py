@@ -25,6 +25,7 @@ parser.add_argument('-nh', dest='ht', action='store_const',
                    const=False, default=True,  help='no htaccess file is created')
 parser.add_argument('--name', default = None, help='Give a name to the new dir')
 
+parser.add_argument('--config', default = None, help='Config directory')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
 args = parser.parse_args()
 #args = sys.argv[1:]
@@ -55,12 +56,20 @@ def MakeSubFolders(_input, RegionList=None):
     if not os.path.isdir(_plotfolder):
         os.mkdir(_plotfolder)
 
-    print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
-    subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
+    if args.config is not None:
+        config_ = args.config.split('./')[1]
+        print 'command is','cp -r ' + current_+ '/' +args.config+ '/ ' + _plotfolder + '/'
+        subprocess.call('cp -r ' + current_ + '/' +args.config + '/ ' + _plotfolder + '/', shell = True)
+    else:
+        config_ = 'config'
+        print 'command is','cp -r ../config ' + _plotfolder + '/'
+        subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
     if args.ht:
+        print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
         subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
+        subprocess.call('cp -r ' + current_ + '/.htaccess ' + _plotfolder + '/' + config_ + '/', shell = True)
     subprocess.call('cp -r '+current_+'/index.php ' + _plotfolder + '/', shell = True)
-
+    subprocess.call('cp -r ' + current_ + '/index.php ' + _plotfolder + '/' + config_ + '/', shell = True)
     FILE = os.listdir('.')
 
     #subprocess.call('cp -r ../config .', shell = True)
