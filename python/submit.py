@@ -306,7 +306,7 @@ if pathconfig.has_section('SubmitOptions'):
         submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
 
     if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
-        submitScriptSpecialOptions.update(eval(submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
+        submitScriptSpecialOptions.update(eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
 
 condorBatchGroups = {}
 # ------------------------------------------------------------------------------
