@@ -282,31 +282,31 @@ list_submitted_singlejobs = {}
 #
 #
 # ------------------------------------------------------------------------------
-try: 
-    submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
-except:
-    # Default
-    submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
 
-try:
-    submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
-except:
-    # Default
-    submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
-try:
-    submitScriptSpecialOptions = eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions'))
-except:
-    # Default values: 
-    submitScriptSpecialOptions = {
-        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
-        'singleeval': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
-        'eval': ' -l h_vmem=4g ',
-        'cachedc': ' -l h_vmem=6g ',
-        'cacheplot': ' -l h_vmem=6g ',
-        'cachetraining': ' -l h_vmem=6g ',
-        'hadd': ' -l h_vmem=6g ',
-    }
+# Default values
+submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
+submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
+submitScriptSpecialOptions = {
+    'mergesyscachingdcsplit': ' -l h_vmem=6g ',
+    'singleeval': ' -l h_vmem=6g ',
+    'runtraining': ' -l h_vmem=6g ',
+    'eval': ' -l h_vmem=4g ',
+    'cachedc': ' -l h_vmem=6g ',
+    'cacheplot': ' -l h_vmem=6g ',
+    'cachetraining': ' -l h_vmem=6g ',
+    'hadd': ' -l h_vmem=6g ',
+}
+
+# Overwrite by config
+if pathconfig.has_section('SubmitOptions'):
+    if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
+        submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
+
+    if pathconfig.has_option('SubmitOptions', 'submitScriptOptionsTemplate'):
+        submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
+
+    if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
+        submitScriptSpecialOptions.update(eval(submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
 
 condorBatchGroups = {}
 # ------------------------------------------------------------------------------
