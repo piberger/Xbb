@@ -268,7 +268,7 @@ list_submitted_singlejobs = {}
 #[SubmitOptions]
 #
 #submitScriptTemplate = qsub {options} -o {logfile} {runscript}
-#submitScriptOptionsTemplate = -V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s
+#submitScriptOptionsTemplate = -V -cwd -q %%(queue)s -N %%(name)s -j y -pe smp %%(nprocesses)s
 #submitScriptSpecialOptions = {
 #        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
 #        'singleeval': ' -l h_vmem=6g ',
@@ -284,12 +284,19 @@ list_submitted_singlejobs = {}
 # ------------------------------------------------------------------------------
 try: 
     submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
+except:
+    # Default
+    submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
+
+try:
     submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
-    submitScriptSpecialOptions = eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')
+except:
+    # Default
+    submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
+try:
+    submitScriptSpecialOptions = eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions'))
 except:
     # Default values: 
-    submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
-    submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
     submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
