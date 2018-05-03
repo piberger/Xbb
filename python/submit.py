@@ -262,11 +262,35 @@ repDict = {
 list_submitted_singlejobs = {}
 
 # ------------------------------------------------------------------------------
-# SUBMIT SCRIPT options defined here, TODO: move to config
+# SUBMIT SCRIPT options defined in config general.ini [SubmitOptions]
+
+# Template: 
+#[SubmitOptions]
+#
+#submitScriptTemplate = qsub {options} -o {logfile} {runscript}
+#submitScriptOptionsTemplate = -V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s
+#submitScriptSpecialOptions = {
+#        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
+#        'singleeval': ' -l h_vmem=6g ',
+#        'runtraining': ' -l h_vmem=6g ',
+#        'eval': ' -l h_vmem=4g ',
+#        'cachedc': ' -l h_vmem=6g ',
+#        'cacheplot': ' -l h_vmem=6g ',
+#        'cachetraining': ' -l h_vmem=6g ',
+#        'hadd': ' -l h_vmem=6g ',
+#        }
+#
+#
 # ------------------------------------------------------------------------------
-submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
-submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
-submitScriptSpecialOptions = {
+try: 
+    submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
+    submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
+    submitScriptSpecialOptions = eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')
+except:
+    # Default values: 
+    submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
+    submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
+    submitScriptSpecialOptions = {
         'mergesyscachingdcsplit': ' -l h_vmem=6g ',
         'singleeval': ' -l h_vmem=6g ',
         'runtraining': ' -l h_vmem=6g ',
@@ -275,9 +299,9 @@ submitScriptSpecialOptions = {
         'cacheplot': ' -l h_vmem=6g ',
         'cachetraining': ' -l h_vmem=6g ',
         'hadd': ' -l h_vmem=6g ',
-        }
-condorBatchGroups = {}
+    }
 
+condorBatchGroups = {}
 # ------------------------------------------------------------------------------
 # get job queue
 # ------------------------------------------------------------------------------
