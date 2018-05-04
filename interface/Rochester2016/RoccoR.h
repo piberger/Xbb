@@ -42,34 +42,34 @@ struct CrystalBall{
 	double fa   = fabs(a);
 	double expa = exp(-fa*fa/2);
 	double A    = pow(n/fa, n)*expa;
-	double C1   = n/fa/(n-1)*expa;
+	double C1   = n/fa/(n-1)*expa; 
 	double D1   = 2*SPiO2*erf(fa/S2);
 
 	B  = n/fa-fa;
-	C  = (D1+2*C1)/C1;
-	D  = (D1+2*C1)/2;
+	C  = (D1+2*C1)/C1;   
+	D  = (D1+2*C1)/2;   
 
-	N  = 1.0/s/(D1+2*C1);
-	k  = 1.0/(n-1);
+	N  = 1.0/s/(D1+2*C1); 
+	k  = 1.0/(n-1);  
 
-	NA = N*A;
-	Ns = N*s;
-	NC = Ns*C1;
-	F  = 1-fa*fa/n;
-	G  = s*n/fa;
+	NA = N*A;       
+	Ns = N*s;       
+	NC = Ns*C1;     
+	F  = 1-fa*fa/n; 
+	G  = s*n/fa;    
 
 	cdfMa=cdf(m-a*s);
 	cdfPa=cdf(m+a*s);
     }
 
-    double pdf(double x) const{
+    double pdf(double x) const{ 
 	double d=(x-m)/s;
 	if(d<-a) return NA*pow(B-d, -n);
 	if(d> a) return NA*pow(B+d, -n);
 	return N*exp(-d*d/2);
     }
 
-    double pdf(double x, double ks, double dm) const{
+    double pdf(double x, double ks, double dm) const{ 
 	double d=(x-m-dm)/(s*ks);
 	if(d<-a) return NA/ks*pow(B-d, -n);
 	if(d> a) return NA/ks*pow(B+d, -n);
@@ -124,7 +124,7 @@ class RocRes{
     public:
 	enum TYPE {MC, Data, Extra};
 
-	CrystalBall  cb[NMAXETA][NMAXTRK];
+	CrystalBall  cb[NMAXETA][NMAXTRK]; 
 
 	RocRes();
 	int getEtaBin(double feta) const;
@@ -196,8 +196,8 @@ class RocOne{
 
 class RoccoR{
     public:
-	RoccoR();
-	RoccoR(std::string dirname);
+	RoccoR(); 
+	RoccoR(std::string dirname); 
 	~RoccoR();
 
 	void init(std::string dirname);
@@ -205,8 +205,8 @@ class RoccoR{
 	double kGenSmear(double pt, double eta, double v, double u, RocRes::TYPE TT=RocRes::Data, int s=0, int m=0) const;
 	double kScaleDT(int Q, double pt, double eta, double phi, int s=0, int m=0) const;
 
-	double kScaleAndSmearMC(int Q, double pt, double eta, double phi, int n, double u, double w, int s=0, int m=0) const;
-	double kScaleFromGenMC(int Q, double pt, double eta, double phi, int n, double gt, double w, int s=0, int m=0) const;
+	double kScaleAndSmearMC(int Q, double pt, double eta, double phi, int n, double u, double w, int s=0, int m=0) const;  
+	double kScaleFromGenMC(int Q, double pt, double eta, double phi, int n, double gt, double w, int s=0, int m=0) const; 
 
 
 	double getM(int T, int H, int F, int E=0, int m=0) const{return RC[E][m].getM(T,H,F);}

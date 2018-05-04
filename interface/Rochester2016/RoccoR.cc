@@ -81,14 +81,14 @@ void RocRes::dumpParams(){
 }
 
 
-
+	
 void RocRes::init(std::string filename){
     std::ifstream in(filename.c_str());
     char tag[4];
-    int type, sys, mem, isdt, var, bin;
+    int type, sys, mem, isdt, var, bin;	
     std::string s;
     while(std::getline(in, s)){
-	std::stringstream ss(s);
+	std::stringstream ss(s); 
 	if(s.substr(0,4)=="RMIN")       ss >> tag >> NMIN;
 	else if(s.substr(0,4)=="RTRK")  ss >> tag >> NTRK;
 	else if(s.substr(0,4)=="RETA")  {
@@ -96,27 +96,27 @@ void RocRes::init(std::string filename){
 	    for(int i=0; i< NETA+1; ++i) ss >> BETA[i];
 	}
 	else if(s.substr(0,1)=="R")  {
-	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin;
-	    if(var==0) for(int i=0; i<NTRK; ++i) ss >> rmsA[bin][i];
-	    if(var==1) for(int i=0; i<NTRK; ++i) ss >> rmsB[bin][i];
+	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin; 
+	    if(var==0) for(int i=0; i<NTRK; ++i) ss >> rmsA[bin][i];  
+	    if(var==1) for(int i=0; i<NTRK; ++i) ss >> rmsB[bin][i];  
 	    if(var==2) for(int i=0; i<NTRK; ++i) {
-		ss >> rmsC[bin][i];
+		ss >> rmsC[bin][i];  
 		rmsC[bin][i]/=100;
 	    }
-	    if(var==3) for(int i=0; i<NTRK; ++i) ss >> width[bin][i];
-	    if(var==4) for(int i=0; i<NTRK; ++i) ss >> alpha[bin][i];
-	    if(var==5) for(int i=0; i<NTRK; ++i) ss >> power[bin][i];
+	    if(var==3) for(int i=0; i<NTRK; ++i) ss >> width[bin][i];  
+	    if(var==4) for(int i=0; i<NTRK; ++i) ss >> alpha[bin][i];  
+	    if(var==5) for(int i=0; i<NTRK; ++i) ss >> power[bin][i];  
 	}
 	else if(s.substr(0,1)=="T")  {
-	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin;
-	    if(isdt==0) for(int i=0; i<NTRK+1; ++i) ss >> ntrk[bin][i];
-	    if(isdt==1) for(int i=0; i<NTRK+1; ++i) ss >> dtrk[bin][i];
+	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin; 
+	    if(isdt==0) for(int i=0; i<NTRK+1; ++i) ss >> ntrk[bin][i];  
+	    if(isdt==1) for(int i=0; i<NTRK+1; ++i) ss >> dtrk[bin][i];  
 	}
 	else if(s.substr(0,1)=="F")  {
-	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin;
+	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin; 
 	    if(var==0){
-		if(isdt==0) for(int i=0; i<NETA; ++i) ss >> kRes[i];
-		if(isdt==1) for(int i=0; i<NETA; ++i) ss >> kDat[i];
+		if(isdt==0) for(int i=0; i<NETA; ++i) ss >> kRes[i];  
+		if(isdt==1) for(int i=0; i<NETA; ++i) ss >> kDat[i];  
 	    }
 	}
     }
@@ -135,7 +135,7 @@ double RocRes::Sigma(double pt, int H, int F) const{
 }
 
 double RocRes::getUrnd(int H, int F, double w) const{
-    return ntrk[H][F]+(ntrk[H][F+1]-ntrk[H][F])*w;
+    return ntrk[H][F]+(ntrk[H][F+1]-ntrk[H][F])*w; 
 }
 
 double RocRes::kSpread(double gpt, double rpt, double eta, int n, double w) const{
@@ -144,7 +144,7 @@ double RocRes::kSpread(double gpt, double rpt, double eta, int n, double w) cons
     double  v = getUrnd(H, F, w);
     int     D = getBin(v, NTRK, dtrk[H]);
     double  kold = gpt / rpt;
-    double  u = cb[H][F].cdf( (kold-1.0)/kRes[H]/Sigma(gpt,H,F) );
+    double  u = cb[H][F].cdf( (kold-1.0)/kRes[H]/Sigma(gpt,H,F) ); 
     double  knew = 1.0 + kDat[H]*Sigma(gpt,H,D)*cb[H][D].invcdf(u);
     if(knew<0) return 1.0;
     return kold/knew;
@@ -153,7 +153,7 @@ double RocRes::kSpread(double gpt, double rpt, double eta, int n, double w) cons
 double RocRes::kSmear(double pt, double eta, TYPE type, double v, double u) const{
     int H = getBin(fabs(eta), NETA, BETA);
     int F = type==Data? getNBinDT(v, H) : getNBinMC(v, H);
-    double K = type==Data ? kDat[H] : kRes[H];
+    double K = type==Data ? kDat[H] : kRes[H]; 
     double x = K*Sigma(pt, H, F)*cb[H][F].invcdf(u);
     return 1.0/(1.0+x);
 }
@@ -162,7 +162,7 @@ double RocRes::kSmear(double pt, double eta, TYPE type, double w, double u, int 
     int H = getBin(fabs(eta), NETA, BETA);
     int F = n>NMIN ? n-NMIN : 0;
     if(type==Data) F = getNBinDT(getUrnd(H, F, w), H);
-    double K = type==Data ? kDat[H] : kRes[H];
+    double K = type==Data ? kDat[H] : kRes[H]; 
     double x = K*Sigma(pt, H, F)*cb[H][F].invcdf(u);
     return 1.0/(1.0+x);
 }
@@ -174,12 +174,12 @@ double RocRes::kExtra(double pt, double eta, int n, double u, double w) const{
     int     D = getBin(v, NTRK, dtrk[H]);
     double RD = kDat[H]*Sigma(pt, H, D);
     double RM = kRes[H]*Sigma(pt, H, F);
-    if(RD<=RM) return 1.0;
+    if(RD<=RM) return 1.0; 
     double r=cb[H][F].invcdf(u);
     if(fabs(r)>5) return 1.0; //protection against too large smearing
     double x = sqrt(RD*RD-RM*RM)*r;
     if(x<=-1) return 1.0;
-    return 1.0/(1.0 + x);
+    return 1.0/(1.0 + x); 
 }
 
 
@@ -194,7 +194,7 @@ int RocOne::getBin(double x, const int NN, const double *b) const{
 
 int RocOne::getBin(double x, const int nmax, const double xmin, const double dx) const{
     int ibin=(x-xmin)/dx;
-    if(ibin<0) return 0;
+    if(ibin<0) return 0; 
     if(ibin>=nmax) return nmax-1;
     return ibin;
 }
@@ -249,13 +249,13 @@ void RocOne::init(std::string filename, int iTYPE, int iSYS, int iMEM){
 
     std::ifstream in(filename.c_str());
     char tag[4];
-    int type, sys, mem, isdt, var, bin;
+    int type, sys, mem, isdt, var, bin;	
 
     bool initialized=false;
 
     std::string s;
     while(std::getline(in, s)){
-	std::stringstream ss(s);
+	std::stringstream ss(s); 
 	if(s.substr(0,4)=="CPHI")       {
 	    ss >> tag >> NPHI;
 	    DPHI=2*TMath::Pi()/NPHI;
@@ -265,18 +265,18 @@ void RocOne::init(std::string filename, int iTYPE, int iSYS, int iMEM){
 	    for(int i=0; i< NETA+1; ++i) ss >> BETA[i];
 	}
 	else if(s.substr(0,1)=="C")  {
-	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin;
+	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin; 
 	    if(!checkTIGHT(type,sys,mem,iTYPE,iSYS,iMEM)) continue;
 	    initialized=true;
-	    if(var==0) for(int i=0; i<NPHI; ++i) { ss >> M[isdt][bin][i]; M[isdt][bin][i]/=100; M[isdt][bin][i]+=1.0;}
-	    if(var==1) for(int i=0; i<NPHI; ++i) { ss >> A[isdt][bin][i]; A[isdt][bin][i]/=100;}
+	    if(var==0) for(int i=0; i<NPHI; ++i) { ss >> M[isdt][bin][i]; M[isdt][bin][i]/=100; M[isdt][bin][i]+=1.0;} 
+	    if(var==1) for(int i=0; i<NPHI; ++i) { ss >> A[isdt][bin][i]; A[isdt][bin][i]/=100;} 
 
 	}
 	else if(s.substr(0,1)=="F")  {
-	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin;
+	    ss >> tag >> type >> sys >> mem >> isdt >> var >> bin; 
 	    if(var==1){
-		for(int i=0; i<NETA; ++i) {
-		    ss >> D[isdt][i];
+		for(int i=0; i<NETA; ++i) { 
+		    ss >> D[isdt][i];  
 		    D[isdt][i]/=10000;
 		    D[isdt][i]+=1.0;
 		}
@@ -336,7 +336,7 @@ RoccoR::RoccoR(std::string dirname){
 }
 
 
-void
+void 
 RoccoR::init(std::string dirname){
 
     std::string filename=Form("%s/config.txt", dirname.c_str());
@@ -347,13 +347,13 @@ RoccoR::init(std::string dirname){
     int si;
     int sn;
     while(std::getline(in, s)){
-	std::stringstream ss(s);
-	ss >> tag >> si >> sn;
+	std::stringstream ss(s); 
+	ss >> tag >> si >> sn; 
 	std::vector<RocOne> v;
 	for(int m=0; m<sn; ++m){
 	    std::string inputfile=Form("%s/%d.%d.txt", dirname.c_str(), si, m);
 	    if(gSystem->AccessPathName(inputfile.c_str())) {
-		std::cout << Form("Missing %8d %3d, using default instead...", si, m) << std::endl;
+		std::cout << Form("Missing %8d %3d, using default instead...", si, m) << std::endl;  
 		v.push_back(RocOne(Form("%s/%d.%d.txt", dirname.c_str(),0,0),0,0,0));
 	    }
 	    else{
