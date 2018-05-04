@@ -33,7 +33,7 @@ class SampleTreesToNumpyConverter(object):
         self.treeCut = config.get('Cuts', self.treeCutName)
 
         # split in train/eval sets
-        self.trainCut = config.get('Cuts', 'TrainCut')
+        self.trainCut = config.get('Cuts', 'TrainCut') 
         self.evalCut = config.get('Cuts', 'EvalCut')
         # rescale MC by 2 because of train/eval split
         self.globalRescale = 2.0
@@ -73,7 +73,7 @@ class SampleTreesToNumpyConverter(object):
         arrayLists_sys = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in systematics}
         weightLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         targetLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
-
+        
         # standard weight expression
         weightF = self.config.get('Weights','weightF')
 
@@ -101,12 +101,12 @@ class SampleTreesToNumpyConverter(object):
                     if sampleTree:
                         treeScale = sampleTree.getScale(sample) * self.globalRescale
                         print ('scale:', treeScale)
-
+                        
                         # initialize numpy array
                         nSamples = sampleTree.GetEntries()
                         features = self.MVA_Vars['Nominal']
-                        features_sys = {x: self.MVA_Vars[x] for x in systematics}
-                        nFeatures = len(features)
+                        features_sys = {x: self.MVA_Vars[x] for x in systematics} 
+                        nFeatures = len(features) 
                         print('nFeatures:', nFeatures)
                         inputData = np.zeros((nSamples, nFeatures), dtype=np.float32)
                         inputData_sys = {x: np.zeros((nSamples, nFeatures), dtype=np.float32) for x in systematics}
@@ -118,7 +118,7 @@ class SampleTreesToNumpyConverter(object):
                             for feature in features_s:
                                 sampleTree.addFormula(feature)
                         sampleTree.addFormula(weightF)
-
+                        
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
                             for j, feature in enumerate(features):
@@ -128,7 +128,7 @@ class SampleTreesToNumpyConverter(object):
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
 
-                            # fill systematics
+                            # fill systematics 
                             for k, feature_s in features_sys.iteritems():
                                 for j, feature in enumerate(feature_s):
                                     inputData_sys[k][i,j] = sampleTree.evaluate(feature)
@@ -149,8 +149,8 @@ class SampleTreesToNumpyConverter(object):
                     'sample_weight': np.array(weightLists['train'], dtype=np.float32),
                     },
                 'test': {
-                    'X': np.concatenate(arrayLists['test'], axis=0),
-                    'y': np.array(targetLists['test'], dtype=np.float32),
+                    'X': np.concatenate(arrayLists['test'], axis=0), 
+                    'y': np.array(targetLists['test'], dtype=np.float32), 
                     'sample_weight': np.array(weightLists['test'], dtype=np.float32),
                     },
                 'category_labels': {idx: label for idx, label in enumerate(categories)},
@@ -202,5 +202,5 @@ if len(opts.tag.strip()) > 1:
 # load config
 config = BetterConfigParser()
 config.read(opts.config)
-converter = SampleTreesToNumpyConverter(config, opts.trainingRegions)
+converter = SampleTreesToNumpyConverter(config, opts.trainingRegions) 
 converter.run()
