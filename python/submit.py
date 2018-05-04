@@ -264,24 +264,54 @@ repDict = {
 list_submitted_singlejobs = {}
 
 # ------------------------------------------------------------------------------
-# SUBMIT SCRIPT options defined here, TODO: move to config
+# SUBMIT SCRIPT options defined in config general.ini [SubmitOptions]
+
+# Template: 
+#[SubmitOptions]
+#
+#submitScriptTemplate = qsub {options} -o {logfile} {runscript}
+#submitScriptOptionsTemplate = -V -cwd -q %%(queue)s -N %%(name)s -j y -pe smp %%(nprocesses)s
+#submitScriptSpecialOptions = {
+#        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
+#        'singleeval': ' -l h_vmem=6g ',
+#        'runtraining': ' -l h_vmem=6g ',
+#        'eval': ' -l h_vmem=4g ',
+#        'cachedc': ' -l h_vmem=6g ',
+#        'cacheplot': ' -l h_vmem=6g ',
+#        'cachetraining': ' -l h_vmem=6g ',
+#        'hadd': ' -l h_vmem=6g ',
+#        }
+#
+#
 # ------------------------------------------------------------------------------
+
+# Default values
 submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
 submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
 submitScriptSpecialOptions = {
-        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
-        'sysnew': ' -l h_vmem=6g ',
-        'singleeval': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
-        'eval': ' -l h_vmem=4g ',
-        'cachedc': ' -l h_vmem=6g ',
-        'runtraining': ' -l h_vmem=6g ',
-        'cacheplot': ' -l h_vmem=6g ',
-        'cachetraining': ' -l h_vmem=6g ',
-        'hadd': ' -l h_vmem=6g ',
-        }
-condorBatchGroups = {}
+    'mergesyscachingdcsplit': ' -l h_vmem=6g ',
+    'singleeval': ' -l h_vmem=6g ',
+    'runtraining': ' -l h_vmem=6g ',
+    'eval': ' -l h_vmem=4g ',
+    'cachedc': ' -l h_vmem=6g ',
+    'cacheplot': ' -l h_vmem=6g ',
+    'cachetraining': ' -l h_vmem=6g ',
+    'hadd': ' -l h_vmem=6g ',
+}
 
+# Overwrite by config
+if pathconfig.has_section('SubmitOptions'):
+    if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
+        submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
+
+    if pathconfig.has_option('SubmitOptions', 'submitScriptOptionsTemplate'):
+        submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
+
+
+    if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
+        submitScriptSpecialOptions.update(eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
+
+condorBatchGroups = {}
 # ------------------------------------------------------------------------------
 # get job queue
 # ------------------------------------------------------------------------------
@@ -313,7 +343,7 @@ def waitFor(jobNameList):
             time.sleep(30)
 
 # ------------------------------------------------------------------------------
-# filter sample list with simple wildcard (*) syntax, used for -S option 
+# filter sample list with simple wildcard (*) syntax, used for -S option
 # ------------------------------------------------------------------------------
 def filterSampleList(sampleIdentifiers, samplesList):
     if samplesList and len([x for x in samplesList if x]) > 0:
@@ -928,7 +958,7 @@ if opts.task.startswith('runplot'):
     # submit all the plot regions as separate jobs
     for region in regions:
 
-        # if --regions is given, only plot those regions 
+        # if --regions is given, only plot those regions
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
             for j, plotVarList in enumerate(plotVarChunks):
@@ -1152,7 +1182,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize) 
+        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
 
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
@@ -1221,7 +1251,7 @@ if opts.task == 'summary':
         for sample in samplesUsed:
             if sample.identifier == sampleIdentifier:
                 print " >>> ", sample.name
-    
+
 
 
     print "-"*80
@@ -1250,7 +1280,7 @@ if opts.task == 'status':
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList) 
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
     basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
@@ -1273,6 +1303,9 @@ if opts.task == 'status':
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
                 fileStatus[folder][sampleIdentifier].append(fileLocator.exists(localFilePath))
+
+    # print the full sample name at the end so can resubmit them using -S sample1,sample2
+    missing_samples_list = []
     for folder in foldersToCheck:
         folderStatus = fileStatus[folder]
         print "---",folder,"---"
@@ -1281,7 +1314,11 @@ if opts.task == 'status':
             statusBar = ""
             for x in sampleStatus:
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
+            if len([x for x in sampleStatus if x]) != len(sampleStatus):
+                missing_samples_list.append(sampleIdentifier)
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+    if len(missing_samples_list) > 0:
+        print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
 
 # outputs a simple python code to read the whole sample as chain
 if opts.task == 'sample':
@@ -1307,7 +1344,7 @@ if opts.task == 'sample':
             for sampleFileName in splitFilesChunks[0]:
                 print "    '{fileName}',".format(fileName=sampleFileName)
             print "]"
-            print "sampleTree = SampleTree(sampleFiles, treeName='Events')" 
+            print "sampleTree = SampleTree(sampleFiles, treeName='Events')"
             print "print 'number of events:', sampleTree.GetEntries()"
             print "# example how to loop over all events"
             print "# alternatively, the TChain object can be accessed as sampleTree.tree"
