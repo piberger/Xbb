@@ -9,8 +9,9 @@ import math
 from copytreePSI import filelist as getSampleFileList  # to avoid name conflict with filelist variable
 
 class TreeCache:
-    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, remove_sys=False, do_onlypart_n= False, dccut = None):
+    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,plotMergeCached=False, branch_to_keep=None, do_onlypart_n= False, dccut = None, remove_sys=None):
         ROOT.gROOT.SetBatch(True)
+        self.verbose = False
         self.path = path
         self.config = config
         self.remove_sys = remove_sys
@@ -18,10 +19,13 @@ class TreeCache:
         print("Init path",path)#," sampleList",sampleList)
         self._cutList = []
         self.dccut = None
+        self.branch_to_keep = branch_to_keep
         if dccut:
             self.dccut = dccut
         #! Make the cut lists from inputs
         for cut in cutList:
+            if not cut:
+                cut = ""
             self._cutList.append('(%s)'%cut.replace(' ',''))
         try:
             self.__tmpPath = os.environ["TMPDIR"]
@@ -79,7 +83,7 @@ class TreeCache:
         else:
             #remove repetition and (1) (the latter would keep all the events)
             for cut in self._cutList:
-                if not cut in effective_cuts and not cut == "(1)":
+                if not cut in effective_cuts:
                     effective_cuts.append(cut)
             self._cutList = effective_cuts
             self.minCut = '||'.join(self._cutList)
@@ -201,17 +205,20 @@ class TreeCache:
             # check for existence of the individual tree files
             filelistCopied = []
             for inputFile in filelist:
+                print ('inputFile is', inputFile)
                 try:
                     subfolder = inputFile.split('/')[-4]
                     filename = inputFile.split('/')[-1]
                     filename = filename.split('_')[0]+'_'+subfolder+'_'+filename.split('_')[1]
                     hash = hashlib.sha224(filename).hexdigest()
                     inputFileNew = "%s/%s/%s" %(self.path,sample.identifier,filename.replace('.root','')+'_'+str(hash)+'.root')
-                    print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
+                    if self.verbose:
+                        print('inputFile2',inputFileNew,'isfile',os.path.isfile(inputFileNew.replace('root://t3dcachedb03.psi.ch:1094/','')))
                     filelistCopied.append(inputFileNew)
                 except Exception as e:
                     print ('Exception:'+str(e))
                     print ('ERROR occured for "'+inputFile+'"')
+                    print ('->'+inputFileNew)
 
             # append semicolon separated list as single element to inputfiles list and just one file to tmpfiles
             inputfiles.append(';'.join(filelistCopied))
@@ -375,11 +382,13 @@ class TreeCache:
             #  READ INPUT files
             # ----------------------------------------------------------------------------------------------------------
             # list -> TChain
-            if ';' in inputfile:
+            if ';' in inputfile or type(inputfile) == list:
+                inputFilesList = inputfile.split(';') if type(inputfile) != list else inputfile
                 tree = ROOT.TChain(sample.tree)
                 histograms = {}
                 time1=time.time()
-                for rootFileName in inputfile.split(';'):
+                nFilesChained = 0
+                for rootFileName in inputFilesList:
                     chainTree = '%s/%s'%(rootFileName, sample.tree)
                     if os.path.isfile(rootFileName.replace('root://t3dcachedb03.psi.ch:1094/','')):
                         obj = None
@@ -402,21 +411,23 @@ class TreeCache:
                             input.Close()
 
                             # add file to chain
-                            print ('chaining '+chainTree)
+                            if self.verbose:
+                                print ('chaining '+chainTree)
                             statusCode = tree.Add(chainTree)
                             if statusCode != 1 or not tree:
                                 print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode),'tree:',tree)
                                 raise Exception("TChain method Add failure")
                             else:
                                 treeEmpty = False
+                                nFilesChained += 1
                         else:
                             print ('ERROR: Cant open file:'+chainTree)
                 assert type(tree) is ROOT.TChain
                 time2=time.time()
-                print ('adding files to chain took %f seconds.'%(time2-time1))
+                print ('adding %d files to chain took %f seconds.'%(nFilesChained, time2-time1))
                 input = None
-
-                print ("HISTOGRAMS: %r"%histograms)
+                if self.verbose:
+                    print ("HISTOGRAMS: %r"%histograms)
                 output.cd()
                 for histogramName, histogram in histograms.iteritems():
                     histogram.SetDirectory(output)
@@ -425,6 +436,8 @@ class TreeCache:
             else:
                 print ("I am reading")
                 input = ROOT.TFile.Open(inputfile,'read')
+                if (not input or input.IsZombie()):
+                    print('file not found:' + inputfile)
                 input.Print()
                 print ("I read the tree")
                 tree = input.Get(sample.tree)
@@ -485,12 +498,22 @@ class TreeCache:
                     except:
                         pass
 
+                branchList = tree.GetListOfBranches()
                 for branch in removeBranches:
                     try:
                         #print ('will remove', branch)
-                        tree.SetBranchStatus(branch,0)
+                        if branchList.FindObject(branch):    
+                            print ('will remove', branch)
+                            tree.SetBranchStatus(branch,0)
                     except:
                         pass
+                if self.branch_to_keep:
+                    tree.SetBranchStatus('*',0)
+                    for b in self.branch_to_keep:
+                        if branchList.FindObject(b):
+                            print ('use branch:', b)
+                            tree.SetBranchStatus(b,1)
+
 
                 #time2 = time.time()
                 #print ('DEBUG: tree=',tree)
@@ -504,7 +527,9 @@ class TreeCache:
                 #if len(theCut) < str_limit:
 
                     time2 = time.time()
+                    print ('normal caching')
                     print ('DEBUG: tree=',tree)
+                    print ('theCut is', theCut)
                     cutFormula = ROOT.TTreeFormula("cutFormula", theCut, tree)
                     subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
 
@@ -538,17 +563,19 @@ class TreeCache:
                         totalEntries += 1
                         i += 1
                 else:
-                    cutformula_list =[]
-                    for formula_cut in self._cutList:
-                        if formula_cut == "(1)": continue
-                        formula = ROOT.TTreeFormula("cutFormula%i"%self._cutList.index(formula_cut), formula_cut, tree)
-                        cutformula_list.append(formula)
+                    #cutformula_list =[]
+                    #for formula_cut in self._cutList:
+                    #    if formula_cut == "(1)": continue
+                    #    formula = ROOT.TTreeFormula("cutFormula%i"%self._cutList.index(formula_cut), formula_cut, tree)
+                    #    cutformula_list.append(formula)
 
                     print ('cut_list is', self._cutList)
 
                     #loop over the tree and apply cut
                     time2 = time.time()
+                    print ('caching for dc')
                     print ('DEBUG: tree=',tree)
+                    print ('dccut is', self.dccut)
                     subcutFormula = ROOT.TTreeFormula("subcutFormula", sample.subcut if subcutExists else '1', tree)
                     dccutFormula = ROOT.TTreeFormula("dccut", self.dccut, tree)
 
@@ -572,8 +599,8 @@ class TreeCache:
                         if treeNum != oldTreeNum:
                             dccutFormula.UpdateFormulaLeaves()
                             subcutFormula.UpdateFormulaLeaves()
-                            for formula in cutformula_list:
-                                formula.UpdateFormulaLeaves()
+                            #for formula in cutformula_list:
+                            #    formula.UpdateFormulaLeaves()
                             oldTreeNum = treeNum
 
                         pass_cut = False
@@ -714,11 +741,10 @@ class TreeCache:
             #stop if a file is missing
             file_missing = False
             for sample in self.__sampleList:
-                theHash = hashlib.sha224('%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)).hexdigest()
+                hashString = '%s_%s_split%d' %(sample,self.minCut,sample.mergeCachingSize)
+                theHash = hashlib.sha224(hashString).hexdigest()
                 tmpFileMask = '{tmpdir}/tmp_{hash}_{part}.root'.format(tmpdir=self.__cachedPath, hash=theHash, part='*')
                 tmpFileMask = tmpFileMask.replace('root://t3dcachedb03.psi.ch:1094','')
-                print ('Sample name: '+sample.FullName)
-                print (tmpFileMask)
 
                 # get list of unmerged root files
                 samplefiles = self.config.get('Directories','samplefiles')
@@ -731,7 +757,8 @@ class TreeCache:
                 mergeList = [unmergedFiles[x:x+sample.mergeCachingSize] for x in xrange(0, len(unmergedFiles), sample.mergeCachingSize)]
 
                 # compare filenames from cached files with expectation from mergeList
-                print ('LEN mergelist:', len(mergeList), ' LEN cached files:', len(mergedFiles))
+                print ('%s %s (%s): %d/%d'%(sample.FullName, sample.group, tmpFileMask.split('/')[-1], len(mergedFiles), len(mergeList)))
+
                 for i,mergeListPart in enumerate(mergeList):
                     found = False
                     for mergedFile in mergedFiles:
@@ -739,6 +766,7 @@ class TreeCache:
                             found = True
                             break
                     if not found:
+                        print ('hash string:', hashString)
                         print ('  \x1b[31mmissing:','part ',i,':','(hash)_%d.root'%i,'\x1b[0m')
                         if not self.do_onlypart_n:
                             file_missing = True
@@ -753,7 +781,8 @@ class TreeCache:
                 # extract hashes from filenames and pass them as a list to __hashDict
                 self.__hashDict[sample.name] = [x.split('/')[-1].replace('tmp_','').split('.')[0] for x in mergedFiles]
             if file_missing:
-                raise Exception('files missing')
+                print (tmpFileMask)
+                raise Exception('files missing, run caching again')
             #print( "DICT:",self.__hashDict)
 
     def __cache_samples(self,filelist=None,mergeplot=False):
@@ -830,10 +859,9 @@ class TreeCache:
             self.__hashDict[theName]=theHash
 
     def get_tree(self, sample, cut):
-        print (self.__hashDict)
+        #print (self.__hashDict)
         inputHashes = self.__hashDict[sample.name]
         print('input file %s/tmp_\x1b[32m%r\x1b[0m.root'%(self.__cachedPath, inputHashes))
-
         #fill all Count* histos as lists, like self.CountWeighted = [123.23]
         inputHashesList = inputHashes if type(inputHashes) == list else [inputHashes]
         #print ('inputHashesList is', inputHashesList)
@@ -999,21 +1027,30 @@ class TreeCache:
                 rootFile.Close()
             else:
                 print ('\x1b[31mERROR: zombie: {file}\x1b[0m'.format(file=rootFileName))
-                raise Exception("root file with weight histogram is zombie")
+                del_protocol = rootFileName.replace('gsidcap://t3se01.psi.ch:22128/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('dcap://t3se01.psi.ch:22125/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=').replace('root://t3dcachedb03.psi.ch:1094/','srm://t3se01.psi.ch:8443/srm/managerv2?SFN=')
+                if '/scratch/' in  del_protocol: command = 'rm %s' %(del_protocol)
+                else: command = 'gfal-rm %s' %(del_protocol)
+                subprocess.call([command], shell=True)
+                print(command)
+                raise Exception("root file with weight histogram is zombie. Deleting the file.")
         return weightHistogram
 
     def get_scale_training(self, sample, config, lumi = None, count=1):
         try: sample.xsec = sample.xsec[0]
         except: pass
         self.__cachedPath
-        posWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountPosWeight') #input.Get('CountPosWeight')
-        negWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountNegWeight') #input.Get('CountNegWeight')
-        anaTag=config.get('Analysis','tag')
-        theScale = 1.
-        count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        try:
+            posWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountPosWeight') #input.Get('CountPosWeight')
+            negWeight = self.get_weight_histogram(self.__hashDict[sample.name], 'CountNegWeight') #input.Get('CountNegWeight')
+            anaTag=config.get('Analysis','tag')
+            theScale = 1.
+            count = (posWeight.GetBinContent(1) - negWeight.GetBinContent(1))
+        except:
+            print ("TreeCache: no CountPosWeight/CountNegWeight: using Count instead!!!!!!!!!!!")
+            count = self.get_weight_histogram(self.__hashDict[sample.name], 'Count').GetBinContent(1)
         lumi = float(sample.lumi)
         theScale = lumi*sample.xsec*sample.sf/(count)
-        print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
+        #print("sample: ",sample,"lumi: ",lumi,"xsec: ",sample.xsec,"sample.sf: ",sample.sf,"count: ",count," ---> using scale: ", theScale)
         return theScale
 
     def get_scale(self, sample, config, lumi = None, count=1):

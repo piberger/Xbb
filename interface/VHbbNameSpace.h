@@ -7,6 +7,106 @@
 
 namespace VHbb {
 
+double SoverSBWeight(double BDT, int channel) {
+
+    //Check to which bin the BDT belongs to
+    int BDTbin = -1;
+    if (BDT <= -0.8)                    BDTbin = 0;
+    if (BDT > -0.8 && BDT <= -0.68)     BDTbin = 0;
+    if (BDT > -0.68 && BDT <= -0.56)    BDTbin = 1;
+    if (BDT > -0.56 && BDT <= -0.44)    BDTbin = 2;
+    if (BDT > -0.44 && BDT <= -0.32)    BDTbin = 3;
+    if (BDT > -0.32 && BDT <= -0.02)    BDTbin = 4;
+    if (BDT > -0.2 && BDT <= -0.08)     BDTbin = 5;
+    if (BDT > -0.08 && BDT <= 0.04)     BDTbin = 6;
+    if (BDT > 0.04 && BDT <= 0.16)      BDTbin = 7;
+    if (BDT > 0.16 && BDT <= 0.28)      BDTbin = 8;
+    if (BDT > 0.28 && BDT <= 0.4)       BDTbin = 9;
+    if (BDT > 0.4 && BDT <= 0.52)       BDTbin = 10;
+    if (BDT > 0.52 && BDT <= 0.64)      BDTbin = 11;
+    if (BDT > 0.64 && BDT <= 0.76)      BDTbin = 12;
+    if (BDT > 0.76 && BDT <= 0.88)      BDTbin = 13;
+    if (BDT > 0.88)                     BDTbin = 14;
+
+    double SB_Zuu_low[15]={2.76737387847e-05,
+                           6.64750589345e-05,
+                           0.000149447397438,
+                           0.000364720697321,
+                           0.000704082928445,
+                           0.00114156054762,
+                           0.00178676530053,
+                           0.00289993913949,
+                           0.00473330069259,
+                           0.00714558106403,
+                           0.0109339081032,
+                           0.0184934984159,
+                           0.0326417501844,
+                           0.0664331803746,
+                           0.155709437265
+    };
+
+    double SB_Zee_low[15]={4.38820281278e-05,
+                           6.59406637058e-05,
+                           0.000151812163876,
+                           0.00037181791516,
+                           0.000651510194471,
+                           0.00109292029164,
+                           0.00180371097475,
+                           0.00289255480983,
+                           0.00440456389377 ,
+                           0.00717194663279,
+                           0.011191506056,
+                           0.0192027774896,
+                           0.0313549416529,
+                           0.0627899701193,
+                           0.188193463981
+    };
+
+    double SB_Zuu_high[15]={0.000150118338319,
+                            0.000177184418437,
+                            0.000381785086736,
+                            0.00081621546275,
+                            0.00132284030661,
+                            0.00315465582298,
+                            0.00513913238438,
+                            0.00871858305194,
+                            0.014172742012,
+                            0.0265281704166,
+                            0.0408929588652,
+                            0.0762144976363,
+                            0.138083647382,
+                            0.204843885382,
+                            0.321478566847
+    };
+
+    double SB_Zee_high[15]={7.252018604e-08,
+                            0.000204092490389,
+                            0.00045852950862,
+                            0.000812207870653,
+                            0.00187548258053,
+                            0.00255126940987,
+                            0.00515682235312,
+                            0.00931094133369,
+                            0.0140552030406,
+                            0.0230148836113,
+                            0.0413999559234,
+                            0.0668556717614,
+                            0.131102613516,
+                            0.242663806491,
+                            0.331429498934
+    };
+
+    if (channel == 1) return SB_Zee_low[BDTbin];
+    if (channel == 2) return SB_Zuu_low[BDTbin];
+    if (channel == 3) return SB_Zee_high[BDTbin];
+    if (channel == 4) return SB_Zuu_high[BDTbin];
+
+    return 0;
+
+    }
+
+
+
   double deltaPhi(double phi1, double phi2) {
     double result = phi1 - phi2;
     if (result > TMath::Pi()) {
@@ -294,6 +394,133 @@ namespace VHbb {
     TLorentzVector j;
     j.SetPtEtaPhiM(pt, eta, phi, m);
     return j.Mt();
+  }
+
+  double weight_QCD(int nGenHiggsBoson, int nGenTop, int nGenVbosons, double lheHT, int GenVbosons_pdgId) {
+    // QCD reweighting applied to W+Jets samples.
+    if (nGenHiggsBoson==0 && nGenTop==0 && nGenVbosons==1 && lheHT>100 && abs(GenVbosons_pdgId)==24) {
+      return (lheHT>100 && lheHT<200)*(1.459/1.21) + (lheHT>200 && lheHT<400)*(1.434/1.21) + (lheHT>400 && lheHT<600)*(1.532/1.21) + (lheHT>600)*(1.004/1.21);
+    }
+    return 1.;
+  }
+
+  double weight_EWK(int nGenHiggsBoson, int nGenTop, int nGenVbosons, double GenVbosons_pt, int VtypeSim, int GenVbosons_pdgId) {
+    // EWK reweighting applied to W+Jets and Z+Jets samples.
+    if (nGenHiggsBoson==0 && nGenTop==0 && nGenVbosons==1 && GenVbosons_pt>100 && GenVbosons_pt<3000) {
+      if ((VtypeSim==0 || VtypeSim==1 || VtypeSim==4 || VtypeSim==5) && GenVbosons_pdgId==23) {
+        return -0.1808051 + 6.04146*TMath::Power(GenVbosons_pt + 759.098, -0.242556);
+      } else if ((VtypeSim==2 || VtypeSim==3) && GenVbosons_pdgId==24) {
+        return -0.830041 + 7.93714*TMath::Power(GenVbosons_pt + 877.978, -0.213831);
+      }
+    }
+    return 1.;
+  }
+
+  double weight_LOtoNLO(int nGenHiggsBoson, int nGenTop, int nGenVbosons, int GenVbosons_pdgId, double deta_jj, int nGenBJets) {
+    // LO to NLO reweighting applied to Drell-Yan samples.
+    if (nGenHiggsBoson==0 && nGenTop==0 && nGenVbosons==1 && GenVbosons_pdgId==23 && deta_jj<5) {
+      if (nGenBJets < 1) {
+        return 0.935422 + 0.0403162*deta_jj - 0.0089026*deta_jj*deta_jj + 0.0064324*deta_jj*deta_jj*deta_jj - 0.000212443*deta_jj*deta_jj*deta_jj*deta_jj;
+      } else if (nGenBJets == 1) {
+        return 0.962415 + 0.0329463*deta_jj - 0.0414479*deta_jj*deta_jj + 0.0240993*deta_jj*deta_jj*deta_jj - 0.00278271*deta_jj*deta_jj*deta_jj*deta_jj;
+      } else if (nGenBJets >= 2) {
+        return (0.721265 - 0.105643*deta_jj - 0.0206835*deta_jj*deta_jj + 0.00558626*deta_jj*deta_jj*deta_jj)*TMath::Exp(0.450244*deta_jj);
+      }
+    }
+    return 1.;
+  }
+
+  double weight_TTbar_genPt(int nGenTop, double GenTop_pt1, double GenTop_pt2) {
+    if (nGenTop == 2) {
+      double sf_top1 = exp(0.0615 - 0.0005*GenTop_pt1);
+      double sf_top2 = exp(0.0615 - 0.0005*GenTop_pt2);
+      return sqrt(sf_top1 * sf_top2);
+    }
+    return 1.;
+  }
+
+  double weight_TTbar_nJetCentral(int nGenTop, int nJetsCentral) {
+    if (nGenTop == 2) {
+      double sf_njets = 1.2217 * (0.924773 - 0.0212496*nJetsCentral);
+      return sf_njets;
+    }
+    return 1.;
+  }
+
+   double weight_TTbar_nJetCentral_Up(int nGenTop, int nJetsCentral) {
+    if (nGenTop == 2) {
+      double sf_njets = 1.2222 * (0.9058043 - 0.01751612*nJetsCentral);
+      return sf_njets;
+    }
+    return 1.;
+  }
+
+  double weight_TTbar_nJetCentral_Down(int nGenTop, int nJetsCentral) {
+    if (nGenTop == 2) {
+      double sf_njets = 1.2213 * (0.9437417 - 0.02498308*nJetsCentral);
+      return sf_njets;
+    }
+    return 1.;
+  }
+
+  double weight_EWK_VH(int is_ZH, double GenVbosons_pt) {
+    // Apply the EWK signal correction to ZH signal sample.
+    if (is_ZH) {
+      if (GenVbosons_pt>0 && GenVbosons_pt<20) {
+        return 0.963285466565;
+      } else if (GenVbosons_pt>20 && GenVbosons_pt<40) {
+        return 0.960945354673;
+      } else if (GenVbosons_pt>40 && GenVbosons_pt<60) {
+        return 0.958125845181;
+      } else if (GenVbosons_pt>60 && GenVbosons_pt<80) {
+        return 0.956040178567;
+      } else if (GenVbosons_pt>80 && GenVbosons_pt<100) {
+        return 0.954829397636;
+      } else if (GenVbosons_pt>100 && GenVbosons_pt<120) {
+        return 0.955710296883;
+      } else if (GenVbosons_pt>120 && GenVbosons_pt<140) {
+        return 0.958933532209;
+      } else if (GenVbosons_pt>140 && GenVbosons_pt<160) {
+        return 0.960145045414;
+      } else if (GenVbosons_pt>160 && GenVbosons_pt<180) {
+        return 0.958798002291;
+      } else if (GenVbosons_pt>180 && GenVbosons_pt<200) {
+        return 0.954417774192;
+      } else if (GenVbosons_pt>200 && GenVbosons_pt<220) {
+        return 0.950510442261;
+      } else if (GenVbosons_pt>220 && GenVbosons_pt<240) {
+        return 0.943227377306;
+      } else if (GenVbosons_pt>240 && GenVbosons_pt<260) {
+        return 0.93876408527;
+      } else if (GenVbosons_pt>260 && GenVbosons_pt<280) {
+        return 0.929695202634;
+      } else if (GenVbosons_pt>280 && GenVbosons_pt<300) {
+        return 0.924760963363;
+      } else if (GenVbosons_pt>300 && GenVbosons_pt<320) {
+        return 0.915490487966;
+      } else if (GenVbosons_pt>320 && GenVbosons_pt<340) {
+        return 0.906099906197;
+      } else if (GenVbosons_pt>340 && GenVbosons_pt<360) {
+        return 0.901215165553;
+      } else if (GenVbosons_pt>360 && GenVbosons_pt<380) {
+        return 0.891758657639;
+      } else if (GenVbosons_pt>380 && GenVbosons_pt<400) {
+        return 0.882966044972;
+      } else if (GenVbosons_pt>400 && GenVbosons_pt<420) {
+        return 0.87385231926;
+      } else if (GenVbosons_pt>420 && GenVbosons_pt<440) {
+        return 0.868965659921;
+      } else if (GenVbosons_pt>440 && GenVbosons_pt<460) {
+        return 0.866066608534;
+      } else if (GenVbosons_pt>460 && GenVbosons_pt<480) {
+        return 0.854245464035;
+      } else if (GenVbosons_pt>480 && GenVbosons_pt<500) {
+        return 0.846544787867;
+      } else if (GenVbosons_pt>500) {
+        return 0.846544787867;
+      }
+    }
+    return 1.;
   }
 
   double ptWeightDY(double lheV_pt, double sign = 1.) {
@@ -797,7 +1024,7 @@ double ptWeightEWK_Zllv2(int isDY ,double GenVbosons_pt){
 // weights correction for EWK NLO correction (for ZllHbb only !!!)
 double ptWeightEWK_Zll(int nGenVbosons,double GenVbosons_pt,int VtypeSim, int nGenTop, int nGenHiggsBoson){
     double SF = 1.;
-    if (nGenVbosons ==1 & nGenTop == 0 & nGenHiggsBoson == 0)
+    if (nGenVbosons ==1 && nGenTop == 0 && nGenHiggsBoson == 0)
     {
         if (VtypeSim == 0 || VtypeSim == 1 || VtypeSim == 4 || VtypeSim == 5)
         {

@@ -9,6 +9,9 @@ import hashlib
 import signal
 import zlib
 import base64
+from myutils.sampleTree import SampleTree as SampleTree
+from myutils.FileList import FileList
+from myutils.Datacard import Datacard
 
 parser = OptionParser()
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
@@ -35,6 +38,8 @@ parser.add_option("-m", "--monitor", dest="monitor_only", action="store_true", d
                       help="Override run_locally option to run in batch")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False,
                               help="Interactive mode")
+parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
+                      help="Force overwriting of files if they already exist")
 
 (opts, args) = parser.parse_args(sys.argv)
 #print 'opts.mass is', opts.mass
@@ -125,7 +130,6 @@ config.read(configs)
 
 # RETRIEVE RELEVANT VARIABLES FROM CONFIG FILES AND FROM COMMAND LINE OPTIONS
 logPath = config.get("Directories","logpath")
-logo = open('%s/data/submit.txt' %config.get('Directories','vhbbpath')).readlines()
 counter = 0
 samplesinfo = config.get("Directories","samplesinfo")
 whereToLaunch = config.get('Configuration','whereToLaunch')
@@ -177,6 +181,7 @@ def dump_config(configs,output_file):
             outf.write(f.read())
         except: print '@WARNING: Config' + i + ' not found. It will not be used.'
 
+# TODO: binary files compiled by this function do not work (30.10.2017) 
 def compile_macro(config,macro):
     """
     Creates the library from a macro using CINT compiling it in scratch to avoid
@@ -287,17 +292,29 @@ list_submitted_singlejobs = {}
 def submit(job,repDict,redirect_to_null=False):
     global counter
     repDict['job'] = job
-    nJob = counter % len(logo)
+    nJob = counter
     counter += 1
-    if opts.philipp_love_progress_bars:
-        repDict['name'] = '"%s"' %logo[nJob].strip()
-    else:
-        repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+    repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+
+    # run script
+    runScript = 'runAll.sh %(job)s %(en)s '%(repDict)
+    runScript += opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+
+    # add named arguments to run script
+    if 'arguments' in repDict:
+        for argument, value in repDict['arguments'].iteritems():
+            runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
+
+    # submit script
     if run_locally == 'False':
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
-        print "the command is ", command
+        logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
+        qsubOptions = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s' %(repDict) 
+
+        if opts.task in ['mergesyscachingdcsplit', 'singleeval', 'cacheplot', 'cachetraining']:
+            qsubOptions += ' -l h_vmem=6g '
+
+        command = 'qsub {options} -o {logfile} {runscript}'.format(options=qsubOptions, logfile=logOutputPath, runscript=runScript)
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-        subprocess.call([command], shell=True)
     else:
         waiting_time_before_retry = 60
         number_symultaneous_process = 2
@@ -309,17 +326,27 @@ def submit(job,repDict,redirect_to_null=False):
             os.system('sleep '+str(waiting_time_before_retry))
             counter = int(subprocess.check_output('ps aux | grep $USER | grep \'sh runAll.sh\' | grep '+opts.task +' | wc -l', shell=True))
 
-        command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + repDict['additional']
+        command = 'sh {runscript}'.format(runscript=runScript)
+
         if redirect_to_null: command = command + ' 2>&1 > /dev/null &'
         else: command = command + ' 2>&1 > %(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s_%(additional)s.out' %(repDict) + ' &'
-        print "the command is ", command
         dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
-        subprocess.call([command], shell=True)
+
+    # run command
+    if opts.interactive:
+        print "the real command is:\x1b[34m",command,"\x1b[0m\n(press ENTER to run it and continue)"
+        answer = raw_input().strip()
+        if answer == 'no' or answer == 'skip':
+            return
+    else:
+        print "the command is ", command
+
+    subprocess.call([command], shell=True)
 
 # SINGLE (i.e. FILE BY FILE) AND SPLITTED FILE WORKFLOW SUBMISSION FUNCTION
 def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="nosample"):
     global counter
-    nJob = counter % len(logo)
+    nJob = counter
     counter += 1
     task = opts.task
     if file != "none":
@@ -333,17 +360,19 @@ def checksinglestep(repDict,run_locally,counter_local,Plot,file="none",sample="n
 def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=False):
     global counter
     repDict['job'] = job
-    nJob = counter % len(logo)
+    repDict['joblogname'] = job.replace(',','_')
+    nJob = counter
     counter += 1
-    if opts.philipp_love_progress_bars:
-        repDict['name'] = '"%s"' %logo[nJob].strip()
-    else:
-        repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
-        repDict['name'] = repDict['name']+'_'+str(counter_local)
+    repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+    repDict['name'] = repDict['name'].replace(',','_')+'_'+str(counter_local)
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        else:
+            command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(joblogname)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
         command = command.replace('.out','_'+str(counter_local)+'.out')
     list_submitted_singlejobs[repDict['name']] = [file,1]
     #print "the command is ", command
@@ -354,7 +383,9 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
     if opts.interactive:
         print "the real command is:",command
         print "(press ENTER to run it and continue)"
-        raw_input()
+        answer = raw_input().strip()
+        if answer == 'no' or answer == 'skip':
+            return
     dump_config(configs,"%(logpath)s/%(timestamp)s_%(job)s_%(en)s_%(task)s.config" %(repDict))
     if (not opts.monitor_only) or resubmit:
         subprocess.call([command], shell=True)
@@ -362,16 +393,17 @@ def submitsinglefile(job,repDict,file,run_locally,counter_local,Plot,resubmit=Fa
 def mergesubmitsinglefile(job,repDict,run_locally,Plot):
     global counter
     repDict['job'] = job
-    nJob = counter % len(logo)
+    nJob = counter
     counter += 1
-    if opts.philipp_love_progress_bars:
-        repDict['name'] = '"%s"' %logo[nJob].strip()
-    else:
-        repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+    repDict['name'] = ('%(job)s_%(en)s%(task)s' %repDict).replace(',','_')
+    repDict['logname'] =  ('%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)).replace(',','_')
     if run_locally == 'True':
         command = 'sh runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     else:
-        command = 'qsub -V -cwd -q %(queue)s -l h_vmem=6G -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        if opts.task == 'mergesyscachingdcsplit' or opts.task == 'singleeval':
+            command = 'qsub -l h_vmem=6g -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
+        else:
+            command = 'qsub -V -cwd -q %(queue)s -N %(name)s -j y -o %(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out -pe smp %(nprocesses)s runAll.sh %(job)s %(en)s ' %(repDict) + opts.task + ' ' + repDict['nprocesses']+ ' ' + repDict['job_id'] + ' ' + ('0' if not repDict['additional'] else repDict['additional'])
     list_submitted_singlejobs[repDict['name']] = [file,1]
     command = command + ' mergeall' + ' "' + str(Plot)+ '"'
     print "the command is ", command
@@ -565,7 +597,7 @@ def return_splitcaching_hash(treecut,isdata):
         if shape__.replace(' ','')  == '': continue#to avoid && case
         shapecut_split_ = shape__.split('||')
         for shape_ in  shapecut_split_:
-            new_cut_list=sys_cut_suffix[syst]
+            #new_cut_list=sys_cut_suffix[syst]
             for new_cut in replace_cut:
                 old_str,new_str=new_cut.split('>')
                 if old_str in shape_:
@@ -737,7 +769,229 @@ elif opts.task == 'splitsubcaching':
              repDict['queue'] = 'all.q'
              training(additional_)
 
-if opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+if opts.task.startswith('cachetraining'):
+    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
+    allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
+    print "backgrounds:"
+    for sampleName in sorted(allBackgrounds):
+        print " >", sampleName
+    print "signals:"
+    for sampleName in sorted(allSignals):
+        print " >", sampleName
+    
+    # get samples info
+    info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
+    samples = info.get_samples(allBackgrounds + allSignals)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit separate jobs for all samples
+    for sampleIdentifier in sampleIdentifiers:
+
+        # number of files to process per job 
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        
+        # submit all the single chunks for one sample
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
+            jobDict = repDict.copy()
+            jobDict.update({
+                'queue': 'short.q',
+                'arguments':
+                    {
+                        'trainingRegions': ','.join(trainingRegions),
+                        'sampleIdentifier': sampleIdentifier,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
+                    }
+                })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                compressedFileList = FileList.compress(splitFilesChunk)
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'training_cache_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+            submit(jobName, jobDict)
+
+if opts.task.startswith('runtraining'):
+    # training regions
+    trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
+
+    # separate job for all training regions
+    for trainingRegion in trainingRegions:
+        jobDict = repDict.copy()
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}})
+        jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
+        submit(jobName, jobDict)
+
+if opts.task.startswith('cacheplot'):
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    sampleNames = eval(config.get('Plot_general', 'samples')) 
+    dataSampleNames = eval(config.get('Plot_general', 'Data')) 
+
+    # get samples info
+    info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+    samples = info.get_samples(sampleNames + dataSampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+
+        # number of files to process per job 
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'plottingSamples')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        
+        # submit all the single parts
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
+            compressedFileList = FileList.compress(splitFilesChunk)
+            jobDict = repDict.copy()
+            jobDict.update({
+                    'queue': 'short.q',
+                    'arguments':
+                        {
+                        'regions': ','.join(regions),
+                        'sampleIdentifier': sampleIdentifier,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
+                        }
+                    })
+            if opts.force:
+                jobDict['arguments']['force'] = ''
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'plot_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
+            submit(jobName, jobDict)
+
+if opts.task.startswith('runplot'):
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+
+    # submit all the plot regions as separate jobs
+    for region in regions:
+        jobDict = repDict.copy()
+        jobDict.update({
+            'arguments':
+                {
+                    'regions': region,
+                }
+            })
+        jobName = 'plot_run_{region}'.format(region=region)
+        submit(jobName, jobDict)
+
+if opts.task.startswith('cachedc'):
+    # get list of all sample names used in DC step
+    sampleNames = []
+    regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
+    if config.has_option('LimitGeneral', 'addSample_sys'):
+        addSample_sys = eval(config.get('LimitGeneral', 'addSample_sys'))
+        sampleNames += [addSample_sys[key] for key in addSample_sys]
+    for region in regions:
+        for sampleType in ['data', 'signal', 'background']:
+            sampleNames += eval(config.get('dc:%s'%region, sampleType))
+
+    # get samples info
+    sampleFolder = config.get('Directories', 'dcSamples')
+    info = ParseInfo(samplesinfo, sampleFolder)
+    samples = info.get_samples(sampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples if sample.identifier in samplesToCache or len(samplesToCache) < 1])))
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+
+        # number of files to process per job 
+        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': sampleFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        
+        # submit all the single parts
+        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
+            compressedFileList = FileList.compress(splitFilesChunk)
+            jobDict = repDict.copy()
+            jobDict.update({
+                'arguments':
+                    {
+                        'sampleIdentifier': sampleIdentifier,
+                        'chunkNumber': chunkNumber,
+                        'splitFilesChunks': len(splitFilesChunks),
+                        'splitFilesChunkSize': splitFilesChunkSize,
+                    }
+                })
+            # pass file list, if only a chunk of it is processed
+            if len(splitFilesChunks) > 1:
+                jobDict['arguments']['fileList'] = compressedFileList
+            jobName = 'dc_cache_{sample}_part{chunk}'.format(sample=sampleIdentifier, chunk=chunkNumber)
+            submit(jobName, jobDict)
+
+if opts.task.startswith('rundc'):
+    
+    regions = Datacard.getRegions(config=config)
+    samples = Datacard.getSamples(config=config, regions=regions)
+
+    sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
+
+    # only process given samples (if option is present)
+    samplesToCache = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
+    if len(samplesToCache) > 0:
+        sampleIdentifiers = [x for x in sampleIdentifiers if x in samplesToCache]
+
+    #DEBUG: sampleIdentifiers = [x for x in sampleIdentifiers if 'Double' in x]
+
+    # submit all the DC regions as separate jobs
+    for region in regions:
+        # submit separate jobs for either sampleIdentifiers
+        for sampleIdentifier in sampleIdentifiers: 
+            jobDict = repDict.copy()
+            jobDict.update({
+                'queue': 'short.q',
+                'arguments':
+                    {
+                        'regions': region,
+                        'sampleIdentifier': sampleIdentifier,
+                    }
+                })
+            jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+            submit(jobName, jobDict)
+
+if opts.task.startswith('mergedc'):
+    regions = Datacard.getRegions(config=config)
+
+    # submit all the DC regions as separate jobs
+    for region in regions:
+        jobDict = repDict.copy()
+        jobDict.update({
+            'queue': 'short.q',
+            'arguments':
+                {
+                    'regions': region,
+                }
+            })
+        jobName = 'dc_merge_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+        submit(jobName, jobDict)
+
+if opts.task == 'dc' or opts.task == 'mergesyscachingdc' or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     DC_vars= [x.strip() for x in (config.get('LimitGeneral','List')).split(',')]
     print DC_vars
 
@@ -777,6 +1031,82 @@ if opts.task == 'splitvarplot' or opts.task == 'mergecachingplotvar':
 #                #Need to propagate the cutbin param
 #                repDict['additional']= cut_
 #                submit(region,repDict)
+
+#if opts.task == 'splitcaching':
+#    plitcaching()
+
+if opts.task == 'mergecaching2':
+
+    samplesinfo = config.get('Directories', 'samplesinfo')
+    info = ParseInfo(samplesinfo,path)
+    print info
+
+    # get all regions
+    regions = [x.strip() for x in config.get('Plot_general', 'List').split(',')]
+
+    # determine which regions are compatible to be cached together in one go
+    regionsDict = {}
+    for region in regions:
+        section = 'Plot:%s'%region
+        dataSamples = eval(config.get(section, 'Datas'))
+        isSignal = config.has_option(section, 'Signal')
+        mcSignalSamples = eval(config.get(section,'Datas'))
+        identifier = ','.join(dataSamples) + '__' + str(isSignal) + '__' + ','.join(mcSignalSamples)
+        if identifier in regionsDict:
+            regionsDict[identifier].append(region)
+        else:
+            regionsDict[identifier] = [region]
+
+    regionGroups = [y for x,y in regionsDict.iteritems()]
+    print ("REGION GROUPS:",regionGroups)
+
+    # loop over all region group. A region group is defined to have the same data samples.
+    for regionGroup in regionGroups:
+        print "GROUP: ", regionGroup
+        section = 'Plot:%s'%regionGroup[0]
+        data = eval(config.get(section, 'Datas'))
+        mc = eval(config.get('Plot_general', 'samples'))
+        datasamples = info.get_samples(data)
+        mcsamples = info.get_samples(mc)
+        samples = mcsamples+datasamples
+
+        samplesListToRun = [x for x in samplesList if len(x) > 0]
+
+        for sample in samples:
+            if sample.identifier in samplesListToRun or len(samplesListToRun) < 1:
+                print " SAMPLE",sample
+                print " id",sample.identifier
+
+                # split merging proces for chunk of files
+                files = getfilelist(sample.identifier)
+                files_per_job = sample.mergeCachingSize
+                files_split = [files[x:x+files_per_job] for x in xrange(0, len(files), files_per_job)]
+                counter_local = 0
+                for files_sublist in files_split:
+                    print "  SUBMIT:", len(files_sublist), " files"
+                    print "  PART:", counter_local
+
+                    repDict['additional'] = 'MERGECACHING2'+'_'+str(counter_local)+'__'+str(sample)
+                    jobName = ','.join(regionGroup)
+
+                    files_sublist_filtered = []
+                    for filename in files_sublist:
+                        if filename.split('/')[-1] not in sample.skipParts:
+                            files_sublist_filtered.append(filename)
+                        else:
+                            print ('WARNING: the tree part '+filename+' will be excluded from merge, since it is in the skipParts section.')
+
+                    globalFilesSubmitted += 1
+                    print "  --->submit"
+                    filelistString = ';'.join(files_sublist_filtered)
+                    # necessary due to limits on passed arguments size
+                    if files_per_job > 400:
+                        lenBefore = len(filelistString)
+                        filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
+                        lenAfter = len(filelistString)
+                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                    submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot='', resubmit=False)
+                    counter_local = counter_local + 1
 
 #print 'item is', item
 #signals = eval('['+config.get('dc:%s'%item,'signal')+']')
@@ -822,7 +1152,8 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
             samples = info.get_samples(signals+backgrounds)
         elif opts.task == 'mergesyscaching':
             print 'region is', region
-            signals = eval('['+config.get('dc:%s'%region,'signal')+']')
+            #signals = eval('['+config.get('dc:%s'%region,'signal')+']')
+            signals = eval(config.get('dc:%s'%region,'signal'))
             #print 'signals are', signals
             backgrounds = eval(config.get('dc:%s'%region,'background'))
             #print 'background are', backgrounds
@@ -978,7 +1309,7 @@ if opts.task == 'mergecaching' or opts.task == 'mergesubcaching' or opts.task ==
                         lenBefore = len(filelistString)
                         filelistString = 'base64:' + base64.b64encode(zlib.compress(filelistString, 9))
                         lenAfter = len(filelistString)
-                        print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
+                        #print ('used base64(zlib(.)) to compress from ', lenBefore, ' to ', lenAfter, ' bytes.')
                     submitsinglefile(job=jobName, repDict=repDict, file=filelistString, run_locally=run_locally, counter_local=counter_local, Plot=region, resubmit=False)
                 else:
                     print 'SKIPED !'
@@ -1034,7 +1365,8 @@ if opts.task == 'splitcachingdc':
         #get all the samples list
         print 'item is', item 
         signals = eval('['+config.get('dc:%s'%item,'signal')+']')
-        backgrounds = eval(config.get('LimitGeneral','BKG'))
+        #backgrounds = eval(config.get('LimitGeneral','BKG'))
+        backgrounds = eval(config.get('dc:%s'%item,'background'))
         all_samples = info.get_samples(signals+backgrounds)
         data_sample_names = eval(config.get('dc:%s'%item,'data'))
         data_samples = info.get_samples(data_sample_names)
@@ -1078,11 +1410,23 @@ if opts.task == 'trainReg':
     submit('trainReg',repDict)
 
 
-elif opts.task == 'dc' or opts.task == 'mergesyscachingdc' :
+elif opts.task == 'dc' or opts.task == 'mergesyscachingdc'  or opts.task == 'mergesyscachingdcsplit' or opts.task == 'mergesyscachingdcmerge':
     repDict['queue'] = 'all.q'
     for item in DC_vars:
         # item here contains the dc name
-        submit(item,repDict)
+        if opts.task == 'mergesyscachingdcsplit':
+            split_factor = eval(config.get('LimitGeneral','split_factor'))
+            for i in range(0,split_factor+4):
+                 #if i != 34: continue
+                 #if i == 3: continue
+                 #if i != 3: continue
+                 repDict['additional'] = 'SPLIT'+'_'+str(i)
+                 submit(item,repDict)
+        elif opts.task == 'mergesyscachingdcmerge':
+            repDict['additional'] = 'DCMERGE'
+            submit(item,repDict)
+        else:
+            submit(item,repDict)
 
 
 elif opts.task == 'prep':

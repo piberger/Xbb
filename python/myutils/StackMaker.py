@@ -286,10 +286,14 @@ class StackMaker:
             self.histos[i].SetLineColor(1)
             allStack.Add(self.histos[i])
 
-        datas_nbins = self.datas[i].GetXaxis().GetNbins()
-        datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
-        datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
-
+        try:
+            datas_nbins = self.datas[i].GetXaxis().GetNbins()
+            datas_xMin = self.datas[i].GetXaxis().GetBinLowEdge(1)
+            datas_xMax = self.datas[i].GetXaxis().GetBinLowEdge(datas_nbins)+self.datas[i].GetXaxis().GetBinWidth(datas_nbins)
+        except:
+            datas_nbins = 0
+            datas_xMin = 0
+            datas_xMax = 0
         print 'data_nbins:', datas_nbins
         print 'datas_xMin:', datas_xMin
         print 'datas_xMax:', datas_xMax
@@ -302,11 +306,21 @@ class StackMaker:
         datatitle='Data'
         addFlag = ''
         print 'self.datanames is', self.datanames
-        if 'Muon' in self.datanames and 'Electron' in self.datanames:
+        isZee = False
+        isZmm = False
+        for data_ in self.datanames:
+            print 'data_ is', data_
+            if 'DoubleEG' in data_:
+                isZee = True
+                print 'isZee is True'
+            if 'DoubleMuon' in data_:
+                isZmm = True
+                print 'isZmm is True'
+        if ('Zee' in self.datanames and 'Zmm' in self.datanames) or (isZee and isZmm):
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Electron' in self.datanames:
+        elif 'Zee' in self.datanames or isZee:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Muon' in self.datanames:
+        elif 'Zmm' in self.datanames or isZmm:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'
@@ -314,8 +328,20 @@ class StackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in self.datanames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        elif 'Wtn' in self.datanames:
-            addFlag = 'W(#tau#nu)H(b#bar{b})'
+        #if 'Muon' in self.datanames and 'Electron' in self.datanames:
+        #    addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
+        #elif 'Electron' in self.datanames:
+        #    addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
+        #elif 'Muon' in self.datanames:
+        #    addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
+        #elif 'Znn' in self.datanames:
+        #    addFlag = 'Z(#nu#nu)H(b#bar{b})'
+        #elif 'Wmn' in self.datanames:
+        #    addFlag = 'W(#mu#nu)H(b#bar{b})'
+        #elif 'Wen' in self.datanames:
+        #    addFlag = 'W(e#nu)H(b#bar{b})'
+        #elif 'Wtn' in self.datanames:
+        #    addFlag = 'W(#tau#nu)H(b#bar{b})'
 
         for i in range(0,len(self.datas)):
             print "Adding data ",self.datas[i]," with integral:",self.datas[i].Integral()," and entries:",self.datas[i].GetEntries()," and bins:",self.datas[i].GetNbinsX()
@@ -486,12 +512,16 @@ class StackMaker:
         chiScore = d1.Chi2Test( allMC , "UWCHI2/NDF")
         print ksScore
         print chiScore
-        ratio.SetStats(0)
-        ratio.GetXaxis().SetTitle(self.xAxis)
-        ratioError = ROOT.TGraphErrors(error)
-        ratioError.SetFillColor(ROOT.kGray+3)
-        ratioError.SetFillStyle(3013)
-        ratio.Draw("E1")
+        try:
+            ratio.SetStats(0)
+            ratio.GetXaxis().SetTitle(self.xAxis)
+            ratioError = ROOT.TGraphErrors(error)
+            ratioError.SetFillColor(ROOT.kGray+3)
+            ratioError.SetFillStyle(3013)
+            ratio.Draw("E1")
+        except Exception as e:
+            print "ERROR with ratio histogram!", e
+        
         if self.doFit:
             fitData = ROOT.TF1("fData", "gaus",0.7, 1.3)
             fitMC = ROOT.TF1("fMC", "gaus",0.7, 1.3)
@@ -520,16 +550,25 @@ class StackMaker:
                 r_err[key].SetLineWidth(self.ratio_band[key].GetLineWidth())
                 r_err[key].SetLineColor(self.ratio_band[key].GetLineColor())
 
-        if not self.AddErrors:
-            l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
-        else:
-            l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
+        try:
+            if not self.AddErrors:
+                l2.AddEntry(ratioError,"MC uncert. (stat.)","f")
+            else:
+                l2.AddEntry(ratioError,"MC uncert. (stat. + syst.)","f")
+        except:
+            pass
 
         l2.Draw()
 
-        ratioError.Draw('SAME2')
-        ratio.Draw("E1SAME")
-        ratio.SetTitle("")
+        try:
+            ratioError.Draw('SAME2')
+        except:
+            pass
+        try:
+            ratio.Draw("E1SAME")
+            ratio.SetTitle("")
+        except:
+            pass
         m_one_line = ROOT.TLine(self.xMin,1,self.xMax,1)
         m_one_line.SetLineStyle(ROOT.kSolid)
         m_one_line.Draw("Same")
@@ -666,11 +705,23 @@ class StackMaker:
         d1 = ROOT.TH1F('noData','noData',self.nBins,self.xMin,self.xMax)
         datatitle='Data'
         addFlag = ''
-        if 'Zee' in self.datanames and 'Zmm' in self.datanames:
+        print 'asdf yeah man'
+        print 'datanames is', self.datanames
+        isZee = False
+        isZmm = False
+        for data_ in self.datanames:
+            print 'data_ is', data_
+            if 'DoubleEG' in data_:
+                isZee = True
+                print 'isZee is True'
+            if 'DoubleMuon' in data_:
+                isZmm = True
+                print 'isZmm is True'
+        if ('Zee' in self.datanames and 'Zmm' in self.datanames) or (isZee and isZmm):
             addFlag = 'Z(l^{-}l^{+})H(b#bar{b})'
-        elif 'Zee' in self.datanames:
+        elif 'Zee' in self.datanames or isZee:
             addFlag = 'Z(e^{-}e^{+})H(b#bar{b})'
-        elif 'Zmm' in self.datanames:
+        elif 'Zmm' in self.datanames or isZmm:
             addFlag = 'Z(#mu^{-}#mu^{+})H(b#bar{b})'
         elif 'Znn' in self.datanames:
             addFlag = 'Z(#nu#nu)H(b#bar{b})'

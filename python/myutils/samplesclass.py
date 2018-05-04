@@ -30,3 +30,19 @@ class Sample:
     
     def __eq__(self,other):
         return self.name == other.name
+
+    def printInfo(self):
+        print "-sample-info--------"
+        print "name:", self.name
+        print "type:", self.type
+        print "identifier:", self.identifier
+        print "subsample:", self.subsample
+        print "group:", self.group
+        print "treecut:", self.treecut
+        print "--------------------"
+
+    def isData(self):
+        return self.type=='DATA'
+
+    def isMC(self):
+        return not self.isData()

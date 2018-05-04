@@ -3,6 +3,8 @@ from optparse import OptionParser
 import sys
 import pickle
 import ROOT 
+import zlib
+import base64
 ROOT.gROOT.SetBatch(True)
 from array import array
 #warnings.filterwarnings( action='ignore', category=RuntimeWarning, message='creating converter.*' )
@@ -152,6 +154,11 @@ if not  opts.MVAsettings == '':
         #opt_MVAsettings = opts.MVAsettings
         optimisation_training = True
 
+# to avoid argument size limits, filelist can be encoded with 'base64:' + base64(zlib(.)), decode it first in this case
+if opts.filelist.startswith('base64:'):
+    opts.filelist = zlib.decompress(base64.b64decode(opts.filelist[7:]))
+    #print 'zlib decoded file list:', opts.filelist
+
 filelist=filter(None,opts.filelist.replace(' ', '').split(';'))
 # print filelist
 print "len(filelist)",len(filelist),
@@ -277,6 +284,7 @@ samples = []
 samples = info.get_samples(signals+backgrounds)
 
 print "XXXXXXXXXXXXXXXX"
+print 'filelist is', filelist
 
 #tc = TreeCache(cuts,samples,path,config, [])
 #to be compatible with mergecaching
@@ -284,9 +292,13 @@ tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.me
 
 #for mergesubcaching step, need to continue even if some root files are missing to perform the caching in parallel
 if sample_to_cache_ or mergeCachingPart:
-    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_, do_onlypart_n=True)
+    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=None, do_onlypart_n=True,   dccut=None, remove_sys=remove_sys_)
 else:
-    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, remove_sys=remove_sys_)
+    tc = TreeCache(cuts, samples, path, config, filelist=filelist, mergeplot=opts.mergeplot, sample_to_merge=None, mergeCachingPart=mergeCachingPart, plotMergeCached = opts.mergecachingplot, branch_to_keep=None, do_onlypart_n=False, dccut=None, remove_sys=remove_sys_)
+
+##   .tc = TreeCache(self.cuts, samples, path, config, filelist, mergeplot, sample_to_merge, mergeCachingPart,                                         plotMergeCached,                         branch_to_keep,        False,                dccut,        remove_sys)  # created cached tree i.e. create new skimmed trees using the list of cuts
+#
+#    def __init__(self, cutList, sampleList, path, config,filelist=None,mergeplot=False,sample_to_merge=None,mergeCachingPart=-1,                      plotMergeCached=False,                   branch_to_keep=None,   do_onlypart_n= False, dccut = None, remove_sys=None):
 
 #if sample_to_cache_:
 #    print "@INFO: performed caching only. bye"
