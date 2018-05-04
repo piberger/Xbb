@@ -11,7 +11,7 @@ class DYweight(object):
 
     def getBranches(self):
         return self.branches
-
+    
     def getDYspecialWeight(self, tree=None):
         specialWeight = 1.0
         if self.sample.specialweight:
