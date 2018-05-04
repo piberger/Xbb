@@ -74,6 +74,7 @@ class NewStackMaker:
                     'draw': 'draw',
                     'min': ['min', 'minX'],
                     'max': ['max', 'maxX'],
+                    'blindCut': 'blindCut',
                     'minX': ['minX', 'min'],
                     'minY': ['minY', 'min'],
                     'minZ': ['minZ'],
@@ -98,13 +99,13 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
-        
-        # region/variable specific blinding cut 
+
+        # region/variable specific blinding cut
         if self.config.has_option(self.configSection, 'blindCuts'):
             blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
             if self.var in blindCuts:
                 self.histogramOptions['blindCut'] = blindCuts[self.var]
-                print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut'])) 
+                print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut']))
 
         self.groups = {}
         self.histograms = []
@@ -589,9 +590,33 @@ class NewStackMaker:
         for histogram in self.histograms:
             self.histoCounts['weighted'][histogram['name']] = histogram['histogram'].Integral()
             self.histoCounts['unweighted'][histogram['name']] = histogram['histogram'].GetEntries()
+
+        # print n events and weights for each sample
         keys = list(set(sorted([histogram['name'] for histogram in self.histograms])))
         for key in keys:
             print(key.ljust(50),("%d"%self.histoCounts['unweighted'][key]).ljust(10), ("%f"%self.histoCounts['weighted'][key]).ljust(10))
+
+        ## print n events and weights for group
+        self.groupCounts =  {'unweighted':{}, 'weighted': {}}
+        for histogram in self.histograms:
+            group_ = histogram['group']
+            if not group_ in self.groupCounts['weighted']:
+                self.groupCounts['weighted'][group_] = histogram['histogram'].Integral()
+                self.groupCounts['unweighted'][group_] = histogram['histogram'].GetEntries()
+            else:
+                self.groupCounts['weighted'][group_] += histogram['histogram'].Integral()
+                self.groupCounts['unweighted'][group_] += histogram['histogram'].GetEntries()
+
+
+        print('--------------------')
+        print('Printing the #events and yield by group')
+        print('--------------------\n')
+
+        #print('self.groupCounts[weighted] is',self.groupCounts['weighted'])
+        keys = list(set(sorted([histogram['group'] for histogram in self.histograms])))
+        for key in keys:
+            #print('groupName is', key)
+            print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
 
         # save data histogram
         if self.config.has_option('Plot_general','saveDataHistograms') and eval(self.config.get('Plot_general','saveDataHistograms')):
@@ -601,5 +626,3 @@ class NewStackMaker:
                 groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
                 dataOutputFile.Write()
                 dataOutputFile.Close()
-
-
