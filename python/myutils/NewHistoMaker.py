@@ -2,6 +2,7 @@ from __future__ import print_function
 import ROOT
 import TdrStyles
 import os
+import sys
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -57,6 +58,11 @@ class NewHistoMaker:
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.EvalCut)
                 weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
                 print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
+            # add blind cut on data if specified for this variable
+            if 'blindCut' in self.histogramOptions and self.histogramOptions['group'] == 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
+                #print('cut is', cut)
+                #sys.exit()
 
             # per sample special weight
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
@@ -64,22 +70,27 @@ class NewHistoMaker:
                 weightF = "(({weight})*({specialweight}))".format(weight=weightF, specialweight=specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=specialweight))
 
-            # additional blinding cut applied to DATA only in BDT plots
+            # (deprecated) additional blinding cut applied to DATA only in BDT plots
             if 'BDT' in self.histogramOptions['treeVar'] and self.sample.type == 'DATA':
                 if self.config.has_section('Blinding') and self.config.has_option('Blinding', 'BlindBDTinSR'):
                     self.blindingCut = self.config.get('Blinding', 'BlindBDTinSR')
                     cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.blindingCut)
                     print ("\x1b[31mUSE BLINDING CUT FOR DATA in BDT!!", self.blindingCut ,"\x1b[0m")
 
-
+            # (deprecated) additional mass blinding
             if 'mass' in self.histogramOptions['treeVar'] and self.sample.type == 'DATA':
                 if self.config.has_section('Blinding') and self.config.has_option('Blinding', 'BlindDataInMassPlots') and eval(self.config.get('Blinding', 'BlindDataInMassPlots')):
                     self.blindingCut = '0'
                     cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.blindingCut)
                     print ("\x1b[31mUSE BLINDING CUT FOR DATA in BDT!!", self.blindingCut ,"\x1b[0m")
 
+            # region/var specific blinding cut
+            # TODO: switch to this type only
+            if 'blindCut' in self.histogramOptions and self.sample.type == 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
+                print("INFO: found region/var specific blinding cut in histogramOptions:\n--->{cut}".format(cut=self.histogramOptions['blindCut']))
+
             # add tree cut 
-            # TODO: add sample cut again, which should not matter but to be safe
             selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
             if nEvents < 0:
