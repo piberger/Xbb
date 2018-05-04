@@ -2,6 +2,7 @@ from __future__ import print_function
 import ROOT
 import TdrStyles
 import os
+import sys
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -57,6 +58,11 @@ class NewHistoMaker:
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.EvalCut)
                 weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
                 print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
+            # add blind cut on data if specified for this variable
+            if 'blindCut' in self.histogramOptions and self.histogramOptions['group'] == 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
+                #print('cut is', cut)
+                #sys.exit()
 
             # per sample special weight
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
