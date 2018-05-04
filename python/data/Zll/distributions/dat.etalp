@@ -1,19 +1,19 @@
 # histogram:  7, bins: 100
-#
+# 
 # column  1: kinematical quantity on x-axis
-# column  2: Monte Carlo average for the Born cross-section
-# column  3: Monte Carlo error   for the Born cross-section
-# column  4: Monte Carlo average for the complete cross-section
-# column  5: Monte Carlo error   for the complete cross-section
-# column  6: Monte Carlo average for virt+real ew cross-section
-# column  7: Monte Carlo error   for virt+real ew cross-section
-# column  8: Monte Carlo average for virt+real QCD cross-section
-# column  9: Monte Carlo error   for virt+real QCD cross-section
+# column  2: Monte Carlo average for the Born cross-section       
+# column  3: Monte Carlo error   for the Born cross-section       
+# column  4: Monte Carlo average for the complete cross-section   
+# column  5: Monte Carlo error   for the complete cross-section   
+# column  6: Monte Carlo average for virt+real ew cross-section   
+# column  7: Monte Carlo error   for virt+real ew cross-section   
+# column  8: Monte Carlo average for virt+real QCD cross-section  
+# column  9: Monte Carlo error   for virt+real QCD cross-section  
 # column 10: Monte Carlo average for incoming photon cross-section
 # column 11: Monte Carlo error   for incoming photon cross-section
-# column 12: Monte Carlo average for incoming gluon cross-section
-# column 13: Monte Carlo error   for incoming gluon cross-section
-#
+# column 12: Monte Carlo average for incoming gluon cross-section 
+# column 13: Monte Carlo error   for incoming gluon cross-section 
+# 
 -.25000000E+01  0.123597E+01  0.303282E-02  0.136165E+01  0.163828E-01  -.796566E-01  0.229824E-02  0.303493E+00  0.158351E-01  0.413452E-03  0.101079E-03  -.985683E-01  0.177770E-02
 -.24500000E+01  0.129094E+01  0.306505E-02  0.143008E+01  0.166376E-01  -.825237E-01  0.228774E-02  0.320824E+00  0.160914E-01  0.363595E-03  0.400959E-04  -.995192E-01  0.180284E-02
 -.24000000E+01  0.135155E+01  0.310657E-02  0.151990E+01  0.161495E-01  -.884211E-01  0.245920E-02  0.358636E+00  0.155510E-01  0.319498E-03  0.368920E-04  -.102183E+00  0.181053E-02
@@ -115,7 +115,7 @@
 0.24000000E+01  0.129328E+01  0.307140E-02  0.144587E+01  0.177851E-01  -.812827E-01  0.222209E-02  0.334699E+00  0.172947E-01  0.245446E-03  0.247312E-04  -.101076E+00  0.168376E-02
 0.24500000E+01  0.123895E+01  0.303393E-02  0.136674E+01  0.188560E-01  -.756970E-01  0.211676E-02  0.300330E+00  0.184141E-01  0.218082E-03  0.290737E-04  -.970630E-01  0.166974E-02
 0.25000000E+01  0.123895E+01  0.303393E-02  0.136674E+01  0.188560E-01  -.756970E-01  0.211676E-02  0.300330E+00  0.184141E-01  0.218082E-03  0.290737E-04  -.970630E-01  0.166974E-02
-#
+# 
 # additional data point at x = 0.250000E+01
 #
 # useful for plotting with gnuplot
