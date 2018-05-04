@@ -56,6 +56,7 @@ parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="pat
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
+parser.add_option("-m", "--scan", dest="mvaScan", default=None, help="Scan MVA Settings for runtraining with the given number as number of runs")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -196,6 +197,7 @@ if opts.override_to_run_locally and opts.override_to_run_in_batch:
     print 'both override_to_run_locally and override_to_run_in_batch ativated, using str(config.get("Configuration","run_locally")) instead'
 elif opts.override_to_run_locally:
     run_locally = 'True'
+    submitScriptRunAllLocally = True
     print 'using override_to_run_locally to override str(config.get("Configuration","run_locally"))'
 elif opts.override_to_run_in_batch:
     run_locally = 'False'
@@ -462,7 +464,7 @@ def submit(job, repDict):
                 if answer.lower() == 'a':
                     submitScriptRunAllLocally = True
                 print "run locally"
-                command = 'sh {runscript}'.format(runscript=runScript)
+                command = 'sh {runscript} | tee {logfile}'.format(runscript=runScript,logfile=outOutputPath)
                 if answer.lower() == 'd':
                     command = "XBBDEBUG=1 " + command
         else:
@@ -870,6 +872,8 @@ if opts.task.startswith('runtraining'):
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
         jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        if opts.mvaScan is not None:
+            jobDict['arguments']['scan'] = opts.mvaScan
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
