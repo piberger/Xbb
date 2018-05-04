@@ -323,9 +323,9 @@ class Datacard(object):
                     systematicsDictionary = deepcopy(self.systematicsDictionaryNominal)
                     systematicsDictionary.update({
                             'sysType': 'sample',
-                            'samples': sampleSystematicSamples,
+                            'samples': sampleSystematicSamples, 
                             'name': sampleSystematicName,
-                            'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q)
+                            'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][sampleSystematicName], Q=Q) 
                         })
                     # loop over list of sample per systematic e.g.: ggZH, ZH. Note: sample sys assumed to be correlated among the samples
                     for sampleSystematicSample in sampleSystematicSamples:
@@ -524,7 +524,7 @@ class Datacard(object):
                         cut = cut.replace(k, '{%s}'%tempName)
         # now do normal replacements
         if syst != 'minmax':
-            new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]]
+            new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
             for new_cut in new_cut_list:
                 if not new_cut == 'nominal':
                     old_str, new_str = new_cut.split('>')
@@ -548,7 +548,7 @@ class Datacard(object):
         cacheStatus = {}
         for i, sample in enumerate(allSamples):
             # get cuts that were used in caching for this sample
-            sampleCuts = self.getCacheCut(sample)
+            sampleCuts = self.getCacheCut(sample) 
 
             # get sample tree from cache
             tc = TreeCache.TreeCache(
@@ -636,7 +636,7 @@ class Datacard(object):
 
             # add all the cuts/weights for the different systematics 
             for systematics in systematicsList:
-
+                
                 # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
                 # and even don't compute the histograms in this case (because e.g. branches missing)
                 # (this is different from the 'affecting' option, which only modifies the textfile but always creates histograms)
@@ -644,7 +644,7 @@ class Datacard(object):
                 if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
                     if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
                         systematics['enabled'] = False
-
+                
                 # additional BLINDING cut
                 if self.sysOptions['addBlindingCut']:
                     systematics['cutWithBlinding'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
@@ -665,7 +665,7 @@ class Datacard(object):
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
-
+                
                 if systematics['enabled']:
                     sampleTree.addFormula(systematics['cutWithBlinding'])
                     if sample.type != 'DATA':
@@ -753,7 +753,7 @@ class Datacard(object):
         self.histograms = {}
         allSamples = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
-
+        
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]

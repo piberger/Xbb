@@ -14,7 +14,7 @@ class LeptonWeights(object):
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
-        # initialize buffers for new branches
+        # initialize buffers for new branches 
         if channel == 'Zll' or len(channel)<1:
             for branchName in ['weight_SF_LooseID','weight_SF_LooseISO','weight_SF_LooseIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_doubleEle80x', 'muTrigSFWeight_doublemu']:
                 self.branchBuffers[branchName] = array.array('f', [1.0, 0.0, 0.0])
@@ -39,13 +39,13 @@ class LeptonWeights(object):
     def getBranches(self):
         return self.branches
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
             return self.branchBuffers[arguments][0]
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
         for i in range(arguments['length']):
@@ -78,18 +78,18 @@ class LeptonWeights(object):
             weight_SF_LowEta[0] =  (self.weight[0][0]*self.weight[1][0])
             weight_SF_LowEta[1] =  (self.weight[0][0]*self.weight[1][0])
             #assign sys
-            weight_SF_HighEta[0] = ((self.weight[0][0]-self.weight[0][1])*(self.weight[1][0]-self.weight[1][1]))
-            weight_SF_HighEta[1] = ((self.weight[0][0]+self.weight[0][1])*(self.weight[1][0]+self.weight[1][1]))
+            weight_SF_HighEta[0] = ((self.weight[0][0]-self.weight[0][1])*(self.weight[1][0]-self.weight[1][1])) 
+            weight_SF_HighEta[1] = ((self.weight[0][0]+self.weight[0][1])*(self.weight[1][0]+self.weight[1][1])) 
 
         elif abs(lep1_eta) < etacut and abs(lep2_eta) > etacut:
             weight_SF_LowEta[0] =  ((self.weight[0][0]-self.weight[0][1])*self.weight[1][0])
             weight_SF_LowEta[1] =  ((self.weight[0][0]+self.weight[0][1])*self.weight[1][0])
-            weight_SF_HighEta[0] = ((self.weight[0][0])*(self.weight[1][0]-self.weight[1][1]))
-            weight_SF_HighEta[1] = ((self.weight[0][0])*(self.weight[1][0]+self.weight[1][1]))
+            weight_SF_HighEta[0] = ((self.weight[0][0])*(self.weight[1][0]-self.weight[1][1])) 
+            weight_SF_HighEta[1] = ((self.weight[0][0])*(self.weight[1][0]+self.weight[1][1])) 
 
         elif abs(lep1_eta) > etacut and abs(lep2_eta) < etacut:
-            weight_SF_LowEta[0] =  ((self.weight[0][0])*(self.weight[1][0]-self.weight[1][1]))
-            weight_SF_LowEta[1] =  ((self.weight[0][0])*(self.weight[1][0]+self.weight[1][1]))
+            weight_SF_LowEta[0] =  ((self.weight[0][0])*(self.weight[1][0]-self.weight[1][1])) 
+            weight_SF_LowEta[1] =  ((self.weight[0][0])*(self.weight[1][0]+self.weight[1][1])) 
             weight_SF_HighEta[0] = ((self.weight[0][0]-self.weight[0][1])*self.weight[1][0])
             weight_SF_HighEta[1] = ((self.weight[0][0]+self.weight[0][1])*self.weight[1][0])
 
@@ -231,13 +231,13 @@ class LeptonWeights(object):
                     lepCorrIdentifier = j + '_' + name[0] + '_' + name[1]
                     if lepCorrIdentifier not in self.leptonSF:
                         self.leptonSF[lepCorrIdentifier] = LeptonSF(j , name[0], name[1])
-                    lepCorr = self.leptonSF[lepCorrIdentifier]
+                    lepCorr = self.leptonSF[lepCorrIdentifier] 
 
                     # recompute vLeptons
                     vLepSelector = vLeptonSelector(tree)
                     Vtype = vLepSelector.getVtype()
                     vLeptons = vLepSelector.getVleptons()
-
+                            
                     # cross check vtypes
                     if Vtype != tree.Vtype:
                         print "\x1b[97m\x1b[41mVtype mismatch!!!!!\x1b[0m"
@@ -455,7 +455,7 @@ class LeptonWeights(object):
                         lepCorrIdentifier = j + '_' + name[0] + '_' + name[1]
                         if lepCorrIdentifier not in self.leptonSF:
                             self.leptonSF[lepCorrIdentifier] = LeptonSF(j , name[0], name[1])
-                        lepCorr = self.leptonSF[lepCorrIdentifier]
+                        lepCorr = self.leptonSF[lepCorrIdentifier] 
 
                         #2-D binned SF
                         if not j.find('trk_SF_Run') != -1:

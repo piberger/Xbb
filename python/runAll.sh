@@ -370,7 +370,7 @@ elif [ $task = "plot_sys" ]; then
 
 fi
 
-# add standard arguments, print command and run
+# add standard arguments, print command and run 
 if [ "$runCommand" ]; then
     if [ "$fileList" ]; then
         runCommand="${runCommand} --fileList ${fileList}"

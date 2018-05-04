@@ -10,7 +10,7 @@ class Jet(object):
         self.mass = mass
 
 class FSR(object):
-
+    
     def deltaR(self, jet1, jet2):
         deltaPhi = ROOT.TVector2.Phi_mpi_pi(jet1.phi-jet2.phi)
         deltaEta = jet1.eta-jet2.eta
@@ -33,10 +33,10 @@ class FSR(object):
 
         # corrected Higgs properties
         self.higgsProperties = ['HCMVAV2_reg_fsrCorr_pt', 'HCMVAV2_reg_fsrCorr_eta', 'HCMVAV2_reg_fsrCorr_phi', 'HCMVAV2_reg_fsrCorr_mass']
-        for higgsProperty in self.higgsProperties:
+        for higgsProperty in self.higgsProperties: 
             self.branchBuffers[higgsProperty] = array.array('f', [0.0])
             self.branches.append({'name': higgsProperty, 'formula': self.getBranch, 'arguments': higgsProperty})
-
+        
         self.branchBuffers['nisr_Jet'] = array.array('i', [0])
         self.branches.append({'name': 'nisr_Jet', 'formula': self.getBranch, 'arguments': 'nisr_Jet', 'type': 'i'})
         self.isrJetProperties = ['isrJet_pt', 'isrJet_eta', 'isrJet_phi', 'isrJet_mass', 'isrJet_deltaR']
@@ -49,14 +49,14 @@ class FSR(object):
 
     def getBranches(self):
         return self.branches
-
-    # read from buffers which have been filled in processEvent()
+ 
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
             return self.branchBuffers[arguments][0]
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
         for i in range(arguments['length']):
@@ -115,14 +115,14 @@ class FSR(object):
                     print " +FSR:", fsrCandidateJets[0].pt, fsrCandidateJets[0].eta, fsrCandidateJets[0].phi, fsrCandidateJets[0].mass
                     print " deltaR:", self.deltaR(fsrCandidateJets[0], higgsCandidateJets[0]), " / ", self.deltaR(fsrCandidateJets[0], higgsCandidateJets[1])
                     print " nFSR:", len(fsrCandidateJets)
-
+                    
                 oldMass = higgs.M()
                 higgs = higgs + fsr
                 if self.debug:
                     if abs(125-higgs.M()) < abs(125-oldMass):
                         print "\x1b[32m",
                     else:
-                        print "\x1b[31m",
+                        print "\x1b[31m", 
                     print " -> ", higgs.Pt(), higgs.Eta(), higgs.Phi(), higgs.M(), "\x1b[0m"
 
             self.branchBuffers['HCMVAV2_reg_fsrCorr_pt'][0]   = higgs.Pt()

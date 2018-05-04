@@ -174,7 +174,7 @@ class MvaTrainingHelper(object):
         arrayLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         weightLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         targetLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
-
+        
         # standard weight expression
         weightF = self.config.get('Weights','weightF')
 
@@ -214,7 +214,7 @@ class MvaTrainingHelper(object):
                         for feature in features:
                             sampleTree.addFormula(feature)
                         sampleTree.addFormula(weightF)
-
+                        
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
                             for j, feature in enumerate(features):
@@ -334,12 +334,12 @@ class MvaTrainingHelper(object):
                     #reg_alpha=8,
                     reg_lambda=self.parameters['reg_lambda'] if 'reg_lambda' in self.parameters else 1.0,
                     reg_alpha=self.parameters['reg_alpha'] if 'reg_alpha' in self.parameters else 0.0,
-                    )
+                    ) 
             if self.parameters['class_weight'] == 'balanced':
                 applyClassWeights = True
         elif self.parameters['classifier'] == 'MLPClassifier':
             classifierParams = {k:v for k,v in self.parameters.iteritems() if k in ['solver', 'alpha', 'hidden_layer_sizes', 'max_iter', 'warm_start', 'learning_rate_init', 'learning_rate', 'momentum', 'epsilon', 'beta_1', 'beta_2', 'validation_fraction', 'early_stopping']}
-            clf = MLPClassifier(**classifierParams)
+            clf = MLPClassifier(**classifierParams) 
         elif self.parameters['classifier'] in ['SVC', 'LinearSVC']:
             '''
             clf = SVC(
@@ -465,7 +465,7 @@ class MvaTrainingHelper(object):
         # oversample
         upscale = self.parameters['upscalefactor'] if 'upscalefactor' in self.parameters else None
         if upscale:
-            upscalemax =  self.parameters['upscalemax'] if 'upscalemax' in self.parameters else 10
+            upscalemax =  self.parameters['upscalemax'] if 'upscalemax' in self.parameters else 10 
             upscalesignal = self.parameters['upscalefactorsignal'] if 'upscalefactorsignal' in self.parameters else 1.0 #upscalefactorsignal
             indices = []
             for i in range(len(self.data['train']['sample_weight'])):
@@ -534,10 +534,10 @@ class MvaTrainingHelper(object):
                 clf = clf.fit(**self.data['train'])
             except:
                 clf = clf.fit(X=self.data['train']['X'], y=self.data['train']['y'])
-
+                
                 if 'rounds' in self.parameters and self.parameters['rounds'] > 1:
                     for rNumber in range(self.parameters['rounds']):
-                        results = clf.predict_proba(self.data['test']['X'])
+                        results = clf.predict_proba(self.data['test']['X']) 
                         auc1 = roc_auc_score(self.data['test']['y'], results[:,1], sample_weight=self.data['test']['sample_weight'])
                         print(" round ", rNumber, " AUC=", auc1)
                         learningCurve.append(auc1)
@@ -605,7 +605,7 @@ class MvaTrainingHelper(object):
 <<<<<<< HEAD
             if useSqrt:
                 result = math.sqrt(result)
-            weight = self.data['train']['sample_weight'][i]
+            weight = self.data['train']['sample_weight'][i] 
 =======
             weight = self.data['train']['sample_weight'][i]
 >>>>>>> 3df7e0593230ea62b87aaf5ce1c88e6efb9e41a8
@@ -758,8 +758,8 @@ class MvaTrainingHelper(object):
         classifierOutputPath = self.getCachedNumpyArrayPath()
         classifierFileName = classifierOutputPath + '/clf' + timestamp + '.pkl'
 <<<<<<< HEAD
-        joblib.dump(clf, classifierFileName)
-        joblib.dump(self.scaler, classifierOutputPath + '/clf' + timestamp + '_scaler.pkl')
+        joblib.dump(clf, classifierFileName) 
+        joblib.dump(self.scaler, classifierOutputPath + '/clf' + timestamp + '_scaler.pkl') 
 
 =======
         joblib.dump(clf, classifierFileName)

@@ -5,7 +5,7 @@ from JsonTable import JsonTable
 from vLeptons import vLeptonSelector
 
 class ElectronSFfromJSON(object):
-
+    
     def __init__(self, jsonFiles=None):
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
@@ -28,12 +28,12 @@ class ElectronSFfromJSON(object):
         if not self.isData:
             for branchName in ['electronSF', 'electronSF_IdIso', 'electronSF_trigger']:
                 self.branchBuffers[branchName] = array.array('f', [0])
-                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
+                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName}) 
 
     def getBranches(self):
         return self.branches
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
@@ -48,7 +48,7 @@ class ElectronSFfromJSON(object):
             zElectrons = vLeptonSelector(tree).getZelectrons()
 
             # require two electrons
-            if len(zElectrons) == 2:
+            if len(zElectrons) == 2: 
                 sfIdIso = self.getIdIsoSf(eta=zElectrons[0].eta, pt=zElectrons[0].pt) * self.getIdIsoSf(eta=zElectrons[1].eta, pt=zElectrons[1].pt)
                 sfTrigger = self.getTriggerSf(eta1=zElectrons[0].eta, pt1=zElectrons[0].pt, eta2=zElectrons[1].eta, pt2=zElectrons[1].pt)
                 self.branchBuffers['electronSF'][0] = sfIdIso * sfTrigger
@@ -65,7 +65,7 @@ class ElectronSFfromJSON(object):
         if self.debug:
             print "id/iso eta:", eta, "pt:", pt, "->", sf
         return sf
-
+    
     def getTriggerSf(self, eta1, pt1, eta2, pt2):
         leg1 = self.jsonTable.find(self.triggerSf[0], eta1, pt1)
         leg2 = self.jsonTable.find(self.triggerSf[1], eta2, pt2)

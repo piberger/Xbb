@@ -226,7 +226,7 @@ class SampleTree(object):
                 nanoTreeCountBuffers = {}
                 for key, value in self.totalNanoTreeCounts.iteritems():
                     if type(value) == int:
-                        # 64 bit signed int
+                        # 64 bit signed int 
                         typeCode = 'L'
                     elif type(value) == long:
                         typeCode = 'L'
@@ -698,7 +698,7 @@ class SampleTree(object):
             outputTree['newBranches'] = {}
             for branch in self.newBranches:
                 # convert ROOT type convention to python array type convetion if necessary
-                pyType = pyTypes[branch['type']] if branch['type'] in pyTypes else branch['type']
+                pyType = pyTypes[branch['type']] if branch['type'] in pyTypes else branch['type'] 
                 outputTree['newBranchArrays'][branch['name']] = array.array(pyType, [0] * branch['length'])
                 if 'leaflist' in branch:
                     leafList = branch['leaflist']

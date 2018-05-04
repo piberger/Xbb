@@ -26,12 +26,12 @@ class MuonSFfromJSON(object):
         if not self.isData:
             for branchName in ['muonSF', 'muonSF_IdIso', 'muonSF_trigger']:
                 self.branchBuffers[branchName] = array.array('f', [0])
-                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
+                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName}) 
 
     def getBranches(self):
         return self.branches
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
@@ -48,7 +48,7 @@ class MuonSFfromJSON(object):
 
             # require two muons
             if len(zMuons) == 2:
-                sfIdIso = self.getIdIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt)
+                sfIdIso = self.getIdIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt) 
                 sfTrigger = self.getTriggerSf(eta1=zMuons[0].eta, pt1=zMuons[0].pt, eta2=zMuons[1].eta, pt2=zMuons[1].pt)
                 self.branchBuffers['muonSF'][0] = sfIdIso * sfTrigger
                 self.branchBuffers['muonSF_IdIso'][0] = sfIdIso
@@ -66,10 +66,10 @@ class MuonSFfromJSON(object):
         if self.debug:
             print "id/iso eta:", eta, "pt:", pt, "->", sf
         return sf
-
+    
     def getTriggerSf(self, eta1, pt1, eta2, pt2):
         leg1 = 1.0 #not implemented yet
-        leg2 = 1.0
+        leg2 = 1.0 
         if self.debug:
             print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
             print "leg2: eta:", eta2, " pt:", pt2, "->", leg2

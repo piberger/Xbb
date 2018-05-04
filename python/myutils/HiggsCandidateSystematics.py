@@ -3,9 +3,9 @@ import ROOT
 import array
 from Jet import Jet
 
-# propagate JES/JER systematics from jets to higgs candidate dijet pair
+# propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(object):
-
+    
     def __init__(self, addSystematics=True):
         self.debug = False
         self.lastEntry = -1
@@ -23,7 +23,7 @@ class HiggsCandidateSystematics(object):
     def customInit(self, initVars):
         self.sample = initVars['sample']
         self.higgsPropertiesWithSys = self.higgsProperties if self.sample.type != 'DATA' else []
-        for higgsProperty in self.higgsProperties:
+        for higgsProperty in self.higgsProperties: 
             self.branchBuffers[higgsProperty] = array.array('f', [0.0])
             self.branches.append({'name': higgsProperty, 'formula': self.getBranch, 'arguments': higgsProperty})
             # for data only include the min/max (set to nominal) to simplify cutting
@@ -41,14 +41,14 @@ class HiggsCandidateSystematics(object):
 
     def getBranches(self):
         return self.branches
-
-    # read from buffers which have been filled in processEvent()
+ 
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
             return self.branchBuffers[arguments][0]
-
-    # read from buffers which have been filled in processEvent()
+    
+    # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
         length = min(self.nJet, self.nJetMax)
@@ -135,7 +135,7 @@ class HiggsCandidateSystematics(object):
                 for syst in self.jetSystematics:
                     for Q in ['Up', 'Down']:
                         treeJet_mass_sys[syst+Q] = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))
-                        treeJet_pt_sys[syst+Q] = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))
+                        treeJet_pt_sys[syst+Q] = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q)) 
 
             # compute min/max for each jet
             for i in range(min(self.nJet, self.nJetMax)):

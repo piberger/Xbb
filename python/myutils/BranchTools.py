@@ -2,7 +2,7 @@
 
 # if a branch does not exist, add it to the tree with a default value
 class DefaultIfNotExisting(object):
-
+    
     def __init__(self, branchName, branchType='f', defaultValue=0.0):
         self.debug = False
         self.branches = []
