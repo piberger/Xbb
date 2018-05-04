@@ -35,7 +35,7 @@ class BTagWeights(object):
         else:
             print "\x1b[31m:ERROR: BTagCalibrationStandalone not found! Go to Xbb directory and run 'make'!\x1b[0m"
             raise Exception("BTagCalibrationStandaloneNotFound")
-
+        
         print 'load bTag CSV files...'
         calib = ROOT.BTagCalibration(calibName, calibFile)
         self.btag_calibrators = {}
@@ -68,7 +68,7 @@ class BTagWeights(object):
                 }
         print 'INFO: bTag initialization done.'
 
-        # initialize buffers for new branches
+        # initialize buffers for new branches 
         self.branchBuffers[self.branchBaseName] = array.array('f', [0])
         self.branches.append({'name': self.branchBaseName, 'formula': self.getBranch, 'arguments': self.branchBaseName})
         for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
@@ -80,7 +80,7 @@ class BTagWeights(object):
                 if self.includeFixPtEtaBins:
                     for ipt in range(0,5):
                         for ieta in range(1,4):
-                            branchName = self.branchBaseName + "_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
+                            branchName = self.branchBaseName + "_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir 
                             self.branchBuffers[branchName] = array.array('f', [0])
                             self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
 
@@ -93,13 +93,13 @@ class BTagWeights(object):
     def getBranches(self):
         return self.branches
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
         if arguments:
             return self.branchBuffers[arguments][0]
 
-    # read from buffers which have been filled in processEvent()
+    # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
         for i in range(arguments['length']):
@@ -117,7 +117,7 @@ class BTagWeights(object):
 
     # function that reads the SF
     def get_SF(self, pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M", shape_corr=False):
-
+        
         #if eta<0:
         #    eta=-eta
 
@@ -181,7 +181,7 @@ class BTagWeights(object):
                 weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True)
         #print '--->',weight
         return weight
-
+    
     # compute all the btag weights
     def processEvent(self, tree):
         isGoodEvent = True
@@ -248,7 +248,7 @@ class BTagWeights(object):
                                 branchName = self.branchBaseName+"_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
                                 self.branchBuffers[branchName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
         return isGoodEvent
-
+    
 # if btag SF per Jet has been already computed
 class BTagEventWeightFromJetSF(object):
     def __init__(self, nano=True):
@@ -261,10 +261,10 @@ class BTagEventWeightFromJetSF(object):
             self.branches = [{'name': 'bTagEventWeight', 'formula': self.getBTagEventWeight}]
         else:
             self.branches = []
-
+    
     def getBranches(self):
         return self.branches
-
+    
     def getBTagEventWeight(self, tree):
         weight = 1.0
         treeJet_Pt = getattr(tree, self.jetPtBranchName)
