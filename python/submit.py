@@ -174,7 +174,7 @@ if not opts.ftag == '':
     for item in configs:
         # if relative path to other config folder, just take file name
         destConfigFileName = item.split('/')[-1]
-        shutil.copyfile(item, '%s/%s/%s'%(tagDir, opts.ftag, destConfigFileName))
+        shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
 
 if debugPrintOUts:
     print configs
@@ -578,7 +578,11 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR:", sampleIdentifier, " could not be found!\x1b[0m"
+            continue
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
