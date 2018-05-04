@@ -17,7 +17,7 @@ class PUweight(object):
         self.sampleTree = initVars['sampleTree']
         if self.sample.isMC():
             self.systematics = {
-                    'Nominal': self.fileNameData,
+                    'Nominal': self.fileNameData, 
                     'Up': self.fileNameDataUp,
                     'Down': self.fileNameDataDown
                     }
@@ -52,7 +52,7 @@ class PUweight(object):
                     if v.GetNbinsX()!=histogramMC.GetNbinsX() or v.GetXaxis().GetXmin()!=histogramMC.GetXaxis().GetXmin() or v.GetXaxis().GetXmax()!=histogramMC.GetXaxis().GetXmax():
                         print "\x1b[31mERROR: ", k, "histograms not compatible! (bins, xmin, xmax)\x1b[0m"
                         raise Exception("IncompatiblePUhistograms")
-
+            
             if not histogramData['Nominal']:
                 raise Exception("HistogramMissing")
 
@@ -70,8 +70,8 @@ class PUweight(object):
                     if v:
                         self.puWeightLUT[k][pu] = 1.0 * v.GetBinContent(v.FindBin(pu))/nMC  if nMC > 0 else 1.0
                 print "PU = ",pu," weight = ", self.puWeightLUT['Nominal'][pu]
-            self.puWeightLUTmin = minPU
-            self.puWeightLUTmax = maxPU
+            self.puWeightLUTmin = minPU 
+            self.puWeightLUTmax = maxPU 
 
             # add PU weight for all available systematic variations
             for k,v in histogramData.iteritems():
