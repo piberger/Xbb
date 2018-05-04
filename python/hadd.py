@@ -21,12 +21,12 @@ class PartialFileMerger(object):
         self.commandTemplate = "hadd -k  -ff {output} {inputs}"
         self.sampleIdentifier = sampleIdentifier
         self.force = force
-
+        
         # use sampleTree class as replacement for hadd
         self.useChain = True
 
         treeHashes = []
-        for fileName in self.fileNames:
+        for fileName in self.fileNames: 
             treeHashes.append(hashlib.sha224(fileName).hexdigest())
         totalHash = hashlib.sha224('-'.join(sorted(treeHashes))).hexdigest()
         self.mergedFileName = '/'.join(self.fileNames[0].split('/')[:-4]) + '/' + totalHash + '/' + self.submitTime + '/0000/tree_%d.root'%chunkNumber
@@ -39,14 +39,14 @@ class PartialFileMerger(object):
     # real output file name where the file is stored
     def getOutputFileName(self):
         fakeFileName = self.getMergedFakeFileName()
-        outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName)
+        outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName) 
         return "{path}/{sample}/{fileName}".format(path=self.config.get('Directories','HADDout'), sample=self.sampleIdentifier, fileName=outputFileName)
-
+    
     def getTemporaryFileName(self):
         fakeFileName = self.getMergedFakeFileName()
-        outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName)
+        outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName) 
         return "{path}/hadd/{sample}/{fileName}".format(path=self.config.get('Directories','scratch'), sample=self.sampleIdentifier, fileName=outputFileName)
-
+    
     def run(self):
         inputFileNames = ["{path}/{sample}/{fileName}".format(path=self.config.get('Directories','HADDin'), sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in self.fileNames]
         outputFileName = self.getTemporaryFileName()
@@ -54,7 +54,7 @@ class PartialFileMerger(object):
         command = self.commandTemplate.format(output=outputFileName, inputs=' '.join(inputFileNames), f="-f" if self.force else "")
         if self.debug:
             print ("DEBUG: run \x1b[34m", command, "\x1b[0m")
-
+        
         if self.useChain:
             # use sampleTree class (can e.g. drop branches at the same time)
             sampleTree = SampleTree(inputFileNames, config=self.config)
@@ -92,7 +92,7 @@ class PartialFileMerger(object):
             raise Exception("HaddError")
 
 if __name__ == "__main__":
-
+    
     # read arguments
     argv = sys.argv
     parser = OptionParser()
