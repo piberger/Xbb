@@ -43,7 +43,7 @@ for run in runs:
             if inData and inData2:
                 printout += '\x1b[42m \x1b[0m'
                 counts['both'] += 1
-            elif inData:
+            elif inData: 
                 printout += '\x1b[45m \x1b[0m'
                 counts['only1'] += 1
             elif inData2:
