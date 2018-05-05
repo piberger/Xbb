@@ -27,6 +27,9 @@ class BTagWeights(object):
         self.branchBuffers = {}
         self.branches = []
         self.systematics = ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]
+        v_sys = getattr(ROOT, 'vector<string>')()
+        for syst in self.systList:
+            v_sys.push_back(syst)
 
         print 'load BTagCalibrationStandalone...'
         self.btagCalibratorFileName = "../interface/BTagCalibrationStandalone_cpp.so"
@@ -39,11 +42,11 @@ class BTagWeights(object):
         print 'load bTag CSV files...'
         calib = ROOT.BTagCalibration(calibName, calibFile)
         self.btag_calibrators = {}
-        for syst in self.systematics:
-            print "[btagSF]: Loading calibrator for algo:", self.calibName, "systematic:", syst
-            self.btag_calibrators[self.calibName+"_iterative_"+syst] = ROOT.BTagCalibrationReader(3, syst)
-            for fl in range(3):
-                self.btag_calibrators[self.calibName+"_iterative_"+syst].load(calib, fl, self.method)
+        
+        print "[btagSF]: Loading calibrator for algo:", self.calibName, "systematic:", syst
+        self.btag_calibrators[self.calibName+"_iterative"] = ROOT.BTagCalibrationReader(3, "central", v_sys)
+        for fl in range(3):
+            self.btag_calibrators[self.calibName+"_iterative"].load(calib, fl, self.method)
 
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysMap = {
@@ -116,56 +119,11 @@ class BTagWeights(object):
         return True
 
     # function that reads the SF
-    def get_SF(self, pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M", shape_corr=False):
-        
-        #if eta<0:
-        #    eta=-eta
-
-        # no SF for pT<20 GeV or pt>1000 or abs(eta)>2.4
-        if abs(eta)>2.4 or pt>1000. or pt<20.:
-            return 1.0
-
+    def get_SF(self, pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M", shape_corr=True):
         # the .csv files use the convention: b=0, c=1, l=2. Convert into hadronFlavour convention: b=5, c=4, f=0
         fl_index = min(-fl+5,2)
-        # no fl=1 in .csv for CMVAv2 (a bug???)
-        #if not shape_corr and "CMVAV2" in algo and fl==4:
-        #    fl_index = 0
 
-        if shape_corr:
-            if self.applies(fl,syst):
-                sf = self.btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-                #print 'shape_corr SF:',fl_index ,eta, pt, val, "=>", sf
-                if sf < 0.01 and fl_index==0:
-                    print 'sf is 0 for:', fl_index ,eta, pt, val, algo+"_iterative_"+syst
-
-                return sf
-            else:
-                sf = self.btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-                #print 'shape_corr for central SF:', fl_index ,eta, pt, val, "=>", sf
-                return sf
-
-
-        # pt ranges for bc SF: needed to avoid out_of_range exceptions
-        pt_range_high_bc = 10000 #670.-1e-02 if "CSV" in algo else 320.-1e-02
-        pt_range_low_bc = 20 #30.+1e-02
-
-        # b or c jets
-        if fl>=4:
-            # use end_of_range values for pt in [20,30] or pt in [670,1000], with double error
-            out_of_range = False
-            if pt>pt_range_high_bc or pt<pt_range_low_bc:
-                out_of_range = True
-            pt = min(pt, pt_range_high_bc)
-            pt = max(pt, pt_range_low_bc)
-            sf = self.btag_calibrators[algo+wp+"_"+syst+"_bc"].eval(fl_index ,eta, pt)
-            # double the error for pt out-of-range
-            if out_of_range and syst in ["up","down"]:
-                sf = max(2*sf - self.btag_calibrators[algo+wp+"_central_bc"].eval(fl_index ,eta, pt), 0.)
-            return sf
-        # light jets
-        else:
-            sf = self.btag_calibrators[algo+wp+"_"+syst+"_l"].eval( fl_index ,eta, pt)
-            return  sf
+        return self.btag_calibrators[algo+"_iterative"].eval_auto_bounds(syst if self.applies(fl,syst) else "central", fl_index, eta, pt, val)
 
     def get_event_SF(self, ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV"):
         weight = 1.0
@@ -184,7 +142,6 @@ class BTagWeights(object):
     
     # compute all the btag weights
     def processEvent(self, tree):
-        isGoodEvent = True
         currentEntry = tree.GetReadEntry()
         # if current entry has not been processed yet
         if currentEntry != self.lastEntry and not self.isData:
@@ -247,29 +204,4 @@ class BTagWeights(object):
 
                                 branchName = self.branchBaseName+"_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
                                 self.branchBuffers[branchName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
-        return isGoodEvent
-    
-# if btag SF per Jet has been already computed
-class BTagEventWeightFromJetSF(object):
-    def __init__(self, nano=True):
-        self.nano = nano
-
-    def customInit(self, initVars):
-        self.sample = initVars['sample']
-        self.sampleTree = initVars['sampleTree']
-        if self.sample.isMC():
-            self.branches = [{'name': 'bTagEventWeight', 'formula': self.getBTagEventWeight}]
-        else:
-            self.branches = []
-    
-    def getBranches(self):
-        return self.branches
-    
-    def getBTagEventWeight(self, tree):
-        weight = 1.0
-        treeJet_Pt = getattr(tree, self.jetPtBranchName)
-        for i in range(tree.nJet):
-            if tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i]:
-                weight *= tree.Jet_btagSF[i]
-        return weight
-
+        return True 
