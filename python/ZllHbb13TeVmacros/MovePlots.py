@@ -64,6 +64,9 @@ def MakeSubFolders(_input, RegionList=None):
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
     
     if args.ht:
+        if not os.path.isfile(current_+'/.htaccess'):
+            print current_+'/.htaccess'
+            raise Exception("HTaccessFileNotFound")
         print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
         subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
         subprocess.call('cp -r ' + current_ + '/.htaccess ' + _plotfolder + '/config/', shell = True)
@@ -119,6 +122,8 @@ def MakeSubFolders(_input, RegionList=None):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
                 if args.ht:
+                    if not os.path.isfile(current_+'/.htaccess'):
+                        raise Exception("HTaccessFileNotFound")
                     subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
             if os.path.isfile(file):
@@ -157,7 +162,10 @@ def MoveSubFolders(_input, _output, server=None):
     print copyCommand
     subprocess.call(copyCommand, shell = True)
 
-current_ = os.getcwd()
+#current_ = os.getcwd()
+# copy htaccess and index files from script directory instead of current directory!! TODO: don't use global variable here
+current_ = '/'.join(os.path.realpath(__file__).split('/')[:-1])
+
 os.chdir(_input)
 if args.do_inp:
     if args.region:
