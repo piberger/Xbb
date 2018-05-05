@@ -4,7 +4,7 @@ interface/VHbbNameSpace_h.so: interface/VHbbNameSpace.h
 	 cd interface && root -b -l -q ../init.cc && cd ..	 
 
 interface/BTagCalibrationStandalone_cpp.so: interface/BTagCalibrationStandalone.cpp
-	 cd interface && ./build_btag.sh && cd ..
+	 cd interface && root -b -l -q ../init.cc && cd ..
 
 interface/Rochester2016_h.so: interface/Rochester2016.h
 	cd interface && root -b -l -q ../init_rochester.cc && cd ..
