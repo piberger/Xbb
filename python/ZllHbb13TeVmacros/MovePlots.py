@@ -18,7 +18,7 @@ parser.add_argument('--eos', dest='webservice', action='store_const', default = 
 parser.add_argument('--afs', dest='webservice', action='store_const', default = False, const='afs/cern.ch', help='use default path with afs webserver')
 parser.add_argument('--name', default = None, help='Give a name to the new dir')
 
-parser.add_argument('--fext', nargs='*', default = None, help='only copy specified file extensions')
+parser.add_argument('--fext', nargs='*', default = None, help='only copy specified file extensions. Default: "png pdf root". Use "all" for no restriction')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
 parser.add_argument('--no', dest='do_outp', action='store_const',
                    const=False, default=True,  help='no copying')
@@ -74,7 +74,7 @@ def MakeSubFolders(_input, current_, RegionList=None):
                 if not os.path.isfile(file):
                     continue
                 filename, ext = os.path.splitext(file)   
-                if  ext.split(".")[1] not in fext:
+                if  not 'all' in fext and ext.split(".")[1] not in fext:
                     continue
                 #skip folders in listdir
                 if args.folders == 'region':
@@ -91,15 +91,10 @@ def MakeSubFolders(_input, current_, RegionList=None):
         if not os.path.isfile(file):
             continue
         filename, ext = os.path.splitext(file)   
-        if  ext.split(".")[1] not in fext:
+        if  not 'all' in fext and ext.split(".")[1] not in fext:
             continue
         print 'file is', file
         
-        filename, ext = os.path.splitext(file)   
-        if  ext.split(".")[1] not in fext:
-            FILE.remove(file)
-            print ext+" not in "+" ,".join(fext)
-            continue
         folder2 = None
         for name, folder in RegionList:
             if not name in file: continue
