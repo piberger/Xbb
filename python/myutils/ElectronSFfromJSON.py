@@ -14,6 +14,7 @@ class ElectronSFfromJSON(object):
         self.jsonTable = JsonTable(jsonFiles)
         self.idIsoSfName = 'doubleEleIDISO2017'
         self.triggerLegNames = ['doubleEleTriggerLeg1', 'doubleEleTriggerLeg2']
+        self.systVariations = [None, 'Up', 'Down']
         self.idIsoSf = self.jsonTable.getEtaPtTable(self.idIsoSfName)
         self.triggerSf = [self.jsonTable.getEtaPtTable(x) for x in self.triggerLegNames]
 
@@ -27,8 +28,10 @@ class ElectronSFfromJSON(object):
         self.lastEntry = -1
         if not self.isData:
             for branchName in ['electronSF', 'electronSF_IdIso', 'electronSF_trigger']:
-                self.branchBuffers[branchName] = array.array('f', [0])
-                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName}) 
+                for syst in self.systVariations:
+                    branchNameSyst = branchName+syst if syst else branchName
+                    self.branchBuffers[branchNameSyst] = array.array('f', [0])
+                    self.branches.append({'name': branchNameSyst, 'formula': self.getBranch, 'arguments': branchNameSyst}) 
 
     def getBranches(self):
         return self.branches
@@ -46,29 +49,30 @@ class ElectronSFfromJSON(object):
             self.lastEntry = currentEntry
 
             zElectrons = vLeptonSelector(tree).getZelectrons()
-
-            # require two electrons
-            if len(zElectrons) == 2: 
-                sfIdIso = self.getIdIsoSf(eta=zElectrons[0].eta, pt=zElectrons[0].pt) * self.getIdIsoSf(eta=zElectrons[1].eta, pt=zElectrons[1].pt)
-                sfTrigger = self.getTriggerSf(eta1=zElectrons[0].eta, pt1=zElectrons[0].pt, eta2=zElectrons[1].eta, pt2=zElectrons[1].pt)
-                self.branchBuffers['electronSF'][0] = sfIdIso * sfTrigger
-                self.branchBuffers['electronSF_IdIso'][0] = sfIdIso
-                self.branchBuffers['electronSF_trigger'][0] = sfTrigger
-            else:
-                self.branchBuffers['electronSF'][0] = 1.0
-                self.branchBuffers['electronSF_IdIso'][0] = 1.0
-                self.branchBuffers['electronSF_trigger'][0] = 1.0
+            
+            for syst in self.systVariations:
+                # require two electrons
+                if len(zElectrons) == 2: 
+                    sfIdIso = self.getIdIsoSf(eta=zElectrons[0].eta, pt=zElectrons[0].pt, syst=syst) * self.getIdIsoSf(eta=zElectrons[1].eta, pt=zElectrons[1].pt, syst=syst)
+                    sfTrigger = self.getTriggerSf(eta1=zElectrons[0].eta, pt1=zElectrons[0].pt, eta2=zElectrons[1].eta, pt2=zElectrons[1].pt, syst=syst)
+                else:
+                    sfIdIso = 1.0
+                    sfTrigger = 1.0
+                # Up/Down variations should be taken from individual components instead of total during the datacard creation
+                self.branchBuffers['electronSF' + (syst if syst else '')][0] = sfIdIso * sfTrigger
+                self.branchBuffers['electronSF_IdIso' + (syst if syst else '')][0] = sfIdIso
+                self.branchBuffers['electronSF_trigger' + (syst if syst else '')][0] = sfTrigger
         return True
 
-    def getIdIsoSf(self, eta, pt):
-        sf = self.jsonTable.find(self.idIsoSf, eta, pt)
+    def getIdIsoSf(self, eta, pt, syst=None):
+        sf = self.jsonTable.find(self.idIsoSf, eta, pt, syst=syst)
         if self.debug:
             print "id/iso eta:", eta, "pt:", pt, "->", sf
         return sf
     
-    def getTriggerSf(self, eta1, pt1, eta2, pt2):
-        leg1 = self.jsonTable.find(self.triggerSf[0], eta1, pt1)
-        leg2 = self.jsonTable.find(self.triggerSf[1], eta2, pt2)
+    def getTriggerSf(self, eta1, pt1, eta2, pt2, syst=None):
+        leg1 = self.jsonTable.find(self.triggerSf[0], eta1, pt1, syst=syst)
+        leg2 = self.jsonTable.find(self.triggerSf[1], eta2, pt2, syst=syst)
         if self.debug:
             print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
             print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
