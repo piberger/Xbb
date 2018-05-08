@@ -124,6 +124,7 @@
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_15.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_16.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_17.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_18.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_19.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_2.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V3/SingleElectron/arizzi-RunII2017ReminiRegDataR88/180506_180157/0000/tree_20.root
