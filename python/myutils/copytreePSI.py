@@ -74,12 +74,9 @@ class CopyTreePSI(object):
         # check root file existence
         if self.fileLocator.exists(outputFile, attempts=2):
             remoteRootFileName = self.fileLocator.getRemoteFileName(outputFile)
-            input2 = ROOT.TFile.Open(remoteRootFileName, 'read')
-            if input2 and not input2.IsZombie() and input2.GetNkeys() > 0 and not input2.TestBit(ROOT.TFile.kRecovered):
+            if self.fileLocator.isValidRootFile(remoteRootFileName):
                 if self.debug:
                     print('DEBUG: file exists and is good!')
-            else:
-                raise Exception('ERROR: file DOES NOT exist OR is corrupted!')
         else:
             raise Exception("self.fileLocator.exists(outputFile, attempts=2) failed: file DOES NOT exist")
               
