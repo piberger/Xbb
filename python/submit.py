@@ -1180,7 +1180,10 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
+        try:
+            splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
+        except:
+            print "\x1b[31mERROR: missing ", sampleIdentifier, " => skip \x1b[0m"
 
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
