@@ -25,13 +25,18 @@ class JsonTable(object):
                     if ptName != "pt":
                         raise Exception("JsonFileError")
                     ptRange = eval(ptKey.split(':')[1])
-                    table.append({'eta_min': etaRange[0], 'eta_max': etaRange[1], 'pt_min': ptRange[0], 'pt_max': ptRange[1], 'eta_type': etaName, 'value': self.data[tableName][subtableName][etaKey][ptKey]['value']})
+                    table.append({'eta_min': etaRange[0], 'eta_max': etaRange[1], 'pt_min': ptRange[0], 'pt_max': ptRange[1], 'eta_type': etaName, 'value': self.data[tableName][subtableName][etaKey][ptKey]['value'], 'error': self.data[tableName][subtableName][etaKey][ptKey]['error']})
         return table
 
-    def find(self, table, eta, pt, default=1.0):
+    def find(self, table, eta, pt, default=1.0, syst=None):
         for sfBin in table:
             if ((sfBin['eta_type'] == 'eta' and sfBin['eta_min'] <= eta and eta < sfBin['eta_max']) or (sfBin['eta_type'] == 'abseta' and sfBin['eta_min'] <= abs(eta) and abs(eta) < sfBin['eta_max'])) and sfBin['pt_min'] <= pt and pt < sfBin['pt_max']:
-                return sfBin['value']
+                if syst=='Up':
+                    return sfBin['value'] + sfBin['error']
+                elif syst=='Down':
+                    return sfBin['value'] - sfBin['error']
+                else:
+                    return sfBin['value']
         if self.debug:
             print "not found in table: eta:", eta, "pt:", pt, "->returning default =", default
         return default

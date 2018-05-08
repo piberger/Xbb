@@ -64,6 +64,9 @@ def MakeSubFolders(_input, RegionList=None):
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
     
     if args.ht:
+        if not os.path.isfile(current_+'/.htaccess'):
+            print current_+'/.htaccess'
+            raise Exception("HTaccessFileNotFound")
         print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
         subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
         subprocess.call('cp -r ' + current_ + '/.htaccess ' + _plotfolder + '/config/', shell = True)
@@ -119,6 +122,8 @@ def MakeSubFolders(_input, RegionList=None):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
                 if args.ht:
+                    if not os.path.isfile(current_+'/.htaccess'):
+                        raise Exception("HTaccessFileNotFound")
                     subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
             if os.path.isfile(file):
@@ -137,10 +142,13 @@ def MakeSubFolders(_input, RegionList=None):
 
 def MoveSubFolders(_input, _output, server=None):
     if server is None:
+        # TODO: username on T3 and lxplus can be different!! => as workaround give server path explicitly for now
         process = os.popen('echo $USER')
         user = process.read().strip()
         process.close()
         server = user + '@lxplus.cern.ch'
+    else:
+        user = server.split('@')[0]
     
     if args.name is None:
         _plotfolder = _input.split('/')[-2]
@@ -148,32 +156,16 @@ def MoveSubFolders(_input, _output, server=None):
         _plotfolder = args.name
 
     if args.webservice:
-        _output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www" + _output
+        _output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www/" + _output
     print 'gonna lunch the command'
     copyCommand = 'scp -r ' + _plotfolder + ' ' + server + ':' + _output
     print copyCommand
     subprocess.call(copyCommand, shell = True)
-    print 'that was delicious!'
 
+#current_ = os.getcwd()
+# copy htaccess and index files from script directory instead of current directory!! TODO: don't use global variable here
+current_ = '/'.join(os.path.realpath(__file__).split('/')[:-1])
 
-#RegionList = [('Zll_CRZb_incl__','Zhf_Zll'),('Zll_CRZb_incl_lowpt__','Zhf_Zll_lowpt'),('Zll_CRZb_incl_highpt__','Zhf_Zll_highpt'),\
-#              ('Zll_CRZlight__','Zlf_Zll'),('Zll_CRZlight_lowpt__','Zlf_Zll_lowpt'),('Zll_CRZlight_highpt__','Zlf_Zll_highpt'),\
-#              ('Zll_CRttbar__','ttbar_Zll'),('Zll_CRttbar_lowpt__','ttbar_Zll_lowpt'),('Zll_CRttbar_highpt__','ttbar_Zll_highpt'),\
-#              ('Zee_SR','SR_Zee'),('Zuu_SR','SR_Zuu'),\
-#              ('Zee_CRZb_incl__','Zhf_Zee'),('Zee_CRZb_incl_lowpt__','Zhf_Zee_lowpt'),('Zee_CRZb_incl_highpt__','Zhf_Zee_highpt'),\
-#              ('Zee_CRZlight__','Zlf_Zee'),('Zee_CRZlight_lowpt__','Zlf_Zee_incl_lowpt'),('Zee_CRZlight_highpt__','Zlf_Zee_incl_highpt'),\
-#              ('Zee_CRttbar__','ttbar_Zee'),('Zee_CRttbar_lowpt__','ttbar_Zee_lowpt'),('Zee_CRttbar_highpt__','ttbar_Zee_highpt'),\
-#              ('Zuu_CRZb_incl__','Zhf_Zuu'),('Zuu_CRZb_incl_lowpt__','Zhf_Zuu_lowpt'),('Zuu_CRZb_incl_highpt__','Zhf_Zuu_highpt'),\
-#              ('Zuu_CRZlight__','Zlf_Zuu'),('Zuu_CRZlight_lowpt__','Zlf_Zuu_lowpt'),('Zuu_CRZlight_highpt__','Zlf_Zuu_highpt'),\
-#              ('Zuu_CRttbar__','ttbar_Zuu'),('Zuu_CRttbar_lowpt__','ttbar_Zuu_lowpt'),('Zuu_CRttbar_highpt__','ttbar_Zuu_highpt'),\
-#              ('Zee_CRZb_incl_new','Zhf_Zee_new'),('Zuu_CRZb_incl_new','Zhf_Zuu_new'),('Zll_CRZb_inclPhi2p3','Zhf_Zll_Phi2p3'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZb_inclPhi2p5','Zhf_Zll_Phi2p5'),('Zll_CRZlightPhi2p3','Zlf_Zll_Phi2p3'),('Zll_CRZlightPhi2p5','Zlf_Zll_Phi2p5'),('BasicCuts_low','BasicCuts_low'),('BasicCuts_high','BasicCuts_high'),
-#              ('Zll_BasicCuts','ZBasicCuts_Zll'),\
-#              ('ZeeBDT_lowpt','ZSR_Zee_lowpt'),('ZeeBDT_highpt','ZSR_Zee_highpt'),('ZuuBDT_lowpt','ZSR_Zuu_lowpt'),('ZuuBDT_highpt','ZSR_Zuu_highpt'),\
-#              ('ZllBDT__','ZSR_Zll'),('ZllBDT_lowpt__','ZSR_Zll_lowpt'),('ZllBDT_highpt__','ZSR_Zll_highpt'),\
-#              ('all','all'),('nivf2','nivf2'),('HTL400','HLT400'),('HTL400nivf2','HTL400nivf2')\
-#              ]
-
-current_ = os.getcwd()
 os.chdir(_input)
 if args.do_inp:
     if args.region:

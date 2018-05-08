@@ -50,7 +50,7 @@ class Copy(object):
 
 class Collection(object):
 
-    def __init__(self, name, properties, maxSize=1):
+    def __init__(self, name, properties, maxSize=1, leaves=False):
         self.name = name
         self.properties = properties
         self.maxSize = maxSize
@@ -59,39 +59,52 @@ class Collection(object):
         self.branches = []
         self.branchBuffers = {}
 
-        if not self.scalar:
+        if not self.scalar and not leaves:
             numBranchName = 'n' + self.name
             self.branchBuffers['n'] = array.array('i', [0])
             self.branches.append({'name': numBranchName, 'formula': self.getBranch, 'arguments': 'n', 'type': 'i'})
 
-        for prop in self.properties:
-            # properties given as list oif dicts: [{'name':'bla', 'type':'f'},...]
-            if type(prop) == dict:
-                propBranch = self.name + '_' + prop['name']
-                propType = prop['type'] if 'type' in prop else 'f'
-                bufferName = prop['name']
-            # properties given as list of strings ['bla', ...]
-            else:
-                propType = 'f'
-                propBranch = self.name + '_' + prop
-                bufferName = prop
-            self.branchBuffers[bufferName] = array.array(propType, [0.0] * self.maxSize)
-            leaflist = '{branch}[{size}]/{type}'.format(branch=propBranch, size=numBranchName, type=propType.upper()) if not self.scalar else '{branch}/{type}'.format(branch=propBranch, type=propType.upper())
-            if self.scalar:
-                self.branches.append({
-                        'name': propBranch,
-                        'formula': self.getBranch,
-                        'arguments': bufferName,
-                        'type': propType,
-                    })
-            else:
-                self.branches.append({
-                        'name': propBranch,
-                        'formula': self.fillVectorBranch,
-                        'arguments': {'branch': bufferName, 'size': 'n'},
-                        'length': self.maxSize,
-                        'leaflist': leaflist,
-                    })
+        if leaves:
+            # at the moment only float supported with leaves
+            self.branchBuffers[name] = array.array('f', [0.0] * len(properties))
+            leaflist = ':'.join(properties) + '/F' 
+            print "-->",type(len(properties))
+            self.branches.append({
+                    'name': name,
+                    'formula': self.fillVectorBranch,
+                    'arguments': {'branch': name, 'size': len(properties)},
+                    'length': len(properties),
+                    'leaflist': leaflist,
+                })
+        else:
+            for prop in self.properties:
+                # properties given as list oif dicts: [{'name':'bla', 'type':'f'},...]
+                if type(prop) == dict:
+                    propBranch = self.name + '_' + prop['name']
+                    propType = prop['type'] if 'type' in prop else 'f'
+                    bufferName = prop['name']
+                # properties given as list of strings ['bla', ...]
+                else:
+                    propType = 'f'
+                    propBranch = self.name + '_' + prop
+                    bufferName = prop
+                self.branchBuffers[bufferName] = array.array(propType, [0.0] * self.maxSize)
+                leaflist = '{branch}[{size}]/{type}'.format(branch=propBranch, size=numBranchName, type=propType.upper()) if not self.scalar else '{branch}/{type}'.format(branch=propBranch, type=propType.upper())
+                if self.scalar:
+                    self.branches.append({
+                            'name': propBranch,
+                            'formula': self.getBranch,
+                            'arguments': bufferName,
+                            'type': propType,
+                        })
+                else:
+                    self.branches.append({
+                            'name': propBranch,
+                            'formula': self.fillVectorBranch,
+                            'arguments': {'branch': bufferName, 'size': 'n'},
+                            'length': self.maxSize,
+                            'leaflist': leaflist,
+                        })
 
     # direct access to branch arrays
     def __getitem__(self, key):
