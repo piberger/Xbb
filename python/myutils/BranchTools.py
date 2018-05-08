@@ -86,16 +86,22 @@ class Collection(object):
                 # properties given as list of strings ['bla', ...]
                 else:
                     propType = 'f'
-                    propBranch = self.name + '_' + prop
-                    bufferName = prop
+                    if prop != '':
+                        propBranch = self.name + '_' + prop
+                        bufferName = prop
+                    else:
+                        propBranch = self.name
+                        bufferName = ''
                 self.branchBuffers[bufferName] = array.array(propType, [0.0] * self.maxSize)
                 leaflist = '{branch}[{size}]/{type}'.format(branch=propBranch, size=numBranchName, type=propType.upper()) if not self.scalar else '{branch}/{type}'.format(branch=propBranch, type=propType.upper())
                 if self.scalar:
                     self.branches.append({
                             'name': propBranch,
-                            'formula': self.getBranch,
-                            'arguments': bufferName,
+                            'formula': self.fillVectorBranch,
+                            'arguments': {'branch': bufferName, 'size': 1},
                             'type': propType,
+                            'length': 1,
+                            'arrayStyle': True,
                         })
                 else:
                     self.branches.append({
