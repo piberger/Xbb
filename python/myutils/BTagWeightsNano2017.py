@@ -122,7 +122,7 @@ class BTagWeights(AddCollectionsModule):
     def processEvent(self, tree):
 
         # if current entry has not been processed yet
-        if not self.hasBeenProcessed(tree):
+        if not self.hasBeenProcessed(tree) and not self.isData:
             self.markProcessed(tree)
 
             jets_cmva = []
