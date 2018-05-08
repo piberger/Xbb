@@ -7,6 +7,9 @@ from BranchTools import AddCollectionsModule
 import sys
 sys.path.append("..")
 from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier
+from MyStandardScaler import StandardScaler
+import numpy as np
+import pickle
 
 class tensorflowEvaluator(AddCollectionsModule):
 
@@ -15,31 +18,90 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.debug = False
         super(tensorflowEvaluator, self).__init__()
 
-        self.branchName = 'dnn'
-        self.addCollection(Collection(self.branchName, ['Nominal'], leaves=True))
+    def customInit(self, initVars):
+        self.config = initVars['config']
+        self.sampleTree = initVars['sampleTree']
+        self.sample = initVars['sample']
+        
+        #self.mvaName = 'ZllBDT_highptCMVAnew'
+        #self.branchName = 'dnnHigh'
+        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1.cfg'
+        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/scaler.dmp'
+        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/model.ckpt'
+        
+        self.mvaName = 'ZllBDT_lowptCMVAnew'
+        self.branchName = 'dnnLow'
+        self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1.cfg'
+        self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/scaler.dmp'
+        self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/model.ckpt'
+        
+        self.systematics = self.config.get('systematics', 'systematics').split(' ')
 
+        # create output branches
+        self.dnnCollection = Collection(self.branchName, self.systematics, leaves=True) 
+        self.addCollection(self.dnnCollection)
 
-        self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1.cfg'
-        self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/model.ckpt'
+        # create formulas for input variables
+        self.inputVariables = {}
+        for syst in self.systematics:
+            self.inputVariables[syst] = self.config.get(self.config.get(self.mvaName, "treeVarSet"), syst if self.sample.isMC() else 'Nominal').split(' ')
+            for var in self.inputVariables[syst]:
+                self.sampleTree.addFormula(var)
 
-        self.clf = None
+        # create tensorflow graph
         self.reloadModel()
 
-
-    def reloadModel(self):
-
+    def loadModelConfig(self):
         # read network architecture/hyper parameters from file
         with open(self.tensforflowConfig, 'r') as inputFile:
             lines = inputFile.read()
-        self.parameters = eval(lines)
-        self.clf = TensorflowDNNClassifier(parameters=self.parameters, nFeatures=23)
+        return eval(lines)
+
+    def reloadModel(self):
+        self.parameters = self.loadModelConfig()
+        
+        # build tensorflow graph
+        self.clf = TensorflowDNNClassifier(parameters=self.parameters, nFeatures=len(self.inputVariables[self.systematics[0]]), limitResources=True)
         self.clf.buildModel()
+
+        # restore rom checkpoint
         self.clf.restore(self.checkpoint)
+        with open(self.scalerDump, "r") as inputFile:
+            self.scaler = pickle.load(inputFile)
+
+        # initialize arrays for transfering data to graph
+        self.data = {}
+        self.data['test'] = {
+                    'X': np.full((len(self.systematics), self.clf.nFeatures), 0.0),
+                    'y': np.full((len(self.systematics),), 1.0, dtype=np.float32),
+                    'sample_weight': np.full((len(self.systematics),), 1.0, dtype=np.float32),
+                }
 
     def processEvent(self, tree):
 
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-            print "process event ", tree.GetReadEntry()
+            
+            # fill input variables
+            for j, syst in enumerate(self.systematics):
+                for i, var in enumerate(self.inputVariables[syst]):
+                    self.data['test']['X'][j,i] = self.sampleTree.evaluate(var)
+
+            # standardize
+            self.data['test']['X_sc'] = self.scaler.transform(self.data['test']['X'])
+            
+            # evaluate
+            probabilities = self.clf.session.run(self.clf.predictions, feed_dict={
+                                self.clf.x: self.data['test']['X_sc'], 
+                                self.clf.y_: self.data['test']['y'].astype(int),
+                                self.clf.w: self.data['test']['sample_weight'],
+                                self.clf.keep_prob: np.array([1.0]*len(self.clf.pKeep), dtype=np.float32),
+                                self.clf.learning_rate_adam: self.parameters['learning_rate_adam_start'],
+                                self.clf.is_training: False,
+                            })
+
+            # fill output branches
+            for j, syst in enumerate(self.systematics):
+                self.dnnCollection[self.branchName][j] = probabilities[j,0]
 
         return True
