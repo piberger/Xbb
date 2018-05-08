@@ -14,6 +14,7 @@ import glob
 import shutil
 import numpy as np
 import math
+import gzip
 
 class SampleTreesToNumpyConverter(object):
 
@@ -170,8 +171,8 @@ class SampleTreesToNumpyConverter(object):
         for sys in systematics:
             self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
 
-        numpyOutputFileName = './' + self.mvaName + '.dmp'
-        with open(numpyOutputFileName, 'wb') as outputFile:
+        numpyOutputFileName = './' + self.mvaName + '.dmpz'
+        with gzip.open(numpyOutputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
         print(self.data['meta'])
         print("written to:\x1b[34m", numpyOutputFileName, " \x1b[0m")
