@@ -21,6 +21,7 @@ class ElectronSFfromJSON(object):
     def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
+        self.config = initVars['config']
 
         # prepare buffers for new branches to add
         self.branches = []
@@ -48,7 +49,7 @@ class ElectronSFfromJSON(object):
         if currentEntry != self.lastEntry and not self.isData:
             self.lastEntry = currentEntry
 
-            zElectrons = vLeptonSelector(tree).getZelectrons()
+            zElectrons = vLeptonSelector(tree, config=self.config).getZelectrons()
             
             for syst in self.systVariations:
                 # require two electrons
