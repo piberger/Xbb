@@ -297,6 +297,17 @@ submitScriptSpecialOptions = {
     'hadd': ' -l h_vmem=6g ',
 }
 
+submitQueueDict = {
+        'hadd': 'short.q',
+        'cacheplot': 'short.q',
+        'runplot': 'short.q', # Not implemented !
+        'cachetraining': 'short.q',
+        'runtraining': 'short.q',
+        'cachedc': 'short.q',
+        'rundc': 'short.q',
+        'mergedc': 'short.q',
+}
+
 # Overwrite by config
 if pathconfig.has_section('SubmitOptions'):
     if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
@@ -307,6 +318,9 @@ if pathconfig.has_section('SubmitOptions'):
 
     if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
         submitScriptSpecialOptions.update(eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
+
+    if pathconfig.has_option('SubmitOptions', 'submitQueueDict'):
+        submitQueueDict.update(eval(pathconfig.get('SubmitOptions', 'submitQueueDict')))
 
 condorBatchGroups = {}
 # ------------------------------------------------------------------------------
@@ -686,7 +700,7 @@ if opts.task == 'hadd':
                 if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
                     jobDict = repDict.copy()
                     jobDict.update({
-                        'queue': 'short.q',
+                        'queue': submitQueueDict['hadd'],
                         'arguments':{
                             'sampleIdentifier': sampleIdentifier,
                             'fileList': FileList.compress(fileNames),
@@ -846,7 +860,7 @@ if opts.task.startswith('cachetraining'):
             for regionChunkNumber, regionChunk in enumerate(regionChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
-                    'queue': 'short.q',
+                    'queue': submitQueueDict['cachetraining'],
                     'arguments':
                         {
                             'trainingRegions': ','.join(regionChunk),
@@ -876,7 +890,7 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': submitQueueDict['runtraining']})
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
@@ -925,7 +939,7 @@ if opts.task.startswith('cacheplot'):
             for regionChunkNumber, regionChunk in enumerate(regionChunks): 
                 jobDict = repDict.copy()
                 jobDict.update({
-                        'queue': 'short.q',
+                        'queue': submitQueueDict['cacheplot'],
                         'arguments':
                             {
                             'regions': ','.join(regionChunk),
@@ -1062,7 +1076,7 @@ if opts.task.startswith('cachedc'):
                             'splitFilesChunkSize': splitFilesChunkSize,
                         },
                     'batch': opts.task + '_' + sampleIdentifier,
-                    'queue': 'short.q',
+                    'queue': submitQueueDict['cachedc'],
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
@@ -1100,7 +1114,7 @@ if opts.task.startswith('rundc'):
             for sampleIdentifier in sampleIdentifiers:
                 jobDict = repDict.copy()
                 jobDict.update({
-                    'queue': 'short.q',
+                    'queue': submitQueueDict['rundc'],
                     'arguments':
                         {
                             'regions': region,
@@ -1124,7 +1138,7 @@ if opts.task.startswith('mergedc'):
     for region in regions:
         jobDict = repDict.copy()
         jobDict.update({
-            'queue': 'short.q',
+            'queue': submitQueueDict['mergedc'],
             'arguments':
                 {
                     'regions': region,
