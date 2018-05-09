@@ -736,7 +736,10 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -1317,6 +1320,8 @@ if opts.task == 'status':
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
+            if len(sampleStatus) < 1:
+                sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)

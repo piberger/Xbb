@@ -68,8 +68,19 @@ class CopyTreePSI(object):
         output.Close()
         input.Close()
         tmpFile = __tmpPath+'/'+outputFileName
-        self.fileLocator.cp(source=tmpFile, target=outputFile)
         print 'copy to final location:\x1b[34m', outputFile, '\x1b[0m'
+        self.fileLocator.cp(source=tmpFile, target=outputFile)
+        print 'checking if the copy worked'
+        # check root file existence
+        if self.fileLocator.exists(outputFile, attempts=2):
+            if self.fileLocator.isValidRootFile(outputFile):
+                if self.debug:
+                    print('DEBUG: file exists and is good!')
+            else:
+                raise Exception('ERROR: file DOES NOT exist OR is corrupted!')
+        else:
+            raise Exception("self.fileLocator.exists(outputFile, attempts=2) failed: file DOES NOT exist")
+              
         self.fileLocator.rm(tmpFile)
 
     def copySingleFileOneInput(self, inputs):
