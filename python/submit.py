@@ -1320,6 +1320,8 @@ if opts.task == 'status':
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
+            if len(sampleStatus) < 1:
+                sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
