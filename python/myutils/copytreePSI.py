@@ -73,10 +73,11 @@ class CopyTreePSI(object):
         print 'checking if the copy worked'
         # check root file existence
         if self.fileLocator.exists(outputFile, attempts=2):
-            remoteRootFileName = self.fileLocator.getRemoteFileName(outputFile)
-            if self.fileLocator.isValidRootFile(remoteRootFileName):
+            if self.fileLocator.isValidRootFile(outputFile):
                 if self.debug:
                     print('DEBUG: file exists and is good!')
+            else:
+                raise Exception('ERROR: file DOES NOT exist OR is corrupted!')
         else:
             raise Exception("self.fileLocator.exists(outputFile, attempts=2) failed: file DOES NOT exist")
               
