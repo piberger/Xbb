@@ -29,7 +29,7 @@ parser.add_argument('--nh', dest='ht', action='store_const',
 
 #Move all plots in corresponding subfolders
 
-def MakeSubFolders(_input, current_, RegionList=None):
+def MakeSubFolders(_input, current_):
 
     #I am in macro location
     #I am in Plots
@@ -66,47 +66,27 @@ def MakeSubFolders(_input, current_, RegionList=None):
     
     print "File extensions to copy: " + ', '.join(fext)
     
-    #make default RegionList
-    if RegionList is None:
-        RegionList = []
-    if not args.folders == 'none':
-        for file in FILE:
-                if not os.path.isfile(file):
-                    continue
-                filename, ext = os.path.splitext(file)   
-                if  not 'all' in fext and ext.split(".")[1] not in fext:
-                    continue
-                #skip folders in listdir
-                if args.folders == 'region':
-                    region = filename.split("__")[0]
-                    region = region.replace("comp_","")
-                elif args.folders == 'variable':
-                    region = filename.split("__")[1]
-                if region not in RegionList:
-                    RegionList.append((region,region)) 
-        #print RegionList
-   
     for file in FILE:
-        #if not 'comp' in file: continue #Skip shape plots
         if not os.path.isfile(file):
             continue
         filename, ext = os.path.splitext(file)   
         if  not 'all' in fext and ext.split(".")[1] not in fext:
             continue
-        print 'file is', file
-        
-        folder2 = None
-        for name, folder in RegionList:
-            if not name in file: continue
-            folder2 = os.path.join(_plotfolder,folder)
-            break
-        if not folder2:
-            folder2 = _plotfolder
-                #If file is not in RegionList, create folder using file prefix
-            #    folder = file.split('__')[0]
-            #    folder2 = os.path.join(_plotfolder,folder)
+        #skip folders in listdir
 
-        print 'folder2 is', folder2
+        folder = None
+        if args.folders == 'region':
+            folder = filename.split("__")[0]
+            folder = folder.replace("comp_","")
+        elif args.folders == 'variable':
+            folder = filename.split("__")[1]
+   
+        if folder is None:
+            folder2 = _plotfolder
+        else:
+            folder2 = os.path.join(_plotfolder,folder)
+
+        print file + ' --> ' + folder2
         if folder2:
             if not os.path.isdir(folder2):
                 os.mkdir(folder2)
