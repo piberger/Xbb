@@ -174,7 +174,7 @@ if not opts.ftag == '':
     for item in configs:
         # if relative path to other config folder, just take file name
         destConfigFileName = item.split('/')[-1]
-        shutil.copyfile(item, '%s/%s/%s'%(tagDir, opts.ftag, destConfigFileName))
+        shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
 
 if debugPrintOUts:
     print configs
@@ -578,7 +578,11 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR:", sampleIdentifier, " could not be found!\x1b[0m"
+            continue
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -732,7 +736,10 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -1176,7 +1183,10 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
+        try:
+            splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
+        except:
+            print "\x1b[31mERROR: missing ", sampleIdentifier, " => skip \x1b[0m"
 
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
@@ -1310,6 +1320,8 @@ if opts.task == 'status':
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
+            if len(sampleStatus) < 1:
+                sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
