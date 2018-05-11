@@ -73,3 +73,6 @@ class QCDweights(object):
                 self.branchBuffers['QCDw'][0] = 1.
 
             return True
+
+        else:
+            return True
