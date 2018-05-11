@@ -6,45 +6,82 @@ from myutils import BetterConfigParser, ParseInfo
 import glob
 from multiprocessing import Process
 from myutils.sampleTree import SampleTree as SampleTree
+import argparse
+from myutils.BranchList import BranchList
+
+parser = argparse.ArgumentParser(description='getExtWeightsNew: compute stitching coefficients for samples with overlap')
+parser.add_argument('--samples', dest='samples', help='list of sample identifiers')
+parser.add_argument('--cuts', dest='cuts', help='cuts')
+parser.add_argument('-T', dest='tag', help='config tag')
+args = parser.parse_args()
 
 # 1) ./getExtWeights.py configname
 # 2) ./getExtWeight.py configname verify
 
-def countEvents(rootFileName, cut = "1"):
-
-    f = ROOT.TFile.Open(rootFileName)
-    if not f or f.IsZombie():
-        print "\x1b[31mnot found:",rootFileName,"\x1b[0m"
-    tree = f.Get("tree")
-    nevents = 1.* tree.Draw("1",cut,"goff")
-    f.Close()
-    return nevents
-
 def getEventCount(config, sampleIdentifier, cut="1"):
-    sysOut = config.get('Directories','SYSout').strip()
-    t3proto = 'root://t3dcachedb.psi.ch:1094'
-    sysOutMountedPath = sysOut.replace(t3proto,'').replace('root://t3dcachedb03.psi.ch:1094','')
-    fileMask = "{path}/{sample}/{tree}.root".format(path=sysOutMountedPath, sample=sampleIdentifier, tree='*')
-    sampleFiles = [t3proto + x for x in glob.glob(fileMask)]
-
-    sampleTree = SampleTree(sampleFiles, config=config)
+    sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','SYSout').strip()}, config=config)
     nEvents = sampleTree.tree.Draw("1", cut, "goff")
-    print sampleIdentifier,"(",len(sampleFiles),"files) =>",nEvents
+    print sampleIdentifier," =>",nEvents
     return nEvents
 
-configFolder = sys.argv[1]
 
 # load config
 config = BetterConfigParser()
+configFolder = args.tag + 'config/'
+print "config folder:", configFolder
 config.read(configFolder + '/paths.ini')
-config.read(configFolder + '/general.ini')
-config.read(configFolder + '/cuts.ini')
-config.read(configFolder + '/training.ini')
-config.read(configFolder + '/datacards.ini')
-config.read(configFolder + '/plots.ini')
-config.read(configFolder + '/lhe_weights.ini')
-config.read(configFolder + '/samples_nosplit.ini')
+configFiles = [x for x in config.get('Configuration','List').strip().split(' ') if len(x.strip()) > 0]
+config = BetterConfigParser()
+for configFile in configFiles:
+    config.read(configFolder + configFile)
+    print "read config ", configFile
 
+sampleGroups = []
+for x in args.samples.split(','):
+    sampleGroups.append(x.split('+'))
+
+sampleCuts = args.cuts.strip().split(',')
+
+countDict = {}
+for sampleGroup in sampleGroups:
+    for sampleIdentifier in sampleGroup:
+        countDict[sampleIdentifier] = {}
+        for sampleCut in sampleCuts:
+            countDict[sampleIdentifier][sampleCut] = -1
+
+for sampleCut in sampleCuts:
+    print "CUT=",sampleCuts,":"
+    for sampleGroup in sampleGroups:
+        count = 0
+        for sample in sampleGroup:
+            sampleCount = getEventCount(config, sample, sampleCut)
+            print sample,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
+            count += sampleCount
+        for sample in sampleGroup:
+            countDict[sample][sampleCut] = count
+
+print countDict
+
+for sampleIdentifier,counts in countDict.iteritems():
+    specialweight = ''
+    for cut,cutCount in counts.iteritems():
+        totalCount = 0
+        for sample,sampleCounts in countDict.iteritems():
+            totalCount += sampleCounts[cut]
+
+        if cutCount>0:
+            if cutCount==totalCount:
+                if len(specialweight) > 0:
+                    specialweight += ' + '
+                specialweight += '(' + cut + ')'
+            else:
+                if len(specialweight) > 0:
+                    specialweight += ' + '
+                specialweight += '(' + cut + ')*%1.5f'%(1.0*cutCount/totalCount)
+    print sampleIdentifier, specialweight
+
+
+'''
 samples = ['DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1', 'DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext2']
 sampleCut = '(lheHT<100)'
 
@@ -57,6 +94,7 @@ print '-'*160
 for i, sample in enumerate(samples):
     print sample.ljust(100),('%d'%eventCounts[sample]).ljust(30),('%1.5f'%(1.0 * eventCounts[sample] / totalCount)).ljust(30)
 print '-'*160
+'''
 
 
 

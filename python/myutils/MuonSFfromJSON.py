@@ -18,6 +18,7 @@ class MuonSFfromJSON(object):
     def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
+        self.config = initVars['config']
 
         # prepare buffers for new branches to add
         self.branches = []
@@ -43,7 +44,7 @@ class MuonSFfromJSON(object):
         if currentEntry != self.lastEntry and not self.isData:
             self.lastEntry = currentEntry
 
-            vLeptons = vLeptonSelector(tree)
+            vLeptons = vLeptonSelector(tree, config=self.config)
             zMuons = vLeptons.getZmuons()
 
             # require two muons

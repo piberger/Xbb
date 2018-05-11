@@ -1,0 +1,6 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond126/180504_160541/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond127/180504_160614/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond127/180504_160614/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond127/180504_160614/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond128/180504_160645/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIISummer16NanoAOD-PUMoriond128/180504_160645/0000/tree_2.root
