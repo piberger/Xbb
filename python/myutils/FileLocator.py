@@ -71,6 +71,7 @@ class FileLocator(object):
 
     # special Xbb function: get filename after prep step from original file name
     def getFilenameAfterPrep(self, inputFile):
+        inputFile = inputFile.replace('\r','')
         # this allows to have duplicate tree names, e.g. to import 2 trees which are both called tree_1.root
         if self.config and self.config.has_option('Configuration', 'AllowDuplicateTrees') and eval(self.config.get('Configuration', 'AllowDuplicateTrees')):
             subfolder = '_'.join(inputFile.split('/')[-4:-1])
