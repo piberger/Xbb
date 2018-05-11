@@ -287,7 +287,7 @@ submitQueueDict = {
         'sysnew': 'all.q',
         'trainReg': 'all.q',
         'cacheplot': 'short.q',
-        'runplot': 'all.q', 
+        'runplot': 'short.q', 
         'cachetraining': 'short.q',
         'runtraining': 'short.q',
         'eval': 'all.q',
