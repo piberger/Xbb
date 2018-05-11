@@ -1289,7 +1289,7 @@ if opts.task == 'status':
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
     basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
 
-    maxPrintoutLen = 50
+    maxPrintoutLen = 70
 
     # process all sample identifiers (correspond to folders with ROOT files)
     fileStatus = {}
@@ -1312,7 +1312,7 @@ if opts.task == 'status':
     missing_samples_list = []
     for folder in foldersToCheck:
         folderStatus = fileStatus[folder]
-        print "---",folder,"---"
+        print "---",folder,"-"*100
         for sampleIdentifier, sampleStatus in folderStatus.iteritems():
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
@@ -1322,6 +1322,8 @@ if opts.task == 'status':
                 missing_samples_list.append(sampleIdentifier)
             if len(sampleStatus) < 1:
                 sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
+            elif len([x for x in sampleStatus if x])==len(sampleStatus):
+                sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
