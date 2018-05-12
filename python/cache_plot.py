@@ -58,7 +58,7 @@ class CachePlot(object):
         except:
             keepBranchesPlot = []
         try:
-            keepBranchesPlot.append(eval(self.config.get('Branches', 'keep_branches')))
+            keepBranchesPlot += eval(self.config.get('Branches', 'keep_branches'))
         except:
             pass
 
