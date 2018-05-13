@@ -29,12 +29,39 @@ class tensorflowEvaluator(AddCollectionsModule):
         #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/scaler.dmp'
         #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/model.ckpt'
         
-        self.mvaName = 'ZllBDT_lowptCMVAnew'
-        self.branchName = 'dnnLow'
-        self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1.cfg'
-        self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/scaler.dmp'
-        self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/model.ckpt'
+        #self.mvaName = 'ZllBDT_lowptCMVAnew'
+        #self.branchName = 'dnnLow'
+        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1.cfg'
+        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/scaler.dmp'
+        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/model.ckpt'
+        #export/Zll2016highpt_15_qAloss_v3/Zll2016highpt_15_qAloss_H6v2.cfg
         
+        #self.mvaName = 'tfZllDNN_highpt15'
+        #self.branchName = 'dnn15High'
+        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAloss_v3/Zll2016highpt_15_qAloss_H6v2.cfg'
+        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAloss_v3/scaler.dmp'
+        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAloss_v3/checkpoints/model.ckpt'
+
+        #Zll2016lowpt_15_qAloss_v1/Zll2016lowpt_15_qAloss_H6v2.cfg
+        #self.mvaName = 'tfZllDNN_lowpt15'
+        #self.branchName = 'dnn15Low'
+        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_15_qAloss_v1/Zll2016lowpt_15_qAloss_H6v2.cfg'
+        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_15_qAloss_v1/scaler.dmp'
+        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_15_qAloss_v1/checkpoints/model.ckpt'
+
+        #self.mvaName = 'tfZllDNN_incl15'
+        #self.branchName = 'dnn15Incl'
+        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016incl_15_qAloss_v4/Zll2016incl_15_qAloss_H6v4.cfg'
+        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016incl_15_qAloss_v4/scaler.dmp'
+        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016incl_15_qAloss_v4/checkpoints/model.ckpt'
+        
+        self.mvaName = 'tfZllDNN_highpt15'
+        self.branchName = 'dnn15HighBtagSys'
+        self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAS_btagsystematics_v2/Zll2016highpt_23to15_qAS_v4.cfg'
+        self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAS_btagsystematics_v2/scaler.dmp'
+        self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_15_qAS_btagsystematics_v2/checkpoints/model.ckpt'
+
+        #Zll2016highpt_15_qAS_btagsystematics_v2/Zll2016highpt_23to15_qAS_v4.cfg
         self.systematics = self.config.get('systematics', 'systematics').split(' ')
 
         # create output branches
