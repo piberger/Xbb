@@ -9,7 +9,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Move plots to public webpage')
-parser.add_argument('_input', nargs='*', metavar='I', help='first argument: input folder, second argument (optional) output folder. You can use --eos or --afs option to use the default path as output folder. If output folder and --eos or --afs option is set, the output folder will be appended to the default path.')
+parser.add_argument('--input', dest='input', metavar='I', help='first argument: input folder, second argument (optional) output folder. You can use --eos or --afs option to use the default path as output folder. If output folder and --eos or --afs option is set, the output folder will be appended to the default path.')
 #parser.add_argument('-r', dest='region', action='store_const',
 #                   const=False, default=True,  help='use automatic region list insead of default')
 parser.add_argument('--server', default = None, help='other server than lxplus')
@@ -40,7 +40,7 @@ def MakeSubFolders(_input, current_):
         _plotfolder = args.name
     
     if not os.path.isdir(_plotfolder):
-        os.mkdir(_plotfolder)
+        os.makedirs(_plotfolder)
 
     print 'command is','cp -r ../config ' + _plotfolder + '/'
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
@@ -148,11 +148,11 @@ def MoveSubFolders(_input, _output, server=None, user=None):
 
 args = parser.parse_args()
 
-_input = os.path.abspath(args._input[0])
+#_input = os.path.abspath(args._input[0])
+_input = os.path.abspath(args.input)
 
-if len(args._input) > 1:
-    _output = args._input[1]
-
+if args.name:
+    _output = '/'.join(args.name.split('/')[0:-1])
 else:
     _output = "/"
 
