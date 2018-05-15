@@ -19,7 +19,7 @@ args = parser.parse_args()
 # 2) ./getExtWeight.py configname verify
 
 def getEventCount(config, sampleIdentifier, cut="1"):
-    sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','SYSout').strip()}, config=config)
+    sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','PREPout').strip()}, config=config)
     nEvents = sampleTree.tree.Draw("1", cut, "goff")
     print sampleIdentifier," =>",nEvents
     return nEvents
@@ -79,23 +79,5 @@ for sampleIdentifier,counts in countDict.iteritems():
                     specialweight += ' + '
                 specialweight += '(' + cut + ')*%1.5f'%(1.0*cutCount/totalCount)
     print sampleIdentifier, specialweight
-
-
-'''
-samples = ['DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1', 'DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext2']
-sampleCut = '(lheHT<100)'
-
-eventCounts = {sample: getEventCount(config, sample, sampleCut) for sample in samples}
-totalCount = sum([v for k,v in eventCounts.iteritems()])*1.0
-
-print '-'*160
-print "CUT:", sampleCut
-print '-'*160
-for i, sample in enumerate(samples):
-    print sample.ljust(100),('%d'%eventCounts[sample]).ljust(30),('%1.5f'%(1.0 * eventCounts[sample] / totalCount)).ljust(30)
-print '-'*160
-'''
-
-
 
 

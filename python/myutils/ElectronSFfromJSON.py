@@ -21,6 +21,7 @@ class ElectronSFfromJSON(object):
     def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
+        self.config = initVars['config']
 
         # prepare buffers for new branches to add
         self.branches = []
@@ -48,7 +49,7 @@ class ElectronSFfromJSON(object):
         if currentEntry != self.lastEntry and not self.isData:
             self.lastEntry = currentEntry
 
-            zElectrons = vLeptonSelector(tree).getZelectrons()
+            zElectrons = vLeptonSelector(tree, config=self.config).getZelectrons()
             
             for syst in self.systVariations:
                 # require two electrons
@@ -66,17 +67,17 @@ class ElectronSFfromJSON(object):
 
     def getIdIsoSf(self, eta, pt, syst=None):
         sf = self.jsonTable.find(self.idIsoSf, eta, pt, syst=syst)
-        if self.debug:
-            print "id/iso eta:", eta, "pt:", pt, "->", sf
+        #if self.debug:
+        #    print "id/iso eta:", eta, "pt:", pt, "->", sf
         return sf
     
     def getTriggerSf(self, eta1, pt1, eta2, pt2, syst=None):
         leg1 = self.jsonTable.find(self.triggerSf[0], eta1, pt1, syst=syst)
         leg2 = self.jsonTable.find(self.triggerSf[1], eta2, pt2, syst=syst)
-        if self.debug:
-            print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
-            print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
-            print "-->", leg1*leg2
+        #if self.debug:
+        #    print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
+        #    print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
+        #    print "-->", leg1*leg2
         return leg1*leg2
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ class MuonSFfromJSON(object):
     def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
+        self.config = initVars['config']
 
         # prepare buffers for new branches to add
         self.branches = []
@@ -43,7 +44,7 @@ class MuonSFfromJSON(object):
         if currentEntry != self.lastEntry and not self.isData:
             self.lastEntry = currentEntry
 
-            vLeptons = vLeptonSelector(tree)
+            vLeptons = vLeptonSelector(tree, config=self.config)
             zMuons = vLeptons.getZmuons()
 
             # require two muons
@@ -63,17 +64,17 @@ class MuonSFfromJSON(object):
         sfId = self.jsonTable.find(self.idSf, eta=eta, pt=pt)
         sfIso = self.jsonTable.find(self.isoSf, eta=eta, pt=pt)
         sf = sfId * sfIso
-        if self.debug:
-            print "id/iso eta:", eta, "pt:", pt, "->", sf
+        #if self.debug:
+        #    print "id/iso eta:", eta, "pt:", pt, "->", sf
         return sf
     
     def getTriggerSf(self, eta1, pt1, eta2, pt2):
         leg1 = 1.0 #not implemented yet
         leg2 = 1.0 
-        if self.debug:
-            print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
-            print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
-            print "-->", leg1*leg2
+        #if self.debug:
+        #    print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
+        #    print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
+        #    print "-->", leg1*leg2
         return leg1*leg2
 
 if __name__ == "__main__":

@@ -6,14 +6,19 @@ from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 import sys
 sys.path.append("..")
+# tfZllDNN repository has to be cloned inside the python folder
 from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier
 from MyStandardScaler import StandardScaler
 import numpy as np
 import pickle
 
+# reads tensorflow checkpoints and applies DNN output to ntuples,
+# including variations from systematic uncertainties
+# needs: tensorflow >=1.4
 class tensorflowEvaluator(AddCollectionsModule):
 
-    def __init__(self, nano=False):
+    def __init__(self, mvaName, nano=False):
+        self.mvaName = mvaName
         self.nano = nano
         self.debug = False
         super(tensorflowEvaluator, self).__init__()
@@ -22,19 +27,12 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.config = initVars['config']
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
-        
-        #self.mvaName = 'ZllBDT_highptCMVAnew'
-        #self.branchName = 'dnnHigh'
-        #self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1.cfg'
-        #self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/scaler.dmp'
-        #self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016highpt_23_qAloss_H6v1-7346705/model.ckpt'
-        
-        self.mvaName = 'ZllBDT_lowptCMVAnew'
-        self.branchName = 'dnnLow'
-        self.tensforflowConfig = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1.cfg'
-        self.scalerDump =  '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/scaler.dmp'
-        self.checkpoint = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_10_1_0/src/Xbb/python/tfZllDNN/export/Zll2016lowpt_23_qAloss_H4v1/model.ckpt'
-        
+        self.tensorflowConfig = self.config.get(self.mvaName, 'tensorflowConfig')
+        self.scalerDump = self.config.get(self.mvaName, 'scalerDump')
+        self.checkpoint = self.config.get(self.mvaName, 'checkpoint')
+        self.branchName = self.config.get(self.mvaName, 'branchName')
+
+        # Jet systematics
         self.systematics = self.config.get('systematics', 'systematics').split(' ')
 
         # create output branches
@@ -51,16 +49,17 @@ class tensorflowEvaluator(AddCollectionsModule):
         # create tensorflow graph
         self.reloadModel()
 
+    # read network architecture/hyper parameters from *.cfg file
     def loadModelConfig(self):
-        # read network architecture/hyper parameters from file
-        with open(self.tensforflowConfig, 'r') as inputFile:
+        with open(self.tensorflowConfig, 'r') as inputFile:
             lines = inputFile.read()
         return eval(lines)
 
+    # rebuild tensorflow graph
     def reloadModel(self):
         self.parameters = self.loadModelConfig()
         
-        # build tensorflow graph
+        # for evaluation of weights always set limitResources=True which limits threads (and therefore memory)
         self.clf = TensorflowDNNClassifier(parameters=self.parameters, nFeatures=len(self.inputVariables[self.systematics[0]]), limitResources=True)
         self.clf.buildModel()
 
@@ -70,13 +69,14 @@ class tensorflowEvaluator(AddCollectionsModule):
             self.scaler = pickle.load(inputFile)
 
         # initialize arrays for transfering data to graph
-        self.data = {}
-        self.data['test'] = {
-                    'X': np.full((len(self.systematics), self.clf.nFeatures), 0.0),
-                    'y': np.full((len(self.systematics),), 1.0, dtype=np.float32),
-                    'sample_weight': np.full((len(self.systematics),), 1.0, dtype=np.float32),
-                }
+        self.data = {'test':{
+                                'X': np.full((len(self.systematics), self.clf.nFeatures), 0.0),
+                                'y': np.full((len(self.systematics),), 1.0, dtype=np.float32),
+                                'sample_weight': np.full((len(self.systematics),), 1.0, dtype=np.float32),
+                            }
+                    }
 
+    # called from main loop for every event
     def processEvent(self, tree):
 
         if not self.hasBeenProcessed(tree):

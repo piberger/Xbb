@@ -294,11 +294,6 @@ class Datacard(object):
                     })
                 self.systematicsList.append(systematicsDictionary)
         
-        if self.debug:
-            print ('systematics dict')
-            print ('===================\n')
-            print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
-        
         # weight systematics
         for weightF_sys in self.sysOptions['weightF_sys']:
             for Q in self.UD:
@@ -341,6 +336,12 @@ class Datacard(object):
                                     systematicsDictionary['sample_sys_dic'][sampleName] = value
 
                     self.systematicsList.append(systematicsDictionary)
+        
+        if self.debug:
+            print ('systematics dict')
+            print ('===================\n')
+            print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
+        
         if self.debug or self.verbose:
             print('INFO: datacard initialization complete!')
             print('INFO: {nSys} systematics for {nSamples} samples'.format(nSys=len(self.systematicsList), nSamples=sum([len(x) for k,x in self.samples.iteritems()])))

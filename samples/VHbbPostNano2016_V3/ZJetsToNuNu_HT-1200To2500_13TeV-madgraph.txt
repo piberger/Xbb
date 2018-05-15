@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/RunIISummer16NanoAOD-PUMoriond84/180504_200103/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/RunIISummer16NanoAOD-PUMoriond96/180504_155059/0000/tree_1.root

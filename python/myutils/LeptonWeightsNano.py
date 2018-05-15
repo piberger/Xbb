@@ -234,7 +234,7 @@ class LeptonWeights(object):
                     lepCorr = self.leptonSF[lepCorrIdentifier] 
 
                     # recompute vLeptons
-                    vLepSelector = vLeptonSelector(tree)
+                    vLepSelector = vLeptonSelector(tree, config=self.config)
                     Vtype = vLepSelector.getVtype()
                     vLeptons = vLepSelector.getVleptons()
                             
