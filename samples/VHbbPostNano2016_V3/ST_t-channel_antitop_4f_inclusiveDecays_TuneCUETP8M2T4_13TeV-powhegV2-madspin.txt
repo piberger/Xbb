@@ -1,0 +1,11 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_10.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_11.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V3/ST_t-channel_antitop_4f_inclusiveDecays_TuneCUETP8M2T4_13TeV-powhegV2-madspin/RunIISummer16NanoAOD-PUMoriond309/180504_173210/0000/tree_9.root

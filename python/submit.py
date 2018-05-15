@@ -46,7 +46,7 @@ parser.add_option("-l", "--limit", dest="limit", default=None, help="max number 
 parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
                       help="Number of events per file when splitting or number of files when using single file workflow.")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
-parser.add_option("-q", "--queue", dest="queue", default="all.q", help="queue")
+parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
@@ -174,7 +174,7 @@ if not opts.ftag == '':
     for item in configs:
         # if relative path to other config folder, just take file name
         destConfigFileName = item.split('/')[-1]
-        shutil.copyfile(item, '%s/%s/%s'%(tagDir, opts.ftag, destConfigFileName))
+        shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
 
 if debugPrintOUts:
     print configs
@@ -244,22 +244,6 @@ if not os.path.isdir(logPath):
     print 'Exit'
     sys.exit(-1)
 
-# ------------------------------------------------------------------------------
-# CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
-#  ------------------------------------------------------------------------------
-repDict = {
-    'en': en,
-    'logpath': logPath,
-    'job': '',
-    'task': opts.task,
-    'queue': opts.queue,
-    'timestamp': timestamp,
-    'additional': '',
-    'job_id': 'noid',
-    'nprocesses': str(max(int(pathconfig.get('Configuration', 'nprocesses')), 1))
-}
-
-list_submitted_singlejobs = {}
 
 # ------------------------------------------------------------------------------
 # SUBMIT SCRIPT options defined in config general.ini [SubmitOptions]
@@ -297,6 +281,21 @@ submitScriptSpecialOptions = {
     'hadd': ' -l h_vmem=6g ',
 }
 
+submitQueueDict = {
+        'hadd': 'short.q',
+        'prep': 'all.q',
+        'sysnew': 'all.q',
+        'trainReg': 'all.q',
+        'cacheplot': 'short.q',
+        'runplot': 'short.q', 
+        'cachetraining': 'short.q',
+        'runtraining': 'short.q',
+        'eval': 'all.q',
+        'cachedc': 'short.q',
+        'rundc': 'short.q',
+        'mergedc': 'short.q',
+}
+
 # Overwrite by config
 if pathconfig.has_section('SubmitOptions'):
     if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
@@ -308,7 +307,37 @@ if pathconfig.has_section('SubmitOptions'):
     if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
         submitScriptSpecialOptions.update(eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
 
+    if pathconfig.has_option('SubmitOptions', 'submitQueueDict'):
+        submitQueueDict.update(eval(pathconfig.get('SubmitOptions', 'submitQueueDict')))
+
+# Overwrite queue when command line option is set. Otherwise use config if it is avaiable for given task. Default is 'all.q'
+if opts.queue is not None:
+    _queue = opts.queue
+else:
+    _queue = 'all.q'
+    for key in submitQueueDict:
+        if opts.task.startswith(key):
+            _queue = submitQueueDict[key]
+            break
+
+# ------------------------------------------------------------------------------
+# CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
+#  ------------------------------------------------------------------------------
+repDict = {
+    'en': en,
+    'logpath': logPath,
+    'job': '',
+    'task': opts.task,
+    'queue': _queue,
+    'timestamp': timestamp,
+    'additional': '',
+    'job_id': 'noid',
+    'nprocesses': str(max(int(pathconfig.get('Configuration', 'nprocesses')), 1))
+}
+
+list_submitted_singlejobs = {}
 condorBatchGroups = {}
+
 # ------------------------------------------------------------------------------
 # get job queue
 # ------------------------------------------------------------------------------
@@ -340,7 +369,7 @@ def waitFor(jobNameList):
             time.sleep(30)
 
 # ------------------------------------------------------------------------------
-# filter sample list with simple wildcard (*) syntax, used for -S option 
+# filter sample list with simple wildcard (*) syntax, used for -S option
 # ------------------------------------------------------------------------------
 def filterSampleList(sampleIdentifiers, samplesList):
     if samplesList and len([x for x in samplesList if x]) > 0:
@@ -578,7 +607,11 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR:", sampleIdentifier, " could not be found!\x1b[0m"
+            continue
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -682,7 +715,7 @@ if opts.task == 'hadd':
                 if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
                     jobDict = repDict.copy()
                     jobDict.update({
-                        'queue': 'short.q',
+                        #'queue': submitQueueDict['hadd'],
                         'arguments':{
                             'sampleIdentifier': sampleIdentifier,
                             'fileList': FileList.compress(fileNames),
@@ -732,7 +765,10 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -839,7 +875,7 @@ if opts.task.startswith('cachetraining'):
             for regionChunkNumber, regionChunk in enumerate(regionChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
-                    'queue': 'short.q',
+                    #'queue': submitQueueDict['cachetraining'],
                     'arguments':
                         {
                             'trainingRegions': ','.join(regionChunk),
@@ -869,7 +905,10 @@ if opts.task.startswith('runtraining'):
     # separate job for all training regions
     for trainingRegion in trainingRegions:
         jobDict = repDict.copy()
-        jobDict.update({'arguments': {'trainingRegions': trainingRegion}, 'queue': 'short.q'})
+        jobDict.update({
+            'arguments': {'trainingRegions': trainingRegion}, 
+            #'queue': submitQueueDict['runtraining']
+            })
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
@@ -918,7 +957,7 @@ if opts.task.startswith('cacheplot'):
             for regionChunkNumber, regionChunk in enumerate(regionChunks): 
                 jobDict = repDict.copy()
                 jobDict.update({
-                        'queue': 'short.q',
+                        #'queue': submitQueueDict['cacheplot'],
                         'arguments':
                             {
                             'regions': ','.join(regionChunk),
@@ -952,7 +991,7 @@ if opts.task.startswith('runplot'):
     # submit all the plot regions as separate jobs
     for region in regions:
 
-        # if --regions is given, only plot those regions 
+        # if --regions is given, only plot those regions
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
             for j, plotVarList in enumerate(plotVarChunks):
@@ -1055,7 +1094,7 @@ if opts.task.startswith('cachedc'):
                             'splitFilesChunkSize': splitFilesChunkSize,
                         },
                     'batch': opts.task + '_' + sampleIdentifier,
-                    'queue': 'short.q',
+                    #'queue': submitQueueDict['cachedc'],
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
@@ -1093,7 +1132,7 @@ if opts.task.startswith('rundc'):
             for sampleIdentifier in sampleIdentifiers:
                 jobDict = repDict.copy()
                 jobDict.update({
-                    'queue': 'short.q',
+                    #'queue': submitQueueDict['rundc'],
                     'arguments':
                         {
                             'regions': region,
@@ -1117,7 +1156,7 @@ if opts.task.startswith('mergedc'):
     for region in regions:
         jobDict = repDict.copy()
         jobDict.update({
-            'queue': 'short.q',
+            #'queue': submitQueueDict['mergedc'],
             'arguments':
                 {
                     'regions': region,
@@ -1130,7 +1169,7 @@ if opts.task.startswith('mergedc'):
 # regression training
 # -----------------------------------------------------------------------------
 if opts.task == 'trainReg':
-    repDict['queue'] = 'all.q'
+    #repDict['queue'] = 'all.q'
     submit('trainReg',repDict)
 
 # -----------------------------------------------------------------------------
@@ -1176,7 +1215,10 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-        splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize) 
+        try:
+            splitFilesChunks = partitionFileList(filelist(samplefiles, sampleIdentifier), chunkSize=chunkSize)
+        except:
+            print "\x1b[31mERROR: missing ", sampleIdentifier, " => skip \x1b[0m"
 
         # submit a job for each chunk of up to N files
         print "going to submit \x1b[36m",len(splitFilesChunks),"\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
@@ -1245,7 +1287,7 @@ if opts.task == 'summary':
         for sample in samplesUsed:
             if sample.identifier == sampleIdentifier:
                 print " >>> ", sample.name
-    
+
 
 
     print "-"*80
@@ -1274,12 +1316,12 @@ if opts.task == 'status':
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
     info = ParseInfo(samplesinfo, path)
-    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList) 
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
-    basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+    basePaths = dict([(x, config.get("Directories", x)) for x in foldersToCheck])
 
-    maxPrintoutLen = 50
+    maxPrintoutLen = 70
 
     # process all sample identifiers (correspond to folders with ROOT files)
     fileStatus = {}
@@ -1297,15 +1339,26 @@ if opts.task == 'status':
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
                 fileStatus[folder][sampleIdentifier].append(fileLocator.exists(localFilePath))
+
+    # print the full sample name at the end so can resubmit them using -S sample1,sample2
+    missing_samples_list = []
     for folder in foldersToCheck:
         folderStatus = fileStatus[folder]
-        print "---",folder,"---"
+        print "---",folder,"-"*100
         for sampleIdentifier, sampleStatus in folderStatus.iteritems():
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
             for x in sampleStatus:
                 statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
+            if len([x for x in sampleStatus if x]) != len(sampleStatus):
+                missing_samples_list.append(sampleIdentifier)
+            if len(sampleStatus) < 1:
+                sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
+            elif len([x for x in sampleStatus if x])==len(sampleStatus):
+                sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+    if len(missing_samples_list) > 0:
+        print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
 
 # outputs a simple python code to read the whole sample as chain
 if opts.task == 'sample':
@@ -1316,7 +1369,7 @@ if opts.task == 'sample':
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
     print "folders:", foldersToCheck
-    basePaths = {x: config.get("Directories", x) for x in foldersToCheck}
+    basePaths = dict([(x, config.get("Directories", x)) for x in foldersToCheck])
 
     for folder in foldersToCheck:
         path = basePaths[folder]
@@ -1331,7 +1384,7 @@ if opts.task == 'sample':
             for sampleFileName in splitFilesChunks[0]:
                 print "    '{fileName}',".format(fileName=sampleFileName)
             print "]"
-            print "sampleTree = SampleTree(sampleFiles, treeName='Events')" 
+            print "sampleTree = SampleTree(sampleFiles, treeName='Events')"
             print "print 'number of events:', sampleTree.GetEntries()"
             print "# example how to loop over all events"
             print "# alternatively, the TChain object can be accessed as sampleTree.tree"

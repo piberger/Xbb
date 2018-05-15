@@ -14,6 +14,7 @@ import glob
 import shutil
 import numpy as np
 import math
+import gzip
 
 class SampleTreesToNumpyConverter(object):
 
@@ -45,6 +46,17 @@ class SampleTreesToNumpyConverter(object):
         for sys in self.systematics:
             self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
 
+        self.weightSYS = []
+        self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
+        self.weightSYSweights = {}
+        for d in ['Up','Down']:
+            for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
+                systFullName = "btag_" + syst + "_" + d
+                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + d
+                self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
+                self.weightSYS.append(systFullName)
+
+
         # samples
         self.sampleNames = {
 #                   'BKG_TT': eval(self.config.get('Plot_general', 'TT')),
@@ -73,6 +85,8 @@ class SampleTreesToNumpyConverter(object):
         arrayLists_sys = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in systematics}
         weightLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         targetLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
+
+        weightListsSYS = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in self.weightSYS} 
         
         # standard weight expression
         weightF = self.config.get('Weights','weightF')
@@ -118,6 +132,8 @@ class SampleTreesToNumpyConverter(object):
                             for feature in features_s:
                                 sampleTree.addFormula(feature)
                         sampleTree.addFormula(weightF)
+                        for syst in self.weightSYS:
+                            sampleTree.addFormula(self.weightSYSweights[syst])
                         
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
@@ -127,6 +143,10 @@ class SampleTreesToNumpyConverter(object):
                             totalWeight = treeScale * sampleTree.evaluate(weightF)
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
+                            
+                            # add weights varied by (btag) systematics
+                            for syst in self.weightSYS:
+                                weightListsSYS[syst][datasetName].append(treeScale * sampleTree.evaluate(self.weightSYSweights[syst]))
 
                             # fill systematics 
                             for k, feature_s in features_sys.iteritems():
@@ -163,15 +183,18 @@ class SampleTreesToNumpyConverter(object):
                     'testCut': self.evalCut,
                     'samples': self.sampleNames,
                     'weightF': weightF,
+                    'weightSYS': self.weightSYS,
                     'variables': ' '.join(self.MVA_Vars['Nominal'])
                     }
                 }
         # add systematics variations
         for sys in systematics:
             self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
+        for syst in self.weightSYS:
+            self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
 
-        numpyOutputFileName = './' + self.mvaName + '.dmp'
-        with open(numpyOutputFileName, 'wb') as outputFile:
+        numpyOutputFileName = './' + self.mvaName + '.dmpz'
+        with gzip.open(numpyOutputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
         print(self.data['meta'])
         print("written to:\x1b[34m", numpyOutputFileName, " \x1b[0m")

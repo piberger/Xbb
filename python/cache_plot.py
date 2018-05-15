@@ -57,7 +57,10 @@ class CachePlot(object):
             keepBranchesPlot = eval(self.config.get('Branches', 'keep_branches_plot'))
         except:
             keepBranchesPlot = []
-        keepBranchesPlotOld = keepBranchesPlot
+        try:
+            keepBranchesPlot += eval(self.config.get('Branches', 'keep_branches'))
+        except:
+            pass
 
         # also keep some branches which might be used later in variables definition and weights
         try:
@@ -70,6 +73,9 @@ class CachePlot(object):
             keepBranchesPlot.append(self.config.get('Weights', 'weightF'))
         except:
             pass
+        # plotting region cut
+        for region,regionInfo in self.regionsDict.iteritems():
+            keepBranchesPlot.append(regionInfo['cut'])
         keepBranchesPlotFinal = BranchList(keepBranchesPlot).getListOfBranches()
 
         # ----------------------------------------------------------------------------------------------------------------------

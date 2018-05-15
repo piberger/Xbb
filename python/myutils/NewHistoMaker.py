@@ -2,6 +2,7 @@ from __future__ import print_function
 import ROOT
 import TdrStyles
 import os
+import sys
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -57,6 +58,11 @@ class NewHistoMaker:
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.EvalCut)
                 weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
                 print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
+            # add blind cut on data if specified for this variable
+            if 'blindCut' in self.histogramOptions and self.histogramOptions['group'] == 'DATA':
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
+                #print('cut is', cut)
+                #sys.exit()
 
             # per sample special weight
             if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
@@ -83,6 +89,18 @@ class NewHistoMaker:
             if 'blindCut' in self.histogramOptions and self.sample.type == 'DATA':
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
                 print("INFO: found region/var specific blinding cut in histogramOptions:\n--->{cut}".format(cut=self.histogramOptions['blindCut']))
+
+            # global cut affecting everything!! (but not caching, so can be used to further tighten selection in plots without re-caching)
+            if self.config.has_option('Cuts', 'additionalPlottingCut'):
+                print("\x1b[31mINFO: there is a global additional cut used (defined in Cuts->additionalPlottingCut)!\x1b[0m")
+                globalCut = self.config.get('Cuts', 'additionalPlottingCut')
+                print(globalCut)
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=globalCut)
+            if self.config.has_option('Cuts', 'additionalPlottingWeight'):
+                print("\x1b[31mINFO: there is a global additional weight used, ALSO FOR DATA! (defined in Cuts->additionalPlottingWeight)\x1b[0m")
+                globalCut = self.config.get('Cuts', 'additionalPlottingWeight')
+                weightF = '({cut2})*({cut1})'.format(cut1=weightF, cut2=globalCut)
+                print("INFO: ->", weightF)
 
             # add tree cut 
             selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
