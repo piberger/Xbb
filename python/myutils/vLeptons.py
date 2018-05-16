@@ -122,8 +122,8 @@ class vLeptons(object):
             self.branchBuffers['VMuonIdx'][1] = self.selector.vMuonIdx[1] if len(self.selector.vMuonIdx) > 1 else -2 
             self.branchBuffers['VElectronIdx'][0] = self.selector.vElectronIdx[0] if len(self.selector.vElectronIdx) > 0 else -2 
             self.branchBuffers['VElectronIdx'][1] = self.selector.vElectronIdx[1] if len(self.selector.vElectronIdx) > 1 else -2 
-            self.branchBuffers['nVMuonIdx'][0] = len(self.selector.vMuonIdx)
-            self.branchBuffers['nVElectronIdx'][0] = len(self.selector.vElectronIdx)
+            self.branchBuffers['nVMuonIdx'][0] = min(len(self.selector.vMuonIdx),2)
+            self.branchBuffers['nVElectronIdx'][0] = min(len(self.selector.vElectronIdx),2)
             #print self.branchBuffers['VMuonIdx'][0],self.branchBuffers['VMuonIdx'][1],self.branchBuffers['VElectronIdx'][0],self.branchBuffers['VElectronIdx'][1],self.branchBuffers['nVMuonIdx'][0],self.branchBuffers['nVElectronIdx'][0]
 
         return True
@@ -137,10 +137,11 @@ class vLeptons(object):
 
     def getVMuonIdx(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
-        for i in range(len(self.selector.vMuonIdx)):
-            destinationArray[i] = self.branchBuffers['VMuonIdx'][i]
+        size = len(self.selector.vMuonIdx)
+        destinationArray[0:size] = self.branchBuffers['VMuonIdx'][0:size]
     
     def getVElectronIdx(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
-        for i in range(len(self.selector.vElectronIdx)):
-            destinationArray[i] = self.branchBuffers['VElectronIdx'][i]
+        size = len(self.selector.vElectronIdx)
+        destinationArray[0:size] = self.branchBuffers['VElectronIdx'][0:size]
+

@@ -793,6 +793,9 @@ class SampleTree(object):
                     outputTree['passed'] += 1
 
         print('INFO: end of processing. time ', time.ctime())
+        passedTime = time.time() - self.timeStart
+        perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
+        print('INFO: throughput:', perfStats)
         sys.stdout.flush()
 
         # write files
