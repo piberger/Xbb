@@ -94,6 +94,8 @@ class FileLocator(object):
         return self.isPnfs(path) or self.isStoragePath(path) or '://' in path
 
     def isValidRootFile(self, path):
+        if self.debug:
+            print("DEBUG: check validity of ", path)
         f = ROOT.TFile.Open(path, 'read')
         if f:
             isValid = not (f.IsZombie() or f.GetNkeys() == 0 or f.TestBit(ROOT.TFile.kRecovered))
