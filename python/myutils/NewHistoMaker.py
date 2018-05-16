@@ -90,6 +90,18 @@ class NewHistoMaker:
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
                 print("INFO: found region/var specific blinding cut in histogramOptions:\n--->{cut}".format(cut=self.histogramOptions['blindCut']))
 
+            # global cut affecting everything!! (but not caching, so can be used to further tighten selection in plots without re-caching)
+            if self.config.has_option('Cuts', 'additionalPlottingCut'):
+                print("\x1b[31mINFO: there is a global additional cut used (defined in Cuts->additionalPlottingCut)!\x1b[0m")
+                globalCut = self.config.get('Cuts', 'additionalPlottingCut')
+                print(globalCut)
+                cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=globalCut)
+            if self.config.has_option('Cuts', 'additionalPlottingWeight'):
+                print("\x1b[31mINFO: there is a global additional weight used, ALSO FOR DATA! (defined in Cuts->additionalPlottingWeight)\x1b[0m")
+                globalCut = self.config.get('Cuts', 'additionalPlottingWeight')
+                weightF = '({cut2})*({cut1})'.format(cut1=weightF, cut2=globalCut)
+                print("INFO: ->", weightF)
+
             # add tree cut 
             selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
             nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)

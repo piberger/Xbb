@@ -68,13 +68,13 @@ class Collection(object):
             # at the moment only float supported with leaves
             self.branchBuffers[name] = array.array('f', [0.0] * len(properties))
             leaflist = ':'.join(properties) + '/F' 
-            print "-->",type(len(properties))
             self.branches.append({
                     'name': name,
                     'formula': self.fillVectorBranch,
                     'arguments': {'branch': name, 'size': len(properties)},
                     'length': len(properties),
                     'leaflist': leaflist,
+                    'arrayStyle': True,
                 })
         else:
             for prop in self.properties:
