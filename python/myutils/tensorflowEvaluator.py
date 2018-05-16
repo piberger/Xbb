@@ -6,6 +6,7 @@ from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 import sys
 sys.path.append("..")
+sys.path.append("../tfZllDNN/")
 # tfZllDNN repository has to be cloned inside the python folder
 from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier
 from MyStandardScaler import StandardScaler
