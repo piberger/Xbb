@@ -9,6 +9,18 @@ from myutils import BetterConfigParser, ParseInfo, LeptonSF
 from myutils.FileLocator import FileLocator
 import importlib
 from myutils.sampleTree import SampleTree
+from myutils.VtypeCorrector import VtypeCorrector
+from myutils.AdditionalJetIndex import AdditionalJetIndex
+from myutils.TTWeights import TTWeights
+from myutils.EWKweights import EWKweights
+from myutils.BTagWeights import BTagWeights
+from myutils.LeptonWeights import LeptonWeights
+from myutils.JetEnergySystematics import JetEnergySystematics
+from myutils.WPtReweight import WPtReweight
+import resource
+from myutils.DYspecialWeight import DYspecialWeight
+from myutils.PerSampleWeight import PerSampleWeight
+from myutils.Skim import Skim
 
 argv = sys.argv
 parser = OptionParser()
@@ -76,7 +88,7 @@ for fileName in filelist:
     fileLocator.makedirs(tmpFolder)
     fileLocator.makedirs(outputFolder)
 
-    if opts.force or not fileLocator.isValidRootFile(outputFileName):
+    if not fileLocator.exists(outputFileName) or opts.force:
         # load sample tree and initialize vtype corrector
         sampleTree = SampleTree([inputFileName], config=config)
         if not sampleTree.tree:
@@ -162,6 +174,8 @@ for fileName in filelist:
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
 
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        
         # copy temporary file to output folder
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)
