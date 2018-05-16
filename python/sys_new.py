@@ -9,18 +9,7 @@ from myutils import BetterConfigParser, ParseInfo, LeptonSF
 from myutils.FileLocator import FileLocator
 import importlib
 from myutils.sampleTree import SampleTree
-from myutils.VtypeCorrector import VtypeCorrector
-from myutils.AdditionalJetIndex import AdditionalJetIndex
-from myutils.TTWeights import TTWeights
-from myutils.EWKweights import EWKweights
-from myutils.BTagWeights import BTagWeights
-from myutils.LeptonWeights import LeptonWeights
-from myutils.JetEnergySystematics import JetEnergySystematics
-from myutils.WPtReweight import WPtReweight
 import resource
-from myutils.DYspecialWeight import DYspecialWeight
-from myutils.PerSampleWeight import PerSampleWeight
-from myutils.Skim import Skim
 
 argv = sys.argv
 parser = OptionParser()
@@ -77,6 +66,22 @@ if len(collections) < 1:
     print "\x1b[31mWARNING: no collections added! Specify the collections to add with the --addCollections option!\x1b[0m"
 print 'collections to add:', collections
 
+# restrict memory for debugging purpose
+if 'XBBMEMLIMIT' in os.environ:
+    print('\x1b[31mDEBUG: memory limits set by XBBMEMLIMIT environment variable!\x1b[0m')
+    rsrc = resource.RLIMIT_DATA
+    resource.setrlimit(rsrc, (float(os.environ['XBBMEMLIMIT'])*1024*1024*1024, 6*1024*1024*1024))
+    soft, hard = resource.getrlimit(rsrc)
+    print('DEBUG: mem limits soft/hard:', soft, hard)
+    rsrc = resource.RLIMIT_AS
+    # restrict memory
+    resource.setrlimit(rsrc, (float(os.environ['XBBMEMLIMIT'])*1024*1024*1024, 6*1024*1024*1024))
+    soft, hard = resource.getrlimit(rsrc)
+    print('DEBUG: AS limits soft/hard:', soft, hard)
+    rsrc = resource.RLIMIT_STACK
+    soft, hard = resource.getrlimit(rsrc)
+    print('DEBUG: stack limits soft/hard:', soft, hard)
+    print('DEBUG: max mem used:', resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 for fileName in filelist:
     localFileName = fileLocator.getFilenameAfterPrep(fileName)
