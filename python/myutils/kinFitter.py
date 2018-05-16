@@ -24,7 +24,7 @@ class NullTree(object):
         return method
 
 class AnalysisToolsTree(object):
-    def __init__(self, sampleTree):
+    def __init__(self, sampleTree, isData=False):
 
         self.formulas = {
                 'hJetInd1': 'hJCMVAV2idx[0]',
@@ -37,16 +37,15 @@ class AnalysisToolsTree(object):
                 'hj2_eta': 'Jet_eta[hJCMVAV2idx[1]]',
                 'hj2_phi': 'Jet_phi[hJCMVAV2idx[1]]',
                 'hj2_mass': 'Jet_mass[hJCMVAV2idx[1]]',
-                'GenBJ1_eta': 'Jet_mcEta[hJCMVAV2idx[0]]', 
-                'GenBJ2_eta': 'Jet_mcEta[hJCMVAV2idx[1]]', 
-                'GenBJ1_phi': 'Jet_mcPhi[hJCMVAV2idx[0]]', 
-                'GenBJ2_phi': 'Jet_mcPhi[hJCMVAV2idx[1]]', 
-                'GenBJ1_pt': 'Jet_mcPt[hJCMVAV2idx[0]]', 
-                'GenBJ2_pt': 'Jet_mcPt[hJCMVAV2idx[1]]', 
-                'GenBJ1_mass': 'Jet_mcM[hJCMVAV2idx[0]]', 
-                'GenBJ2_mass': 'Jet_mcM[hJCMVAV2idx[1]]', 
+                'GenBJ1_eta': '-1' if isData else 'Jet_mcEta[hJCMVAV2idx[0]]', 
+                'GenBJ2_eta': '-1' if isData else 'Jet_mcEta[hJCMVAV2idx[1]]', 
+                'GenBJ1_phi': '-1' if isData else 'Jet_mcPhi[hJCMVAV2idx[0]]', 
+                'GenBJ2_phi': '-1' if isData else 'Jet_mcPhi[hJCMVAV2idx[1]]', 
+                'GenBJ1_pt': '-1' if isData else 'Jet_mcPt[hJCMVAV2idx[0]]', 
+                'GenBJ2_pt': '-1' if isData else 'Jet_mcPt[hJCMVAV2idx[1]]', 
+                'GenBJ1_mass': '-1' if isData else 'Jet_mcM[hJCMVAV2idx[0]]', 
+                'GenBJ2_mass': '-1' if isData else 'Jet_mcM[hJCMVAV2idx[1]]', 
                 'isZmm': '(Vtype==0)',
-                'isHeppy': '1',
                 'lepInd1': '0',
                 'lepInd2': '1',
                 }
@@ -100,7 +99,7 @@ class kinFitter(AddCollectionsModule):
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
-        self.wrappedTree = AnalysisToolsTree(self.sampleTree)
+        self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData())
 
         if self.sample.isData():
             self.ak4pfchs_ptres = ROOT.JME.JetResolution('AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt')
