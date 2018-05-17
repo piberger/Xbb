@@ -49,10 +49,11 @@ class SampleTreesToNumpyConverter(object):
         self.weightSYS = []
         self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
         self.weightSYSweights = {}
+        self.bTagWeight = self.config.get('Weights','bTagWeight')
         for d in ['Up','Down']:
             for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
                 systFullName = "btag_" + syst + "_" + d
-                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + d
+                weightName = self.bTagWeight + "_" +  syst + d
                 self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
                 self.weightSYS.append(systFullName)
 
