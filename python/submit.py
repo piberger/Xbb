@@ -478,7 +478,7 @@ def submit(job, repDict):
     # -----------------------------------------------------------------------------
     if command:
         if opts.interactive and not submitScriptSubmitAll:
-            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)"
+            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)"
             if submitScriptRunAllLocally:
                 answer = 'l'
             else:
