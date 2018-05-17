@@ -14,6 +14,7 @@ import glob
 import shutil
 import numpy as np
 import math
+from copy import deepcopy
 import gzip
 
 class SampleTreesToNumpyConverter(object):
@@ -161,6 +162,10 @@ class SampleTreesToNumpyConverter(object):
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
+        
+        #systematics for training
+        puresystematics = deepcopy(systematics)
+        puresystematics.remove('Nominal')
 
         # concatenate all data from different samples
         self.data = {
@@ -185,7 +190,8 @@ class SampleTreesToNumpyConverter(object):
                     'samples': self.sampleNames,
                     'weightF': weightF,
                     'weightSYS': self.weightSYS,
-                    'variables': ' '.join(self.MVA_Vars['Nominal'])
+                    'variables': ' '.join(self.MVA_Vars['Nominal']),
+                    'systematics': puresystematics,
                     }
                 }
         # add systematics variations
