@@ -9,7 +9,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Move plots to public webpage')
-parser.add_argument('_input', nargs='*', metavar='I', help='first argument: input folder, second argument (optional) output folder. You can use --eos or --afs option to use the default path as output folder. If output folder and --eos or --afs option is set, the output folder will be appended to the default path.')
+parser.add_argument('--input', dest='input', metavar='I', help='first argument: input folder, second argument (optional) output folder. You can use --eos or --afs option to use the default path as output folder. If output folder and --eos or --afs option is set, the output folder will be appended to the default path.')
 #parser.add_argument('-r', dest='region', action='store_const',
 #                   const=False, default=True,  help='use automatic region list insead of default')
 parser.add_argument('--server', default = None, help='other server than lxplus')
@@ -18,8 +18,9 @@ parser.add_argument('--eos', dest='webservice', action='store_const', default = 
 parser.add_argument('--afs', dest='webservice', action='store_const', default = False, const='afs/cern.ch', help='use default path with afs webserver')
 parser.add_argument('--name', default = None, help='Give a name to the new dir')
 
-parser.add_argument('--fext', nargs='*', default = None, help='only copy specified file extensions. Default: "png pdf root". Use "all" for no restriction')
+parser.add_argument('--fext', default = 'png,pdf,root', help='only copy specified file extensions. Default: "png,pdf,root". Use "all" for no restriction')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
+parser.add_argument('--tar', default = False, action='store_const', const=True,  help='use tar compression')
 parser.add_argument('--no', dest='do_outp', action='store_const',
                    const=False, default=True,  help='no copying')
 parser.add_argument('--ni', dest='do_inp', action='store_const',
@@ -39,7 +40,7 @@ def MakeSubFolders(_input, current_):
         _plotfolder = args.name
     
     if not os.path.isdir(_plotfolder):
-        os.mkdir(_plotfolder)
+        os.makedirs(_plotfolder)
 
     print 'command is','cp -r ../config ' + _plotfolder + '/'
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
@@ -59,11 +60,8 @@ def MakeSubFolders(_input, current_):
 
     #Files, file extension
     FILE = os.listdir('.')
-    if args.fext is None:
-        fext = ['pdf','png','root']
-    else:
-        fext = args.fext
-    
+    fext = args.fext.split(',')
+
     print "File extensions to copy: " + ', '.join(fext)
     
     for file in FILE:
@@ -125,22 +123,36 @@ def MoveSubFolders(_input, _output, server=None, user=None):
         _plotfolder = _input.split('/')[-2]
     else:
         _plotfolder = args.name
-
+    
     if args.webservice:
         _output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www/" + _output
-    print 'gonna lunch the command'
-    copyCommand = 'scp -r ' + _plotfolder + ' ' + server + ':' + _output
-    print copyCommand
-    subprocess.call(copyCommand, shell = True)
+    
+    if args.tar:
+        tarfile = _plotfolder + '.tar'
+        zipcommand = 'tar -cf ' + tarfile + ' ' + _plotfolder
+        print zipcommand
+        subprocess.call(zipcommand, shell = True)
+        copyCommand = 'ssh '+ server +' "cd '+ _output + ' && tar -xvv" < ' + tarfile
+        print copyCommand
+        subprocess.call(copyCommand, shell = True)
+        remTarCmd = 'rm ' + tarfile
+        print remTarCmd
+        subprocess.call(remTarCmd, shell = True)
+    
+    else:
+        print 'gonna lunch the command'
+        copyCommand = 'scp -r ' + _plotfolder + ' ' + server + ':' + _output
+        print copyCommand
+        subprocess.call(copyCommand, shell = True)
 
 
 args = parser.parse_args()
 
-_input = os.path.abspath(args._input[0])
+#_input = os.path.abspath(args._input[0])
+_input = os.path.abspath(args.input)
 
-if len(args._input) > 1:
-    _output = args._input[1]
-
+if args.name:
+    _output = '/'.join(args.name.split('/')[0:-1])
 else:
     _output = "/"
 
