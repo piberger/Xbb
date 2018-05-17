@@ -9,14 +9,14 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Move plots to public webpage')
-parser.add_argument('--input', dest='input', metavar='I', help='first argument: input folder, second argument (optional) output folder. You can use --eos or --afs option to use the default path as output folder. If output folder and --eos or --afs option is set, the output folder will be appended to the default path.')
+parser.add_argument('--input', dest='input', default = "./", metavar='I', help='input folder, default: current folder.')
 #parser.add_argument('-r', dest='region', action='store_const',
 #                   const=False, default=True,  help='use automatic region list insead of default')
 parser.add_argument('--server', default = None, help='other server than lxplus')
 parser.add_argument('--user', default = None, help='insert lxplus username, if lxplus user does not match tier3 username. Only is used when --server is not set.')
 parser.add_argument('--eos', dest='webservice', action='store_const', default = False, const='eos', help='use default path with eos webserver')
 parser.add_argument('--afs', dest='webservice', action='store_const', default = False, const='afs/cern.ch', help='use default path with afs webserver')
-parser.add_argument('--name', default = None, help='Give a name to the new dir')
+parser.add_argument('--name', default = None, help='output folder. default: log folder name')
 
 parser.add_argument('--fext', default = 'png,pdf,root', help='only copy specified file extensions. Default: "png,pdf,root". Use "all" for no restriction')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
@@ -37,7 +37,7 @@ def MakeSubFolders(_input, current_):
     if args.name is None:
         _plotfolder = _input.split('/')[-2]
     else:
-        _plotfolder = args.name
+        _plotfolder = args.name.split('/')[-1]
     
     if not os.path.isdir(_plotfolder):
         os.makedirs(_plotfolder)
