@@ -18,6 +18,8 @@ parser.add_argument('--eos', dest='webservice', action='store_const', default = 
 parser.add_argument('--afs', dest='webservice', action='store_const', default = False, const='afs/cern.ch', help='use default path with afs webserver')
 parser.add_argument('--name', default = None, help='output folder. default: log folder name')
 
+parser.add_argument('--skipcomp', action='store_const', const=True, default=False,  help='skip comp_ plots')
+
 parser.add_argument('--fext', default = 'png,pdf,root', help='only copy specified file extensions. Default: "png,pdf,root". Use "all" for no restriction')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
 parser.add_argument('--tar', default = False, action='store_const', const=True,  help='use tar compression')
@@ -32,8 +34,9 @@ parser.add_argument('--nh', dest='ht', action='store_const',
 
 def MakeSubFolders(_input, current_):
 
-    #I am in macro location
     #I am in Plots
+    
+    # name of new folder
     if args.name is None:
         _plotfolder = _input.split('/')[-2]
     else:
@@ -42,9 +45,11 @@ def MakeSubFolders(_input, current_):
     if not os.path.isdir(_plotfolder):
         os.makedirs(_plotfolder)
 
+    #copy config
     print 'command is','cp -r ../config ' + _plotfolder + '/'
     subprocess.call('cp -r ../config ' + _plotfolder + '/', shell = True)
     
+    #copy .htaccess
     if args.ht:
         if not os.path.isfile(current_+'/.htaccess'):
             print current_+'/.htaccess'
@@ -52,6 +57,8 @@ def MakeSubFolders(_input, current_):
         print 'command is','cp -r '+current_+'/.htaccess ' + _plotfolder + '/'
         subprocess.call('cp -r '+current_+'/.htaccess ' + _plotfolder + '/', shell = True)
         subprocess.call('cp -r ' + current_ + '/.htaccess ' + _plotfolder + '/config/', shell = True)
+
+    #copy index.php
     if not os.path.isfile(current_+'/index.php'):
         print current_+'/index.php'
         raise Exception("IndexFileNotFound")
@@ -65,13 +72,20 @@ def MakeSubFolders(_input, current_):
     print "File extensions to copy: " + ', '.join(fext)
     
     for file in FILE:
+        #not existing files
         if not os.path.isfile(file):
             continue
+
+        #only copy specified file extensions
         filename, ext = os.path.splitext(file)   
         if  not 'all' in fext and ext.split(".")[1] not in fext:
             continue
-        #skip folders in listdir
-
+        
+        #skip comp_* files
+        if args.skipcomp and filename.startswith("comp_"):
+            continue
+            
+        #prepare subfolder
         folder = None
         if args.folders == 'region':
             folder = filename.split("__")[0]
@@ -86,6 +100,8 @@ def MakeSubFolders(_input, current_):
 
         print file + ' --> ' + folder2
         if folder2:
+
+            # make subfolder
             if not os.path.isdir(folder2):
                 os.mkdir(folder2)
                 #subprocess.call('cp -r ../config '+ folder2 + '/', shell = True)
@@ -94,8 +110,12 @@ def MakeSubFolders(_input, current_):
                         raise Exception("HTaccessFileNotFound")
                     subprocess.call('cp -r '+current_+'/.htaccess ' + folder2 + '/', shell = True)
                 subprocess.call('cp -r '+current_+'/index.php ' + folder2 + '/', shell = True)
+
+            #copy file
             if os.path.isfile(file):
                 shutil.copy(file,folder2)
+
+            # ??? probably outdated
             if os.path.isfile('pdf/'+file.replace('png','pdf')):
                 shutil.copy('pdf/'+file.replace('png','pdf'), folder2)
             else:
