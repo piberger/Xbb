@@ -14,6 +14,7 @@ import glob
 import shutil
 import numpy as np
 import math
+from copy import deepcopy
 import gzip
 
 class SampleTreesToNumpyConverter(object):
@@ -49,10 +50,11 @@ class SampleTreesToNumpyConverter(object):
         self.weightSYS = []
         self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
         self.weightSYSweights = {}
+        self.bTagWeight = self.config.get('Weights','bTagWeight')
         for d in ['Up','Down']:
             for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
                 systFullName = "btag_" + syst + "_" + d
-                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + d
+                weightName = self.bTagWeight + "_" +  syst + d
                 self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
                 self.weightSYS.append(systFullName)
 
@@ -160,6 +162,10 @@ class SampleTreesToNumpyConverter(object):
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
+        
+        #systematics for training
+        puresystematics = deepcopy(systematics)
+        puresystematics.remove('Nominal')
 
         # concatenate all data from different samples
         self.data = {
@@ -184,7 +190,8 @@ class SampleTreesToNumpyConverter(object):
                     'samples': self.sampleNames,
                     'weightF': weightF,
                     'weightSYS': self.weightSYS,
-                    'variables': ' '.join(self.MVA_Vars['Nominal'])
+                    'variables': ' '.join(self.MVA_Vars['Nominal']),
+                    'systematics': puresystematics,
                     }
                 }
         # add systematics variations
