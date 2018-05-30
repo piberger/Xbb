@@ -18,7 +18,8 @@ class HiggsCandidateSystematics(object):
         self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','jesFlavorZJet','jesFlavorPhotonJet','jesFlavorPureGluon','jesFlavorPureQuark','jesFlavorPureCharm','jesFlavorPureBottom','jesCorrelationGroupMPFInSitu','jesCorrelationGroupIntercalibration','jesCorrelationGroupbJES','jesCorrelationGroupFlavor','jesCorrelationGroupUncorrelated']
 
         # corrected dijet (Higgs candidate) properties
-        self.higgsProperties = ['H_reg_pt', 'H_reg_eta', 'H_reg_phi', 'H_reg_mass']
+        #self.higgsProperties = ['H_reg_pt', 'H_reg_eta', 'H_reg_phi', 'H_reg_mass']
+        self.higgsProperties = ['H_pt', 'H_eta', 'H_phi', 'H_mass']
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -85,10 +86,10 @@ class HiggsCandidateSystematics(object):
 
             dijet_Nominal = hJ0 + hJ1
 
-            self.branchBuffers['H_reg_pt'][0] = dijet_Nominal.Pt()
-            self.branchBuffers['H_reg_eta'][0] = dijet_Nominal.Eta()
-            self.branchBuffers['H_reg_phi'][0] = dijet_Nominal.Phi()
-            self.branchBuffers['H_reg_mass'][0] = dijet_Nominal.M()
+            self.branchBuffers['H_pt'][0] = dijet_Nominal.Pt()
+            self.branchBuffers['H_eta'][0] = dijet_Nominal.Eta()
+            self.branchBuffers['H_phi'][0] = dijet_Nominal.Phi()
+            self.branchBuffers['H_mass'][0] = dijet_Nominal.M()
 
             #if self.branchBuffers['H_reg_eta'][0] > -1.001 and self.branchBuffers['H_reg_eta'][0] < -0.999:
             #    print "adding 2 jets ", hJidx0, " and ", hJidx1
@@ -110,15 +111,15 @@ class HiggsCandidateSystematics(object):
                         else:
                             dijet = dijet_Nominal
 
-                        self.branchBuffers['H_reg_pt_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Pt()
-                        self.branchBuffers['H_reg_eta_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Eta()
-                        self.branchBuffers['H_reg_phi_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Phi()
-                        self.branchBuffers['H_reg_mass_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.M()
+                        self.branchBuffers['H_pt_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Pt()
+                        self.branchBuffers['H_eta_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Eta()
+                        self.branchBuffers['H_phi_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Phi()
+                        self.branchBuffers['H_mass_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.M()
 
-                        valueList['H_reg_pt'].append(dijet.Pt())
-                        valueList['H_reg_eta'].append(dijet.Eta())
-                        valueList['H_reg_phi'].append(dijet.Phi())
-                        valueList['H_reg_mass'].append(dijet.M())
+                        valueList['H_pt'].append(dijet.Pt())
+                        valueList['H_eta'].append(dijet.Eta())
+                        valueList['H_phi'].append(dijet.Phi())
+                        valueList['H_mass'].append(dijet.M())
 
             # get minimum and maximum variation
             for syst in ['minmax']:
