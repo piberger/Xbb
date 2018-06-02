@@ -66,12 +66,18 @@ class HiggsCandidateSystematics(object):
             hJidx0 = tree.hJidx[0]
             hJidx1 = tree.hJidx[1]
 
+
             # select branches from tree
-            treeJet_bReg = tree.Jet_bReg
-            treeJet_Pt = tree.Jet_Pt
+            # for 2016 nano v5
+            treeJet_PtReg = tree.Jet_PtReg 
             treeJet_pt = tree.Jet_pt
+            treeJet_Pt = tree.Jet_Pt
+            treeJet_bReg = tree.Jet_bReg
+
+            #treeJet_Pt = tree.Jet_Pt
             treeJet_phi = tree.Jet_phi
             treeJet_eta = tree.Jet_eta
+
             if self.sample.type != 'DATA':
                 treeJet_mass = tree.Jet_mass_nom
             else:
@@ -81,8 +87,10 @@ class HiggsCandidateSystematics(object):
             hJ0 = ROOT.TLorentzVector()
             hJ1 = ROOT.TLorentzVector()
 
-            hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*treeJet_Pt[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
-            hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*treeJet_Pt[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
+            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0] * treeJet_bReg[hJidx0])
+            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1] * treeJet_bReg[hJidx1])
+            #hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*treeJet_Pt[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
+            #hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*treeJet_Pt[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
 
             dijet_Nominal = hJ0 + hJ1
 
@@ -105,8 +113,12 @@ class HiggsCandidateSystematics(object):
                         if self.sample.type != 'DATA':
                             hJ0 = ROOT.TLorentzVector()
                             hJ1 = ROOT.TLorentzVector()
-                            hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
-                            hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
+
+                            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
+                            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
+                            #dummy
+                            #hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
+                            #hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
                             dijet = hJ0 + hJ1
                         else:
                             dijet = dijet_Nominal
@@ -147,6 +159,7 @@ class HiggsCandidateSystematics(object):
                         for Q in ['Up', 'Down']:
                             ptList.append(treeJet_pt_sys[syst+Q][i])
                             massList.append(treeJet_mass_sys[syst+Q][i])
+
 
                 # compute maximum/minimum
                 self.branchBuffers['Jet_pt_minmaxUp'][i] = max(ptList)
