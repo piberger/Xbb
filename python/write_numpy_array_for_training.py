@@ -19,7 +19,7 @@ import gzip
 
 class SampleTreesToNumpyConverter(object):
 
-    def __init__(self, config, mvaName, useSyst=True):
+    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True):
         self.mvaName = mvaName
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
@@ -48,12 +48,16 @@ class SampleTreesToNumpyConverter(object):
         self.weightSYSweights = {}
 
         if useSyst:
-            
+            print ("including systematics")
             self.systematics = config.get('systematics', 'systematics').strip().split(' ')
             
             for sys in self.systematics:
                 self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
-            
+        else:
+            self.systematics = []
+
+        if useWeightSyst:
+            print ("including Btag weight systematics")
             self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
             self.bTagWeight = self.config.get('Weights','bTagWeight')
             
@@ -62,9 +66,8 @@ class SampleTreesToNumpyConverter(object):
                     systFullName = "btag_" + syst + "_" + d
                     weightName = self.bTagWeight + "_" +  syst + d
                     self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
-                    self.weightSYS.append(systFullName)
-        else:
-            self.systematics = []
+                    self.weightSYS.append
+                    (systFullName)
         
 
 
@@ -226,7 +229,7 @@ parser.add_option("-T", "--tag", dest="tag", default='',
 parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-S","--systematics", dest="systematics", default=1,
-                      help="include systematics (0 for none)")
+                      help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -241,8 +244,14 @@ if len(opts.tag.strip()) > 1:
     opts.config = ["{tag}config/{file}".format(tag=opts.tag, file=x.strip()) for x in configFiles]
     print("reading config files:", opts.config)
 
+sys = False
+btagSys = False
+if int(opts.systematics) > 0:
+    sys = True
+    if int(opts.systematics) > 1:
+        btagSys = True
 # load config
 config = BetterConfigParser()
 config.read(opts.config)
-converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=opts.systematics) 
+converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys)
 converter.run()
