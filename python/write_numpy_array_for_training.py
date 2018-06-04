@@ -55,6 +55,7 @@ class SampleTreesToNumpyConverter(object):
                 self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
         else:
             self.systematics = []
+        print ("systematics: "+", ".join(self.systematics))
 
         if useWeightSyst:
             print ("including Btag weight systematics")
@@ -66,9 +67,8 @@ class SampleTreesToNumpyConverter(object):
                     systFullName = "btag_" + syst + "_" + d
                     weightName = self.bTagWeight + "_" +  syst + d
                     self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
-                    self.weightSYS.append
-                    (systFullName)
-        
+                    self.weightSYS.append(systFullName)
+        print ("btag weights: "+", ".join(self.weightSYS))
 
 
         # samples
