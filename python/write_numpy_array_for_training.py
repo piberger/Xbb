@@ -212,8 +212,9 @@ class SampleTreesToNumpyConverter(object):
             self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
         for syst in self.weightSYS:
             self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
-
-        numpyOutputFileName = './' + self.mvaName + '.dmpz'
+        if not os.path.exists("./dumps"):
+                os.makedirs("dumps")
+        numpyOutputFileName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '.dmpz'
         with gzip.open(numpyOutputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
         print(self.data['meta'])
@@ -228,7 +229,7 @@ parser.add_option("-T", "--tag", dest="tag", default='',
                       help="configuration tag")
 parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
-parser.add_option("-S","--systematics", dest="systematics", default=1,
+parser.add_option("-S","--systematics", dest="systematics", default=2,
                       help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
