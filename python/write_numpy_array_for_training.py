@@ -14,6 +14,7 @@ import glob
 import shutil
 import numpy as np
 import math
+from copy import deepcopy
 import gzip
 
 class SampleTreesToNumpyConverter(object):
@@ -63,8 +64,15 @@ class SampleTreesToNumpyConverter(object):
             
             for d in ['Up','Down']:
                 for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
-                    systFullName = "btag_" + syst + "_" + d
-                    weightName = self.bTagWeight + "_" +  syst + d
+                  for npt in ["0","1","2","3"]:
+                    for neta in ["1","2","3"]:
+			#splitted systematics
+                        systFullName = "btag_" + syst + "_pt"+ npt + "_eta" + neta + "_" + d
+                        weightName = "bTagWeightCMVAV2_Moriond_" +  syst + "_pt"+ npt + "_eta" + neta  + d
+			
+			#not splitted systematics			
+#                    systFullName = "btag_" + syst + "_" + d
+#                    weightName = self.bTagWeight + "_" +  syst + d
                     self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
                     self.weightSYS.append(systFullName)
         print ("btag weights: "+", ".join(self.weightSYS))
