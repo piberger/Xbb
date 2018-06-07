@@ -5,7 +5,7 @@ from ROOT import TFile
 from optparse import OptionParser
 import sys
 from myutils import BetterConfigParser, TdrStyles, getRatio
-
+import os
 
 argv = sys.argv
 parser = OptionParser()
@@ -73,7 +73,7 @@ channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25/rundc-all-test12/Limits'
 #path_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc-v2/Limits'
-path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/Limits'
+path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -87,7 +87,11 @@ path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2
 
 #path = config.get('Directories','limits')
 #outpath = config.get('Directories','plotpath')
-outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/plot_sys/'
+outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/plot_sys/'
+
+if not os.path.exists(outpath):
+  os.makedirs(outpath)
+
 
 setup = eval(config.get('LimitGeneral','setup'))
 Dict = eval(config.get('LimitGeneral','Dict'))
@@ -121,6 +125,11 @@ def myText(txt="CMS Preliminary",ndcX=0,ndcY=0,size=0.8):
 #for mass in ['110','115','120','125','130','135']:
 for mass in masses:
     for channel in channels:
+
+	if not os.path.exists(outpath+channel):
+	  os.makedirs(outpath+channel)
+
+
 
         if mode == 'BDT':
             #input = TFile.Open(path+'/vhbb_TH_BDT_M'+mass+'_'+channel+Abin+'_8TeV.root','read')
@@ -156,6 +165,13 @@ for mass in masses:
 
             input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
+
+
+
+	    input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
+            print 'input_ is', input_
+
+
 
             #'ZeeMass_lowpt':'ZeeMass_lowpt',if not 'ZeeBDT_lowpt' in input_: continue
             #if not ('ZeeMassVV_highpt' in input_ or 'ZeeMass_highpt' in input_): continue
@@ -327,7 +343,7 @@ for mass in masses:
 
                 #name = outpath+Abin+'_M'+mass+'_'+channel+'_'+MC+syst+'.png'
                 #c.Print(name)
-                name = outpath+'systPlot_'+channel+'_M'+mass+'_'+channel+'_'+MC+syst+'.pdf'
+                name = outpath+channel+'/'+'systPlot_'+channel+'_M'+mass+'_'+channel+'_'+MC+syst+'.pdf'
                 #print 'name is', name
                 #if not 'EWK' in name: sys.exit()
                 c.Print(name.replace('.pdf','.png'))
