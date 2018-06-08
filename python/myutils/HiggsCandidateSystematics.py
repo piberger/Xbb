@@ -63,8 +63,12 @@ class HiggsCandidateSystematics(object):
         if currentEntry != self.lastEntry:
             self.lastEntry = currentEntry
 
-            hJidx0 = tree.hJidx[0]
-            hJidx1 = tree.hJidx[1]
+#            hJidx0 = tree.hJidx[0]
+#            hJidx1 = tree.hJidx[1]
+#CMVA idx
+            hJidx0 = tree.hJidxCMVA[0]
+            hJidx1 = tree.hJidxCMVA[1]
+
 
 
             # select branches from tree

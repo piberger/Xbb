@@ -46,10 +46,14 @@ class EWKweights(object):
     def getNLOw(self, tree):
         NLOw = 1.0
         if self.applyNLO:
+#            if self.nano:
+#                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
+#            else:
+#                etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
             if self.nano:
-                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
+                etabb = abs(tree.Jet_eta[tree.hJidxCMVA[0]] - tree.Jet_eta[tree.hJidxCMVA[1]])
             else:
-                etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
+                etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]]) 
             if etabb < 5:
                 NLOw = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
         return NLOw
