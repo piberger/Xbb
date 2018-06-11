@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAODv2-Ne132/180525_235134/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAODv2-Ne132/180525_235134/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_herwigpp/arizzi-RunIIFall17MiniAODv2-Ne132/180525_235134/0000/tree_3.root
