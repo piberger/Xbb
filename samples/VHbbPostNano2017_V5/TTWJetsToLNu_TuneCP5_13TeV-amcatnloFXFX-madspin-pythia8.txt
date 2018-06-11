@@ -1,0 +1,13 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_10.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_11.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_12.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_13.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/arizzi-RunIIFall17MiniAODv2-Ne94/180526_214731/0000/tree_9.root
