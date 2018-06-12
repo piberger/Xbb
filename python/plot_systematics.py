@@ -20,51 +20,11 @@ mode = 'BDT'
 xMin=-1
 xMax=1
 masses = ['125']
-#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_highpt']
 
-#channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
-#vhbb_TH_ZuuMass_highpt.root
-#channels = ['ZuuMass_highpt']
-channels = ['Zee_CRZb_lowpt']
-#channels = ['ZeeBDT_lowpt']
-#channels = ['Zee_CRZlight_lowpt']
-#channels = ['Zuu_CRZlight_lowpt']
-#Abins = ['HighPt','LowPt']
-#Abins = ['HighPt']
-#Abins = ['LowPt']
-#channels= ['ZeeBDT_lowpt']
-#channels= ['ZllBDT_lowpt']
-#channels= ['ZllBDT_highpt']
-#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
-#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
-#channels = ['Zuu_CRZlight_lowpt','Zee_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_highpt','Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
-#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
-#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_highpt']
-#channels = ['ZeeBDT_highpt']
-#channels = ['Zee_CRZlight_highpt']
-#channels = ['Zee_CRZlight_lowpt']
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CMVA_test_sys/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CSV_4_wbTag/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_09_04_2017/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_18_03_17/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHING_v8_Zll_6_debug/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHING_v8_Zll_7/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_v8_allw_addJESsys_sysMinMax_bTagsplit_minbr_6_4/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_02_06_2017/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_newMVAIDsys_test/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_15_06_2017/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_MVAID_E_B_v2/Limits/'
-#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017/'
-#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_newMVAid/'
-#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_BDTmin_0p2/'
-#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_M/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
-#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
-path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc-v3/Limits'
+#channels = ['Zuu_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRZb_lowpt','Zee_BDT_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_lowpt','Zee_BDT_highpt','Zuu_BDT_highpt','Zuu_BDT_lowpt']
+channels = ['Zuu_BDT_highpt']
+
+path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v1/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -79,7 +39,7 @@ path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python
 #path = config.get('Directories','limits')
 #outpath = config.get('Directories','plotpath')
 #outpath = config.get('Directories','plotpath')
-outpath = 'TEST/'
+outpath = '2017SYSplotdc/'
 
 setup = eval(config.get('LimitGeneral','setup'))
 Dict = eval(config.get('LimitGeneral','Dict'))
@@ -112,34 +72,8 @@ def myText(txt="CMS Preliminary",ndcX=0,ndcY=0,size=0.8):
 for mass in masses:
     for channel in channels:
         if mode == 'BDT':
-            #input = TFile.Open(path+'/vhbb_TH_BDT_M'+mass+'_'+channel+Abin+'_8TeV.root','read')
-            #input = TFile.Open()
-
-            #input = TFile.Open(path+'vhbb_TH_ZmmLowPt_13TeV.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmHighPt_13TeV.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v9/vhbb_TH_ZuuBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_highpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/dc_v9_allpt_4/Limits/vhbb_TH_ZllBDT_highpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_datacards_test/Limits/vhbb_TH_Zuu_CRZb_incl_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_3/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SCACHING_v23_final_wBtag/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final_4/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final_6/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZuuBDT_lowpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZuuBDT_highpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_lowpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_highpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
-            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
-            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
-            input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/2017_nanoV5_BDT_default_15vars_04_05_18/'
+            input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v1/Limits'
 
             input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
