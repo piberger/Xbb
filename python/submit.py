@@ -765,6 +765,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
             sampleFileList = filelist(samplefiles, sampleIdentifier)
         except:
             print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
+            continue
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
