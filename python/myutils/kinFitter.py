@@ -18,6 +18,9 @@ sys.path.append("..")
 from AnalysisTools.python.kinfitter import *
 
 class NullTree(object):
+    def GetListOfBranches(self):
+        return []
+
     def __getattr__(self, name):
         def method(*args):
             pass
@@ -25,6 +28,7 @@ class NullTree(object):
 
 class AnalysisToolsTree(object):
     def __init__(self, sampleTree, isData=False):
+        self.outputBuffers = {}
         
         if sampleTree.treeName == 'tree':
             self.formulas = {
@@ -81,6 +85,25 @@ class AnalysisToolsTree(object):
                     'hj2_eta': 'Jet_eta[hJidx[1]]',
                     'hj2_phi': 'Jet_phi[hJidx[1]]',
                     'hj2_mass': 'Jet_mass[hJidx[1]]',
+                    'hj1_reg_pt': 'Jet_PtReg[hJidx[0]]',
+                    'hj1_reg_eta': 'Jet_eta[hJidx[0]]',
+                    'hj1_reg_phi': 'Jet_phi[hJidx[0]]',
+                    'hj1_reg_mass': 'Jet_mass[hJidx[0]]',
+                    'hj2_reg_pt': 'Jet_PtReg[hJidx[1]]',
+                    'hj2_reg_eta': 'Jet_eta[hJidx[1]]',
+                    'hj2_reg_phi': 'Jet_phi[hJidx[1]]',
+                    'hj2_reg_mass': 'Jet_mass[hJidx[1]]',
+                    'hj12_pt': 'H_pt',
+                    'hj12_eta': 'H_eta',
+                    'hj12_phi': 'H_phi',
+                    'hj12_mass': 'H_mass',
+                    'hj12_reg_pt': 'H_pt',
+                    'hj12_reg_eta': 'H_eta',
+                    'hj12_reg_phi': 'H_phi',
+                    'hj12_reg_mass': 'H_mass',
+                    'n_hj_matched': '0',
+                    'HVdPhi': 'abs(TVector2::Phi_mpi_pi(H_phi-V_phi))',
+                    'jjVPtRatio': 'V_pt/H_pt',
                     'GenBJ1_eta': '-1' if isData else '-1', #'GenJet_eta[Jet_genJetIdx[hJidx[0]]]',
                     'GenBJ2_eta': '-1' if isData else '-1', #'GenJet_eta[Jet_genJetIdx[hJidx[1]]]',
                     'GenBJ1_phi': '-1' if isData else '-1', #'GenJet_phi[Jet_genJetIdx[hJidx[0]]]',
@@ -90,33 +113,59 @@ class AnalysisToolsTree(object):
                     'GenBJ1_mass': '-1' if isData else '-1', #'GenJet_mass[Jet_genJetIdx[hJidx[0]]]',
                     'GenBJ2_mass': '-1' if isData else '-1', #'GenJet_mass[Jet_genJetIdx[hJidx[1]]]',
                     'isZmm': '(Vtype==0)',
-                    'lepInd1': '(nVMuonIdx==2&&nVElectronIdx<2)*Alt$(VMuonIdx[0],0) + (nVMuonIdx<2&&nVElectronIdx==2)*Alt$(VElectronIdx[0],0)',
-                    'lepInd2': '(nVMuonIdx==2&&nVElectronIdx<2)*Alt$(VMuonIdx[1],0) + (nVMuonIdx<2&&nVElectronIdx==2)*Alt$(VElectronIdx[1],0)',
+                    'lepInd1': 'vLidx[0]',
+                    'lepInd2': 'vLidx[1]',
                     'GenLepIndex1': '-1',
                     'GenLepIndex2': '-1',
+                    'n_fsr_jets': '0',
                     }
             self.aliases = {
                     }
             self.castToInt = {'hJetInd1': True, 'hJetInd2': True, 'lepInd1': True, 'lepInd2':True, 'GenLepIndex1': True, 'GenLepIndex2': True}
             self.constantArray = {}
+            self.castToArray = {'hj1_pt': True, 'hj1_eta':True, 'hj1_phi':True, 'hj1_mass':True, 'hj2_pt': True, 'hj2_eta':True, 'hj2_phi':True, 'hj2_mass':True, 'hj12_pt': True, 'hj12_eta':True, 'hj12_phi':True, 'hj12_mass':True, 'n_fsr_jets': True,'hj1_reg_pt': True, 'hj1_reg_eta':True, 'hj1_reg_phi':True, 'hj1_reg_mass':True, 'hj2_reg_pt': True, 'hj2_reg_eta':True, 'hj2_reg_phi':True, 'hj2_reg_mass':True, 'hj12_reg_pt': True, 'hj12_reg_eta':True, 'hj12_reg_phi':True, 'hj12_reg_mass':True, 'n_hj_matched': True, 'V_eta': True}
+
+            self.branchesToFill = ['hj1_jme_res', 'hj2_jme_res', 'hj1_hh4b_res', 'hj2_hh4b_res']
+            for br in self.branchesToFill:
+                setattr(self, br, array.array('d', [0.0]))
         
         self.sampleTree = sampleTree
         for alias, target in self.aliases.iteritems():
             self.sampleTree.tree.SetAlias(alias, target)
         for formula, target in self.formulas.iteritems():
             self.sampleTree.addFormula(formula, target)
+        self.sysVariations = {}
+    
+    def createOutputBranch(self, name):
+        self.outputBuffers[name] = array.array('d', [0.0])
+
+    def overwriteWithVariation(self, name, formula):
+        self.sampleTree.addFormula(formula)
+        self.sysVariations[name] = formula
 
     def __getattr__(self, name):
-        if hasattr(self.sampleTree.tree, name):
-            return getattr(self.sampleTree.tree, name)
-        elif name in self.constantArray:
-            return [self.constantArray[name][1]]*self.constantArray[name][0]
+        if name in self.sysVariations:
+            value = array.array('d', [0.0]*self.sampleTree.tree.nJet)
+            self.sampleTree.evaluateArray(self.sysVariations[name], value)
+            #print "==> overwritten with sys variation ", name, " -> ", self.sysVariations[name], " ==>", value
+        elif hasattr(self.sampleTree.tree, name):
+            value = getattr(self.sampleTree.tree, name)
+        elif name in self.sampleTree.formulas:
+            value = self.sampleTree.evaluate(name)
+        elif name in self.outputBuffers:
+            value = self.outputBuffers[name]
         else:
-            if name in self.castToInt:
-                return int(self.sampleTree.evaluate(name))
-            else:
-                return self.sampleTree.evaluate(name)
+            raise AttributeError
 
+        if name in self.castToInt:
+            if name in self.castToArray:
+                value = array.array('i', [int(value)])
+            else:
+                value = int(value)
+        else:
+            if name in self.castToArray:
+                value = array.array('d', [value])
+        return value
 
 class kinFitter(AddCollectionsModule):
 
@@ -124,43 +173,76 @@ class kinFitter(AddCollectionsModule):
         super(kinFitter, self).__init__()
         self.branchName = branchName
         self.skipBadEvents = skipBadEvents
+
+        ep = EventProxy()
         
-        self.leaves = VarContainer(NullTree()).tree_vars
-        self.kinFitterCollection = Collection(self.branchName, self.leaves, leaves=True) 
-        self.addCollection(self.kinFitterCollection)
+        # all output vars
+        self.all_TREE_VARS = TREE_VARS | set(['twoResolvedJets'])
+        ep.init_output(NullTree(), self.all_TREE_VARS) 
+        
+        # only write those to files which are results from fit
+        self.leaves = [x for x in ep.tree_vars if 'fit' in x]
+        print "output vars:", self.leaves
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
         self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData())
+        
+        # add separate collection for every sys variation, leaves are the different fit outputs
+        self.systematics = ['', 'jerUp', 'jerDown', 'jesTotalUp', 'jesTotalDown'] if not self.sample.isData() else ['']
+        self.kinFitterCollection = {}
+        for syst in self.systematics:
+            self.kinFitterCollection[syst] = Collection(self.branchName + ('_' + syst if syst != '' else ''), self.leaves, leaves=True)
+            self.addCollection(self.kinFitterCollection[syst])
 
+        # create buffers for output only branches which don't exist yet
+        for var in self.all_TREE_VARS:
+            if not hasattr(self.wrappedTree, var):
+                self.wrappedTree.createOutputBranch(var)
+
+        # load Jet/Met resolution files
         if self.sample.isData():
             self.ak4pfchs_ptres = ROOT.JME.JetResolution('AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt')
         else:
             self.ak4pfchs_ptres = ROOT.JME.JetResolution('AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_MC_PtResolution_AK4PFchs.txt')
 
-        ak4pfchs_ptres
-
     def processEvent(self, tree):
-        global ak4pfchs_ptres
 
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-            
+
             # run kinematic fitter
-            c = VarContainer(NullTree())
-            try:
-                apply_fit_to_event(self.wrappedTree, c, self.ak4pfchs_ptres)
-            except Exception as e:
-                print "\x1b[31mEXCEPTION:",e,"\x1b[0m"
-                if self.skipBadEvents:
-                    return False
-                else:
-                    raise Exception("KinFitException")
+            c = None
+            for syst in self.systematics:
+                if not c:
+                    c = EventProxy()
+                try:
+                    # add systematic variations in the tree wrapper class
+                    if syst:
+                        self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*Jet_pt_' + syst + '/Jet_Pt')
+                        self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass*Jet_pt_' + syst + '/Jet_Pt')
+                    else:
+                        self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg')
+                        self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass')
 
+                    # update EventProxy with event data from wrapped tree
+                    c.set_event(self.wrappedTree)
 
-            # write output branches
-            for i, leaf in enumerate(self.leaves):
-                self.kinFitterCollection[self.branchName][i] = getattr(c, leaf)
-        
+                    # run the fit
+                    apply_fit_to_event(c, self.ak4pfchs_ptres)
+                except Exception as e:
+                    print "\x1b[31mEXCEPTION:",e,"\x1b[0m"
+                    if self.skipBadEvents:
+                        return False
+                    else:
+                        raise Exception("KinFitException")
+
+                #print 'syst=',syst, ' H_mass', c.H_mass, "-->", c.H_mass_fit[0]
+
+                # write output branches
+                for i, leaf in enumerate(self.leaves):
+                    leafValue = getattr(c, leaf)
+                    self.kinFitterCollection[syst].setProperty(leaf, leafValue[0] if type(leafValue) == array.array else leafValue)
+
         return True
