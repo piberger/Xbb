@@ -1331,6 +1331,7 @@ if opts.task.split('.')[0] == 'status':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     fileStatus = {}
+    failedJobs = []
     for x in foldersToCheck:
         fileStatus[x] = {}
     for sampleIdentifier in sampleIdentifiers:
@@ -1359,6 +1360,8 @@ if opts.task.split('.')[0] == 'status':
                 if jobName in jobs:
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[45m\x1b[97mR\x1b[0m')
                 else:
+                    if not x:
+                        failedJobs.append(jobName)
                     statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x,n in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
@@ -1369,6 +1372,13 @@ if opts.task.split('.')[0] == 'status':
             print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
+    if len(failedJobs) > 0:
+        print "-"*20
+        print "failed jobs (%d):"%len(failedJobs)
+        if len(failedJobs) > 20:
+            failedJobs = failedJobs[:20]
+        print "\n".join(failedJobs)
+        print "(up to 20 jobs are printed)"
 
 # outputs a simple python code to read the whole sample as chain
 if opts.task == 'sample':
