@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8/perrozzi-RunIIFall17MiniAODv2-84/180526_112248/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8/perrozzi-RunIIFall17MiniAODv2-84/180526_112248/0000/tree_2.root

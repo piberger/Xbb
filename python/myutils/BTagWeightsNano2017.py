@@ -128,8 +128,12 @@ class BTagWeights(AddCollectionsModule):
             jets_cmva = []
             treeJet_Pt = getattr(tree, self.jetPtBranchName)
             for i in range(tree.nJet):
-                if (tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
-                    jet_cmva = Jet(tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
+                #if (tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
+                #    jet_cmva = Jet(tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
+                #    jets_cmva.append(jet_cmva)
+                # modified for 2017 nano v5
+                if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
+                    jet_cmva = Jet(tree.Jet_PtReg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
                     jets_cmva.append(jet_cmva)
 
             ptmin = 20.
