@@ -58,16 +58,20 @@ class Collection(object):
         self.scalar = (self.maxSize < 2)
         self.branches = []
         self.branchBuffers = {}
+        self.leaves = leaves
 
         if not self.scalar and not leaves:
             numBranchName = 'n' + self.name
             self.branchBuffers['n'] = array.array('i', [0])
             self.branches.append({'name': numBranchName, 'formula': self.getBranch, 'arguments': 'n', 'type': 'i'})
 
+        # if set to True, the properties are saved as leaves of a branch with name: self.name
+        #     warning: at the moment only float supported with leaves
         if leaves:
-            # at the moment only float supported with leaves
-            self.branchBuffers[name] = array.array('f', [0.0] * len(properties))
-            leaflist = ':'.join(properties) + '/F' 
+            # call the central value 'Nominal' in this case
+            self.properties = [propertyName if len(propertyName)>0 else 'Nominal' for propertyName in properties]
+            self.branchBuffers[name] = array.array('f', [0.0] * len(self.properties))
+            leaflist = ':'.join(self.properties) + '/F'
             self.branches.append({
                     'name': name,
                     'formula': self.fillVectorBranch,
@@ -76,6 +80,16 @@ class Collection(object):
                     'leaflist': leaflist,
                     'arrayStyle': True,
                 })
+            # create index of properties to speed up setting a single property by name
+            self.propertyIndex = {}
+            for i, propertyName in enumerate(self.properties):
+                self.propertyIndex[propertyName] = i
+
+            # add alias for nominal value
+            if 'Nominal' in self.propertyIndex and '' not in self.propertyIndex:
+                self.propertyIndex[''] = self.propertyIndex['Nominal']
+
+        # otherwise the properties are saved as separate branches with name: self.name + '_' + propertyName
         else:
             for prop in self.properties:
                 # properties given as list oif dicts: [{'name':'bla', 'type':'f'},...]
@@ -115,6 +129,15 @@ class Collection(object):
     # direct access to branch arrays
     def __getitem__(self, key):
         return self.branchBuffers[key]
+
+    # helper function to set properties which works with leaves=True/False
+    #   direct access might be faster for leaves=True
+    def setProperty(self, key, value):
+        if self.leaves:
+            self[self.name][self.propertyIndex[key]] = value
+        else:
+            self[key][0] = value
+
 
     # only for vectors, don't use with scalars
     def setSize(self, size):
