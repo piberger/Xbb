@@ -514,7 +514,7 @@ def submit(job, repDict):
         subprocess.call([command], shell=True)
 
         batchJob = BatchJob(repDict['name'], command)
-        batchJob.setProperty('log', logOutputPath)
+        batchJob.setProperty('log', outOutputPath)
         submittedJobs.append(batchJob.toDict())
 
 def printSamplesStatus(samples, regions, status):
@@ -1443,6 +1443,7 @@ if opts.task == 'checklogs':
         lastSubmission = json.load(infile)
     batchSystem = BatchSystem.create(config)
     unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
+    nFailed = 0
     nResubmitted = 0
     for job in lastSubmission:
         print "-"*80
@@ -1460,7 +1461,7 @@ if opts.task == 'checklogs':
                             job['exitCode'] = int(line.split('exit code:')[1].strip())
                         if line.startswith('duration (real time)'):
                             job['duration'] = line.split('duration (real time):')[1].strip()
-                        if 'Traceback (most recent call last)' in line:
+                        if 'Traceback (most recent call last)' in line or '[FATAL] Auth failed' in line:
                             errorLines.append("line %d: %s"%(i, line))
 
             if 'exitCode' in job:
@@ -1474,6 +1475,8 @@ if opts.task == 'checklogs':
             else:
                 status = 'crashed'
                 errorStatus = True
+        if len(errorLines) > 0:
+            errorStatus = True
         print " STATUS:", ("\x1b[31m"+status+"\x1b[0m" if errorStatus else status)
         if len(errorLines) > 0:
             print " ERRORS:"
@@ -1481,10 +1484,11 @@ if opts.task == 'checklogs':
                 print "  \x1b[31m" + errorLine + "\x1b[0m"
         if errorStatus:
             print " RESUBMIT: \x1b[34m" + job['submitCommand']  + "\x1b[0m"
+            nFailed += 1
             if opts.resubmit:
                 subprocess.call([job['submitCommand']], shell=True)
                 nResubmitted += 1
-    print "%d jobs resubmitted"%nResubmitted
+    print "%d jobs failed, %d jobs resubmitted"%(nFailed, nResubmitted)
 
 
 # submit all jobs, which have been grouped in a batch
