@@ -50,8 +50,9 @@ class FileLocator(object):
                 if self.debug:
                     print('DEBUG: initialized xrootd client, server:', self.server)
                     print('DEBUG: client:', self.client)
-            except:
+            except Exception as e:
                 if self.debug:
+                    print('DEBUG: xrootd:', e)
                     print('DEBUG: xrootd could not be initialized, trying to use xrdfs as fallback. To use the faster Python bindings upgrade CMSSW to version 9.')
 
         # prefixes to distinguish remote file paths from local ones
