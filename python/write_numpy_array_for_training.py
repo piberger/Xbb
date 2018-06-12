@@ -14,11 +14,12 @@ import glob
 import shutil
 import numpy as np
 import math
+from copy import deepcopy
 import gzip
 
 class SampleTreesToNumpyConverter(object):
 
-    def __init__(self, config, mvaName):
+    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True):
         self.mvaName = mvaName
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
@@ -41,20 +42,33 @@ class SampleTreesToNumpyConverter(object):
 
         # variables and systematics
         self.treeVarSet = config.get(mvaName, 'treeVarSet')
-        self.systematics = config.get('systematics', 'systematics').strip().split(' ')
         self.MVA_Vars = {'Nominal': [x for x in config.get(self.treeVarSet, 'Nominal').strip().split(' ') if len(x.strip()) > 0]}
-        for sys in self.systematics:
-            self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
 
         self.weightSYS = []
-        self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
         self.weightSYSweights = {}
-        for d in ['Up','Down']:
-            for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
-                systFullName = "btag_" + syst + "_" + d
-                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + d
-                self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
-                self.weightSYS.append(systFullName)
+
+        if useSyst:
+            print ("including systematics")
+            self.systematics = config.get('systematics', 'systematics').strip().split(' ')
+            
+            for sys in self.systematics:
+                self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
+        else:
+            self.systematics = []
+        print ("systematics: "+", ".join(self.systematics))
+
+        if useWeightSyst:
+            print ("including Btag weight systematics")
+            self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
+            self.bTagWeight = self.config.get('Weights','bTagWeight')
+            
+            for d in ['Up','Down']:
+                for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
+                    systFullName = "btag_" + syst + "_" + d
+                    weightName = self.bTagWeight + "_" +  syst + d
+                    self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
+                    self.weightSYS.append(systFullName)
+        print ("btag weights: "+", ".join(self.weightSYS))
 
 
         # samples
@@ -160,6 +174,11 @@ class SampleTreesToNumpyConverter(object):
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
+        
+        #systematics for training
+        puresystematics = deepcopy(systematics)
+        if 'Nominal' in puresystematics:
+            puresystematics.remove('Nominal')
 
         # concatenate all data from different samples
         self.data = {
@@ -184,7 +203,8 @@ class SampleTreesToNumpyConverter(object):
                     'samples': self.sampleNames,
                     'weightF': weightF,
                     'weightSYS': self.weightSYS,
-                    'variables': ' '.join(self.MVA_Vars['Nominal'])
+                    'variables': ' '.join(self.MVA_Vars['Nominal']),
+                    'systematics': puresystematics,
                     }
                 }
         # add systematics variations
@@ -192,8 +212,9 @@ class SampleTreesToNumpyConverter(object):
             self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
         for syst in self.weightSYS:
             self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
-
-        numpyOutputFileName = './' + self.mvaName + '.dmpz'
+        if not os.path.exists("./dumps"):
+                os.makedirs("dumps")
+        numpyOutputFileName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '.dmpz'
         with gzip.open(numpyOutputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
         print(self.data['meta'])
@@ -208,6 +229,8 @@ parser.add_option("-T", "--tag", dest="tag", default='',
                       help="configuration tag")
 parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
+parser.add_option("-S","--systematics", dest="systematics", default=2,
+                      help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -222,8 +245,14 @@ if len(opts.tag.strip()) > 1:
     opts.config = ["{tag}config/{file}".format(tag=opts.tag, file=x.strip()) for x in configFiles]
     print("reading config files:", opts.config)
 
+sys = False
+btagSys = False
+if int(opts.systematics) > 0:
+    sys = True
+    if int(opts.systematics) > 1:
+        btagSys = True
 # load config
 config = BetterConfigParser()
 config.read(opts.config)
-converter = SampleTreesToNumpyConverter(config, opts.trainingRegions) 
+converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys)
 converter.run()
