@@ -4,6 +4,9 @@ import numpy as np
 import array
 import os
 
+from BranchTools import Collection
+from BranchTools import AddCollectionsModule
+
 class Jet :
     def __init__(self, pt, eta, fl, csv) :
         self.pt = pt
@@ -11,10 +14,14 @@ class Jet :
         self.hadronFlavour = fl
         self.csv = csv
 
-class BTagWeights(object):
+class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, fileCSV=None, fileCMVA=None, nano=False):
+    def __init__(self, fileCSV=None, fileCMVA=None, nano=False, useLeaves=False, includeFixPtEtaBins=True, branchName=None):
+        super(BTagWeights, self).__init__()
         self.nano = nano
+        self.useLeaves = useLeaves
+        self.includeFixPtEtaBins = includeFixPtEtaBins
+        self.branchBaseName = branchName if branchName else "bTagWeightCMVAV2"
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
@@ -41,56 +48,57 @@ class BTagWeights(object):
                 "l" : "incl",
                 }
             }
-        self.btag_calibrators = {}
-        for algo in ["CSV", "CMVAV2"]:
-            for syst in ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]:
-                print "[btagSF]: Loading calibrator for algo:", algo, "systematic:", syst
-                self.btag_calibrators[algo+"_iterative_"+syst] = ROOT.BTagCalibrationReader(3, syst)
-                for fl in range(3):
-                    self.btag_calibrators[algo+"_iterative_"+syst].load(self.sf_type_map[algo]["file"], fl, "iterativefit")
+
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysRefMap = {}
-        self.sysMap = {}
-        self.sysMap["JESUp"] = "up_jes"
-        self.sysMap["JESDown"] = "down_jes"
-        self.sysMap["LFUp"] = "up_lf"
-        self.sysMap["LFDown"] = "down_lf"
-        self.sysMap["HFUp"] = "up_hf"
-        self.sysMap["HFDown"] = "down_hf"
-        self.sysMap["HFStats1Up"] = "up_hfstats1"
-        self.sysMap["HFStats1Down"] = "down_hfstats1"
-        self.sysMap["HFStats2Up"] = "up_hfstats2"
-        self.sysMap["HFStats2Down"] = "down_hfstats2"
-        self.sysMap["LFStats1Up"] = "up_lfstats1"
-        self.sysMap["LFStats1Down"] = "down_lfstats1"
-        self.sysMap["LFStats2Up"] = "up_lfstats2"
-        self.sysMap["LFStats2Down"] = "down_lfstats2"
-        self.sysMap["cErr1Up"] = "up_cferr1"
-        self.sysMap["cErr1Down"] = "down_cferr1"
-        self.sysMap["cErr2Up"] = "up_cferr2"
-        self.sysMap["cErr2Down"] = "down_cferr2"
+        self.sysMap = {
+                    "JESUp": "up_jes",
+                    "JESDown": "down_jes",
+                    "LFUp": "up_lf",
+                    "LFDown": "down_lf",
+                    "HFUp": "up_hf",
+                    "HFDown": "down_hf",
+                    "HFStats1Up": "up_hfstats1",
+                    "HFStats1Down": "down_hfstats1",
+                    "HFStats2Up": "up_hfstats2",
+                    "HFStats2Down": "down_hfstats2",
+                    "LFStats1Up": "up_lfstats1",
+                    "LFStats1Down": "down_lfstats1",
+                    "LFStats2Up": "up_lfstats2",
+                    "LFStats2Down": "down_lfstats2",
+                    "cErr1Up": "up_cferr1",
+                    "cErr1Down": "down_cferr1",
+                    "cErr2Up": "up_cferr2",
+                    "cErr2Down": "down_cferr2",
+                }
+        self.systList = ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]
+        self.systVars = ["Up", "Down"]
+        self.systematics = ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]
+
+        v_sys = getattr(ROOT, 'vector<string>')()
+        for syst in self.systematics:
+            v_sys.push_back(syst)
+
+        self.btag_calibrators = {}
+        for algo in ["CSV", "CMVAV2"]:
+            print "[btagSF]: Loading calibrator for algo:", algo, "systematic: all"
+            self.btag_calibrators[algo+"_iterative"] = ROOT.BTagCalibrationReader(3, "central", v_sys)
+            for fl in range(3):
+                self.btag_calibrators[algo+"_iterative"].load(self.sf_type_map[algo]["file"], fl, "iterativefit")
         print 'INFO: bTag initialization done.'
-
-        # initialize buffers for new branches 
-        self.branchBuffers['bTagWeightCMVAV2_Moriond'] = array.array('f', [0])
-        self.branches.append({'name': 'bTagWeightCMVAV2_Moriond', 'formula': self.getBranch, 'arguments': 'bTagWeightCMVAV2_Moriond'})
-        for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
-            for sdir in ["Up", "Down"]:
-                branchName = "bTagWeightCMVAV2_Moriond_"+syst+sdir
-                self.branchBuffers[branchName] = array.array('f', [0])
-                self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
-
-                for ipt in range(0,5):
-                    for ieta in range(1,4):
-                        branchName = "bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir 
-                        self.branchBuffers[branchName] = array.array('f', [0])
-                        self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
 
     def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
-        if self.isData:
-            self.branches = []
+        if not self.isData:
+            self.systBranches = [""] #nominal
+            self.systBranches += [syst + sdir for syst in self.systList for sdir in self.systVars]
+            if self.includeFixPtEtaBins:
+                self.systBranches += [syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir for syst in self.systList for sdir in self.systVars for ipt in range(0,5) for ieta in range(1,4)]
+
+            self.btagCollection = Collection(self.branchBaseName, self.systBranches, leaves=self.useLeaves)
+            self.addCollection(self.btagCollection)
+            print "sys:", self.systBranches
 
     def getBranches(self):
         return self.branches
@@ -114,54 +122,12 @@ class BTagWeights(object):
     # function that reads the SF
     def get_SF(self, pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M", shape_corr=False):
         
-        #if eta<0:
-        #    eta=-eta
-
-        # no SF for pT<20 GeV or pt>1000 or abs(eta)>2.4
-        if abs(eta)>2.4 or pt>1000. or pt<20.:
-            return 1.0
-
         # the .csv files use the convention: b=0, c=1, l=2. Convert into hadronFlavour convention: b=5, c=4, f=0
         fl_index = min(-fl+5,2)
-        # no fl=1 in .csv for CMVAv2 (a bug???)
-        #if not shape_corr and "CMVAV2" in algo and fl==4:
-        #    fl_index = 0
-
-        if shape_corr:
-            if self.applies(fl,syst):
-                sf = self.btag_calibrators[algo+"_iterative_"+syst].eval(fl_index ,eta, pt, val)
-                #print 'shape_corr SF:',fl_index ,eta, pt, val, "=>", sf
-                if sf < 0.01 and fl_index==0:
-                    print 'sf is 0 for:', fl_index ,eta, pt, val, algo+"_iterative_"+syst
-
-                return sf
-            else:
-                sf = self.btag_calibrators[algo+"_iterative_central"].eval(fl_index ,eta, pt, val)
-                #print 'shape_corr for central SF:', fl_index ,eta, pt, val, "=>", sf
-                return sf
-
-
-        # pt ranges for bc SF: needed to avoid out_of_range exceptions
-        pt_range_high_bc = 670.-1e-02 if "CSV" in algo else 320.-1e-02
-        pt_range_low_bc = 30.+1e-02
-
-        # b or c jets
-        if fl>=4:
-            # use end_of_range values for pt in [20,30] or pt in [670,1000], with double error
-            out_of_range = False
-            if pt>pt_range_high_bc or pt<pt_range_low_bc:
-                out_of_range = True
-            pt = min(pt, pt_range_high_bc)
-            pt = max(pt, pt_range_low_bc)
-            sf = self.btag_calibrators[algo+wp+"_"+syst+"_bc"].eval(fl_index ,eta, pt)
-            # double the error for pt out-of-range
-            if out_of_range and syst in ["up","down"]:
-                sf = max(2*sf - self.btag_calibrators[algo+wp+"_central_bc"].eval(fl_index ,eta, pt), 0.)
-            return sf
-        # light jets
-        else:
-            sf = self.btag_calibrators[algo+wp+"_"+syst+"_l"].eval( fl_index ,eta, pt)
-            return  sf
+        sf = self.btag_calibrators[algo+"_iterative"].eval_auto_bounds(syst if self.applies(fl, syst) else "central", fl_index, eta, pt, val)
+        if sf < 0.01 and fl_index==0:
+            print 'sf is 0 for:', fl_index ,eta, pt, val, algo+"_iterative_"+syst
+        return sf
 
     def get_event_SF(self, ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV"):
         weight = 1.0
@@ -171,52 +137,28 @@ class BTagWeights(object):
             #print 'ptmin', ptmin, 'ptmax', ptmax, 'etamin', etamin, 'etamax', etamax
             #print 'jet: pt', jet.pt, 'eta', jet.eta
             if (jet.pt > ptmin and jet.pt < ptmax and abs(jet.eta) > etamin and abs(jet.eta) < etamax):
-                #print syst, '!'
                 weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="", shape_corr=True)
             else:
-                #print 'central !'
                 weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="", shape_corr=True)
         return weight
-    
-    def MakeSysRefMap(self, tree):
-        self.sysRefMap["JESUp"] = tree.btagWeightCSV_up_jes
-        self.sysRefMap["JESDown"] = tree.btagWeightCSV_down_jes
-        self.sysRefMap["LFUp"] = tree.btagWeightCSV_up_lf
-        self.sysRefMap["LFDown"] = tree.btagWeightCSV_down_lf
-        self.sysRefMap["HFUp"] = tree.btagWeightCSV_up_hf
-        self.sysRefMap["HFDown"] = tree.btagWeightCSV_down_hf
-        self.sysRefMap["HFStats1Up"] = tree.btagWeightCSV_up_hfstats1
-        self.sysRefMap["HFStats1Down"] = tree.btagWeightCSV_down_hfstats1
-        self.sysRefMap["HFStats2Up"] = tree.btagWeightCSV_up_hfstats2
-        self.sysRefMap["HFStats2Down"] = tree.btagWeightCSV_down_hfstats2
-        self.sysRefMap["LFStats1Up"] = tree.btagWeightCSV_up_lfstats1
-        self.sysRefMap["LFStats1Down"] = tree.btagWeightCSV_down_lfstats1
-        self.sysRefMap["LFStats2Up"] = tree.btagWeightCSV_up_lfstats2
-        self.sysRefMap["LFStats2Down"] = tree.btagWeightCSV_down_lfstats2
-        self.sysRefMap["cErr1Up"] = tree.btagWeightCSV_up_cferr1
-        self.sysRefMap["cErr1Down"] = tree.btagWeightCSV_down_cferr1
-        self.sysRefMap["cErr2Up"] = tree.btagWeightCSV_up_cferr2
-        self.sysRefMap["cErr2Down"] = tree.btagWeightCSV_down_cferr2
 
-
-    # compute all the EWK weights
+    # compute all the btag weights
     def processEvent(self, tree):
-        isGoodEvent = True
-        currentEntry = tree.GetReadEntry()
+
         # if current entry has not been processed yet
-        if currentEntry != self.lastEntry and not self.isData:
-            self.lastEntry = currentEntry
-            #self.MakeSysRefMap(tree)
+        if not self.hasBeenProcessed(tree) and not self.isData:
+            self.markProcessed(tree)
 
             jets_csv = []
             jets_cmva = []
 
             if self.nano:
                 for i in range(tree.nJet):
-                   # if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+                    # if (tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
                     #    jet_cmva = Jet(tree.Jet_bReg[i]*tree.Jet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVA[i])
-		#Modifed for 2016 Nano v4
-		     if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
+
+                    #Modifed for 2016 Nano v4
+                    if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4):
                         jet_cmva = Jet(tree.Jet_PtReg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], tree.Jet_btagCMVA[i])
                         jets_cmva.append(jet_cmva)
             else:
@@ -231,12 +173,11 @@ class BTagWeights(object):
             etamax = 2.4
 
             central_SF = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", "CMVAV2")
-            self.branchBuffers["bTagWeightCMVAV2_Moriond"][0] = central_SF
+            self.btagCollection.setProperty('', central_SF)
 
             for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
                 for sdir in ["Up", "Down"]:
-                    branchName = "bTagWeightCMVAV2_Moriond_"+syst+sdir
-                    self.branchBuffers[branchName][0] = self.get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], "CMVAV2")
+                    self.btagCollection.setProperty(syst + sdir, self.get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], "CMVAV2"))
 
                     for ipt in range(0,5):
 
@@ -272,6 +213,6 @@ class BTagWeights(object):
                                 etamin = 1.6
                                 etamax = 2.4
 
-                            branchName = "bTagWeightCMVAV2_Moriond_"+syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
-                            self.branchBuffers[branchName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], "CMVAV2")
-        return isGoodEvent
+                            sysName = syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
+                            self.btagCollection.setProperty(sysName, self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], "CMVAV2"))
+        return True
