@@ -1062,25 +1062,8 @@ double LOtoNLOWeightEtabb(double etabb){
     double SF = 1.;
     if(etabb < 5){
 
-        //SF = 0.895074 + 0.0621916*etabb -0.00512346*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
-//GeneralCuts wQCD
-       //SF = 0.914679 + 0.0215918*etabb +0.010957*etabb*etabb + 0.00926905*etabb*etabb*etabb -0.00154982*etabb*etabb*etabb*etabb;
-//GeneralCuts noQCD
-       //SF = 0.914641 + 0.0216597*etabb + 0.0110062*etabb*etabb + 0.00923401*etabb*etabb*etabb - 0.00154752*etabb*etabb*etabb*etabb;
-       //Z+light
-       //wQCD
-       //SF = 0.888143  + 0.0498867*etabb + 0.0139812*etabb*etabb + 0.00217246*etabb*etabb*etabb + 0.000482098*etabb*etabb*etabb*etabb;
-       //For closure test
-       //SF =   0.929881 + 0.0643316*etabb -0.0541741*etabb*etabb + 0.0306295*etabb*etabb*etabb -0.00340578*etabb*etabb*etabb*etabb;
-       //For closure test on Z+light
-       //SF =   0.936322 + 0.0482062*etabb -0.034030*etabb*etabb + 0.0215382*etabb*etabb*etabb -0.00244087*etabb*etabb*etabb*etabb;
-       //Z+light no w (to check)
-       //SF =   0.895074 + 0.0621916*etabb -0.00512345*etabb*etabb + 0.0087489*etabb*etabb*etabb -0.000640691*etabb*etabb*etabb*etabb;
        //From 8/11/16
-       //no QCD weights
        SF =   0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb;
-       //with QCD weights
-       //SF =   0.935996 + 0.0444133*etabb -0.0272901*etabb*etabb +  0.018343*etabb*etabb*etabb -0.00198018*etabb*etabb*etabb*etabb;
 
     }
 
@@ -1094,38 +1077,13 @@ double LOtoNLOWeightBjetSplitEtabb(double etabb, int njets){
     if(etabb < 5){
         if(njets < 1){
 
-        ////0b jets
-        //SF =   0.937159 + 0.0380638*etabb -0.0114265*etabb*etabb +0.00937904*etabb*etabb*etabb -0.000845364*etabb*etabb*etabb*etabb;
-        //}else if(njets == 1){
-        ////1b jets
-        //SF =   1.00048 -0.120242*etabb + 0.112471*etabb*etabb -0.0288309*etabb*etabb*etabb +0.00278647*etabb*etabb*etabb*etabb;
-        //}else if(njets >=2){
-        ////2b jets
-        ////SF =   0.792924 -0.079221*etabb + 0.335798*etabb*etabb -0.138331*etabb*etabb*etabb +0.0189486*etabb*etabb*etabb*etabb;
-        //SF =   0.797513 -0.104328*etabb + 0.384611*etabb*etabb -0.16464*etabb*etabb*etabb +0.0230427*etabb*etabb*etabb*etabb;
-        //}
-        ////with ewk in benriched and bgen
-        ////0b jets
-        //SF =   0.937159 + 0.0380626*etabb -0.0114244*etabb*etabb +0.00937822*etabb*etabb*etabb -0.000845273*etabb*etabb*etabb*etabb;
-        //}else if(njets == 1){
-        ////1b jets
-        //SF =   1.00046 -0.12019*etabb + 0.112428*etabb*etabb -0.0288139*etabb*etabb*etabb +0.00278412*etabb*etabb*etabb*etabb;
-        //}else if(njets >=2){
-        ////2b jets
-        ////SF =   0.797513 -0.0794639*etabb + 0.336195*etabb*etabb -0.138538*etabb*etabb*etabb +0.0189817*etabb*etabb*etabb*etabb;
-        ////exp
-        ////SF =   (0.744195 -0.208734*etabb + 0.0187821*etabb*etabb +0.000198769*etabb*etabb*etabb)*TMath::Exp(0.524992*etabb);
-        ////exp 8 bins
-        //SF =   (0.719104 -0.0266203*etabb -0.0449267*etabb*etabb +0.00834689*etabb*etabb*etabb)*TMath::Exp(0.369618*etabb);
-        //after pu and ewk 400 to 650
+        //0b jets
         SF =   0.935422 + 0.0403162*etabb -0.0089026*etabb*etabb +0.0064324*etabb*etabb*etabb -0.000212443*etabb*etabb*etabb*etabb;
         }else if(njets == 1){
         //1b jets
         SF =   0.962415 +0.0329463*etabb -0.0414479*etabb*etabb +0.0240993*etabb*etabb*etabb -0.00278271*etabb*etabb*etabb*etabb;
         }else if(njets >=2){
         //2b jets
-        //exp
-        //exp 8 bins
         SF =   (0.721265 -0.105643*etabb -0.0206835*etabb*etabb +0.00558626*etabb*etabb*etabb)*TMath::Exp(0.450244*etabb);
         }
     }
