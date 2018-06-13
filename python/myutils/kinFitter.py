@@ -190,7 +190,9 @@ class kinFitter(AddCollectionsModule):
         self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData())
         
         # add separate collection for every sys variation, leaves are the different fit outputs
-        self.systematics = ['', 'jerUp', 'jerDown', 'jesTotalUp', 'jesTotalDown'] if not self.sample.isData() else ['']
+        #self.systematics = ['', 'jerUp', 'jerDown', 'jesTotalUp', 'jesTotalDown'] if not self.sample.isData() else ['']
+        self.systematics = ['']
+
         self.kinFitterCollection = {}
         for syst in self.systematics:
             self.kinFitterCollection[syst] = Collection(self.branchName + ('_' + syst if syst != '' else ''), self.leaves, leaves=True)
