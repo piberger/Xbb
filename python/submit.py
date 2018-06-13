@@ -9,6 +9,7 @@ import signal
 import ROOT
 import fnmatch
 import hashlib
+import json
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -16,12 +17,29 @@ from myutils.Datacard import Datacard
 from myutils import BetterConfigParser, ParseInfo
 from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
+from myutils.BatchSystem import *
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         print "\x1b[31mWARNING: unsupported Python version! Python 2.7+ is needed!\x1b[0m"
 except:
     print "unable to detect python version!"
+
+class BatchJob(object):
+    def __init__(self, jobName='', submitCommand=''):
+        self.data = {
+                'jobName': jobName,
+                'submitCommand': submitCommand,
+                'log': '',
+                'err': '',
+                'outputFiles': []
+                }
+
+    def setProperty(self, prop, value):
+        self.data[prop] = value
+
+    def toDict(self):
+        return self.data
 
 parser = OptionParser()
 parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
@@ -53,6 +71,7 @@ parser.add_option("-s","--folders",dest="folders",default="", help="folders to c
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
+parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
@@ -74,6 +93,7 @@ if opts.task == "":
 
 globalFilesSubmitted = 0
 globalFilesSkipped = 0
+submittedJobs = []
 
 def signal_handler(signal, frame):
     if (globalFilesSubmitted > 0 or globalFilesSkipped > 0):
@@ -342,13 +362,8 @@ condorBatchGroups = {}
 # get job queue
 # ------------------------------------------------------------------------------
 def getJobQueue():
-    if 'condor' in whereToLaunch:
-        getJobQueueCommand = ["condor_q", "-nobatch"]
-    else:
-        getJobQueueCommand = ["qstat -xml | tr '\\n' ' ' | sed 's#<job_list[^>]*>#\\n#g' | sed 's#<[^>]*>##g' | grep ' ' | column -t"]
-    p = subprocess.Popen(getJobQueueCommand, stdout=subprocess.PIPE, shell=True)
-    out, err = p.communicate()
-    return out.split("\n")
+    batchSystem = BatchSystem.create(config)
+    return batchSystem.getJobNames()
 
 # ------------------------------------------------------------------------------
 # wait for other jobs to finish first
@@ -497,6 +512,10 @@ def submit(job, repDict):
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
+
+        batchJob = BatchJob(repDict['name'], command)
+        batchJob.setProperty('log', outOutputPath)
+        submittedJobs.append(batchJob.toDict())
 
 def printSamplesStatus(samples, regions, status):
     print("regions:")
@@ -769,6 +788,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
             sampleFileList = filelist(samplefiles, sampleIdentifier)
         except:
             print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
+            continue
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
@@ -1311,7 +1331,7 @@ if opts.task == 'summary':
         print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
 
 # checks file status for several steps/folders at once
-if opts.task == 'status':
+if opts.task.split('.')[0] == 'status':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
@@ -1323,8 +1343,19 @@ if opts.task == 'status':
 
     maxPrintoutLen = 70
 
+    # get list of running jobs
+    jobs = {}
+    jobPrefix = opts.task.split('.')[1] if '.' in opts.task else ''
+    jobSuffix = opts.tag + jobPrefix
+    try:
+        batchSystem = BatchSystem.create(config)
+        jobs = {k: True for k in batchSystem.getJobNames()}
+    except Exception as e:
+        print "ERROR: could not get list of running jobs: ", e
+
     # process all sample identifiers (correspond to folders with ROOT files)
     fileStatus = {}
+    failedJobs = []
     for x in foldersToCheck:
         fileStatus[x] = {}
     for sampleIdentifier in sampleIdentifiers:
@@ -1334,11 +1365,11 @@ if opts.task == 'status':
             sampleFileList = filelist(samplefiles, sampleIdentifier)
         except:
             sampleFileList = []
-        for sampleFileName in sampleFileList:
+        for partNumber, sampleFileName in enumerate(sampleFileList, 1):
             localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
-                fileStatus[folder][sampleIdentifier].append(fileLocator.exists(localFilePath))
+                fileStatus[folder][sampleIdentifier].append([fileLocator.exists(localFilePath), partNumber])
 
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
@@ -1348,17 +1379,30 @@ if opts.task == 'status':
         for sampleIdentifier, sampleStatus in folderStatus.iteritems():
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
-            for x in sampleStatus:
-                statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
-            if len([x for x in sampleStatus if x]) != len(sampleStatus):
+            for x,number in sampleStatus:
+                jobName = jobPrefix + '_' + sampleIdentifier + '_part%d'%(number-1) + '_' + jobSuffix
+                if jobName in jobs:
+                    statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[45m\x1b[97mR\x1b[0m')
+                else:
+                    if not x:
+                        failedJobs.append(jobName)
+                    statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
+            if len([x for x,n in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
             if len(sampleStatus) < 1:
                 sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
-            elif len([x for x in sampleStatus if x])==len(sampleStatus):
+            elif len([x for x,n in sampleStatus if x])==len(sampleStatus):
                 sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
-            print sampleShort, ("%03d/%03d"%(len([x for x in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+            print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
+    if len(failedJobs) > 0:
+        print "-"*20
+        print "failed jobs (%d):"%len(failedJobs)
+        if len(failedJobs) > 20:
+            failedJobs = failedJobs[:20]
+        print "\n".join(failedJobs)
+        print "(up to 20 jobs are printed)"
 
 # outputs a simple python code to read the whole sample as chain
 if opts.task == 'sample':
@@ -1394,6 +1438,67 @@ if opts.task == 'sample':
             print "# END OF PYTHON FILE"
             print "-"*20
 
+if opts.task == 'checklogs':
+
+    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc']
+    with open('last-submission.json', 'r') as infile:
+        lastSubmission = json.load(infile)
+    batchSystem = BatchSystem.create(config)
+    unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
+    nFailed = 0
+    nResubmitted = 0
+    nComplete = 0
+    for job in lastSubmission:
+        print "-"*80
+        print " NAME:", job['jobName']
+        print " LOG:", job['log']
+        errorLines = []
+        errorStatus = False
+        if job['jobName'] in unfinishedJobs:
+            status = 'running/queued'
+        else:
+            if os.path.isfile(job['log']):
+                with open(job['log'], 'r') as logfile:
+                    for i, line in enumerate(logfile.readlines(), 1):
+                        if line.startswith('exit code:'):
+                            job['exitCode'] = int(line.split('exit code:')[1].strip())
+                        if line.startswith('duration (real time)'):
+                            job['duration'] = line.split('duration (real time):')[1].strip()
+                        for errorMarker in errorMarkers:
+                            if errorMarker in line:
+                                errorLines.append("line %d: %s"%(i, line))
+                                break
+                        # new job output appended to old log
+                        if line.startswith('Configuration Files:'):
+                            errorLines = []
+
+            if 'exitCode' in job:
+                if job['exitCode'] == 0:
+                    status = 'success'
+                    nComplete += 1
+                    if 'duration' in job:
+                        status += " duration:" + job['duration']
+                else:
+                    status = 'error=%d'%job['exitCode']
+                    errorStatus = True
+            else:
+                status = 'crashed'
+                errorStatus = True
+        if len(errorLines) > 0:
+            errorStatus = True
+        print " STATUS:", ("\x1b[31m"+status+"\x1b[0m" if errorStatus else status)
+        if len(errorLines) > 0:
+            print " ERRORS:"
+            for errorLine in errorLines:
+                print "  \x1b[31m" + errorLine + "\x1b[0m"
+        if errorStatus:
+            print " RESUBMIT: \x1b[34m" + job['submitCommand']  + "\x1b[0m"
+            nFailed += 1
+            if opts.resubmit:
+                subprocess.call([job['submitCommand']], shell=True)
+                nResubmitted += 1
+    print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
+
 
 # submit all jobs, which have been grouped in a batch
 if 'condor' in whereToLaunch:
@@ -1408,4 +1513,9 @@ if 'condor' in whereToLaunch:
         else:
             print "the command is ", command
         subprocess.call([command], shell=True)
+
+# dump submitted jobs
+if len(submittedJobs) > 0 and not opts.resubmit:
+    with open('last-submission.json', 'w') as outfile:
+        json.dump(submittedJobs, outfile)
 

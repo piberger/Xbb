@@ -409,7 +409,8 @@ class SampleTree(object):
         self.treeIterator.next()
         self.eventsRead += 1
         if self.debug and self.eventsRead % 1000 == 0:
-            print('DEBUG: %d events read'%self.eventsRead)
+            throughput = 1.0*self.eventsRead / (1.0*(time.time() - self.timeStart) + 0.001)
+            print('DEBUG: %d events read, %1.2f /s'%(self.eventsRead, throughput))
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
