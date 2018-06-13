@@ -1439,12 +1439,15 @@ if opts.task == 'sample':
             print "-"*20
 
 if opts.task == 'checklogs':
+
+    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc']
     with open('last-submission.json', 'r') as infile:
         lastSubmission = json.load(infile)
     batchSystem = BatchSystem.create(config)
     unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
     nFailed = 0
     nResubmitted = 0
+    nComplete = 0
     for job in lastSubmission:
         print "-"*80
         print " NAME:", job['jobName']
@@ -1461,12 +1464,18 @@ if opts.task == 'checklogs':
                             job['exitCode'] = int(line.split('exit code:')[1].strip())
                         if line.startswith('duration (real time)'):
                             job['duration'] = line.split('duration (real time):')[1].strip()
-                        if 'Traceback (most recent call last)' in line or '[FATAL] Auth failed' in line:
-                            errorLines.append("line %d: %s"%(i, line))
+                        for errorMarker in errorMarkers:
+                            if errorMarker in line:
+                                errorLines.append("line %d: %s"%(i, line))
+                                break
+                        # new job output appended to old log
+                        if line.startswith('Configuration Files:'):
+                            errorLines = []
 
             if 'exitCode' in job:
                 if job['exitCode'] == 0:
                     status = 'success'
+                    nComplete += 1
                     if 'duration' in job:
                         status += " duration:" + job['duration']
                 else:
@@ -1488,7 +1497,7 @@ if opts.task == 'checklogs':
             if opts.resubmit:
                 subprocess.call([job['submitCommand']], shell=True)
                 nResubmitted += 1
-    print "%d jobs failed, %d jobs resubmitted"%(nFailed, nResubmitted)
+    print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
 
 
 # submit all jobs, which have been grouped in a batch
