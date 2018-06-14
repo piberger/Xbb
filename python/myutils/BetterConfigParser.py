@@ -14,7 +14,7 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
       os.environ['TERM'] = 'dumb'
 
     # allow string interpolation with environment variables
-    def __init__(self, recursiveReplace=False):
+    def __init__(self, recursiveReplace=True):
         self.recursiveReplace = recursiveReplace
         ConfigParser.SafeConfigParser.__init__(self, os.environ)
 
