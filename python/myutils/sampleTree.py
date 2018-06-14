@@ -34,6 +34,7 @@ import gc
 class SampleTree(object):
 
     def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None):
+        self.sequentialProcessing = True
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
@@ -585,10 +586,31 @@ class SampleTree(object):
             print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
 
     # ------------------------------------------------------------------------------
+    # if self.sequentialProcessing is enabled, the input tree is traversed
+    # multiple times which can lead to a slowdown for larger trees
+    # ------------------------------------------------------------------------------
+    def process(self):
+        if self.sequentialProcessing:
+            print("\x1b[31mINFO: sequential processing of trees is enabled!\x1b[0m")
+
+            # backup full list of trees
+            allTrees = self.outputTrees
+
+            # process output files sequentially
+            for singleTree in allTrees:
+                self.outputTrees = [singleTree]
+                self.process_do()
+
+            # restore
+            self.outputTrees = allTrees
+        else:
+            self.process_do()
+
+    # ------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the
     # cuts are fulfilled.
     # ------------------------------------------------------------------------------
-    def process(self):
+    def process_do(self):
         if self.debug:
             rsrc = resource.RLIMIT_DATA
             # restrict memory
@@ -807,7 +829,7 @@ class SampleTree(object):
         print('INFO: saveMemory is ', self.saveMemory)
         sys.stdout.flush()
 
-        if self.saveMemory:
+        if self.saveMemory and not self.sequentialProcessing:
             self.tree.Reset()
             self.tree = None
             for outputTree in self.outputTrees:
@@ -920,6 +942,7 @@ class SampleTree(object):
             minCut = '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(list(set(cuts)))])
         else:
             minCut = "%r"%cuts
+        #print('\x1b[31mmin cut:',minCut,'\x1b[0m')
         return minCut
 
     def GetEntries(self):
