@@ -15,7 +15,7 @@ class HiggsCandidateSystematics(object):
         self.branchBuffers = {}
         self.addSystematics = addSystematics
 
-        self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','jesFlavorZJet','jesFlavorPhotonJet','jesFlavorPureGluon','jesFlavorPureQuark','jesFlavorPureCharm','jesFlavorPureBottom','jesCorrelationGroupMPFInSitu','jesCorrelationGroupIntercalibration','jesCorrelationGroupbJES','jesCorrelationGroupFlavor','jesCorrelationGroupUncorrelated']
+        self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
         # corrected dijet (Higgs candidate) properties
         #self.higgsProperties = ['H_reg_pt', 'H_reg_eta', 'H_reg_phi', 'H_reg_mass']
@@ -114,8 +114,8 @@ class HiggsCandidateSystematics(object):
                             hJ0 = ROOT.TLorentzVector()
                             hJ1 = ROOT.TLorentzVector()
 
-                            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
-                            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
+                            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
+                            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
                             #dummy
                             #hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
                             #hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
