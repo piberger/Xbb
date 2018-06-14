@@ -29,6 +29,11 @@ class BatchSystemSGE(BatchSystem):
         xmlData = xml.etree.ElementTree.fromstring(subprocess.Popen(["qstat","-xml"], stdout=subprocess.PIPE).stdout.read())
         jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list')]
         return jobNames
+    
+    def getJobNamesRunning(self):
+        xmlData = xml.etree.ElementTree.fromstring(subprocess.Popen(["qstat","-xml"], stdout=subprocess.PIPE).stdout.read())
+        jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list') if job.find('state').text.strip() == 'r']
+        return jobNames
 
 class BatchSystemHTCondor(BatchSystem):
     

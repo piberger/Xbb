@@ -1350,6 +1350,7 @@ if opts.task.split('.')[0] == 'status':
     try:
         batchSystem = BatchSystem.create(config)
         jobs = {k: True for k in batchSystem.getJobNames()}
+        jobsRunning = {k: True for k in batchSystem.getJobNamesRunning()}
     except Exception as e:
         print "ERROR: could not get list of running jobs: ", e
 
@@ -1381,8 +1382,10 @@ if opts.task.split('.')[0] == 'status':
             statusBar = ""
             for x,number in sampleStatus:
                 jobName = jobPrefix + '_' + sampleIdentifier + '_part%d'%(number-1) + '_' + jobSuffix
-                if jobName in jobs:
+                if jobName in jobsRunning:
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[45m\x1b[97mR\x1b[0m')
+                elif jobName in jobs:
+                    statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[43mQ\x1b[0m')
                 else:
                     if not x:
                         failedJobs.append(jobName)
