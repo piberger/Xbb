@@ -79,7 +79,6 @@ channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc_jesTotal-v2/Limits'
 
 path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_tf15noSYS_sepjes-v5/Limits'
-
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
 #mode = 'Mjj'
@@ -97,13 +96,11 @@ outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zl
 if not os.path.exists(outpath):
   os.makedirs(outpath)
 
-
 setup = eval(config.get('LimitGeneral','setup'))
 Dict = eval(config.get('LimitGeneral','Dict'))
 MCs = [Dict[s] for s in setup]
 
 sys_BDT= eval(config.get('LimitGeneral','sys_BDT'))
-
 #sys_BDT= ['CUETP8M1']+eval(config.get('LimitGeneral','sys_BDT'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_HighPt'))
@@ -133,40 +130,10 @@ for mass in masses:
 
 	if not os.path.exists(outpath+channel):
 	  os.makedirs(outpath+channel)
-
-
-
         if mode == 'BDT':
-            #input = TFile.Open(path+'/vhbb_TH_BDT_M'+mass+'_'+channel+Abin+'_8TeV.root','read')
-            #input = TFile.Open()
-
-            #input = TFile.Open(path+'vhbb_TH_ZmmLowPt_13TeV.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmHighPt_13TeV.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
-            #input = TFile.Open(path+'vhbb_TH_ZmmBDT_SCAN_NTrees_100_nEventsMin_400_Zmm_highVpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v9/vhbb_TH_ZuuBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_highpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/ICHEP_v11/vhbb_TH_ZllBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/dc_v9_allpt_4/Limits/vhbb_TH_ZllBDT_highpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_datacards_test/Limits/vhbb_TH_Zuu_CRZb_incl_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_3/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SCACHING_v23_final_wBtag/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final_4/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-            #input = TFile.Open('/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v24/SDC_23_VH_test_final_6/Limits/vhbb_TH_ZeeBDT_lowpt.root','read')
-
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZuuBDT_lowpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZuuBDT_highpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_lowpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/vhbb_TH_ZeeBDT_highpt.root'
-            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
-            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17'
-            #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
             #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits//'
             #input_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/Limits'
-
 
             input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
