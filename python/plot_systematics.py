@@ -72,8 +72,13 @@ channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
 #path_ = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25/rundc-all-test12/Limits'
+
 #path_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc-v2/Limits'
-path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc-v1/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc_jesTotal-v2/Limits'
+
+path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_tf15noSYS_sepjes-v5/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -87,7 +92,7 @@ path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2
 
 #path = config.get('Directories','limits')
 #outpath = config.get('Directories','plotpath')
-outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/plot_sys/'
+outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_tf15noSYS_sepjes-v5/plot_sys/'
 
 if not os.path.exists(outpath):
   os.makedirs(outpath)
@@ -160,7 +165,7 @@ for mass in masses:
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_MVA_12bins_18_03_17/'
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
             #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits//'
-            input_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/Limits'
+            #input_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/Limits'
 
 
             input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
