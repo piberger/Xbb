@@ -39,10 +39,6 @@ if len(opts.tag.strip()) > 1:
 config = BetterConfigParser()
 config.read(opts.config)
 
-#TODO read from config
-mva_min = -0.8
-mva_max = 0.8
-n_bins = 15
 
 converter = SampleTreesToDataFrameConverter(config) 
 converter.loadSamples()
@@ -50,6 +46,10 @@ dfs = converter.getDataFrames()
 for region,df_dict in dfs.iteritems():
     print(region)
     bin_list = None
+    dc = converter.dcMakers[region]
+    mva_min = dc.binning["minX"]
+    mva_max = dc.binning["maxX"]
+    n_bins = dc.binning["nBinsX"]
     try:
         binner = Rebinner(mva_min,mva_max,df_dict['SIG'],df_dict['BKG'])
         bin_list = binner.getBinEdges(n_bins)
