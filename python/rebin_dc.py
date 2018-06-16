@@ -43,23 +43,38 @@ config.read(opts.config)
 converter = SampleTreesToDataFrameConverter(config) 
 converter.loadSamples()
 dfs = converter.getDataFrames()
+
+config_updates = {}
 for region,df_dict in dfs.iteritems():
-    print(region)
+    print("\n------------------------\nComputing bin edges for region: %s"%region)
     bin_list = None
     dc = converter.dcMakers[region]
     mva_min = dc.binning["minX"]
     mva_max = dc.binning["maxX"]
     n_bins = dc.binning["nBinsX"]
+
     try:
         binner = Rebinner(mva_min,mva_max,df_dict['SIG'],df_dict['BKG'])
         bin_list = binner.getBinEdges(n_bins)
     except:
-        print ("Could not fit ROC curve. Set rebin method to default")
+        print ("ERROR: Could not fit ROC curve. Set rebin method to default")
 
     if bin_list is None:
-        print ("Binning fit did not converge. Set rebin method to default")
-        #TODO set rebin method to default
+        print ("ERROR: Binning fit did not converge. Set rebin method to default")
+        rebin_method = "default"
+        rebin_list = "[]"
     else:
-        rebin_list = "[" + ", ".join(str(bin_list)) + "]"
+        rebin_list = "[" + ", ".join(str(x) for x in bin_list) + "]"
+        rebin_method = "fixed"
         print ("rebin_list set to " + rebin_list + ", rebin_method set to 'fixed'")
-        #TODO do so!
+    
+    config_updates[region] = {"rebin_list":rebin_list, "rebin_method":rebin_method}
+
+#TODO: automatic update
+print("\n================================\nupdate your config!")
+for region, update_dict in config_updates.iteritems():
+    print("[dc:%s]"%region)
+    for key, val in update_dict.iteritems():
+        print("%s: %s"%(key,val))
+    print("")
+

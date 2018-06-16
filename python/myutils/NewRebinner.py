@@ -5,7 +5,7 @@ from scipy.interpolate import UnivariateSpline
 from matplotlib import pyplot as plt
 from scipy.misc import derivative
 
-#TODO verbosity, descriptions, safe plots
+#TODO verbosity, descriptions and comments, safe plots, chi2 test, default logscale edges
 
 class Rebinner:
     def __init__(self,mva_min,mva_max,df_signal=None,df_background=None):
@@ -19,7 +19,7 @@ class Rebinner:
         if df_signal is not None and df_background is not None:
             self.prepare(df_signal,df_background)
     
-    def prepare(self,df_signal,df_background):
+    def prepare(self,df_signal,df_background,fitRoc=True):
 
         print df_signal.columns.values
         self.mva = df_signal.columns.values[0]
@@ -34,7 +34,7 @@ class Rebinner:
         
         self.bs_ratio = self.total["background"]/self.total["signal"]
 
-        if not self.fitRoc():
+        if fitRoc and not self.fitRoc():
             raise "ROC fit failed"
 
 

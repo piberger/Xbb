@@ -19,17 +19,21 @@ class SampleTreesToDataFrameConverter(object):
 
     def __init__(self, config):
         self.config = config
-        if config.has_option('List_for_rebinner'):
+        if config.has_option('LimitGeneral', 'List_for_rebinner'):
             self.regions = [x.strip() for x in config.get('LimitGeneral', 'List_for_rebinner').split(',') if len(x.strip()) > 0]
         else:
             self.regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0 and config.get('dc:%s'%(x.strip()),'type').lower()!='cr' ]
+        
+        print("Convert regions:")
+        print(", ".join(self.regions))
         self.dcMakers = {region: Datacard(config=self.config, region=region) for region in self.regions}
         self.dfs = {region: {} for region in self.regions} 
-
+        
 
 
     def loadSamples(self):
         for region in self.regions:
+            print("INFO: Load samples for %s"%region)
             dcMaker = self.dcMakers[region]
             for sampleType in ['SIG','BKG']:
                 samples = dcMaker.samples[sampleType]
