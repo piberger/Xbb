@@ -1443,9 +1443,13 @@ if opts.task == 'sample':
 
 if opts.task == 'checklogs':
 
-    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc']
-    with open('last-submission.json', 'r') as infile:
-        lastSubmission = json.load(infile)
+    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc','file does not exist or is broken, will be SKIPPED']
+    try:
+        with open('last-submission-' + opts.tag + '.json', 'r') as infile:
+            lastSubmission = json.load(infile)
+    except:
+        print "ERROR: nothing to check, there is no submission yet!"
+        exit(0)
     batchSystem = BatchSystem.create(config)
     unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
     nFailed = 0
@@ -1519,6 +1523,6 @@ if 'condor' in whereToLaunch:
 
 # dump submitted jobs
 if len(submittedJobs) > 0 and not opts.resubmit:
-    with open('last-submission.json', 'w') as outfile:
+    with open('last-submission-' + opts.tag + '.json', 'w') as outfile:
         json.dump(submittedJobs, outfile)
 
