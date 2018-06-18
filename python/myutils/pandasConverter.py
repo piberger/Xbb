@@ -17,6 +17,7 @@ import pandas as pd
 
 class SampleTreesToDataFrameConverter(object):
 
+    #TODO: take regions as argument
     def __init__(self, config):
         self.config = config
         if config.has_option('LimitGeneral', 'List_for_rebinner'):
@@ -30,8 +31,8 @@ class SampleTreesToDataFrameConverter(object):
         self.dfs = {region: {} for region in self.regions} 
         
 
-
-    def loadSamples(self):
+    #TODO: check if hdf file is existing
+    def loadSamples(self,safe_hdf=False,path="./"):
         for region in self.regions:
             print("INFO: Load samples for %s"%region)
             dcMaker = self.dcMakers[region]
@@ -41,49 +42,56 @@ class SampleTreesToDataFrameConverter(object):
                 weightF = dcMaker.weightF
                 EvalCut = dcMaker.EvalCut
                 df = pd.DataFrame({treevar: [], 'weight': []})         
-                for i, sample in enumerate(samples): 
-                    print("INFO: Add ",sampleType," sample ", i, " of ", len(samples))
-                    # get sample tree from cache
-                    tc = TreeCache.TreeCache(
-                            sample=sample,
-                            cutList=dcMaker.getCacheCut(sample),
-                            inputFolder=dcMaker.path,
-                            config=self.config,
-                            debug=False
-                        )
-                    if not tc.isCached():
-                        print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
-                        raise Exception("NotCached")
-                    sampleTree = tc.getTree()
-           
-                    if sampleTree:
-                        treeScale = sampleTree.getScale(sample) * 2.0
-                        print ('scale:', treeScale)
+                try:
+                    for i, sample in enumerate(samples): 
+                        print("INFO: Add ",sampleType," sample ", i, " of ", len(samples))
+                        # get sample tree from cache
+                        tc = TreeCache.TreeCache(
+                                sample=sample,
+                                cutList=dcMaker.getCacheCut(sample),
+                                inputFolder=dcMaker.path,
+                                config=self.config,
+                                debug=False
+                            )
+                        if not tc.isCached():
+                            print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
+                            raise "Tree not cached"
+                        sampleTree = tc.getTree()
+               
+                        if sampleTree:
+                            treeScale = sampleTree.getScale(sample) * 2.0
+                            print ('scale:', treeScale)
+                            
+                            # initialize numpy array
+                            nSamples = sampleTree.GetEntries()
+                            input_treevar = []
+                            input_weight = []
+                            sampleTree.addFormula(treevar)
+                            sampleTree.addFormula(weightF)
+                            sampleTree.addFormula(EvalCut)
+                            
+                            # fill numpy array from ROOT tree
+                            for i, event in enumerate(sampleTree):
+                                if sampleTree.evaluate(EvalCut):
+                                    input_treevar.append(sampleTree.evaluate(treevar))
+                                    input_weight.append(sampleTree.evaluate(weightF)*treeScale)
+                                    # total weight comes from weightF (btag, lepton sf, ...) and treeScale to scale MC to x-section
+
+                            sampleDf = pd.DataFrame({treevar: input_treevar, 'weight': input_weight})
+                            df = df.append(sampleDf,ignore_index=True)
+                            
+                        else:
+                            print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
+                            raise "Tree not cached"
                         
-                        # initialize numpy array
-                        nSamples = sampleTree.GetEntries()
-                        input_treevar = []
-                        input_weight = []
-                        sampleTree.addFormula(treevar)
-                        sampleTree.addFormula(weightF)
-                        sampleTree.addFormula(EvalCut)
-                        
-                        # fill numpy array from ROOT tree
-                        for i, event in enumerate(sampleTree):
-                            if sampleTree.evaluate(EvalCut):
-                                input_treevar.append(sampleTree.evaluate(treevar))
-                                input_weight.append(sampleTree.evaluate(weightF)*treeScale)
-                                # total weight comes from weightF (btag, lepton sf, ...) and treeScale to scale MC to x-section
+                    if safe_hdf:
+                        print("INFO: safe %s in %s/%s.hdf"%(sampleType,path,region))
+                        df.to_hdf(path+"/"+region+".hdf",sampleType)
+                    
+                    self.dfs[region][sampleType] = df
+                except:
+                    print("\x1b[31mERROR: reading %s samples for %s failed"%(sampleType,region))
 
-                        sampleDf = pd.DataFrame({treevar: input_treevar, 'weight': input_weight})
-                        df = df.append(sampleDf,ignore_index=True)
-
-                    else:
-                        print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
-                        raise Exception("CachedTreeMissing")
-        
-
-                self.dfs[region][sampleType] = df
     def getDataFrames(self):
         return self.dfs
 

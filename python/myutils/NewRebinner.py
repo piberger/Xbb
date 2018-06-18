@@ -8,23 +8,31 @@ from scipy.misc import derivative
 #TODO verbosity, descriptions and comments, safe plots, chi2 test, default logscale edges
 
 class Rebinner:
-    def __init__(self,mva_min,mva_max,df_signal=None,df_background=None):
+    def __init__(self,mva_min,mva_max,mva_var=None,df_signal=None,df_background=None,make_plots=True):
 
         self.mva_min = mva_min
         self.mva_max = mva_max
+        self.mva = mva_var
         self.s_hist = None
         self.b_hist = None
         self.splines = []
+        self.makePlots = make_plots
 
         if df_signal is not None and df_background is not None:
             self.prepare(df_signal,df_background)
     
     def prepare(self,df_signal,df_background,fitRoc=True):
 
-        print df_signal.columns.values
-        self.mva = df_signal.columns.values[0]
-        if not "Nominal" in self.mva:
-            raise "wrong mva selected"
+        print("INFO: branches in given dataframe: %s"%str(df_signal.columns.values))
+        
+        if self.mva is None:
+            print("INFO: No mva variable set, try to read from dataframe")
+            self.mva = df_signal.columns.values[0]
+            if not "Nominal" in self.mva:
+                raise "wrong mva selected"
+            print("INFO: mva variable set to %s"%self.mva)
+
+        print("INFO: preparing signal and background histograms")
         self.total = {}
         self.s_hist = self.sumWeights(df_signal,"signal")
         self.b_hist = self.sumWeights(df_background,"background")
@@ -77,9 +85,13 @@ class Rebinner:
         return np.clip(self.e_b_fit(x,*self.roc_parms),0,1)
 
     def fitRoc(self):
-        plt.figure(0)
-        plt.plot(self.s_hist.eff,self.s_hist.x)
-        print "Control values: should be mva_min, mva_max, 1, 0"
+        try:
+            plt.figure(0)
+            plt.plot(self.s_hist.eff,self.s_hist.x)
+        except:
+            print("WARNING: couldn't connect to display")
+            self.makePlots = False
+        print("Control values: should be mva_min, mva_max, 1, 0")
         print self.getVal(1,self.s_hist.eff,self.s_hist.x)
         print self.getVal(0,self.s_hist.eff,self.s_hist.x)
         print self.getVal(self.mva_min,self.s_hist.x,self.s_hist.eff)
@@ -91,43 +103,47 @@ class Rebinner:
         q=[0.73264402,0.19657415,0.95333252,0.25953929,3.08998159,0.09257951]
         
         converged = False
-
+        print("INFO: Fitting ROC curve")
         try:
             e_b_p, cov = optimize.curve_fit(self.e_b_fit,self.s_hist.eff[fitrange],e_b_raw[fitrange],q, sigma = (self.s_hist.eff)[fitrange])
             converged = True
-            print e_b_p
+            print("Fit parameters: %s"%str(e_b_p))
             self.roc_parms = e_b_p
             err = np.sqrt(np.diag(cov))
-            print err
+            print("Standard errors: %s"%str(err))
+            print("Correlation Matrix")
             print cov/err[:,np.newaxis]/err[np.newaxis,:]
             x = np.logspace(-3.5,0)
-            plt.figure(1)
-            plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500])))
-            plt.figure(2)
-            plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500]))/e_b_raw[:-500])
-            plt.figure(3)
-            plt.plot(x,self.e_b(x))
-            plt.figure(4)
-            x = np.linspace(0,1)
-            plt.plot(x,self.e_b(x))
+            if self.makePlots:
+                plt.figure(1)
+                plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500])))
+                plt.figure(2)
+                plt.loglog(self.s_hist.eff[:-500],abs(e_b_raw[:-500]-self.e_b(self.s_hist.eff[:-500]))/e_b_raw[:-500])
+                plt.figure(3)
+                plt.plot(x,self.e_b(x))
+                plt.figure(4)
+                x = np.linspace(0,1)
+                plt.plot(x,self.e_b(x))
 
         except:
+            print("ERROR: ROC curve fit did not converge. Try to set other starting values")
             pass
-
-        plt.figure(1)
-        #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q)),':')
-        plt.ylim([1e-6,0.1])
-        plt.figure(2)
-        #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q))/e_b_raw[:-100],':')
-        plt.ylim([1e-4,10])
-        plt.figure(3)
-        plt.loglog(self.s_hist.eff,e_b_raw)
-        #plt.loglog(dfs["signal"].weight[:-100],e_b_fit(dfs["signal"].weight[:-100],*q),':')
-        plt.ylim([1e-5,1])
-        plt.xlim([1e-3,1])
-        plt.figure(4)
-        x = np.linspace(0,1)
-        plt.plot(self.s_hist.eff,e_b_raw)
+        
+        if self.makePlots:
+            plt.figure(1)
+            #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q)),':')
+            plt.ylim([1e-6,0.1])
+            plt.figure(2)
+            #plt.loglog(dfs["signal"].weight[:-100],abs(e_b_raw[:-100]-e_b_fit(dfs["signal"].weight[:-100],*q))/e_b_raw[:-100],':')
+            plt.ylim([1e-4,10])
+            plt.figure(3)
+            plt.loglog(self.s_hist.eff,e_b_raw)
+            #plt.loglog(dfs["signal"].weight[:-100],e_b_fit(dfs["signal"].weight[:-100],*q),':')
+            plt.ylim([1e-5,1])
+            plt.xlim([1e-3,1])
+            plt.figure(4)
+            x = np.linspace(0,1)
+            plt.plot(self.s_hist.eff,e_b_raw)
         #plt.plot(dfs["signal"].weight[:-100],e_b_fit(dfs["signal"].weight[:-100],*q),':')
         #plt.show()
 
@@ -166,6 +182,7 @@ class Rebinner:
 
 
     def fitBinCuts(self):
+        print("INFO: Fit bin edges iteratively")
         self.splines =[lambda x: 0.5]*21
         fitboundaries = lambda n: [-0.001,-1.5+np.sqrt(n)*0.1]
         converged = True
@@ -193,7 +210,7 @@ class Rebinner:
                 self.splines[n] = q
                 print "parameters for n="+str(n)+" found"
             except:
-                print "fit failed"
+                print "ERROR: fit failed"
                 converged = False
                 break
 
@@ -204,7 +221,7 @@ class Rebinner:
         if len(self.splines) <= n:
             if not self.fitBinCuts():
                 return None
-        print str(n) + " bins"
+        print "Estimated events in each bin:"
         print "SIGNAL | BACKGROUND | SIGNIF.**2"
         sig2, cutlist = self.signN(self.getBinCut(1,self.splines[n]),1,n,verbose=True,getCuts=True,signal=self.total["signal"])
         cutlist.append(1.0)

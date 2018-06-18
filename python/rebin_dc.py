@@ -15,6 +15,7 @@ import shutil
 
 
 # read arguments
+# TODO: option for singe region
 argv = sys.argv
 parser = OptionParser()
 parser.add_option("-C", "--config", dest="config", default=[], action="append",
@@ -23,6 +24,10 @@ parser.add_option("-T", "--tag", dest="tag", default='',
                       help="configuration tag")
 parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
+parser.add_option("-l","--load", dest="loadHDF", action="store_const", default=False, const=True,
+                      help="load hdf files")
+parser.add_option("-s","--store", dest="storeHDF", action="store_const", default=False, const=True,
+                      help="store hdf files")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -39,9 +44,16 @@ if len(opts.tag.strip()) > 1:
 config = BetterConfigParser()
 config.read(opts.config)
 
-
 converter = SampleTreesToDataFrameConverter(config) 
-converter.loadSamples()
+
+# TODO: always search fore stored files
+# TODO: filepath, unique filenames for different mva variable sets, etc.
+if opts.storeHDF:
+    print("INFO: Store HDF files")
+
+if not opts.loadHDF:
+    converter.loadSamples(safe_hdf=opts.storeHDF)
+
 dfs = converter.getDataFrames()
 
 config_updates = {}
@@ -51,10 +63,15 @@ for region,df_dict in dfs.iteritems():
     dc = converter.dcMakers[region]
     mva_min = dc.binning["minX"]
     mva_max = dc.binning["maxX"]
-    n_bins = dc.binning["nBinsX"]
+    n_bins = dc.binning["nBinsX"]    
+    binner = Rebinner(mva_min,mva_max)
 
     try:
-        binner = Rebinner(mva_min,mva_max,df_dict['SIG'],df_dict['BKG'])
+        if opts.loadHDF:
+            print("INFO: Load HDF file: %s.hdf"%region)
+            binner.load_hdf("%s.hdf"%region)
+        else:
+            binner.prepare(df_dict['SIG'],df_dict['BKG'])
         bin_list = binner.getBinEdges(n_bins)
     except:
         print ("ERROR: Could not fit ROC curve. Set rebin method to default")
