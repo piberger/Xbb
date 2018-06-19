@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from optparse import OptionParser
 import ROOT
 ROOT.gROOT.SetBatch(True)
 import NewTreeCache as TreeCache
@@ -14,12 +13,14 @@ import glob
 import shutil
 import numpy as np
 import pandas as pd
+import os
 
 class SampleTreesToDataFrameConverter(object):
 
     #TODO: take regions as argument
-    def __init__(self, config):
+    def __init__(self, config,config_name="DC"):
         self.config = config
+        self.config_name = config_name
         if config.has_option('LimitGeneral', 'List_for_rebinner'):
             self.regions = [x.strip() for x in config.get('LimitGeneral', 'List_for_rebinner').split(',') if len(x.strip()) > 0]
         else:
@@ -31,17 +32,26 @@ class SampleTreesToDataFrameConverter(object):
         self.dfs = {region: {} for region in self.regions} 
         
 
-    #TODO: check if hdf file is existing
-    def loadSamples(self,safe_hdf=False,path="./"):
+    def loadSamples(self,safe_hdf=False,path="dumps/",force=False):
         for region in self.regions:
-            print("INFO: Load samples for %s"%region)
+            print("\n\n==========================================\nINFO: Load samples for %s"%region)
             dcMaker = self.dcMakers[region]
             for sampleType in ['SIG','BKG']:
-                samples = dcMaker.samples[sampleType]
                 treevar = dcMaker.treevar
+                hdf_filename = "%s_%s_%s.hdf"%(self.config_name,region,treevar.split(".")[0])
+                if not force:
+                    try:
+                        df = pd.read_hdf("%s/%s"%(path,hdf_filename),sampleType)
+                        print("INFO: HDF file for %s %s %s %s existing. Skip loading"%(self.config_name,region,treevar,sampleType))
+                        self.dfs[region][sampleType] = df
+                        continue
+                    except:
+                        print("INFO: No HDF file found matching %s %s %s %s. Load samples from cache."%(self.config_name,region,treevar,sampleType))
+                        pass
+                df = pd.DataFrame({treevar: [], 'weight': []})         
+                samples = dcMaker.samples[sampleType]
                 weightF = dcMaker.weightF
                 EvalCut = dcMaker.EvalCut
-                df = pd.DataFrame({treevar: [], 'weight': []})         
                 try:
                     for i, sample in enumerate(samples): 
                         print("INFO: Add ",sampleType," sample ", i, " of ", len(samples))
@@ -85,8 +95,10 @@ class SampleTreesToDataFrameConverter(object):
                             raise "Tree not cached"
                         
                     if safe_hdf:
-                        print("INFO: safe %s in %s/%s.hdf"%(sampleType,path,region))
-                        df.to_hdf(path+"/"+region+".hdf",sampleType)
+                        print("INFO: safe %s in %s/%s"%(sampleType,path,hdf_filename))
+                        if not os.path.exists(path):
+                                os.makedirs(path)
+                        df.to_hdf("%s/%s"%(path,hdf_filename),sampleType)
                     
                     self.dfs[region][sampleType] = df
                 except:

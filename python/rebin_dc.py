@@ -26,8 +26,8 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-l","--load", dest="loadHDF", action="store_const", default=False, const=True,
                       help="load hdf files")
-parser.add_option("-s","--store", dest="storeHDF", action="store_const", default=False, const=True,
-                      help="store hdf files")
+parser.add_option("--force", dest="force", action="store_const", default=False, const=True,
+                      help="force reloading samples (use it when cuts have changed)")
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -44,21 +44,17 @@ if len(opts.tag.strip()) > 1:
 config = BetterConfigParser()
 config.read(opts.config)
 
-converter = SampleTreesToDataFrameConverter(config) 
+converter = SampleTreesToDataFrameConverter(config,config_name=opts.tag) 
 
-# TODO: always search fore stored files
-# TODO: filepath, unique filenames for different mva variable sets, etc.
-if opts.storeHDF:
-    print("INFO: Store HDF files")
 
 if not opts.loadHDF:
-    converter.loadSamples(safe_hdf=opts.storeHDF)
+    converter.loadSamples(safe_hdf=True,force=opts.force)
 
 dfs = converter.getDataFrames()
 
 config_updates = {}
 for region,df_dict in dfs.iteritems():
-    print("\n------------------------\nComputing bin edges for region: %s"%region)
+    print("\n_______________________________________________________\nComputing bin edges for region: %s"%region)
     bin_list = None
     dc = converter.dcMakers[region]
     mva_min = dc.binning["minX"]
@@ -68,8 +64,9 @@ for region,df_dict in dfs.iteritems():
 
     try:
         if opts.loadHDF:
-            print("INFO: Load HDF file: %s.hdf"%region)
-            binner.load_hdf("%s.hdf"%region)
+            filename = "dumps/%s_%s_%s.hdf"%(opts.tag,region,dc.treevar.split(".")[0])
+            print("INFO: Load HDF file: %s"%filename)
+            binner.load_hdf(filename)
         else:
             binner.prepare(df_dict['SIG'],df_dict['BKG'])
         bin_list = binner.getBinEdges(n_bins)
@@ -88,7 +85,7 @@ for region,df_dict in dfs.iteritems():
     config_updates[region] = {"rebin_list":rebin_list, "rebin_method":rebin_method}
 
 #TODO: automatic update
-print("\n================================\nupdate your config!")
+print("\n================================\n\nupdate your config!\n")
 for region, update_dict in config_updates.iteritems():
     print("[dc:%s]"%region)
     for key, val in update_dict.iteritems():
