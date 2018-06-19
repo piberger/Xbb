@@ -702,7 +702,7 @@ class Datacard(object):
                 usedBranchList.addCut(sample.specialweight)
                 print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
             else:
-                print("INFO: don't use specialweight, weight:", systematics['weight'])
+                print("INFO: don't use specialweight, weight:", systematicsList[0]['weight'])
 
             # enable only used branches
             usedBranchList.addCut(['evt','run','isData','event'])
