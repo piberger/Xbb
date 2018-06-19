@@ -153,7 +153,7 @@ class Rebinner:
         return np.where(np.power(10,spline(np.log10(x))) > self.s_limit,np.power(10,spline(np.log10(x))),self.s_limit*np.ones_like(x))
 
     def sign1(self,s,b):
-        return (s+b)*np.log(1+s/b)-s
+        return 2*((s+b)*np.log(1+s/b)-s)
         #return s**2/(s+b)
 
     def signN(self, x, c, n , verbose = False, signal = 1, getCuts = False):

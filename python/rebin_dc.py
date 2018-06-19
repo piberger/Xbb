@@ -12,7 +12,7 @@ import sys
 import pickle
 import glob
 import shutil
-
+import numpy as np
 
 # read arguments
 # TODO: option for singe region
@@ -53,6 +53,9 @@ if not opts.loadHDF:
 dfs = converter.getDataFrames()
 
 config_updates = {}
+sig = 0
+sig_old = 0
+
 for region,df_dict in dfs.iteritems():
     print("\n_______________________________________________________\nComputing bin edges for region: %s"%region)
     bin_list = None
@@ -70,6 +73,8 @@ for region,df_dict in dfs.iteritems():
         else:
             binner.prepare(df_dict['SIG'],df_dict['BKG'])
         bin_list = binner.getBinEdges(n_bins)
+        sig += binner.EvalSign(bin_list)**2
+        sig_old += binner.EvalSign(np.linspace(mva_min,mva_max,n_bins))**2
     except:
         print ("ERROR: Could not fit ROC curve. Set rebin method to default")
 
@@ -83,6 +88,10 @@ for region,df_dict in dfs.iteritems():
         print ("rebin_list set to " + rebin_list + ", rebin_method set to 'fixed'")
     
     config_updates[region] = {"rebin_list":rebin_list, "rebin_method":rebin_method}
+
+print("\n *** Significance of equal spaced binds: %s ***"%str(np.sqrt(sig_old)))
+print(" *** Significance of new bins: %s ***"%str(np.sqrt(sig)))
+print(" *** relative difference: %s ***"%str((np.sqrt(sig)-np.sqrt(sig_old))/np.sqrt(sig_old)))
 
 #TODO: automatic update
 print("\n================================\n\nupdate your config!\n")
