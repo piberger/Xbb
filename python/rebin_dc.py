@@ -83,15 +83,15 @@ for region,df_dict in dfs.iteritems():
         rebin_method = "default"
         rebin_list = "[]"
     else:
-        rebin_list = "[" + ", ".join(str(x) for x in bin_list) + "]"
+        rebin_list = "[" + ", ".join(str(np.round(x,4)) for x in bin_list) + "]"
         rebin_method = "fixed"
         print ("rebin_list set to " + rebin_list + ", rebin_method set to 'fixed'")
     
     config_updates[region] = {"rebin_list":rebin_list, "rebin_method":rebin_method}
 
-print("\n *** Significance of equal spaced binds: %s ***"%str(np.sqrt(sig_old)))
-print(" *** Significance of new bins: %s ***"%str(np.sqrt(sig)))
-print(" *** relative difference: %s ***"%str((np.sqrt(sig)-np.sqrt(sig_old))/np.sqrt(sig_old)))
+print("\n *** Significance of equally spaced bins: %s ***"%str(np.round(np.sqrt(sig_old),3)))
+print(" *** Significance of new bins: %s ***"%str(np.round(np.sqrt(sig),3)))
+print(" *** relative difference: %s %% ***"%str(np.round(100*(np.sqrt(sig)-np.sqrt(sig_old))/np.sqrt(sig_old),2)))
 
 #TODO: automatic update
 print("\n================================\n\nupdate your config!\n")
