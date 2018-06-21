@@ -1,0 +1,9 @@
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_1.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_10.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_12.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_13.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_2.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_3.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_4.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_5.root
+/store/user/berger_p2/VHbb/V5benriched/DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180620_121747/0000/tree_9.root
