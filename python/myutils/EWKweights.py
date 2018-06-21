@@ -6,14 +6,14 @@ from pdgId import pdgId
 
 class EWKweights(object):
 
-    def __init__(self, sample=None, nano=False, boost= False,idxtag=""):
+    def __init__(self, sample=None, nano=False, boost= False,tagidx=""):
         self.lastEntry = -1
         self.nano = nano
         self.branchBuffers = {}
         self.branches = []
         self.boost = boost
 #Defines the bTag index
-	self.idxt=idxtag
+	self.tagidx=tagidx
 
         #NLOw is not defined in booseted topologie
         if self.boost == False:
@@ -48,8 +48,13 @@ class EWKweights(object):
     def getNLOw(self, tree):
         NLOw = 1.0
 #defines the idx for the first and second jet
-	idx0=getattr(tree,self.idxt)[0]
-	idx1=getattr(tree,self.idxt)[1]
+	if self.tagidx:
+#	 print "Using the {idx}".format(idx=self.tagidx)
+	 idx0=getattr(tree,self.tagidx)[0]
+	 idx1=getattr(tree,self.tagidx)[1]
+	else:
+	 print "Missing bTag index. Check general.ini"
+	 quit()
         if self.applyNLO:
 #            if self.nano:
 #                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
