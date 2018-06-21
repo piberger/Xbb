@@ -1410,7 +1410,7 @@ if opts.task.split('.')[0] == 'status':
 # outputs a simple python code to read the whole sample as chain
 if opts.task == 'sample':
     fileLocator = FileLocator(config=config)
-    path = config.get("Directories", "PREPout")
+    path = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
@@ -1418,13 +1418,19 @@ if opts.task == 'sample':
     print "folders:", foldersToCheck
     basePaths = dict([(x, config.get("Directories", x)) for x in foldersToCheck])
 
+
     for folder in foldersToCheck:
         path = basePaths[folder]
         for sampleIdentifier in sampleIdentifiers:
-            splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=True, splitFilesChunkSize=-1, config=config).getSampleFileNameChunks()
+            matchingSamples = [x for x in info if x.identifier == sampleIdentifier]
+            sampleObject = matchingSamples[0] if len(matchingSamples)>0 else None
+            sampleTree = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=False, splitFilesChunkSize=-1, config=config)
+            splitFilesChunks = sampleTree.getSampleFileNameChunks()
+            sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
 
             print "----",sampleIdentifier,"----"
-            print "# BEGINNING OF PYTHON FILE"
+            print "# BEGINNING OF PYTHON FILE\n\n"
+            print "# sample: ", sampleIdentifier
             print "import ROOT"
             print "from myutils.sampleTree import SampleTree"
             print "sampleFiles = ["
@@ -1433,19 +1439,32 @@ if opts.task == 'sample':
             print "]"
             print "sampleTree = SampleTree(sampleFiles, treeName='Events')"
             print "print 'number of events:', sampleTree.GetEntries()"
+            print "# ----- loop example ----"
             print "# example how to loop over all events"
             print "# alternatively, the TChain object can be accessed as sampleTree.tree"
             print "#for event in sampleTree:"
             print "#if event.Vtype == 1:"
             print "#    print 'Vtype 1 event', event.event"
-            print "# END OF PYTHON FILE"
+            print "# ----- skim example ----"
+            print "#sampleTree.addOutputTree('skim_" + sampleIdentifier + ".root','(kinFit.V_mass_fit > 75 && kinFit.V_mass_fit < 105 && (kinFit.H_mass_fit_fallback > 90 && kinFit.H_mass_fit_fallback < 150) && Jet_btagCMVA[hJidxCMVA[0]] > -0.5884 && Jet_btagCMVA[hJidxCMVA[1]] > -0.5884 && (((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2))&&(Jet_PtReg[hJidxCMVA[0]]>20&&Jet_PtReg[hJidxCMVA[1]]>20)&&(abs(Jet_eta[hJidxCMVA[0]])<2.4&&abs(Jet_eta[hJidxCMVA[1]])<2.4)&&(hJidxCMVA[0]>-1&&hJidxCMVA[1]>-1))) && ((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2)) && (kinFit.V_pt_fit>50)')"
+            print "#for x in ['nJet','Jet_pt','Jet_eta','Jet_phi','event','run','Muon_pt','Muon_eta','Muon_phi','Muon_mass','Electron_eta','Electron_pt','Electron_phi','Electron_mass','Jet_mass','MET_Pt','MET_pt','Jet_jetId','Jet_puId']:"
+            print "#    sampleTree.addFormula(x)"
+            print "#sampleTree.addOutputBranch('weight','" + config.get('Weights','weightF') + "')"
+            print "#sampleTree.addOutputBranch('XSweight','%f')"%sampleScale
+            print "#sampleTree.process()"
+
+            print "\n\n# END OF PYTHON FILE"
             print "-"*20
 
 if opts.task == 'checklogs':
 
-    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc']
-    with open('last-submission.json', 'r') as infile:
-        lastSubmission = json.load(infile)
+    errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc','file does not exist or is broken, will be SKIPPED']
+    try:
+        with open('last-submission-' + opts.tag + '.json', 'r') as infile:
+            lastSubmission = json.load(infile)
+    except:
+        print "ERROR: nothing to check, there is no submission yet!"
+        exit(0)
     batchSystem = BatchSystem.create(config)
     unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
     nFailed = 0
@@ -1519,6 +1538,6 @@ if 'condor' in whereToLaunch:
 
 # dump submitted jobs
 if len(submittedJobs) > 0 and not opts.resubmit:
-    with open('last-submission.json', 'w') as outfile:
+    with open('last-submission-' + opts.tag + '.json', 'w') as outfile:
         json.dump(submittedJobs, outfile)
 
