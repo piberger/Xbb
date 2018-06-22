@@ -93,7 +93,7 @@ for fileName in filelist:
     fileLocator.makedirs(tmpFolder)
     fileLocator.makedirs(outputFolder)
 
-    if not fileLocator.exists(outputFileName) or opts.force:
+    if not fileLocator.isValidRootFile(outputFileName) or opts.force:
         # load sample tree and initialize vtype corrector
         sampleTree = SampleTree([inputFileName], config=config)
         if not sampleTree.tree:
