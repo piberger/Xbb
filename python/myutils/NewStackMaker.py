@@ -265,22 +265,23 @@ class NewStackMaker:
                         pass
 
             if isSimpleCut:
-                blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
-                for i in range(self.ratioPlot.GetXaxis().GetNbins()):
-                    binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
-                    value = 1.1
-                    if binLowEdgeValue >= blindingCutThreshold:
-                        error = 0.6
-                    else:
-                        error = 0.0
-                    blindedRegion.SetBinContent(1+i, value)
-                    blindedRegion.SetBinError(1+i, error)
-                blindedRegion.SetFillColor(ROOT.kRed)
-                blindedRegion.SetFillStyle(3018)
-                blindedRegion.SetMarkerSize(0)
-                blindedRegion.Draw("SAME E2")
-                self.addObject(blindedRegion)
-                print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+                if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
+                    blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+                    for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                        binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                        value = 1.1
+                        if binLowEdgeValue >= blindingCutThreshold:
+                            error = 0.6
+                        else:
+                            error = 0.0
+                        blindedRegion.SetBinContent(1+i, value)
+                        blindedRegion.SetBinError(1+i, error)
+                    blindedRegion.SetFillColor(ROOT.kRed)
+                    blindedRegion.SetFillStyle(3018)
+                    blindedRegion.SetMarkerSize(0)
+                    blindedRegion.Draw("SAME E2")
+                    self.addObject(blindedRegion)
+                    print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)

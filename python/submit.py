@@ -75,6 +75,7 @@ parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", defa
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
+parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -1471,9 +1472,6 @@ if opts.task == 'checklogs':
     nResubmitted = 0
     nComplete = 0
     for job in lastSubmission:
-        print "-"*80
-        print " NAME:", job['jobName']
-        print " LOG:", job['log']
         errorLines = []
         errorStatus = False
         if job['jobName'] in unfinishedJobs:
@@ -1508,17 +1506,21 @@ if opts.task == 'checklogs':
                 errorStatus = True
         if len(errorLines) > 0:
             errorStatus = True
-        print " STATUS:", ("\x1b[31m"+status+"\x1b[0m" if errorStatus else status)
-        if len(errorLines) > 0:
-            print " ERRORS:"
-            for errorLine in errorLines:
-                print "  \x1b[31m" + errorLine + "\x1b[0m"
-        if errorStatus:
-            print " RESUBMIT: \x1b[34m" + job['submitCommand']  + "\x1b[0m"
-            nFailed += 1
-            if opts.resubmit:
-                subprocess.call([job['submitCommand']], shell=True)
-                nResubmitted += 1
+        if not opts.unfinished or errorStatus or not status.startswith('success'):
+            print "-"*80
+            print " NAME:", job['jobName']
+            print " LOG:", job['log']
+            print " STATUS:", ("\x1b[31m"+status+"\x1b[0m" if errorStatus else status)
+            if len(errorLines) > 0:
+                print " ERRORS:"
+                for errorLine in errorLines:
+                    print "  \x1b[31m" + errorLine + "\x1b[0m"
+            if errorStatus:
+                print " RESUBMIT: \x1b[34m" + job['submitCommand']  + "\x1b[0m"
+                nFailed += 1
+                if opts.resubmit:
+                    subprocess.call([job['submitCommand']], shell=True)
+                    nResubmitted += 1
     print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
 
 
