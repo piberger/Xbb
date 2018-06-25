@@ -404,12 +404,26 @@ class LeptonWeights(object):
                 #raw_input()
 
             if self.channel == 'Wlv' or self.channel == 'Zvv' or len(self.channel) < 1:
+                # recompute vLeptons
+                vLepSelector = vLeptonSelector(tree, config=self.config)
+                Vtype = vLepSelector.getVtype()
+                vLeptons = vLepSelector.getVleptons()
+
+                # cross check vtypes
+                if Vtype != tree.Vtype:
+                    print "\x1b[97m\x1b[41mVtype mismatch!!!!!\x1b[0m"
+                    print "vLeptons:", vLeptons
+                    print "Vtype:", Vtype
+                    print "Vtype(tree)", tree.Vtype
+                    print "MET:",tree.MET_pt,tree.MET_Pt
+                    raise Exception("VtypeMismatch")
+
                 for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu']:
                     self.branchBuffers[branchName][0] = 1.0
                     self.branchBuffers[branchName][1] = 0.0
                     self.branchBuffers[branchName][2] = 0.0
 
-                if tree.Vtype != 4:
+                if tree.Vtype != 4 and tree.Vtype != 5:
                     muID_BCDEF = [1.,0.,0.]
                     muID_GH = [1.,0.,0.]
                     muISO_BCDEF = [1.,0.,0.]

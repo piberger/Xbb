@@ -927,6 +927,17 @@ class SampleTree(object):
             print("sampleTree.getScale(): sample: ", sample, "lumi: ", lumi, "xsec: ", sample.xsec, "sample.sf: ", sample.sf, "count (", countHistogram, "):", count, " ---> using scale: ", theScale)
         return theScale
 
+    def getCollection(self, name):
+        collection = lambda: None
+        branches = [x.GetName() for x in self.GetListOfBranches()]
+        numBranch = 'n' + name
+        if numBranch in branches:
+            collection.size = lambda: getattr(self.tree, numBranch)
+            for x in branches:
+                if x.startswith(name + '_'):
+                    setattr(collection, x.split(name + '_')[1], getattr(self.tree, x))
+        return collection
+
     # create a unique string representation of the total cut, e.g. used to calculate the hash for cached samples 
     # this is not required to be a 'real' cut string, used by TTreeFormula etc.
     @staticmethod

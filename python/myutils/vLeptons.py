@@ -14,6 +14,10 @@ class vLeptonSelector(object):
     def __init__(self, tree, config):
 
         self.electronMVA = config.get('General', 'electronMVA') if config.has_option('General', 'electronMVA') else 'Electron_mvaSpring16GP_WP90' 
+        self.electronMVA_80 = config.get('General', 'electronMVA80') if config.has_option('General', 'electronMVA80') else self.electronMVA
+        self.electronMVA_90 = config.get('General', 'electronMVA90') if config.has_option('General', 'electronMVA90') else self.electronMVA
+
+
         zMuons = []
         zElectrons = []
         wElectrons = []
@@ -26,15 +30,16 @@ class vLeptonSelector(object):
                 zMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA)[i] and tree.Electron_pfRelIso03_all[i]<0.15:
+            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA_90)[i] and tree.Electron_pfRelIso03_all[i]<0.15:
                 zElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
+
         for i in range(tree.nMuon):
             if tree.Muon_pt[i]>25 and tree.Muon_tightId[i] >= 1 and tree.Muon_pfRelIso04_all[i]<0.15 and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
                 wMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA)[i] and tree.Electron_pfRelIso03_all[i]<0.12:
+            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA_80)[i] and tree.Electron_pfRelIso03_all[i]<0.12:
                 wElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
 
@@ -67,7 +72,7 @@ class vLeptonSelector(object):
             Vtype = 5
         else:
             Vtype = 4
-            if tree.MET_pt < 150:
+            if tree.MET_Pt < 150:
                 Vtype = -1
         self.Vtype = Vtype
         self.vLeptons = vLeptons
