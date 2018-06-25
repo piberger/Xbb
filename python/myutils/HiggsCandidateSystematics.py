@@ -6,7 +6,7 @@ from Jet import Jet
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(object):
     
-    def __init__(self, addSystematics=True):
+    def __init__(self, addSystematics=True, jetIndices="hJidx"):
         self.debug = False
         self.lastEntry = -1
         self.nJet = -1
@@ -14,6 +14,7 @@ class HiggsCandidateSystematics(object):
         self.branches = []
         self.branchBuffers = {}
         self.addSystematics = addSystematics
+        self.jetIndices = jetIndices
 
         self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
@@ -62,9 +63,10 @@ class HiggsCandidateSystematics(object):
         # if current entry has not been processed yet
         if currentEntry != self.lastEntry:
             self.lastEntry = currentEntry
-
-            hJidx0 = tree.hJidx[0]
-            hJidx1 = tree.hJidx[1]
+            
+            hJidx = getattr(tree, self.jetIndices)
+            hJidx0 = hJidx[0]
+            hJidx1 = hJidx[1]
 
 
             # select branches from tree
