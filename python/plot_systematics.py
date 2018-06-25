@@ -5,7 +5,7 @@ from ROOT import TFile
 from optparse import OptionParser
 import sys
 from myutils import BetterConfigParser, TdrStyles, getRatio
-
+import os
 
 argv = sys.argv
 parser = OptionParser()
@@ -20,12 +20,65 @@ mode = 'BDT'
 xMin=-1
 xMax=1
 masses = ['125']
+#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_highpt']
 
-#channels = ['Zuu_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRZb_lowpt','Zee_BDT_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_lowpt','Zee_BDT_highpt','Zuu_BDT_highpt','Zuu_BDT_lowpt']
-channels = ['Zuu_BDT_highpt']
+#channels = ['ZeeMassVV_highpt','ZeeMass_highpt']
+#vhbb_TH_ZuuMass_highpt.root
+#channels = ['ZuuMass_highpt']
 
-path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v1/Limits'
+#Test and test complementary
+#channels = ['ZeeBDT_lowpt', 'ZuuBDT_highpt']
+channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt']
 
+#All
+#channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+
+#channels = ['ZeeBDT_lowpt']
+#channels = ['Zee_CRZlight_lowpt']
+#channels = ['Zuu_CRZlight_lowpt']
+#Abins = ['HighPt','LowPt']
+#Abins = ['HighPt']
+#Abins = ['LowPt']
+#channels= ['ZeeBDT_lowpt']
+#channels= ['ZllBDT_lowpt']
+#channels= ['ZllBDT_highpt']
+#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['Zuu_CRZlight_lowpt','Zee_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_highpt','Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
+#channels = ['Zee_CRZb_incl_highpt','Zuu_CRZb_incl_highpt','Zee_CRZb_incl_lowpt','Zuu_CRZb_incl_lowpt','Zuu_CRttbar_highpt','Zee_CRttbar_highpt','Zuu_CRttbar_lowpt','Zee_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_highpt']
+#channels = ['ZeeBDT_highpt']
+#channels = ['Zee_CRZlight_highpt']
+#channels = ['Zee_CRZlight_lowpt']
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/V24/DC_v23_VH_v2_25_11_2016/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/DC_v5_mva_test2/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CMVA_test_sys/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_15_03_17/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/SCAHINGDC_v5_CSV_4_wbTag/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_09_04_2017/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_CSV_18_03_17/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHING_v8_Zll_6_debug/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHING_v8_Zll_7/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_v8_allw_addJESsys_sysMinMax_bTagsplit_minbr_6_4/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_02_06_2017/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_newMVAIDsys_test/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_15_06_2017/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDC_MVAID_E_B_v2/Limits/'
+#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017/'
+#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_newMVAid/'
+#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/DC_VH_20_06_2017_BDTmin_0p2/'
+#path_ =  '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGSPLIT_07_07_17_withSBweights_missing_5/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_M/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MERGESYSCACHINGDCSPLIT_SB_Mjj_08_08_17_v3/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits/'
+#path_ = '/mnt/t3nfs01/data01/shome/berger_p2/VHbb/CMSSW_9_4_0_pre3/src/Xbb/python/logs_v25/rundc-all-test12/Limits'
+
+#path_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc-v2/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_jesTotal-v4/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc-v1/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc_jesTotal-v2/Limits'
+
+path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_tf15noSYS_sepjes-v5/Limits'
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
 #mode = 'Mjj'
@@ -38,14 +91,17 @@ path_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python
 
 #path = config.get('Directories','limits')
 #outpath = config.get('Directories','plotpath')
-#outpath = config.get('Directories','plotpath')
-outpath = '2017SYSplotdc/'
+outpath= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_tf15noSYS_sepjes-v5/plot_sys/'
+
+if not os.path.exists(outpath):
+  os.makedirs(outpath)
 
 setup = eval(config.get('LimitGeneral','setup'))
 Dict = eval(config.get('LimitGeneral','Dict'))
 MCs = [Dict[s] for s in setup]
 
 sys_BDT= eval(config.get('LimitGeneral','sys_BDT'))
+#sys_BDT= ['CUETP8M1']+eval(config.get('LimitGeneral','sys_BDT'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_HighPt'))
 #systematicsnaming = eval(config.get('LimitGeneral','systematicsnaming_LowPt'))
@@ -71,12 +127,23 @@ def myText(txt="CMS Preliminary",ndcX=0,ndcY=0,size=0.8):
 #for mass in ['110','115','120','125','130','135']:
 for mass in masses:
     for channel in channels:
+
+	if not os.path.exists(outpath+channel):
+	  os.makedirs(outpath+channel)
         if mode == 'BDT':
             #input = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_7/src/HiggsAnalysis/CombinedLimit/V24/SCAHINGDC_v5_CSV_6/'
-            input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v1/Limits'
+            #input_ = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_7_4_3/src/Xbb/python/logs_v25/MSCACHINGSPLIT_eval_v8_sigPS_All_rmvbr_VH_7/Limits//'
+            #input_ = '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc_fixednoPU-v3/Limits'
 
             input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
             print 'input_ is', input_
+
+
+
+	    input_ = '%s/vhbb_TH_%s.root'%(path_,channel)
+            print 'input_ is', input_
+
+
 
             #'ZeeMass_lowpt':'ZeeMass_lowpt',if not 'ZeeBDT_lowpt' in input_: continue
             #if not ('ZeeMassVV_highpt' in input_ or 'ZeeMass_highpt' in input_): continue
@@ -248,7 +315,7 @@ for mass in masses:
 
                 #name = outpath+Abin+'_M'+mass+'_'+channel+'_'+MC+syst+'.png'
                 #c.Print(name)
-                name = outpath+'systPlot_'+channel+'_M'+mass+'_'+channel+'_'+MC+syst+'.pdf'
+                name = outpath+channel+'/'+'systPlot_'+channel+'_M'+mass+'_'+channel+'_'+MC+syst+'.pdf'
                 #print 'name is', name
                 #if not 'EWK' in name: sys.exit()
                 c.Print(name.replace('.pdf','.png'))
