@@ -7,21 +7,24 @@ import glob
 from multiprocessing import Process
 from myutils.sampleTree import SampleTree as SampleTree
 import argparse
+import itertools
 from myutils.BranchList import BranchList
 
 parser = argparse.ArgumentParser(description='getExtWeightsNew: compute stitching coefficients for samples with overlap')
 parser.add_argument('--samples', dest='samples', help='list of sample identifiers')
-parser.add_argument('--cuts', dest='cuts', help='cuts')
+parser.add_argument('--cuts', dest='cuts', help='cuts', default='')
+parser.add_argument('--fc', dest='fc', help='fc', default='')
+parser.add_argument('--prune', dest='prune', help='remove contributions with fraction lower than this', default='0.0')
 parser.add_argument('-T', dest='tag', help='config tag')
 args = parser.parse_args()
 
 # 1) ./getExtWeights.py configname
 # 2) ./getExtWeight.py configname verify
 
-def getEventCount(config, sampleIdentifier, cut="1"):
-    sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','PREPout').strip()}, config=config)
+def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None):
+    if not sampleTree:
+        sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','PREPout').strip()}, config=config)
     nEvents = sampleTree.tree.Draw("1", cut, "goff")
-    print sampleIdentifier," =>",nEvents
     return nEvents
 
 
@@ -36,31 +39,53 @@ for configFile in configFiles:
     config.read(configFolder + configFile)
     print "read config ", configFile
 
+pruneThreshold = float(args.prune)
+
 sampleGroups = []
 for x in args.samples.split(','):
     sampleGroups.append(x.split('+'))
 
 sampleCuts = args.cuts.strip().split(',')
+if args.fc != '':
+    cutGroups = [x.strip(',').split(',') for x in args.fc.strip(';').split(';')]
+    # cartesian product
+    sampleCuts = list(set(['&&'.join(x) for x in itertools.product(*cutGroups)]))
+    print sampleCuts
+    print "=> len=",len(sampleCuts)
 
 countDict = {}
 for sampleGroup in sampleGroups:
-    for sampleIdentifier in sampleGroup:
-        countDict[sampleIdentifier] = {}
+    count = 0
+    for sample in sampleGroup:
+        countDict[sample] = {}
+
+        sampleTree = SampleTree({'name': sample, 'folder': config.get('Directories','PREPout').strip()}, config=config)
+        print "CUT=",sampleCuts,":"
         for sampleCut in sampleCuts:
-            countDict[sampleIdentifier][sampleCut] = -1
-
-for sampleCut in sampleCuts:
-    print "CUT=",sampleCuts,":"
-    for sampleGroup in sampleGroups:
-        count = 0
-        for sample in sampleGroup:
-            sampleCount = getEventCount(config, sample, sampleCut)
+            sampleCount = getEventCount(config, sample, sampleCut, sampleTree=sampleTree)
             print sample,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
-            count += sampleCount
-        for sample in sampleGroup:
-            countDict[sample][sampleCut] = count
+            if sampleCut in countDict[sample]:
+                print "duplicate!!", sample, sampleCut, countDict[sample][sampleCut]
+                raise Exception("duplicate")
+            countDict[sample][sampleCut] = sampleCount
 
+# pruning
+for sampleIdentifier,counts in countDict.iteritems():
+    specialweight = ''
+    for cut,cutCount in counts.iteritems():
+        totalCount = 0
+        for sample,sampleCounts in countDict.iteritems():
+            totalCount += sampleCounts[cut]
+
+        if cutCount>0 and totalCount>0:
+            fraction = 1.0*cutCount/totalCount
+            if fraction < pruneThreshold:
+                print "\x1b[31mfor "+sampleIdentifier + " set count("+cut+") from %d"%counts[cut] + " to 0\x1b[0m"
+                counts[cut] = 0
+
+print "result:"
 print countDict
+print "-"*80
 
 for sampleIdentifier,counts in countDict.iteritems():
     specialweight = ''
@@ -80,4 +105,5 @@ for sampleIdentifier,counts in countDict.iteritems():
                 specialweight += '(' + cut + ')*%1.5f'%(1.0*cutCount/totalCount)
     print sampleIdentifier, specialweight
 
+print "-"*80
 

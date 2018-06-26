@@ -64,8 +64,15 @@ class SampleTreesToNumpyConverter(object):
             
             for d in ['Up','Down']:
                 for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
-                    systFullName = "btag_" + syst + "_" + d
-                    weightName = self.bTagWeight + "_" +  syst + d
+                  for npt in ["0","1","2","3"]:
+                    for neta in ["1","2","3"]:
+			#splitted systematics
+                        systFullName = "btag_" + syst + "_pt"+ npt + "_eta" + neta + "_" + d
+                        weightName = "bTagWeightCMVAV2_Moriond_" +  syst + "_pt"+ npt + "_eta" + neta  + d
+			
+			#not splitted systematics			
+#                    systFullName = "btag_" + syst + "_" + d
+#                    weightName = self.bTagWeight + "_" +  syst + d
                     self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
                     self.weightSYS.append(systFullName)
         print ("btag weights: "+", ".join(self.weightSYS))
@@ -174,8 +181,8 @@ class SampleTreesToNumpyConverter(object):
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
-        
-        #systematics for training
+
+       #systematics for training
         puresystematics = deepcopy(systematics)
         if 'Nominal' in puresystematics:
             puresystematics.remove('Nominal')
