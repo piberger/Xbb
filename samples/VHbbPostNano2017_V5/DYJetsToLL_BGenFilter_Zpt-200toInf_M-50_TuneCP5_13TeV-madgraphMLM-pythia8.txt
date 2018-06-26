@@ -1,0 +1,7 @@
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_2.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_3.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_4.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_5.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_6.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_7.root
+/store/user/berger_p2/VHbb/V5benriched/DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/arizzi-RunIIFall17MiniAODv2-Ne83/180620_121949/0000/tree_8.root

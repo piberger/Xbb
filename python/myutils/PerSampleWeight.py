@@ -16,7 +16,7 @@ class PerSampleWeight(object):
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
-        self.weight = weightAffected if self.sample.name in self.affectedSampleNames else self.weightUnaffected
+        self.weight = self.weightAffected if self.sample.name in self.affectedSampleNames else self.weightUnaffected
         self.branches = [{'name': self.branchName, 'formula': self.getTheWeight}]
         self.debug = 'XBBDEBUG' in os.environ
         if self.debug:

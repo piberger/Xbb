@@ -37,7 +37,6 @@ debug = 'XBBDEBUG' in os.environ
 config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
-TrainFlag = eval(config.get('Analysis','TrainFlag'))
 btagLibrary = config.get('BTagReshaping','library')
 samplesinfo=config.get('Directories','samplesinfo')
 channel=config.get('Configuration','channel')
@@ -179,6 +178,8 @@ for fileName in filelist:
         sampleTree.addOutputTree(tmpFileName, cut='1', branches='*')
         sampleTree.process()
 
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        
         # copy temporary file to output folder
         if opts.force and fileLocator.exists(outputFileName):
             fileLocator.rm(outputFileName)

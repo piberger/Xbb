@@ -34,6 +34,8 @@ import gc
 class SampleTree(object):
 
     def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None):
+        # sequentialProcessing not much tested yet, can maybe be used as workaround for problems with ROOT version 6.12.07. (not needed in 6.10.09)
+        self.sequentialProcessing = False
         self.verbose = verbose
         self.debug = 'XBBDEBUG' in os.environ
         self.debugProfiling = 'XBBPROFILING' in os.environ
@@ -409,7 +411,8 @@ class SampleTree(object):
         self.treeIterator.next()
         self.eventsRead += 1
         if self.debug and self.eventsRead % 1000 == 0:
-            print('DEBUG: %d events read'%self.eventsRead)
+            throughput = 1.0*self.eventsRead / (1.0*(time.time() - self.timeStart) + 0.001)
+            print('DEBUG: %d events read, %1.2f /s'%(self.eventsRead, throughput))
         treeNum = self.tree.GetTreeNumber()
         # TTreeFormulas have to be updated when the tree number changes in a TChain
         if treeNum != self.oldTreeNum:
@@ -584,10 +587,31 @@ class SampleTree(object):
             print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
 
     # ------------------------------------------------------------------------------
+    # if self.sequentialProcessing is enabled, the input tree is traversed
+    # multiple times which can lead to a slowdown for larger trees
+    # ------------------------------------------------------------------------------
+    def process(self):
+        if self.sequentialProcessing:
+            print("\x1b[31mINFO: sequential processing of trees is enabled!\x1b[0m")
+
+            # backup full list of trees
+            allTrees = self.outputTrees
+
+            # process output files sequentially
+            for singleTree in allTrees:
+                self.outputTrees = [singleTree]
+                self.process_do()
+
+            # restore
+            self.outputTrees = allTrees
+        else:
+            self.process_do()
+
+    # ------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the
     # cuts are fulfilled.
     # ------------------------------------------------------------------------------
-    def process(self):
+    def process_do(self):
         if self.debug:
             rsrc = resource.RLIMIT_DATA
             # restrict memory
@@ -806,7 +830,7 @@ class SampleTree(object):
         print('INFO: saveMemory is ', self.saveMemory)
         sys.stdout.flush()
 
-        if self.saveMemory:
+        if self.saveMemory and not self.sequentialProcessing:
             self.tree.Reset()
             self.tree = None
             for outputTree in self.outputTrees:
@@ -903,6 +927,17 @@ class SampleTree(object):
             print("sampleTree.getScale(): sample: ", sample, "lumi: ", lumi, "xsec: ", sample.xsec, "sample.sf: ", sample.sf, "count (", countHistogram, "):", count, " ---> using scale: ", theScale)
         return theScale
 
+    def getCollection(self, name):
+        collection = lambda: None
+        branches = [x.GetName() for x in self.GetListOfBranches()]
+        numBranch = 'n' + name
+        if numBranch in branches:
+            collection.size = lambda: getattr(self.tree, numBranch)
+            for x in branches:
+                if x.startswith(name + '_'):
+                    setattr(collection, x.split(name + '_')[1], getattr(self.tree, x))
+        return collection
+
     # create a unique string representation of the total cut, e.g. used to calculate the hash for cached samples 
     # this is not required to be a 'real' cut string, used by TTreeFormula etc.
     @staticmethod
@@ -919,6 +954,7 @@ class SampleTree(object):
             minCut = '||'.join(['(%s)'%x.replace(' ', '') for x in sorted(list(set(cuts)))])
         else:
             minCut = "%r"%cuts
+        #print('\x1b[31mmin cut:',minCut,'\x1b[0m')
         return minCut
 
     def GetEntries(self):

@@ -12,7 +12,7 @@ class FileLocator(object):
     def __init__(self, config=None, xrootdRedirector=None, usePythonXrootD=True):
         self.config = config
         self.debug = 'XBBDEBUG' in os.environ
-        self.timeBetweenAttempts = 30
+        self.timeBetweenAttempts = 5
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             if len(self.xrootdRedirectors) < 1:
@@ -50,8 +50,9 @@ class FileLocator(object):
                 if self.debug:
                     print('DEBUG: initialized xrootd client, server:', self.server)
                     print('DEBUG: client:', self.client)
-            except:
+            except Exception as e:
                 if self.debug:
+                    print('DEBUG: xrootd:', e)
                     print('DEBUG: xrootd could not be initialized, trying to use xrdfs as fallback. To use the faster Python bindings upgrade CMSSW to version 9.')
 
         # prefixes to distinguish remote file paths from local ones
@@ -188,10 +189,25 @@ class FileLocator(object):
             if found:
                 return True
             if attemptsLeft > 0:
+                if attemptsLeft < attempts-1 and self.timeBetweenAttempts and self.timeBetweenAttempts<60:
+                    self.timeBetweenAttempts *= 2
                 print('INFO: file was not found:'+path+', trying %d more times...'%attemptsLeft)
                 if self.timeBetweenAttempts:
-                    print('INFO: wait 30 seconds before trying again')
+                    reconnect = False
+                    if self.client:
+                        self.client = None
+                        reconnect = True
+                    print('INFO: wait %r seconds before trying again'%self.timeBetweenAttempts)
                     sleep(self.timeBetweenAttempts)
+                    if reconnect:
+                        try:
+                            try:
+                                from XRootD import client
+                            except:
+                                pass
+                            self.client = client.FileSystem(self.server)
+                        except:
+                            pass
 
         return found
 

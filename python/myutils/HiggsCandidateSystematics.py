@@ -1,25 +1,30 @@
 #!/usr/bin/env python
 import ROOT
 import array
+import os
 from Jet import Jet
 
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(object):
     
-    def __init__(self, addSystematics=True):
-        self.debug = False
+    def __init__(self, addSystematics=True, tagidx="", prefix="H"):
+        self.debug = 'XBBDEBUG' in os.environ
         self.lastEntry = -1
         self.nJet = -1
         self.nJetMax = 100
         self.branches = []
         self.branchBuffers = {}
         self.addSystematics = addSystematics
+        self.tagidx = tagidx
+        self.prefix = prefix
 
-        self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','jesFlavorZJet','jesFlavorPhotonJet','jesFlavorPureGluon','jesFlavorPureQuark','jesFlavorPureCharm','jesFlavorPureBottom','jesCorrelationGroupMPFInSitu','jesCorrelationGroupIntercalibration','jesCorrelationGroupbJES','jesCorrelationGroupFlavor','jesCorrelationGroupUncorrelated']
+        self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
         # corrected dijet (Higgs candidate) properties
-        #self.higgsProperties = ['H_reg_pt', 'H_reg_eta', 'H_reg_phi', 'H_reg_mass']
-        self.higgsProperties = ['H_pt', 'H_eta', 'H_phi', 'H_mass']
+        self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass']]
+
+        if self.debug:
+            print "DEBUG: HiggsCandidateSystematics::__init__(), with idx=", self.tagidx, " prefix=", self.prefix
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -63,9 +68,15 @@ class HiggsCandidateSystematics(object):
         if currentEntry != self.lastEntry:
             self.lastEntry = currentEntry
 
-            hJidx0 = tree.hJidx[0]
-            hJidx1 = tree.hJidx[1]
-
+            # idx passed as an argument
+            if self.tagidx:
+                #print "Using the {idx}".format(idx=self.tagidx)
+                hJidx0 = getattr(tree,self.tagidx)[0] 
+                hJidx1 = getattr(tree,self.tagidx)[1]
+                #print "tag0 {t0} and tag1 {t1}".format(t0=hJidx0,t1=hJidx1) 
+            else:
+                print "Missing bTag index. Check general.ini"
+                raise Exception("bTagIndexNotSpecified")
 
             # select branches from tree
             # for 2016 nano v5
@@ -94,16 +105,10 @@ class HiggsCandidateSystematics(object):
 
             dijet_Nominal = hJ0 + hJ1
 
-            self.branchBuffers['H_pt'][0] = dijet_Nominal.Pt()
-            self.branchBuffers['H_eta'][0] = dijet_Nominal.Eta()
-            self.branchBuffers['H_phi'][0] = dijet_Nominal.Phi()
-            self.branchBuffers['H_mass'][0] = dijet_Nominal.M()
-
-            #if self.branchBuffers['H_reg_eta'][0] > -1.001 and self.branchBuffers['H_reg_eta'][0] < -0.999:
-            #    print "adding 2 jets ", hJidx0, " and ", hJidx1
-            #    print treeJet_bReg[hJidx0]*treeJet_Pt[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0]
-            #    print treeJet_bReg[hJidx1]*treeJet_Pt[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1]
-            #    print "->", self.branchBuffers['H_reg_pt'][0], self.branchBuffers['H_reg_eta'][0], self.branchBuffers['H_reg_phi'][0], self.branchBuffers['H_reg_mass'][0]
+            self.branchBuffers[self.prefix + '_pt'][0] = dijet_Nominal.Pt()
+            self.branchBuffers[self.prefix + '_eta'][0] = dijet_Nominal.Eta()
+            self.branchBuffers[self.prefix + '_phi'][0] = dijet_Nominal.Phi()
+            self.branchBuffers[self.prefix + '_mass'][0] = dijet_Nominal.M()
 
             # systematics
             valueList = {x:[self.branchBuffers[x][0]] for x in self.higgsProperties}
@@ -114,8 +119,8 @@ class HiggsCandidateSystematics(object):
                             hJ0 = ROOT.TLorentzVector()
                             hJ1 = ROOT.TLorentzVector()
 
-                            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
-                            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
+                            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
+                            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
                             #dummy
                             #hJ0.SetPtEtaPhiM(treeJet_bReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0]/treeJet_pt[hJidx0])
                             #hJ1.SetPtEtaPhiM(treeJet_bReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1]/treeJet_pt[hJidx1])
@@ -123,15 +128,15 @@ class HiggsCandidateSystematics(object):
                         else:
                             dijet = dijet_Nominal
 
-                        self.branchBuffers['H_pt_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Pt()
-                        self.branchBuffers['H_eta_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Eta()
-                        self.branchBuffers['H_phi_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Phi()
-                        self.branchBuffers['H_mass_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.M()
+                        self.branchBuffers[self.prefix + '_pt_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Pt()
+                        self.branchBuffers[self.prefix + '_eta_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Eta()
+                        self.branchBuffers[self.prefix + '_phi_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Phi()
+                        self.branchBuffers[self.prefix + '_mass_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.M()
 
-                        valueList['H_pt'].append(dijet.Pt())
-                        valueList['H_eta'].append(dijet.Eta())
-                        valueList['H_phi'].append(dijet.Phi())
-                        valueList['H_mass'].append(dijet.M())
+                        valueList[self.prefix + '_pt'].append(dijet.Pt())
+                        valueList[self.prefix + '_eta'].append(dijet.Eta())
+                        valueList[self.prefix + '_phi'].append(dijet.Phi())
+                        valueList[self.prefix + '_mass'].append(dijet.M())
 
             # get minimum and maximum variation
             for syst in ['minmax']:
