@@ -189,6 +189,9 @@ class AddCollectionsModule(object):
     def getBranches(self):
         return self.branches
 
+    def getBranch(self, event, arguments):
+        return self.branchBuffers[arguments][0]
+
     def hasBeenProcessed(self, tree):
         return tree.GetReadEntry() == self.lastEntry
 
