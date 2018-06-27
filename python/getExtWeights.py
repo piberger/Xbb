@@ -15,7 +15,7 @@ def countEvents(rootFileName, cut = "1"):
     f = ROOT.TFile.Open(rootFileName)
     if not f or f.IsZombie():
         print "\x1b[31mnot found:",rootFileName,"\x1b[0m"
-    tree = f.Get("tree")
+    tree = f.Get("Events")
 
     nevents = 1.* tree.Draw("",cut)
     f.Close()
@@ -26,6 +26,7 @@ def getEventCount(Sample, region="1"):
     t3proto = 'root://t3dcachedb.psi.ch:1094'
     sysOutMountedPath = sysOut.replace(t3proto,'').replace('root://t3dcachedb03.psi.ch:1094','')
     #SampleCounts = {}
+    print 'path is', sysOutMountedPath
     count = 0
     for sample in Sample:
         cut = ''
@@ -55,6 +56,8 @@ def getEventCount(Sample, region="1"):
 def getStichWeight(string, Sample1, Sample2, region):
     nevent_1 = getEventCount(Sample1, region)
     nevent_2 = getEventCount(Sample2, region)
+    print nevent_1
+    print nevent_2
     #return nevent_1/(nevent_1+nevent_2)
     print 'weight for ', string, 'is', nevent_1/(nevent_1+nevent_2)
 
@@ -77,6 +80,8 @@ def getExtWeights(config, extParts):
     sysOut = config.get('Directories','SYSout').strip()
     t3proto = 'root://t3dcachedb.psi.ch:1094'
     sysOutMountedPath = sysOut.replace(t3proto,'').replace('root://t3dcachedb03.psi.ch:1094','')
+    print 'file is'
+    print sysOutMountedPath 
     extPartCounts = {}
     for extPart in extParts:
         extPartCounts[extPart] = 0
@@ -121,65 +126,70 @@ verify = len(sys.argv) > 2 and sys.argv[2]=='verify'
 #Specialweight
 ##############
 
-ZLLIncl = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext2"]
-
-ZLLjetsHT0       = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-#ZLLjetsHT70      = ["DYJetsToLL_M-50_HT-70to100_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
-ZLLjetsHT100     = ["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-ZLLjetsHT200     = ["DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-ZLLjetsHT400     = ["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-ZLLjetsHT600     = ["DYJetsToLL_M-50_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
-ZLLjetsHT800     = ["DYJetsToLL_M-50_HT-800to1200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
-ZLLjetsHT1200    = ["DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
-ZLLjetsHT2500    = ["DYJetsToLL_M-50_HT-2500toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+#ZLLIncl = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext2"]
+#
+#ZLLjetsHT0       = ["DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+##ZLLjetsHT70      = ["DYJetsToLL_M-50_HT-70to100_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+#ZLLjetsHT100     = ["DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+#ZLLjetsHT200     = ["DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+#ZLLjetsHT400     = ["DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+#ZLLjetsHT600     = ["DYJetsToLL_M-50_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+#ZLLjetsHT800     = ["DYJetsToLL_M-50_HT-800to1200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+#ZLLjetsHT1200    = ["DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+#ZLLjetsHT2500    = ["DYJetsToLL_M-50_HT-2500toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 
 ZlljetsHTbinned = [
-        "DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1",
-#        "DYJetsToLL_M-50_HT-70to100_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1",
-        "DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1",
-        "DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1",
-        "DYJetsToLL_M-50_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-800to1200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-        "DYJetsToLL_M-50_HT-2500toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
+		"DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8",
+		"DYJetsToLL_M-50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8",
+		"DYJetsToLL_M-50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-600to800_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-800to1200_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-1200to2500_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-2500toInf_TuneCP5_13TeV-madgraphMLM-pythia8",
+]
 
 ##V25 only
 #ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 ##V25 + v25b
-ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+#ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
 #
-SampleCuts = {"DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8":"lheV_pt<100","DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1":"lheHT<100"}
+#need to be used when the inclusive is used for the low HT region
+SampleCuts = {"DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8":"LHE_HT<100"}
 
-ZLLBjetsVPT0 = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
-ZLLBjetsVPT100= ["DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
-ZLLBjetsVPT200 = ["DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+ZLLBjetsVPT0 = [""]
+ZLLBjetsVPT100 = ["DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8"]
+ZLLBjetsVPT200 = ["DYBJetsToLL_M-50_Zpt-200toInf_TuneCP5_13TeV-madgraphMLM-pythia8"]
 
-ggZH = ["ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1","ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext2"]
-ZH = ["ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8","ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1"]
+ZLLBFilterjetsVPT0 = [""]
+ZLLBFilterjetsVPT100 = ["DYJetsToLL_BGenFilter_Zpt-100to200_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
+ZLLBFilterjetsVPT200 = ["DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
+
+
+#ggZH = ["ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1","ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext2"]
+#ZH = ["ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8","ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1"]
 
 ####
 #Phase-space cuts
 ####
 
-DYBJets           = "(lheNb>0)"
+DYBFilter	=  "(LHE_Nb==0)"
 
-HT0               = "(lheHT<100)"
-#HT70              = "(lheHT>70&& lheHT<100)"
-HT100             = "(lheHT>100 && lheHT<200)"
-HT200             = "(lheHT>200 && lheHT<400)"
-HT400             = "(lheHT>400 && lheHT<600)"
-HT600             = "(lheHT>600 && lheHT<800)"
-HT800             = "(lheHT>800 && lheHT<1200)"
-HT1200            = "(lheHT>1200 && lheHT<2500)"
-HT2500            = "(lheHT>2500)"
+DYBJets           = "(LHE_Nb>0)"
 
-VPT0              = "(lheV_pt<100)"
-VPT100            = "(lheV_pt>100 && lheV_pt<200)"
-VPT200            = "(lheV_pt>200)"
+HT0               = "(LHE_HT<100)"
+#HT70              = "(LHE_HT>70&& LHE_HT<100)"
+HT100             = "(LHE_HT>100 && LHE_HT<200)"
+HT200             = "(LHE_HT>200 && LHE_HT<400)"
+HT400             = "(LHE_HT>400 && LHE_HT<600)"
+HT600             = "(LHE_HT>600 && LHE_HT<800)"
+HT800             = "(LHE_HT>800 && LHE_HT<1200)"
+HT1200            = "(LHE_HT>1200 && LHE_HT<2500)"
+HT2500            = "(LHE_HT>2500)"
+
+VPT0              = "(LHE_Vpt<100)"
+VPT100            = "(LHE_Vpt>100 && LHE_Vpt<200)"
+VPT200            = "(LHE_Vpt>200)"
 
 
 def runInParallel(func, arglist):
@@ -206,12 +216,24 @@ def runInParallel(func, arglist):
 ##runInParallel(arglist)
 #runInParallel(getStichWeight,arglist)
 
-#arglist = [
-#    ('VPT0'  ,ZlljetsHTbinned, ZLLBjets,VPT0   +"&&"+DYBJets,),
-#    ('VPT100',ZlljetsHTbinned, ZLLBjets,VPT200 +"&&"+DYBJets,),
-#    ('VPT200',ZlljetsHTbinned, ZLLBjets,VPT100 +"&&"+DYBJets,),
-#        ]
-#runInParallel(getStichWeight,arglist)
+arglistB = [
+#    ('VPT0'  ,ZlljetsHTbinned, ZLLBjetsVPT0,VPT0   +"&&"+DYBJets,),
+    ('VPT100',ZlljetsHTbinned, ZLLBjetsVPT100,VPT100 +"&&"+DYBJets,),
+    ('VPT200',ZlljetsHTbinned, ZLLBjetsVPT200,VPT200 +"&&"+DYBJets,)
+        ]
+
+#BFilter
+
+arglistBFilter = [
+#    ('VPT0'  ,ZlljetsHTbinned, ZLLBFilterjetsVPT0,VPT0   +"&&"+DYBFilter,),
+    ('VPT100',ZlljetsHTbinned, ZLLBFilterjetsVPT100,VPT100 +"&&"+DYBFilter,),
+    ('VPT200',ZlljetsHTbinned, ZLLBFilterjetsVPT200,VPT200 +"&&"+DYBFilter,)
+        ]
+
+runInParallel(getStichWeight,arglistBFilter)
+
+
+
 
 #arglist = [
 ##    (config, ZLLjetsHT0,),
@@ -238,9 +260,8 @@ def runInParallel(func, arglist):
 #        ]
 #runInParallel(getExtWeights, arglist)
 
-print'yeah baby'
-arglist = [(config, ZLLIncl,)]
-runInParallel(getExtWeights, arglist)
+#arglist = [(config, ZLLIncl,)]
+#runInParallel(getExtWeights, arglist)
 
 #print 'Weights for HT 0 are',    getStichWeight(ZLLjetsHT0   , ZLLBjets, HT0   +"&&"+DYBJets)
 #print 'Weights for HT 70 are',   getStichWeight(ZLLjetsHT70  , ZLLBjets, HT70  +"&&"+DYBJets)
@@ -252,7 +273,7 @@ runInParallel(getExtWeights, arglist)
 #print 'Weights for HT 1200 are', getStichWeight(ZLLjetsHT1200, ZLLBjets, HT1200+"&&"+DYBJets)
 #print 'Weights for HT 2500 are', getStichWeight(ZLLjetsHT2500, ZLLBjets, HT2500+"&&"+DYBJets)
 
-computeExtWeights = True
+computeExtWeights = False 
 
 if computeExtWeights:
     for section in config.sections():
