@@ -142,7 +142,7 @@ def MoveSubFolders(_input, _output, server=None, user=None):
     if args.name is None:
         _plotfolder = _input.split('/')[-2]
     else:
-        _plotfolder = args.name
+        _plotfolder = args.name.split('/')[-1]
     
     if args.webservice:
         _output = '/' + args.webservice+ '/user/' + user[0] + "/" + user + "/www/" + _output

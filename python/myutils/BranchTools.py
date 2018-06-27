@@ -138,6 +138,14 @@ class Collection(object):
         else:
             self[key][0] = value
 
+    def getProperties(self):
+        return self.properties
+
+    def fromList(self, listOfDicts):
+        self.setSize(len(listOfDicts))
+        for i in range(len(listOfDicts)):
+            for p in self.getProperties():
+                self[p][i] = listOfDicts[i][p]
 
     # only for vectors, don't use with scalars
     def setSize(self, size):
@@ -180,6 +188,9 @@ class AddCollectionsModule(object):
 
     def getBranches(self):
         return self.branches
+
+    def getBranch(self, event, arguments):
+        return self.branchBuffers[arguments][0]
 
     def hasBeenProcessed(self, tree):
         return tree.GetReadEntry() == self.lastEntry

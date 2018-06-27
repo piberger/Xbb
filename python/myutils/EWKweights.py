@@ -12,8 +12,7 @@ class EWKweights(object):
         self.branchBuffers = {}
         self.branches = []
         self.boost = boost
-#Defines the bTag index
-	self.tagidx=tagidx
+        self.tagidx=tagidx
 
         #NLOw is not defined in booseted topologie
         if self.boost == False:
@@ -48,13 +47,14 @@ class EWKweights(object):
     def getNLOw(self, tree):
         NLOw = 1.0
 #defines the idx for the first and second jet
-	if self.tagidx:
-#	 print "Using the {idx}".format(idx=self.tagidx)
-	 idx0=getattr(tree,self.tagidx)[0]
-	 idx1=getattr(tree,self.tagidx)[1]
-	else:
-	 print "Missing bTag index. Check general.ini"
-	 quit()
+        if self.tagidx:
+            #print "Using the {idx}".format(idx=self.tagidx)
+            idx0=getattr(tree,self.tagidx)[0]
+            idx1=getattr(tree,self.tagidx)[1]
+        else:
+            print "Missing bTag index. Check general.ini"
+            raise Exception("bTagIndexNotSpecified")
+        
         if self.applyNLO:
 #            if self.nano:
 #                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
