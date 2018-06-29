@@ -86,7 +86,7 @@ class MvaTrainingHelper(object):
             addBackgroundTreeMethod = self.dataLoader.AddBackgroundTree
             addSignalTreeMethod = self.dataLoader.AddSignalTree
 
-        if eval(self.config.get('Weights','useSpecialWeight')):
+        if self.config.has_option('Weights','useSpecialWeight') and eval(self.config.get('Weights','useSpecialWeight')):
             print("\x1b[31mERROR: specialweight cannot be used with TMVA training, set it to false and add the DY_specialWeight to weightF!!\x1b[0m")
             raise Exception("SpecialWeightNotSupported")
         
