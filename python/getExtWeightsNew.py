@@ -13,6 +13,7 @@ from myutils.BranchList import BranchList
 parser = argparse.ArgumentParser(description='getExtWeightsNew: compute stitching coefficients for samples with overlap')
 parser.add_argument('--samples', dest='samples', help='list of sample identifiers')
 parser.add_argument('--cuts', dest='cuts', help='cuts', default='')
+parser.add_argument('--from', dest='fromFolder', help='folder name to use, e.g. PREPout', default='PREPout')
 parser.add_argument('--fc', dest='fc', help='fc', default='')
 parser.add_argument('--prune', dest='prune', help='remove contributions with fraction lower than this', default='0.0')
 parser.add_argument('-T', dest='tag', help='config tag')
@@ -23,7 +24,7 @@ args = parser.parse_args()
 
 def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None):
     if not sampleTree:
-        sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories','PREPout').strip()}, config=config)
+        sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
     nEvents = sampleTree.tree.Draw("1", cut, "goff")
     return nEvents
 
@@ -59,7 +60,7 @@ for sampleGroup in sampleGroups:
     for sample in sampleGroup:
         countDict[sample] = {}
 
-        sampleTree = SampleTree({'name': sample, 'folder': config.get('Directories','PREPout').strip()}, config=config)
+        sampleTree = SampleTree({'name': sample, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
         print "CUT=",sampleCuts,":"
         for sampleCut in sampleCuts:
             sampleCount = getEventCount(config, sample, sampleCut, sampleTree=sampleTree)
