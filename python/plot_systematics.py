@@ -78,7 +78,7 @@ channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc-v1/Limits'
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc_jesTotal-v2/Limits'
 
-path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v4_all_reg/Limits'
+path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v7_all_newKinFit_firstDCfix/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
