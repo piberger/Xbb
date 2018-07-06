@@ -9,9 +9,11 @@ import sys
 
 ak4pfchs_ptres = None
 
-if not os.path.isfile('AnalysisTools/python/__init__.py') or not os.path.isfile('AnalysisTools/__init__.py'):
-    open('AnalysisTools/__init__.py', 'a').close()
-    open('AnalysisTools/python/__init__.py', 'a').close()
+# make AT importable from python
+if not os.path.isfile('AnalysisTools/python/__init__.py'):
+    open('AnalysisTools/python/__init__.py', 'w').close()
+if not os.path.isfile('AnalysisTools/__init__.py'):
+    open('AnalysisTools/__init__.py', 'w').close()
 
 sys.path.append("..")
 # lets hope for no name conflicts...
@@ -27,9 +29,9 @@ class NullTree(object):
         return method
 
 class AnalysisToolsTree(object):
-    def __init__(self, sampleTree, isData=False):
+    def __init__(self, sampleTree, isData=False, translationDict=None):
         self.outputBuffers = {}
-        
+
         if sampleTree.treeName == 'tree':
             self.formulas = {
                     'hJetInd1': 'hJCMVAV2idx[0]',
@@ -73,7 +75,7 @@ class AnalysisToolsTree(object):
             self.castToInt = {'hJetInd1': True, 'hJetInd2': True, 'lepInd1': True, 'lepInd2':True}
             self.constantArray = {'Muon_ptErr': [2, 9.0], 'Electron_energyErr': [2, 25.0]}
         else:
-            # NANOAOD
+            # NANOAOD default
             self.formulas = {
                     'hJetInd1': 'hJidxCMVA[0]',
                     'hJetInd2': 'hJidxCMVA[1]',
@@ -119,6 +121,8 @@ class AnalysisToolsTree(object):
                     'GenLepIndex2': '-1',
                     'n_fsr_jets': '0',
                     }
+            if translationDict:
+                self.formulas.update(translationDict)
             self.aliases = {
                     }
             self.castToInt = {'hJetInd1': True, 'hJetInd2': True, 'lepInd1': True, 'lepInd2':True, 'GenLepIndex1': True, 'GenLepIndex2': True}
@@ -147,7 +151,7 @@ class AnalysisToolsTree(object):
         if name in self.sysVariations:
             value = array.array('d', [0.0]*self.sampleTree.tree.nJet)
             self.sampleTree.evaluateArray(self.sysVariations[name], value)
-            #print "==> overwritten with sys variation ", name, " -> ", self.sysVariations[name], " ==>", value
+            print "==> overwritten with sys variation ", name, " -> ", self.sysVariations[name], " ==>", value
         elif hasattr(self.sampleTree.tree, name):
             value = getattr(self.sampleTree.tree, name)
         elif name in self.sampleTree.formulas:
@@ -187,12 +191,20 @@ class kinFitter(AddCollectionsModule):
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
-        self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData())
+        self.config = initVars['config']
+
+        translationDict = None
+        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','translationDict'):
+            translationDict = eval(self.config.get('KinematicFit','translationDict'))
+
+        self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData(), translationDict=translationDict)
         
         # add separate collection for every sys variation, leaves are the different fit outputs
-        #self.systematics = ['', 'jerUp', 'jerDown', 'jesTotalUp', 'jesTotalDown'] if not self.sample.isData() else ['']
         self.systematics = ['']
+        if not self.sample.isData() and self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','systematics'):
+            self.systematics = eval(self.config.get('KinematicFit','systematics'))
 
+        # add collections for output variables
         self.kinFitterCollection = {}
         for syst in self.systematics:
             self.kinFitterCollection[syst] = Collection(self.branchName + ('_' + syst if syst != '' else ''), self.leaves, leaves=True)
@@ -202,12 +214,21 @@ class kinFitter(AddCollectionsModule):
         for var in self.all_TREE_VARS:
             if not hasattr(self.wrappedTree, var):
                 self.wrappedTree.createOutputBranch(var)
-
+        
         # load Jet/Met resolution files
-        if self.sample.isData():
-            self.ak4pfchs_ptres = ROOT.JME.JetResolution('AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt')
-        else:
-            self.ak4pfchs_ptres = ROOT.JME.JetResolution('AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_MC_PtResolution_AK4PFchs.txt')
+        self.jmeResolutionData = 'AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt'
+        self.jmeResolutionMC = 'AnalysisTools/VHbbAnalysis/aux/Spring16_25nsV6_MC_PtResolution_AK4PFchs.txt'
+        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','jmeResolutionData'):
+            self.jmeResolutionData = self.config.get('KinematicFit','jmeResolutionData')
+        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','jmeResolutionMC'):
+            self.jmeResolutionData = self.config.get('KinematicFit','jmeResolutionMC')
+        self.ak4pfchs_ptres = ROOT.JME.JetResolution(self.jmeResolutionData if self.sample.isData() else self.jmeResolutionMC)
+
+        # fixes
+        self.symmetrizeJER = False
+        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','symmetrizeJER'):
+            self.symmetrizeJER = eval(self.config.get('KinematicFit','symmetrizeJER'))
+            print "\x1b[31mINFO: JER variation will be symmetrized!\x1b[0m"
 
     def processEvent(self, tree):
 
@@ -222,11 +243,15 @@ class kinFitter(AddCollectionsModule):
                 try:
                     # add systematic variations in the tree wrapper class
                     if syst:
-                        self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*Jet_pt_' + syst + '/Jet_Pt')
-                        self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass*Jet_pt_' + syst + '/Jet_Pt')
+                        if self.symmetrizeJER and syst == 'jer_Down':
+                            self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*(2.0-Jet_pt_jer_Up/Jet_Pt)')
+                            self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_nom*(2.0-Jet_mass_jer_Up/Jet_mass)*Jet_bReg')
+                        else:
+                            self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*Jet_pt_' + syst + '/Jet_Pt')
+                            self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_' + syst + '*Jet_bReg')
                     else:
                         self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg')
-                        self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass')
+                        self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_nom*Jet_bReg')
 
                     # update EventProxy with event data from wrapped tree
                     c.set_event(self.wrappedTree)
