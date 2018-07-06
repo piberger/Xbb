@@ -1,0 +1,42 @@
+# sample: {sampleIdentifier} 
+import ROOT
+from myutils.sampleTree import SampleTree
+sampleFiles = [
+{fileList}
+]
+sampleTree = SampleTree(sampleFiles, treeName='Events')
+print 'number of events:', sampleTree.GetEntries()
+
+# ----- loop example ----
+# example how to loop over all events
+# alternatively, the TChain object can be accessed as sampleTree.tree
+if 0:
+    for event in sampleTree:
+        if event.Vtype == 1:
+            print 'Vtype 1 event', event.event
+
+# ----- duplicate events example ---
+# detects duplicate events
+if 0:
+    rDict = {}
+    for event in sampleTree:
+        if event.run  not in rDict:
+            rDict[event.run] = {}
+        if event.event in rDict[event.run]:
+            print "\x1b[31mwarning: duplicate event! run ", event.run, " event ", event.event, " at position ", event.GetReadEntry(), " equals GetReadEntry()==", rDict[event.run][event.event], "! that's fishy...\x1b[0m"
+        else:
+            rDict[event.run][event.event] = event.GetReadEntry()
+
+# ----- skim example ----
+if 0:
+    sampleTree.addOutputTree('skim_{sampleIdentifier}.root','(kinFit.V_mass_fit > 75 && kinFit.V_mass_fit < 105 && (kinFit.H_mass_fit_fallback > 90 && kinFit.H_mass_fit_fallback < 150) && Jet_btagCMVA[hJidxCMVA[0]] > -0.5884 && Jet_btagCMVA[hJidxCMVA[1]] > -0.5884 && (((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2))&&(Jet_PtReg[hJidxCMVA[0]]>20&&Jet_PtReg[hJidxCMVA[1]]>20)&&(abs(Jet_eta[hJidxCMVA[0]])<2.4&&abs(Jet_eta[hJidxCMVA[1]])<2.4)&&(hJidxCMVA[0]>-1&&hJidxCMVA[1]>-1))) && ((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2)) && (kinFit.V_pt_fit>50)')
+    for x in ['nJet','Jet_pt','Jet_eta','Jet_phi','event','run','Muon_pt','Muon_eta','Muon_phi','Muon_mass','Electron_eta','Electron_pt','Electron_phi','Electron_mass','Jet_mass','MET_Pt','MET_pt','Jet_jetId','Jet_puId']:
+        sampleTree.addFormula(x)
+    # contains the MC scale factors
+    sampleTree.addOutputBranch('MCweight','{mcWeight}')
+    # contains scaling to cross-section
+    sampleTree.addOutputBranch('XSweight','{xsWeight}')
+    # contains the total weight (=MCweight*XSweight)
+    sampleTree.addOutputBranch('weight','{weight}')
+    sampleTree.process()
+
