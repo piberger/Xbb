@@ -74,12 +74,33 @@ class vLeptonSelector(object):
             Vtype = 4
             if tree.MET_Pt < 150:
                 Vtype = -1
+
+        # count additional + veto leptons the same way as AT (02.07.2018)
+        nVetoLeptons = 0
+        nAddLeptons = 0
+        for i in range(tree.nMuon):
+            if (tree.Muon_pt[i] > 4.5 and abs(tree.Muon_eta[i]) < 2.4 and tree.Muon_pfRelIso04_all[i] < 0.4 and abs(tree.Muon_dz[i])<0.2 and abs(tree.Muon_dxy[i])<0.05): 
+                nVetoLeptons += 1
+            if i in wMuons or i in zMuons:
+                continue
+            if tree.Muon_pt[i] > 15 and abs(tree.Muon_eta[i]) < 2.5 and tree.Muon_pfRelIso04_all[i] < 0.1:
+                nAddLeptons += 1
+        for i in range(tree.nElectron):
+            if tree.Electron_pt[i] > 6.5 and abs(tree.Electron_eta[i])<2.5 and tree.Electron_pfRelIso03_all[i] < 0.4 and abs(tree.Electron_dz[i])<0.2 and abs(tree.Electron_dxy[i])<0.05 and tree.Electron_lostHits[i]<1.0:
+                nVetoLeptons += 1
+            if i in zElectrons or i in wElectrons:
+                continue
+            if tree.Electron_pt[i] > 15 and abs(tree.Electron_eta[i]) < 2.5 and tree.Electron_pfRelIso03_all[i] < 0.1:
+                nAddLeptons += 1
+
         self.Vtype = Vtype
         self.vLeptons = vLeptons
         self.zMuons = zMuons
         self.zElectrons = zElectrons
         self.vMuonIdx = sorted(list(set(self.vMuonIdx)))
         self.vElectronIdx = sorted(list(set(self.vElectronIdx)))
+        self.nVetoLeptons = nVetoLeptons
+        self.nAddLeptons = nAddLeptons
 
     def getVleptons(self):
         return self.vLeptons
@@ -108,6 +129,12 @@ class vLeptons(object):
         self.branchBuffers['VElectronIdx'] = array.array('i', [-1, -1])
         self.branches.append({'name': 'VMuonIdx', 'formula': self.getVMuonIdx, 'length':2, 'type': 'i', 'leaflist': 'VMuonIdx[nVMuonIdx]/I'})
         self.branches.append({'name': 'VElectronIdx', 'formula': self.getVElectronIdx, 'length':2, 'type': 'i', 'leaflist': 'VelectronIdx[nVElectronIdx]/I'})
+        
+        self.branchBuffers['nVetoLeptons'] = array.array('i', [0])
+        self.branchBuffers['nAddLeptons'] = array.array('i', [0])
+        self.branches.append({'name': 'nVetoLeptons', 'formula': self.getBranch, 'arguments': 'nVetoLeptons', 'type': 'i'})
+        self.branches.append({'name': 'nAddLeptons', 'formula': self.getBranch, 'arguments': 'nAddLeptons', 'type': 'i'})
+
         self.selector = None
 
     def customInit(self, initVars):
@@ -129,7 +156,8 @@ class vLeptons(object):
             self.branchBuffers['VElectronIdx'][1] = self.selector.vElectronIdx[1] if len(self.selector.vElectronIdx) > 1 else -2 
             self.branchBuffers['nVMuonIdx'][0] = min(len(self.selector.vMuonIdx),2)
             self.branchBuffers['nVElectronIdx'][0] = min(len(self.selector.vElectronIdx),2)
-            #print self.branchBuffers['VMuonIdx'][0],self.branchBuffers['VMuonIdx'][1],self.branchBuffers['VElectronIdx'][0],self.branchBuffers['VElectronIdx'][1],self.branchBuffers['nVMuonIdx'][0],self.branchBuffers['nVElectronIdx'][0]
+            self.branchBuffers['nVetoLeptons'][0] = self.selector.nVetoLeptons
+            self.branchBuffers['nAddLeptons'][0] = self.selector.nAddLeptons
 
         return True
 
