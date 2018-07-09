@@ -29,8 +29,9 @@ class NullTree(object):
         return method
 
 class AnalysisToolsTree(object):
-    def __init__(self, sampleTree, isData=False, translationDict=None):
+    def __init__(self, sampleTree, isData=False, translationDict=None, overwriteVariables=None):
         self.outputBuffers = {}
+        self.overwriteVariables = overwriteVariables
 
         if sampleTree.treeName == 'tree':
             self.formulas = {
@@ -148,26 +149,37 @@ class AnalysisToolsTree(object):
         self.sysVariations[name] = formula
 
     def __getattr__(self, name):
-        if name in self.sysVariations:
-            value = array.array('d', [0.0]*self.sampleTree.tree.nJet)
-            self.sampleTree.evaluateArray(self.sysVariations[name], value)
-            print "==> overwritten with sys variation ", name, " -> ", self.sysVariations[name], " ==>", value
-        elif hasattr(self.sampleTree.tree, name):
-            value = getattr(self.sampleTree.tree, name)
-        elif name in self.sampleTree.formulas:
-            value = self.sampleTree.evaluate(name)
-        elif name in self.outputBuffers:
-            value = self.outputBuffers[name]
+        
+        # simple attribute
+        if name in self.__dict__:
+            return self.__dict__[name]
+        # for fit output variables, ALWAYS overwrite, even if they exist in the tree
+        elif self.__dict__['overwriteVariables'] and name in self.__dict__['overwriteVariables']:
+            value = self.__dict__['outputBuffers'][name]
+        # for systematic variations replace nominal by varied value
+        elif name in self.__dict__['sysVariations']:
+            value = array.array('d', [0.0]*self.__dict__['sampleTree'].tree.nJet)
+            self.sampleTree.evaluateArray(self.__dict__['sysVariations'][name], value)
+            #print "==> overwritten with sys variation ", name, " -> ", self.__dict__['sysVariations'][name], " ==>", value
+        # if it exists in the tree, take it from there
+        elif hasattr(self.__dict__['sampleTree'].tree, name):
+            value = getattr(self.__dict__['sampleTree'].tree, name)
+        # if a formula exists, evaluate it
+        elif name in self.__dict__['sampleTree'].formulas:
+            value = self.__dict__['sampleTree'].evaluate(name)
+        # otherwise it will be treated as new output variable
+        elif name in self.__dict__['outputBuffers']:
+            value = self.__dict__['outputBuffers'][name]
         else:
             raise AttributeError
 
-        if name in self.castToInt:
-            if name in self.castToArray:
+        if name in self.__dict__['castToInt']:
+            if name in self.__dict__['castToArray']:
                 value = array.array('i', [int(value)])
             else:
                 value = int(value)
         else:
-            if name in self.castToArray:
+            if name in self.__dict__['castToArray']:
                 value = array.array('d', [value])
         return value
 
@@ -178,26 +190,30 @@ class kinFitter(AddCollectionsModule):
         self.branchName = branchName
         self.skipBadEvents = skipBadEvents
 
-        ep = EventProxy()
-        
-        # all output vars
-        self.all_TREE_VARS = TREE_VARS | set(['twoResolvedJets'])
-        ep.init_output(NullTree(), self.all_TREE_VARS) 
-        
-        # only write those to files which are results from fit
-        self.leaves = [x for x in ep.tree_vars if 'fit' in x]
-        print "output vars:", self.leaves
-
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
         self.config = initVars['config']
 
+        # all output vars
+        ep = EventProxy()
+        self.all_TREE_VARS = TREE_VARS | set(['twoResolvedJets'])
+        ep.init_output(NullTree(), self.all_TREE_VARS) 
+        
+        self.fitResults = [x for x in ep.tree_vars if 'fit' in x]
+        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','outputVars'):
+            # write variables defined in config
+            self.leaves = [x for x in ep.tree_vars if x in eval(self.config.get('KinematicFit','outputVars'))]
+        else:
+            # write all fit results
+            self.leaves = self.fitResults 
+        print "output vars:", self.leaves
+
         translationDict = None
         if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','translationDict'):
             translationDict = eval(self.config.get('KinematicFit','translationDict'))
 
-        self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData(), translationDict=translationDict)
+        self.wrappedTree = AnalysisToolsTree(self.sampleTree, isData=self.sample.isData(), translationDict=translationDict, overwriteVariables=self.fitResults)
         
         # add separate collection for every sys variation, leaves are the different fit outputs
         self.systematics = ['']
@@ -241,11 +257,12 @@ class kinFitter(AddCollectionsModule):
                 if not c:
                     c = EventProxy()
                 try:
+                #if 1:
                     # add systematic variations in the tree wrapper class
                     if syst:
-                        if self.symmetrizeJER and syst == 'jer_Down':
-                            self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*(2.0-Jet_pt_jer_Up/Jet_Pt)')
-                            self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_nom*(2.0-Jet_mass_jer_Up/Jet_mass)*Jet_bReg')
+                        if self.symmetrizeJER and syst == 'jerDown':
+                            self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*(2.0-Jet_pt_jerUp/Jet_Pt)')
+                            self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_nom*(2.0-Jet_mass_jerUp/Jet_mass)*Jet_bReg')
                         else:
                             self.wrappedTree.overwriteWithVariation('Jet_PtReg', 'Jet_PtReg*Jet_pt_' + syst + '/Jet_Pt')
                             self.wrappedTree.overwriteWithVariation('Jet_mass', 'Jet_mass_' + syst + '*Jet_bReg')
