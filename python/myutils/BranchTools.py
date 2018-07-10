@@ -176,7 +176,6 @@ class Collection(object):
         return self.branches
 
     def getBranch(self, event, arguments):
-        self.processEvent(event)
         return self.branchBuffers[arguments][0]
 
     def fillVectorBranch(self, event, arguments=None, destinationArray=None):
