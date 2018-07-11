@@ -32,20 +32,31 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.scalerDump = self.config.get(self.mvaName, 'scalerDump')
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint')
         self.branchName = self.config.get(self.mvaName, 'branchName')
+        try:
+            self.nClasses = int(self.config.get(self.mvaName, 'nClasses'))
+        except Exception as e:
+            print "exception:",e
+            self.nClasses = 1
+        print "\x1b[31mnum categories:", self.nClasses, "\x1b[0m"
 
         # Jet systematics
         self.systematics = self.config.get('systematics', 'systematics').split(' ')
+        
+        self.dnnCollections = []
 
-        # create output branches
-        self.dnnCollection = Collection(self.branchName, self.systematics, leaves=True) 
-        self.addCollection(self.dnnCollection)
+        for i in range(self.nClasses):
+            # create output branches
+            collectionName = self.branchName if self.nClasses==1 else self.branchName + "_%d"%i
+            self.dnnCollection = Collection(collectionName, self.systematics, leaves=True) 
+            self.addCollection(self.dnnCollection)
+            self.dnnCollections.append(self.dnnCollection)
 
-        # create formulas for input variables
-        self.inputVariables = {}
-        for syst in self.systematics:
-            self.inputVariables[syst] = self.config.get(self.config.get(self.mvaName, "treeVarSet"), syst if self.sample.isMC() else 'Nominal').split(' ')
-            for var in self.inputVariables[syst]:
-                self.sampleTree.addFormula(var)
+            # create formulas for input variables
+            self.inputVariables = {}
+            for syst in self.systematics:
+                self.inputVariables[syst] = self.config.get(self.config.get(self.mvaName, "treeVarSet"), syst if self.sample.isMC() else 'Nominal').split(' ')
+                for var in self.inputVariables[syst]:
+                    self.sampleTree.addFormula(var)
 
         # create tensorflow graph
         self.reloadModel()
@@ -61,7 +72,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.parameters = self.loadModelConfig()
         
         # for evaluation of weights always set limitResources=True which limits threads (and therefore memory)
-        self.clf = TensorflowDNNClassifier(parameters=self.parameters, nFeatures=len(self.inputVariables[self.systematics[0]]), limitResources=True)
+        self.clf = TensorflowDNNClassifier(parameters=self.parameters, nFeatures=len(self.inputVariables[self.systematics[0]]), limitResources=True, nClasses=self.nClasses if self.nClasses>1 else 2)
         self.clf.buildModel()
 
         # restore rom checkpoint
@@ -102,7 +113,8 @@ class tensorflowEvaluator(AddCollectionsModule):
                             })
 
             # fill output branches
-            for j, syst in enumerate(self.systematics):
-                self.dnnCollection[self.branchName][j] = probabilities[j,0]
+            for i,dnnCollection in enumerate(self.dnnCollections):
+                for j, syst in enumerate(self.systematics):
+                    dnnCollection[dnnCollection.name][j] = probabilities[j, i]
 
         return True

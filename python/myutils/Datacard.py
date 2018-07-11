@@ -147,7 +147,6 @@ class Datacard(object):
             else:
                 print ('NOT Passed config')
 
-        self.TrainFlag = eval(config.get('Analysis', 'TrainFlag'))
         self.treecut = config.get('Cuts', self.RCut)
 
         # checks on read options

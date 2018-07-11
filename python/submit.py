@@ -63,6 +63,7 @@ parser.add_option("-L", "--local", dest="override_to_run_locally", action="store
 parser.add_option("-l", "--limit", dest="limit", default=None, help="max number of files to process per sample")
 parser.add_option("-N", "--number-of-events-or-files", dest="nevents_split_nfiles_single", default=-1,
                       help="Number of events per file when splitting or number of files when using single file workflow.")
+parser.add_option("-o", "--output", dest="output", default=None, help="output")
 parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine control for per job task parallelization. Higher values are usually faster and reduce IO and overhead, but also consume more memory. If number of running jobs is not limited, lower values could also increase performance. (Default: maximum per job parallelization).")
 parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
@@ -1414,48 +1415,40 @@ if opts.task == 'sample':
     path = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, path)
+    print ">", info.getSampleIdentifiers()
+    print "filter by:", samplesList
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
+    print "samples:", sampleIdentifiers
     print "folders:", foldersToCheck
     basePaths = dict([(x, config.get("Directories", x)) for x in foldersToCheck])
 
-
     for folder in foldersToCheck:
         path = basePaths[folder]
+        print "check:", path
         for sampleIdentifier in sampleIdentifiers:
             matchingSamples = [x for x in info if x.identifier == sampleIdentifier]
             sampleObject = matchingSamples[0] if len(matchingSamples)>0 else None
             sampleTree = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=False, splitFilesChunkSize=-1, config=config)
             splitFilesChunks = sampleTree.getSampleFileNameChunks()
             sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            
+            fileList = "\n".join(["    '{fileName}',".format(fileName=sampleFileName) for sampleFileName in splitFilesChunks[0]])
+            xsWeight = '%f'%sampleScale
+            mcWeight = config.get('Weights','weightF')
+            weight = "(%s)*%s"%(mcWeight, xsWeight)
 
-            print "----",sampleIdentifier,"----"
-            print "# BEGINNING OF PYTHON FILE\n\n"
-            print "# sample: ", sampleIdentifier
-            print "import ROOT"
-            print "from myutils.sampleTree import SampleTree"
-            print "sampleFiles = ["
-            for sampleFileName in splitFilesChunks[0]:
-                print "    '{fileName}',".format(fileName=sampleFileName)
-            print "]"
-            print "sampleTree = SampleTree(sampleFiles, treeName='Events')"
-            print "print 'number of events:', sampleTree.GetEntries()"
-            print "# ----- loop example ----"
-            print "# example how to loop over all events"
-            print "# alternatively, the TChain object can be accessed as sampleTree.tree"
-            print "#for event in sampleTree:"
-            print "#if event.Vtype == 1:"
-            print "#    print 'Vtype 1 event', event.event"
-            print "# ----- skim example ----"
-            print "#sampleTree.addOutputTree('skim_" + sampleIdentifier + ".root','(kinFit.V_mass_fit > 75 && kinFit.V_mass_fit < 105 && (kinFit.H_mass_fit_fallback > 90 && kinFit.H_mass_fit_fallback < 150) && Jet_btagCMVA[hJidxCMVA[0]] > -0.5884 && Jet_btagCMVA[hJidxCMVA[1]] > -0.5884 && (((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2))&&(Jet_PtReg[hJidxCMVA[0]]>20&&Jet_PtReg[hJidxCMVA[1]]>20)&&(abs(Jet_eta[hJidxCMVA[0]])<2.4&&abs(Jet_eta[hJidxCMVA[1]])<2.4)&&(hJidxCMVA[0]>-1&&hJidxCMVA[1]>-1))) && ((Vtype==1&&1&&Sum$(Electron_pt>20&&Electron_mvaSpring16GP_WP90&&(abs(Electron_eta)>=1.57||abs(Electron_eta)<=1.44)&&Electron_pfRelIso03_all<0.15)>=2)||(Vtype==0&&1&&Sum$(Muon_pfRelIso04_all<0.25)>=2)) && (kinFit.V_pt_fit>50)')"
-            print "#for x in ['nJet','Jet_pt','Jet_eta','Jet_phi','event','run','Muon_pt','Muon_eta','Muon_phi','Muon_mass','Electron_eta','Electron_pt','Electron_phi','Electron_mass','Jet_mass','MET_Pt','MET_pt','Jet_jetId','Jet_puId']:"
-            print "#    sampleTree.addFormula(x)"
-            print "#sampleTree.addOutputBranch('weight','" + config.get('Weights','weightF') + "')"
-            print "#sampleTree.addOutputBranch('XSweight','%f')"%sampleScale
-            print "#sampleTree.process()"
+            with open('skim_template.dat','r') as skimTemplateFile:
+                skimTemplate = skimTemplateFile.read()
 
-            print "\n\n# END OF PYTHON FILE"
-            print "-"*20
+            skimTemplate = skimTemplate.replace('{sampleIdentifier}', sampleIdentifier).replace('{fileList}',fileList).replace('{xsWeight}',xsWeight).replace('{mcWeight}',mcWeight).replace('{weight}',weight)
+            if opts.output:
+                with open(opts.output + '_' + sampleIdentifier + '.py','w') as outputFile:
+                    outputFile.write(skimTemplate)
+                print "written to: \x1b[34m",opts.output,"\x1b[0m"
+            else:
+                print "----",sampleIdentifier,"----"
+                print skimTemplate
 
 if opts.task == 'checklogs':
 

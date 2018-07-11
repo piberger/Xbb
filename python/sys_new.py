@@ -37,7 +37,6 @@ debug = 'XBBDEBUG' in os.environ
 config = BetterConfigParser()
 config.read(opts.config)
 anaTag = config.get("Analysis","tag")
-btagLibrary = config.get('BTagReshaping','library')
 samplesinfo=config.get('Directories','samplesinfo')
 channel=config.get('Configuration','channel')
 VHbbNameSpace=config.get('VHbbNameSpace','library')

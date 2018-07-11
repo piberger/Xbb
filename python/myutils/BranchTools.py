@@ -29,11 +29,29 @@ class TreeFormula(object):
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
-        self.sampleTree.addFormula(formula)
-        self.branches = [{'name': self.branchName, 'formula': lambda x: self.sampleTree.evaluate(formula), 'type': self.branchType}]
+        self.sampleTree.addFormula(self.formula)
+        self.branches = [{'name': self.branchName, 'formula': lambda x: self.sampleTree.evaluate(self.formula), 'type': self.branchType}]
 
     def getBranches(self):
         return self.branches
+
+class TreeFormulas(object):
+
+    def __init__(self, formulaDict):
+        self.formulas = []
+        for k,v in formulaDict.iteritems():
+            if type(v) == str:
+                self.formulas.append(TreeFormula(k, v))
+            else:
+                self.formulas.append(TreeFormula(k, v['formula'], branchType=v['type']))
+
+    def customInit(self, initVars):
+        for x in self.formulas:
+            x.customInit(initVars)
+    
+    def getBranches(self):
+        return sum([x.getBranches() for x in self.formulas],[])
+
 
 class Copy(object):
 
