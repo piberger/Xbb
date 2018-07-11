@@ -71,6 +71,11 @@ class MuonSFfromJSON(object):
     def getTriggerSf(self, eta1, pt1, eta2, pt2):
         leg1 = 1.0 #not implemented yet
         leg2 = 1.0 
+        #define efficiency for MC and 
+        effData_leg8 = []
+        effData_leg17= []
+        effMC_leg8= []
+        effMC_leg17 = []
         #if self.debug:
         #    print "leg1: eta:", eta1, " pt:", pt1, "->", leg1
         #    print "leg2: eta:", eta2, " pt:", pt2, "->", leg2
