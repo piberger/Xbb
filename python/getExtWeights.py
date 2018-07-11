@@ -153,6 +153,7 @@ ZlljetsHTbinned = [
 #ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 ##V25 + v25b
 #ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+
 #
 #need to be used when the inclusive is used for the low HT region
 SampleCuts = {"DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8":"LHE_HT<100"}
@@ -165,15 +166,12 @@ ZLLBFilterjetsVPT0 = [""]
 ZLLBFilterjetsVPT100 = ["DYJetsToLL_BGenFilter_Zpt-100to200_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
 ZLLBFilterjetsVPT200 = ["DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
 
-
 #ggZH = ["ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1","ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext2"]
 #ZH = ["ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8","ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1"]
 
 ####
 #Phase-space cuts
 ####
-
-DYBFilter	=  "(LHE_Nb==0)"
 
 DYBJets           = "(LHE_Nb>0)"
 
@@ -231,9 +229,6 @@ arglistBFilter = [
         ]
 
 runInParallel(getStichWeight,arglistBFilter)
-
-
-
 
 #arglist = [
 ##    (config, ZLLjetsHT0,),
