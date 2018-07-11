@@ -138,18 +138,33 @@ verify = len(sys.argv) > 2 and sys.argv[2]=='verify'
 #ZLLjetsHT1200    = ["DYJetsToLL_M-50_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 #ZLLjetsHT2500    = ["DYJetsToLL_M-50_HT-2500toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 
-ZlljetsHTbinned = ["DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
+ZlljetsHTbinned = [
+		"DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8",
+		"DYJetsToLL_M-50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8",
+		"DYJetsToLL_M-50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-600to800_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-800to1200_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-1200to2500_TuneCP5_13TeV-madgraphMLM-pythia8",
+                "DYJetsToLL_M-50_HT-2500toInf_TuneCP5_13TeV-madgraphMLM-pythia8",
+]
 
 ##V25 only
 #ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"]
 ##V25 + v25b
 #ZLLBjets         = ["DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8","DYBJetsToLL_M-50_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_ext1"]
+
 #
+#need to be used when the inclusive is used for the low HT region
 SampleCuts = {"DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8":"LHE_HT<100"}
 
 ZLLBjetsVPT0 = [""]
-ZLLBjetsVPT100= ["DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8"]
-ZLLBjetsVPT200 = ["etc"]
+ZLLBjetsVPT100 = ["DYBJetsToLL_M-50_Zpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8"]
+ZLLBjetsVPT200 = ["DYBJetsToLL_M-50_Zpt-200toInf_TuneCP5_13TeV-madgraphMLM-pythia8"]
+
+ZLLBFilterjetsVPT0 = [""]
+ZLLBFilterjetsVPT100 = ["DYJetsToLL_BGenFilter_Zpt-100to200_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
+ZLLBFilterjetsVPT200 = ["DYJetsToLL_BGenFilter_Zpt-200toInf_M-50_TuneCP5_13TeV-madgraphMLM-pythia8"]
 
 #ggZH = ["ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1","ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext2"]
 #ZH = ["ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8","ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8_ext1"]
@@ -199,17 +214,21 @@ def runInParallel(func, arglist):
 ##runInParallel(arglist)
 #runInParallel(getStichWeight,arglist)
 
-arglist = [
+arglistB = [
 #    ('VPT0'  ,ZlljetsHTbinned, ZLLBjetsVPT0,VPT0   +"&&"+DYBJets,),
-    ('VPT100',ZlljetsHTbinned, ZLLBjetsVPT100,VPT100 +"&&"+DYBJets,)
-#    ('VPT200',ZlljetsHTbinned, ZLLBjetsVPT200,VPT200 +"&&"+DYBJets,),
+    ('VPT100',ZlljetsHTbinned, ZLLBjetsVPT100,VPT100 +"&&"+DYBJets,),
+    ('VPT200',ZlljetsHTbinned, ZLLBjetsVPT200,VPT200 +"&&"+DYBJets,)
         ]
 
-#arglist = [
-#    ('VPT100',ZlljetsHTbinned, ZlljetsHTbinned,DYBJets,)
-#        ]
-#
-runInParallel(getStichWeight,arglist)
+#BFilter
+
+arglistBFilter = [
+#    ('VPT0'  ,ZlljetsHTbinned, ZLLBFilterjetsVPT0,VPT0   +"&&"+DYBFilter,),
+    ('VPT100',ZlljetsHTbinned, ZLLBFilterjetsVPT100,VPT100 +"&&"+DYBFilter,),
+    ('VPT200',ZlljetsHTbinned, ZLLBFilterjetsVPT200,VPT200 +"&&"+DYBFilter,)
+        ]
+
+runInParallel(getStichWeight,arglistBFilter)
 
 #arglist = [
 ##    (config, ZLLjetsHT0,),
