@@ -1,4 +1,4 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_1.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_2.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_3.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/arizzi-RunIIMoriond17-DeepAndR126/180517_165157/0000/tree_4.root
