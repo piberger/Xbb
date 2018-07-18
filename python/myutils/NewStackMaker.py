@@ -556,6 +556,17 @@ class NewStackMaker:
                 groupedHistograms[dataGroupName].Scale(1./groupedHistograms[dataGroupName].Integral())
             groupedHistograms[dataGroupName].Draw(drawOption)
 
+        # draw total entry number
+        if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
+            mcHistogram0 = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms0')
+            mcHistogram0.SetLineColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerStyle(1)
+            #mcHistogram0.SetMarkerSize(0.001)
+            mcHistogram0.SetStats(0)
+            mcHistogram0.Draw("SAME TEXT0")
+            print("drawn total entry histogram!!!")
+
         # draw ratio plot
         theErrorGraph = None
         if not normalize and not self.is2D:
