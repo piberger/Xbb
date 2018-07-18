@@ -1431,7 +1431,10 @@ if opts.task == 'sample':
             sampleObject = matchingSamples[0] if len(matchingSamples)>0 else None
             sampleTree = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=False, splitFilesChunkSize=-1, config=config)
             splitFilesChunks = sampleTree.getSampleFileNameChunks()
-            sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            try:
+                sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            except:
+                sampleScale = 1.0
             
             fileList = "\n".join(["    '{fileName}',".format(fileName=sampleFileName) for sampleFileName in splitFilesChunks[0]])
             xsWeight = '%f'%sampleScale

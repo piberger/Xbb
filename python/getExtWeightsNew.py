@@ -25,8 +25,11 @@ args = parser.parse_args()
 def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None):
     if not sampleTree:
         sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
-    nEvents = sampleTree.tree.Draw("1", cut, "goff")
-    return nEvents
+    h1 = ROOT.TH1D("h1","h1",1,0,2)
+    nEvents = sampleTree.tree.Draw("1>>h1", "(" + cut + ")*genWeight")
+    nEventsWeighted = h1.GetBinContent(1)
+    h1.Delete()
+    return nEventsWeighted
 
 
 # load config
