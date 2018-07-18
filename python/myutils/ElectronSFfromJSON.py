@@ -86,7 +86,7 @@ class ElectronSFfromJSON(object):
         return True
 
 
-#From Pirmin:
+#Separated weight_Iso in eta (Barrel/Endcap) :
 #----------------------------------------------------------------------------------------------------
 	 
     def computeSF(self, weight_trigg, weight_Iso, weight_Iso_LowEta, weight_Iso_HighEta, weight_SF, lep_eta, lep_pt, lep_n, etacut):
@@ -95,20 +95,16 @@ class ElectronSFfromJSON(object):
         # require two electrons
 #	print "Number of leptons {nl}".format(nl=lep_n)
 	if lep_n == 2:
-#	 print "Inside the two leptons condition"
+
  	 #Calculating IdIso weights, separately for each electron
 	 weight = []
 	 for lep in [0,1]:
 	  #weights_temp=[Nominal,Down,Up] for the corespondong lepton	 
 	  weights_temp=[]
-#	  print "leptons loop"
-#	  quit()
           for syst in self.systVariations:
 	   weights_temp.append(self.getIdIsoSf(eta=lep_eta[lep], pt=lep_pt[lep], syst=syst))
-#	  print weights_temp
-#	  quit()
 	  weight.append(weights_temp)
-#	 print weight	
+
 	 #Calculating the trigger and IdIso weights and Down/Up variations
          for i, syst in enumerate(self.systVariations):
 	  weight_trigg[i] = self.getTriggerSf(eta1=lep_eta[0], pt1=lep_pt[0], eta2=lep_eta[1], pt2=lep_pt[1], syst=syst)
@@ -143,7 +139,7 @@ class ElectronSFfromJSON(object):
              weight_Iso_LowEta[1] = weight[0][0] * weight[1][2]
              weight_Iso_HighEta[0] = weight[0][1] * weight[1][0]
              weight_Iso_HighEta[1] = weight[0][2] * weight[1][0]
-	#This is when an event has more than 2 leptons (Don't really understand this !)
+	#This is when an event has more than 2 lepton
 	else:
          for i, syst in enumerate(self.systVariations):
 	  weight_trigg[i] = 1.
