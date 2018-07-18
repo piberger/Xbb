@@ -1092,6 +1092,38 @@ double LOtoNLOWeightBjetSplitEtabb(double etabb, int njets){
 
 }
 
+double LOtoNLOWeightBjetSplitEtabb2017(double etabb, int njets, double Vpt){
+
+    double SF = 1.;
+    if(etabb < 5){
+        if (Vpt < 150){
+                //low pt
+            if(njets < 1){
+                //0b jets
+                SF =   1.02053 - 0.0600883*etabb + 0.0217384*etabb*etabb;
+                }else if(njets == 1){
+                //1b jets
+                SF =   1.05412 - 0.122462*etabb + 0.0395305*etabb*etabb;
+                }else if(njets >=2){
+                //2b jets
+                SF =   1.01633 - 0.0862970*etabb + 0.0362290*etabb*etabb;
+                }
+
+                //high pt
+            }else if (Vpt > 150){
+                //0b jets
+                SF =   1.00853 - 0.0268244*etabb + 0.0101112*etabb*etabb;
+                }else if(njets == 1){
+                //1b jets
+                SF =   (34.6575 + 2.00480*etabb + 1.54075*etabb*etabb)*0.0315321*TMath::Exp(-0.198796*etabb);
+                }else if(njets >=2){
+                //2b jets
+                SF =   1.05759 - 0.0946755*etabb + 0.0239830*etabb*etabb;
+            }
+        }
+    return SF;
+}
+
 int checkgen(int Jet_mcIdx0, int Jet_mcIdx1, int length){
 
    if (Jet_mcIdx0 == -1 || Jet_mcIdx1 == -1 || Jet_mcIdx0 >= length || Jet_mcIdx1 >= length){
