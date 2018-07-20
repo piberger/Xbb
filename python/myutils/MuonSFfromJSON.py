@@ -25,8 +25,8 @@ class MuonSFfromJSON(object):
         self.branchBuffers = {}
         self.lastEntry = -1
         if not self.isData:
-            for branchName in ['muonSF', 'muonSF_IdIso', 'muonSF_trigger']:
-                self.branchBuffers[branchName] = array.array('f', [0])
+            for branchName in ['muonSF', 'muonSF_Id', 'muonSF_Iso', 'muonSF_trigger']:
+                self.branchBuffers[branchName] = array.array('f', [1.0, 1.0, 1.0])
                 self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName}) 
 
     def getBranches(self):
@@ -49,26 +49,45 @@ class MuonSFfromJSON(object):
 
             # require two muons
             if len(zMuons) == 2:
-                sfIdIso = self.getIdIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt) 
-                sfTrigger = self.getTriggerSf(eta1=zMuons[0].eta, pt1=zMuons[0].pt, eta2=zMuons[1].eta, pt2=zMuons[1].pt)
-                self.branchBuffers['muonSF'][0] = sfIdIso * sfTrigger
-                self.branchBuffers['muonSF_IdIso'][0] = sfIdIso
+                sfId =       self.getIdSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdSf(eta=zMuons[1].eta, pt=zMuons[1].pt) 
+                sfId_Down =  self.getIdSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdSf(eta=zMuons[1].eta, pt=zMuons[1].pt, syst='Down') 
+                sfId_Up =    self.getIdSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIdSf(eta=zMuons[1].eta, pt=zMuons[1].pt, syst='Up') 
+                
+                sfIso =      self.getIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt) 
+                sfIso_Down = self.getIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt, syst='Down') 
+                sfIso_Up =   self.getIsoSf(eta=zMuons[0].eta, pt=zMuons[0].pt) * self.getIsoSf(eta=zMuons[1].eta, pt=zMuons[1].pt, syst='Up') 
+
+                sfTrigger =      self.getTriggerSf(eta1=zMuons[0].eta, pt1=zMuons[0].pt, eta2=zMuons[1].eta, pt2=zMuons[1].pt)
+                sfTrigger_Down = self.getTriggerSf(eta1=zMuons[0].eta, pt1=zMuons[0].pt, eta2=zMuons[1].eta, pt2=zMuons[1].pt, syst='Down')
+                sfTrigger_Up =   self.getTriggerSf(eta1=zMuons[0].eta, pt1=zMuons[0].pt, eta2=zMuons[1].eta, pt2=zMuons[1].pt, syst='Up')
+
+                self.branchBuffers['muonSF'][0] = sfId * sfIso * sfTrigger
+                self.branchBuffers['muonSF'][1] = sfId_Down * sfIso_Down * sfTrigger_Down
+                self.branchBuffers['muonSF'][2] = sfId_Up * sfIso_Up * sfTrigger_Up
+                self.branchBuffers['muonSF_Id'][0] = sfId
+                self.branchBuffers['muonSF_Id'][1] = sfId_Down
+                self.branchBuffers['muonSF_Id'][2] = sfId_Up
+                self.branchBuffers['muonSF_Iso'][0] = sfIso
+                self.branchBuffers['muonSF_Iso'][1] = sfIso_Down
+                self.branchBuffers['muonSF_Iso'][2] = sfIso_Up
                 self.branchBuffers['muonSF_trigger'][0] = sfTrigger
+                self.branchBuffers['muonSF_trigger'][1] = sfTrigger_Down
+                self.branchBuffers['muonSF_trigger'][2] = sfTrigger_Up
             else:
-                self.branchBuffers['muonSF'][0] = 1.0
-                self.branchBuffers['muonSF_IdIso'][0] = 1.0
-                self.branchBuffers['muonSF_trigger'][0] = 1.0
+                for i in range(3):
+                    self.branchBuffers['muonSF'][i] = 1.0
+                    self.branchBuffers['muonSF_Id'][i] = 1.0
+                    self.branchBuffers['muonSF_Iso'][i] = 1.0
+                    self.branchBuffers['muonSF_trigger'][i] = 1.0
         return True
 
-    def getIdIsoSf(self, eta, pt):
-        sfId = self.jsonTable.find(self.idSf, eta=eta, pt=pt)
-        sfIso = self.jsonTable.find(self.isoSf, eta=eta, pt=pt)
-        sf = sfId * sfIso
-        #if self.debug:
-        #    print "id/iso eta:", eta, "pt:", pt, "->", sf
-        return sf
+    def getIdSf(self, eta, pt, syst=None):
+        return self.jsonTable.find(self.idSf, eta=eta, pt=pt, syst=syst)
+
+    def getIsoSf(self, eta, pt, syst=None):
+        return self.jsonTable.find(self.isoSf, eta=eta, pt=pt, syst=syst)
     
-    def getTriggerSf(self, eta1, pt1, eta2, pt2):
+    def getTriggerSf(self, eta1, pt1, eta2, pt2, syst=None):
         leg1 = 1.0 #not implemented yet
         leg2 = 1.0 
         #define efficiency for MC and 
@@ -87,7 +106,7 @@ if __name__ == "__main__":
             'weights/Zll/Muons/RunBCDEF_SF_ID.json',
             'weights/Zll/Muons/RunBCDEF_SF_ISO.json',
         ])
-    print sfObject.getIdIsoSf(0.5, 42)
-    print sfObject.getIdIsoSf(-0.5, 42)
-    print sfObject.getIdIsoSf(1.5, 21)
-    print sfObject.getIdIsoSf(-1.5, 21)
+    print sfObject.getIdSf(0.5, 42)
+    print sfObject.getIdSf(-0.5, 42)
+    print sfObject.getIsoSf(1.5, 21)
+    print sfObject.getIsoSf(-1.5, 21)
