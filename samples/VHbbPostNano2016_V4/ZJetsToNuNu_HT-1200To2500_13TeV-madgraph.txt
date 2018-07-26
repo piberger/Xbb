@@ -1,2 +1,2 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/arizzi-RunIIMoriond17-DeepAndR180/180517_172217/0000/tree_1.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/arizzi-RunIIMoriond17-DeepAndR181/180517_172246/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/arizzi-RunIIMoriond17-DeepAndR180/180517_172217/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ZJetsToNuNu_HT-1200To2500_13TeV-madgraph/arizzi-RunIIMoriond17-DeepAndR181/180517_172246/0000/tree_1.root

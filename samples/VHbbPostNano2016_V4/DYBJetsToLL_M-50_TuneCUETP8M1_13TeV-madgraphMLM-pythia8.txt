@@ -1,2 +1,2 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/arizzi-RunIIMoriond17-DeepAndR87/180517_163036/0000/tree_1.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/arizzi-RunIIMoriond17-DeepAndR87/180517_163036/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/arizzi-RunIIMoriond17-DeepAndR87/180517_163036/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/DYBJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/arizzi-RunIIMoriond17-DeepAndR87/180517_163036/0000/tree_2.root

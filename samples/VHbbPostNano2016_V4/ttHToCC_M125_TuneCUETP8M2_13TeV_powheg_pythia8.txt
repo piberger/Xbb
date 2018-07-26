@@ -1,5 +1,5 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_2.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_28.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_33.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_7.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_9.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_28.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_33.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V4/ttHToCC_M125_TuneCUETP8M2_13TeV_powheg_pythia8/lmastrol-NanoProd_v4-2fc0529a091/180528_113535/0000/tree_9.root
