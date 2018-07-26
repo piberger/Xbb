@@ -11,10 +11,12 @@ from math import sqrt
 from math import acos
 from math import cos
 from math import sin
+import sys
 
 class GetTopMass(object):
 
-    def __init__(self, sample=None):
+    def __init__(self, sample=None, nano=False):
+        self.nano = nano
         self.lastEntry = -1
         self.branchBuffers = {}
         self.branches = []
@@ -42,14 +44,27 @@ class GetTopMass(object):
             lep = TLorentzVector()
             met = TLorentzVector()
 
-            lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
-            met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
+            #print 'self.nano is', self.nano
+            #sys.exit()
+            if not self.nano:
+                lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
+                met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
+            else: 
+                if len(getattr(tree,'VMuonIdx')) == 1:
+                    lep.SetPtEtaPhiM(tree.Muon_pt[tree.VMuonIdx[0]], tree.Muon_eta[tree.VMuonIdx[0]], tree.Muon_phi[tree.VMuonIdx[0]], tree.Muon_mass[tree.VMuonIdx[0]])
+                if len(getattr(tree,'VElectronIdx')) == 1:
+                    lep.SetPtEtaPhiM(tree.Electron_pt[tree.VElectronIdx[0]], tree.Electron_eta[tree.VElectronIdx[0]], tree.Electron_phi[tree.VElectronIdx[0]], tree.Electron_mass[tree.VElectronIdx[0]])
+                met.SetPtEtaPhiM(tree.MET_pt, 0, tree.MET_phi, 0)
             #lep.SetPtEtaPhiM(rand1*86.575485, rand1*-0.370986, rand1*-1.694283, rand1*0.1057000)
             #met.SetPtEtaPhiM(rand2*39.530349, 0., rand2*-2.810159, 0.0)
             bjet1 = TLorentzVector()
             bjet2 = TLorentzVector()
-            bjet1.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_0, tree.Jet_eta[tree.hJCMVAV2idx[0]], tree.Jet_phi[tree.hJCMVAV2idx[0]], tree.Jet_mass[tree.hJCMVAV2idx[0]])
-            bjet2.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_1, tree.Jet_eta[tree.hJCMVAV2idx[1]], tree.Jet_phi[tree.hJCMVAV2idx[1]], tree.Jet_mass[tree.hJCMVAV2idx[1]])
+            if not self.nano:
+                bjet1.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_0, tree.Jet_eta[tree.hJCMVAV2idx[0]], tree.Jet_phi[tree.hJCMVAV2idx[0]], tree.Jet_mass[tree.hJCMVAV2idx[0]])
+                bjet2.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_1, tree.Jet_eta[tree.hJCMVAV2idx[1]], tree.Jet_phi[tree.hJCMVAV2idx[1]], tree.Jet_mass[tree.hJCMVAV2idx[1]])
+            else:
+                bjet1.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[0]], tree.Jet_eta[tree.hJidxCMVA[0]], tree.Jet_phi[tree.hJidxCMVA[0]], tree.Jet_mass[tree.hJidxCMVA[0]])
+                bjet2.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[1]], tree.Jet_eta[tree.hJidxCMVA[1]], tree.Jet_phi[tree.hJidxCMVA[1]], tree.Jet_mass[tree.hJidxCMVA[1]])
             jets = [bjet1, bjet2]
             tmp = self.computeTopMass(lep,met,jets)
             self.branchBuffers['top_mass'][0] = tmp
