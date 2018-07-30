@@ -349,6 +349,7 @@ class SampleTree(object):
             print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
             print(" WARNING !!! ROOT.TTreeFormula of length %d, this might cause problems !!"%len(formula))
             print(" reduce length of formulas if problems occur, e.g. by passing lists of cut formulas!")
+            print("\x1b[32m",formula,"\x1b[97m")
             print("------------------------------------------------------------------------------\x1b[0m")
 
         self.formulaDefinitions.append({'name': formulaName, 'formula': formula})

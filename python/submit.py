@@ -1049,7 +1049,7 @@ if opts.task.startswith('cachedc'):
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
