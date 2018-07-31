@@ -44,8 +44,6 @@ class GetTopMass(object):
             lep = TLorentzVector()
             met = TLorentzVector()
 
-            #print 'self.nano is', self.nano
-            #sys.exit()
             if not self.nano:
                 lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
                 met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
@@ -55,8 +53,6 @@ class GetTopMass(object):
                 if len(getattr(tree,'VElectronIdx')) == 1:
                     lep.SetPtEtaPhiM(tree.Electron_pt[tree.VElectronIdx[0]], tree.Electron_eta[tree.VElectronIdx[0]], tree.Electron_phi[tree.VElectronIdx[0]], tree.Electron_mass[tree.VElectronIdx[0]])
                 met.SetPtEtaPhiM(tree.MET_pt, 0, tree.MET_phi, 0)
-            #lep.SetPtEtaPhiM(rand1*86.575485, rand1*-0.370986, rand1*-1.694283, rand1*0.1057000)
-            #met.SetPtEtaPhiM(rand2*39.530349, 0., rand2*-2.810159, 0.0)
             bjet1 = TLorentzVector()
             bjet2 = TLorentzVector()
             if not self.nano:
