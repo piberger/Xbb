@@ -34,34 +34,12 @@ class GetTopMass(object):
         if self.propagateJES and self.nano:
             self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
-            #top_mass = 'top_mass'
-            #self.branches.append({'name': top_mass, 'formula': self.getBranch, 'arguments': top_mass})
-            # for data only include the min/max (set to nominal) to simplify cutting
             systList = self.jetSystematics + ['minmax']
             for syst in systList:
                 for Q in ['Up', 'Down']:
                     top_massSyst = "{p}_{s}_{q}".format(p='top_mass', s=syst, q=Q)
                     self.branchBuffers[top_massSyst] = array.array('f', [0.0])
                     self.branches.append({'name': top_massSyst, 'formula': self.getBranch, 'arguments': top_massSyst})
-
-            #######################
-            #self.sample = initVars['sample']
-            #self.higgsPropertiesWithSys = self.higgsProperties if self.sample.type != 'DATA' else []
-            #for higgsProperty in self.higgsProperties: 
-            #    self.branchBuffers[higgsProperty] = array.array('f', [0.0])
-            #    self.branches.append({'name': higgsProperty, 'formula': self.getBranch, 'arguments': higgsProperty})
-            #    # for data only include the min/max (set to nominal) to simplify cutting
-            #    systList = self.jetSystematics + ['minmax'] if higgsProperty in self.higgsPropertiesWithSys else ['minmax']
-            #    for syst in systList:
-            #        for Q in ['Up', 'Down']:
-            #            higgsPropertySyst = "{p}_{s}_{q}".format(p=higgsProperty, s=syst, q=Q)
-            #            self.branchBuffers[higgsPropertySyst] = array.array('f', [0.0])
-            #            self.branches.append({'name': higgsPropertySyst, 'formula': self.getBranch, 'arguments': higgsPropertySyst})
-
-            #for p in ['Jet_pt_minmax', 'Jet_mass_minmax']:
-            #    for q in ['Up', 'Down']:
-            #        self.branchBuffers[p+q] = array.array('f', [0.0]*self.nJetMax)
-            #        self.branches.append({'name': p+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+q}, 'length': self.nJetMax, 'leaflist': p+q+'[nJet]/F'})
 
     def getBranch(self, event, arguments=None):
         self.processEvent(event)
@@ -88,8 +66,18 @@ class GetTopMass(object):
             lep = TLorentzVector()
             met = TLorentzVector()
 
-            #hJidx0 = getattr(tree,self.tagidx)[0] 
-            #hJidx1 = getattr(tree,self.tagidx)[1]
+            hJidx0 = getattr(tree,self.tagidx)[0] 
+            hJidx1 = getattr(tree,self.tagidx)[1]
+
+            # select branches from tree
+            # for 2016 nano v5
+            treeJet_PtReg = tree.Jet_PtReg 
+            treeJet_pt = tree.Jet_pt
+            treeJet_Pt = tree.Jet_Pt
+            treeJet_bReg = tree.Jet_bReg
+
+            treeJet_phi = tree.Jet_phi
+            treeJet_eta = tree.Jet_eta
 
             if not self.nano:
                 lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
@@ -106,8 +94,8 @@ class GetTopMass(object):
                 bjet1.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_0, tree.Jet_eta[tree.hJCMVAV2idx[0]], tree.Jet_phi[tree.hJCMVAV2idx[0]], tree.Jet_mass[tree.hJCMVAV2idx[0]])
                 bjet2.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_1, tree.Jet_eta[tree.hJCMVAV2idx[1]], tree.Jet_phi[tree.hJCMVAV2idx[1]], tree.Jet_mass[tree.hJCMVAV2idx[1]])
             else:
-                bjet1.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[0]], tree.Jet_eta[tree.hJidxCMVA[0]], tree.Jet_phi[tree.hJidxCMVA[0]], tree.Jet_mass_nom[tree.hJidxCMVA[0]]*tree.Jet_bReg[tree.hJidxCMVA[0]])
-                bjet2.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[1]], tree.Jet_eta[tree.hJidxCMVA[1]], tree.Jet_phi[tree.hJidxCMVA[1]], tree.Jet_mass_nom[tree.hJidxCMVA[1]]*tree.Jet_bReg[tree.hJidxCMVA[1]])
+                bjet1.SetPtEtaPhiM(tree.Jet_PtReg[hJidx0], tree.Jet_eta[hJidx0], tree.Jet_phi[hJidx0], tree.Jet_mass_nom[hJidx0]*tree.Jet_bReg[hJidx0])
+                bjet2.SetPtEtaPhiM(tree.Jet_PtReg[hJidx1], tree.Jet_eta[hJidx1], tree.Jet_phi[hJidx1], tree.Jet_mass_nom[hJidx1]*tree.Jet_bReg[hJidx1])
             jets = [bjet1, bjet2]
             tmp = self.computeTopMass(lep,met,jets)
             self.branchBuffers['top_mass'][0] = tmp
@@ -120,44 +108,15 @@ class GetTopMass(object):
                 self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
                 systList = self.jetSystematics 
-                #+ ['minmax']
                 top_mass_min = -99
                 top_mass_max = -99
                 for syst in systList:
                     for Q in ['Up', 'Down']:
 
                         top_massSyst = "{p}_{s}_{q}".format(p='top_mass', s=syst, q=Q)
-                        lep = TLorentzVector()
-                        met = TLorentzVector()
 
-                        hJidx0 = getattr(tree,self.tagidx)[0] 
-                        hJidx1 = getattr(tree,self.tagidx)[1]
-
-                        # select branches from tree
-                        # for 2016 nano v5
-                        treeJet_PtReg = tree.Jet_PtReg 
-                        treeJet_pt = tree.Jet_pt
-                        treeJet_Pt = tree.Jet_Pt
-                        treeJet_bReg = tree.Jet_bReg
-
-                        #treeJet_Pt = tree.Jet_Pt
-                        treeJet_phi = tree.Jet_phi
-                        treeJet_eta = tree.Jet_eta
-
-                        if not self.nano:
-                            lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
-                            met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
-                        else: 
-                            if len(getattr(tree,'VMuonIdx')) == 1:
-                                lep.SetPtEtaPhiM(tree.Muon_pt[tree.VMuonIdx[0]], tree.Muon_eta[tree.VMuonIdx[0]], tree.Muon_phi[tree.VMuonIdx[0]], tree.Muon_mass[tree.VMuonIdx[0]])
-                            if len(getattr(tree,'VElectronIdx')) == 1:
-                                lep.SetPtEtaPhiM(tree.Electron_pt[tree.VElectronIdx[0]], tree.Electron_eta[tree.VElectronIdx[0]], tree.Electron_phi[tree.VElectronIdx[0]], tree.Electron_mass[tree.VElectronIdx[0]])
-                            met.SetPtEtaPhiM(tree.MET_pt, 0, tree.MET_phi, 0)
                         bjet1 = TLorentzVector()
                         bjet2 = TLorentzVector()
-
-                            #bjet1.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[0]], tree.Jet_eta[tree.hJidxCMVA[0]], tree.Jet_phi[tree.hJidxCMVA[0]], tree.Jet_mass[tree.hJidxCMVA[0]])
-                            #bjet2.SetPtEtaPhiM(tree.Jet_PtReg[tree.hJidxCMVA[1]], tree.Jet_eta[tree.hJidxCMVA[1]], tree.Jet_phi[tree.hJidxCMVA[1]], tree.Jet_mass[tree.hJidxCMVA[1]])
 
                         bjet1.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
                         bjet2.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
@@ -190,22 +149,8 @@ class GetTopMass(object):
                         else:
                             top_mass_min = min(top_mass_min,tmp)
                             top_mass_max = max(top_mass_max,tmp)
-                    #test
                     self.branchBuffers['top_mass_minmax_Down'][0] = top_mass_min
                     self.branchBuffers['top_mass_minmax_Up'][0] = top_mass_max
-                        
-                        
-
-                ## OLD
-                #top_mass = 'top_mass'
-                #self.branches.append({'name': top_mass, 'formula': self.getBranch, 'arguments': top_mass})
-                ## for data only include the min/max (set to nominal) to simplify cutting
-                #systList = self.jetSystematics + ['minmax']
-                #for syst in systList:
-                #    for Q in ['Up', 'Down']:
-                #        top_massSyst = "{p}_{s}_{q}".format(p=top_mass, s=syst, q=Q)
-                #        self.branchBuffers[top_massSyst] = array.array('f', [0.0])
-                #        self.branches.append({'name': top_massSyst, 'formula': self.getBranch, 'arguments': top_massSyst})
 
             return True
 
