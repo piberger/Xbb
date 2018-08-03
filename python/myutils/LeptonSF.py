@@ -8,10 +8,10 @@ class LeptonSF:
             self.valid = False
             if lep_json!="":
                 pass
-                #print "[LeptonSF]: Warning: ", lep_json, " is not a valid file. Return."
+                print "[LeptonSF]: Warning: ", lep_json, " is not a valid file. Return."
             else:
                 pass
-                #print "[LeptonSF]: No file has been specified. Return."
+                print "[LeptonSF]: No file has been specified. Return."
         else:
             self.init(lep_json, lep_name, lep_binning, extrapolateFromClosestBin)
 
@@ -150,98 +150,52 @@ if __name__ == "__main__":
 
     wdir = os.environ['CMSSW_BASE']+"/src/Xbb"
     jsons = {
-        ##
-        ##Muon
-        ##
-        ##ID and ISO
-        #wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-        #wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-        #wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
-        #wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
-        ##Tracker
-        #wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-        #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+        #
+        #Muon
+        #
+        #ID and ISO
+        wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'], #eta pt
+        wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+        ###
+        wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
+        wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
+        #Tracker
+        wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+        wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
         #Trigg
-            #BCDEFG
-        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
-        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
-        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
-        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunBCDEFG_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
-            #H
-                #no DZ
-        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
-        wdir+'/python/json/V25/Data_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_DATA'],
-        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg8.json' : ['MC_NUM_hlt_Mu17_Mu8_OR_TkMu8_leg8_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
-        wdir+'/python/json/V25/MC_EfficienciesAndSF_doublehlt_perleg_RunH_leg17.json' : ['MC_NUM_hlt_Mu17Mu8_leg17_DEN_LooseIDnISO_PAR_pt_eta', 'abseta_pt_MC'],
-                #with DZ
-        wdir+'/python/json/V25/DATA_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_DATA'],
-        wdir+'/python/json/V25/MC_EfficienciesAndSF_dZ_numH.json' : ['MC_NUM_dZ_DEN_hlt_Mu17_Mu8_OR_TkMu8_loose_PAR_eta1_eta2', 'tag_abseta_abseta_MC']
+        #BCDEF
+        wdir+'/python/json/V25/EfficienciesAndSF_RunBtoF.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
+        #GH
+        wdir+'/python/json/V25/theJSONfile_Period4.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
         ##
         ##Electron
         ##
-        ##ID and ISO
-        #wdir+'/python/json/V25/EIDISO_ZH_out.json' : ['EIDISO_ZH', 'eta_pt_ratio'],
-        ##Tracker
-        #wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio']
-        ##Trigg
-        #wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
-        #wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio'],
+        ##ID and ISO (grouped as MVAid for electron)
+        wdir+'/python/json/V25/EIDISO_WH_out.json' : ['EIDISO_WH', 'eta_pt_ratio'],
+        #Tracker
+        wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio'],
+        #Trigg
+        wdir+'/python/json/V25/Tight27AfterIDISO_out.json' : ['Tight27AfterIDISO', 'eta_pt_ratio']
         }
-    #jsons = {
-    #    #
-    #    #Muon
-    #    #
-    #    ##ID and ISO
-    #    wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-    #    wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_LooseID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-    #    #wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
-    #    #wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['LooseISO_LooseID_pt_eta', 'abseta_pt_ratio'],
-    #    ##Tracker
-    #    #wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-    #    #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-    #    #wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-    #    #Trigg
-    #    wdir+'/python/json/V25/DiEleLeg1AfterIDISO_out.json' : ['DiEleLeg1AfterIDISO', 'eta_pt_ratio'],
-    #    wdir+'/python/json/V25/DiEleLeg2AfterIDISO_out.json' : ['DiEleLeg2AfterIDISO', 'eta_pt_ratio']
-    #    #
-    #    #Muon
-    #    #
-    #    #ID and ISO
-    #    #wdir+'/python/json/V25/EIDISO_ZH_out.json' : ['EIDISO_ZH', 'eta_pt_ratio'],
-    #    ##Tracker
-    #    #wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio']
-    #    #V24
-    #    #jsonpath+'/python/json/ScaleFactor_egammaEff_WP90.json' : ['ScaleFactor_egammaEff_WP90', 'eta_pt_ratio'],
-    #    #jsonpath+'/python/json/WP90_BCD.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCD', 'eta_pt_ratio'],
-    #    #jsonpath+'/python/json/WP90_BCDEF.json' : ['HLT_Ele27_WPLoose_eta2p1_WP90_BCDEF', 'eta_pt_ratio']
-    #    }
 
     for j, name in jsons.iteritems():
+
         print 'j is', j
         lepCorr = LeptonSF(j , name[0], name[1])
-        if not j.find('trk_SF_Run') != -1 and not j.find('EfficienciesAndSF_dZ_numH') != -1:
-            weight = lepCorr.get_2D(65, 1.5)
-            #if not j.find('EIDISO_ZH_out') != -1 and not j.find('ScaleFactor_etracker_80x') != -1:
-            #    weight = lepCorr.get_2D(65, 1.5)
-            #else:
-            #    weight = lepCorr.get_2D( 1.5,65)
+
+        ##test2
+        #lepton_pt = 75 
+        #lepton_eta = 0.9 
+
+        #2-D binned SF
+        if not j.find('trk_SF_Run') != -1:
+            if 'abseta' in  name[1]:
+                weight = lepCorr.get_2D(lepton_pt, abs(lepton_eta))
+            else:
+                weight = lepCorr.get_2D(lepton_pt, lepton_eta)
         #1-D binned SF
-        elif j.find('EfficienciesAndSF_dZ_numH') != -1:
-            weight = lepCorr.get_2D(1.5, 2.0)
         else:
-            weight = lepCorr.get_1D(1.5)
+            weight = lepCorr.get_1D(lepton_eta)
         val = weight[0]
         err = weight[1]
         print 'SF: ',  val, ' +/- ', err
-
-        #print 'j is', j
-        #lepCorr = LeptonSF(j , name[0], name[1])
-        #if not 'ScaleFactor_egammaEff_WP80' in j:
-        #    weight = lepCorr.get_2D( 65 , -1.5)
-        #else:
-        #    weight = lepCorr.get_2D( -1.5, 65)
-        #val = weight[0]
-        #err = weight[1]
-        #print 'SF: ',  val, ' +/- ', err
-    
-    
