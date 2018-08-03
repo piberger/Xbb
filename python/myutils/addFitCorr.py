@@ -72,7 +72,7 @@ class addFitCorr(object):
                 #else:
                 #    CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
             elif 'ST' in self.identifier:
-                CorrFactor = [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
+                CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
 
             self.branchBuffers['FitCorr'][0] = CorrFactor[0]
             self.branchBuffers['FitCorr'][1] = CorrFactor[1]
