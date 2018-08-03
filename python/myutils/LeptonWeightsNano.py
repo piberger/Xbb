@@ -474,9 +474,9 @@ class LeptonWeights(object):
                         #2-D binned SF
                         if not j.find('trk_SF_Run') != -1:
                             if 'abseta' in  name[1]:
-                                self.weight.append(lepCorr.get_2D(abs(vLeptons[0].eta), vLeptons[0].pt))
+                                self.weight.append(lepCorr.get_2D(vLeptons[0].pt, abs(vLeptons[0].eta)))
                             else:
-                                self.weight.append(lepCorr.get_2D(vLeptons[0].eta, vLeptons[0].pt))
+                                self.weight.append(lepCorr.get_2D(vLeptons[0].pt, vLeptons[0].eta))
                         #1-D binned SF
                         else:
                             self.weight.append(lepCorr.get_1D(vLeptons[0].eta))
