@@ -27,14 +27,19 @@ class GetTopMass(object):
 
         self.propagateJES = propagateJES
 
+
+    def customInit(self, initVars):
+        self.sample = initVars['sample']
         ##########
         # add JES/JER systematics
         ##########
         # only defined for nano at the moment
+
         if self.propagateJES and self.nano:
             self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
-            systList = self.jetSystematics + ['minmax']
+            if self.sample.type != 'DATA': systList = self.jetSystematics + ['minmax']
+            else: systList = ['minmax']
             for syst in systList:
                 for Q in ['Up', 'Down']:
                     top_massSyst = "{p}_{s}_{q}".format(p='top_mass', s=syst, q=Q)
@@ -79,6 +84,11 @@ class GetTopMass(object):
             treeJet_phi = tree.Jet_phi
             treeJet_eta = tree.Jet_eta
 
+            if self.sample.type != 'DATA':
+                treeJet_mass = tree.Jet_mass_nom
+            else:
+                treeJet_mass = tree.Jet_mass
+
             if not self.nano:
                 lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
                 met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
@@ -94,8 +104,8 @@ class GetTopMass(object):
                 bjet1.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_0, tree.Jet_eta[tree.hJCMVAV2idx[0]], tree.Jet_phi[tree.hJCMVAV2idx[0]], tree.Jet_mass[tree.hJCMVAV2idx[0]])
                 bjet2.SetPtEtaPhiM(tree.hJetCMVAV2_pt_reg_1, tree.Jet_eta[tree.hJCMVAV2idx[1]], tree.Jet_phi[tree.hJCMVAV2idx[1]], tree.Jet_mass[tree.hJCMVAV2idx[1]])
             else:
-                bjet1.SetPtEtaPhiM(tree.Jet_PtReg[hJidx0], tree.Jet_eta[hJidx0], tree.Jet_phi[hJidx0], tree.Jet_mass_nom[hJidx0]*tree.Jet_bReg[hJidx0])
-                bjet2.SetPtEtaPhiM(tree.Jet_PtReg[hJidx1], tree.Jet_eta[hJidx1], tree.Jet_phi[hJidx1], tree.Jet_mass_nom[hJidx1]*tree.Jet_bReg[hJidx1])
+                bjet1.SetPtEtaPhiM(tree.Jet_PtReg[hJidx0], tree.Jet_eta[hJidx0], tree.Jet_phi[hJidx0], treeJet_mass[hJidx0]*tree.Jet_bReg[hJidx0])
+                bjet2.SetPtEtaPhiM(tree.Jet_PtReg[hJidx1], tree.Jet_eta[hJidx1], tree.Jet_phi[hJidx1], treeJet_mass[hJidx1]*tree.Jet_bReg[hJidx1])
             jets = [bjet1, bjet2]
             tmp = self.computeTopMass(lep,met,jets)
             self.branchBuffers['top_mass'][0] = tmp
@@ -104,12 +114,11 @@ class GetTopMass(object):
             # add JES/JER systematics
             ##########
 
-            if self.propagateJES and self.nano:
-                self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+            top_mass_min = -99
+            top_mass_max = -99
+            if self.propagateJES and self.nano and self.sample.type != 'DATA':
 
                 systList = self.jetSystematics 
-                top_mass_min = -99
-                top_mass_max = -99
                 for syst in systList:
                     for Q in ['Up', 'Down']:
 
@@ -149,8 +158,13 @@ class GetTopMass(object):
                         else:
                             top_mass_min = min(top_mass_min,tmp)
                             top_mass_max = max(top_mass_max,tmp)
-                    self.branchBuffers['top_mass_minmax_Down'][0] = top_mass_min
-                    self.branchBuffers['top_mass_minmax_Up'][0] = top_mass_max
+            elif self.propagateJES and self.nano and self.sample.type == 'DATA':
+                top_mass_min = tmp
+                top_mass_max = tmp
+                print 'top_mass_min is', top_mass_min
+
+            self.branchBuffers['top_mass_minmax_Down'][0] = top_mass_min
+            self.branchBuffers['top_mass_minmax_Up'][0] = top_mass_max
 
             return True
 
