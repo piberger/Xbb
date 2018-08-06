@@ -5,9 +5,10 @@ import array
 
 class addFitCorr(object):
 
-    def __init__(self, sample=None, nano=False):
+    def __init__(self, sample=None, nano=False, dataset = 'year'):
 
         self.nano = nano
+        self.dataset= dataset
         self.branchBuffers = {}
         self.branches = []
         self.branchBuffers['FitCorr'] = np.ones(3, dtype=np.float32)
@@ -47,7 +48,11 @@ class addFitCorr(object):
                 V_pt = tree.V_pt
 
             if 'TT' in self.identifier:
-                CorrFactor =  [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
+                if self.dataset == '2016':
+                    CorrFactor =  [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
+                elif self.dataset== '2017':
+                    CorrFactor =  [1.103 - 0.00061*V_pt, 1.103 - 0.00069*V_pt, 1.103 - 0.00053*V_pt]
+                    #print "Data set is 2017"
             elif ('WJets' in self.identifier or 'WBJets' in self.identifier ):
                 count = 0
                 if not self.nano:
@@ -62,17 +67,28 @@ class addFitCorr(object):
 
                 # Fix
                 if count >= 1:
-                    CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
+                    if self.dataset == '2016':
+                        CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
+                    elif self.dataset == '2017':
+                        CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0018*V_pt, 1.337 - 0.0015*V_pt]
+                        #print "Data set is 2017"
                 else:
-                    CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
-
+                    if self.dataset == '2016':
+                        CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
+                    elif self.dataset == '2017':
+                        CorrFactor = [1.115 - 0.00064*V_pt, 1.115 - 0.00068*V_pt, 1.115 - 0.00060*V_pt]
+                        #print "Data set is 2017"
                 # BUG
                 #if count >= 1:
                 #    CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
                 #else:
                 #    CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
             elif 'ST' in self.identifier:
-                CorrFactor = [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
+                if self.dataset == '2016':
+                     CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
+                elif self.dataset == '2017':
+                     CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0018*V_pt, 1.337 - 0.0015*V_pt]
+                     #print "Data set is 2017"
 
             self.branchBuffers['FitCorr'][0] = CorrFactor[0]
             self.branchBuffers['FitCorr'][1] = CorrFactor[1]
