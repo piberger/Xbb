@@ -117,7 +117,7 @@ SampleCuts = {"WJetsToLNu_TuneCUETP8M1_13TeV-madgraphMLM-pythia8":"(LHE_HT<100)"
 ####
 
 BJets           = "(LHE_Nb>0)"
-BGenFilerJets   = "(LHE_Nb==0)"
+BGenFilerJets   = "(LHE_Nb==0) && Sum$(GenPart_status == 2 && (abs((GenPart_pdgId)/100)%10 == 5 ) || (abs(GenPart_pdgId/1000)%10 == 5)) > 0"
 
 VPT0              = "(LHE_Vpt<100)"
 VPT100            = "(LHE_Vpt>100 && LHE_Vpt<200)"
@@ -179,48 +179,3 @@ arglist = [
     ('VPT200',WlvjetsHTbinned, WlvBGenFilterjets,VPT200 +"&&"+BGenFilerJets,),
         ]
 runInParallel(getStichWeight,arglist)
-
-#print 'Weights for HT 0 are',    getStichWeight(ZLLjetsHT0   , ZLLBjets, HT0   +"&&"+DYBJets)
-#print 'Weights for HT 70 are',   getStichWeight(ZLLjetsHT70  , ZLLBjets, HT70  +"&&"+DYBJets)
-#print 'Weights for HT 100 are',  getStichWeight(ZLLjetsHT100 , ZLLBjets, HT100 +"&&"+DYBJets)
-#print 'Weights for HT 200 are',  getStichWeight(ZLLjetsHT200 , ZLLBjets, HT200 +"&&"+DYBJets)
-#print 'Weights for HT 400 are',  getStichWeight(ZLLjetsHT400 , ZLLBjets, HT400 +"&&"+DYBJets)
-#print 'Weights for HT 600 are',  getStichWeight(ZLLjetsHT600 , ZLLBjets, HT600 +"&&"+DYBJets)
-#print 'Weights for HT 800 are',  getStichWeight(ZLLjetsHT800 , ZLLBjets, HT800 +"&&"+DYBJets)
-#print 'Weights for HT 1200 are', getStichWeight(ZLLjetsHT1200, ZLLBjets, HT1200+"&&"+DYBJets)
-#print 'Weights for HT 2500 are', getStichWeight(ZLLjetsHT2500, ZLLBjets, HT2500+"&&"+DYBJets)
-
-
-#for section in config.sections():
-#    #try:
-#    #    sampleName = config.get(section, 'sampleName')
-#    #except:
-#    sampleName = section
-#    sampleNameShort = sampleName
-#    if '_ext' in sampleName:
-#        sampleNameShort = sampleName.split('_ext')[0]
-#    elif '_backup' in sampleName:
-#        sampleNameShort = sampleName.split('_backup')[0]
-#    if sampleNameShort in sampleDict:
-#        sampleDict[sampleNameShort].append(sampleName)
-#    else:
-#        sampleDict[sampleNameShort] = [sampleName]
-#    if verify:
-#        extweight = 0
-#        try:
-#            extweight = float(config.get(section, 'extweight'))
-#        except:
-#            pass
-#        sampleWeights[sampleNameShort] = float(sampleWeights[sampleNameShort]) + extweight if sampleNameShort in sampleWeights else extweight
-#
-#if verify:
-#    for sampleNameShort,totalWeight in sampleWeights.iteritems():
-#        if sampleNameShort in sampleDict and len(sampleDict[sampleNameShort])>1:
-#            print sampleNameShort,":",totalWeight
-#else:
-#    for sample,extParts in sampleDict.iteritems():
-#        if len(extParts) > 1:
-#            print '-'*80
-#            print sample,":"
-#            getExtWeights(config,extParts)
-#
