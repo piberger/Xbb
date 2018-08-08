@@ -134,7 +134,6 @@ class Datacard(object):
                 'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts'
                 ]
         for sysOptionName in sysOptionNames:
-            print("-->", sysOptionName)
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
             if self.debug:
                 print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
@@ -159,14 +158,15 @@ class Datacard(object):
         # checks on read options
         #on control region cr never blind. Overwrite whatever is in the config
         if self.anType.lower() == 'cr':
-            if self.sysOptions['blind']:
+            if self.sysOptions['blind'] and self.verbose:
                 print ('@WARNING: Changing blind to false since you are running for control region.')
             self.sysOptions['blind'] = False
             
             # binstat_cr can be used to disable BBB in CR
             if self.sysOptions['binstat_cr'] is not None:
                 self.sysOptions['binstat'] = self.sysOptions['binstat_cr']
-        print("INFO: bin-by-bin:", self.sysOptions['binstat'])
+        if self.verbose:
+            print("INFO: bin-by-bin:", self.sysOptions['binstat'])
 
 
         if self.sysOptions['blind']:

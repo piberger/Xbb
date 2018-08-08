@@ -1157,13 +1157,14 @@ if opts.task.startswith('rundc'):
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
                     chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
-                    print('INFO: chunk size is ', chunkSize)
-
                     datacard = Datacard(config=config, region=region, verbose=False)
                     nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    print('INFO: number of files is ', nFiles)
-                    nJobs = int(math.ceil(1.0*nFiles/chunkSize))
-                    print('INFO: number of jobs is ', nJobs)
+                    nJobs = datacard.getNumberOfChunks(sampleIdnetifier)
+
+                    if debugPrintOUts:
+                        print('INFO: chunk size is ', chunkSize)
+                        print('INFO: number of files is ', nFiles)
+                        print('INFO: number of jobs is ', nJobs)
 
                     for chunkNumber in range(1, nJobs+1):
                         jobDict = repDict.copy()
