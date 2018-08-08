@@ -10,6 +10,7 @@ import ROOT
 import fnmatch
 import hashlib
 import json
+import math
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -1152,20 +1153,47 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
-                jobDict = repDict.copy()
-                jobDict.update({
-                    #'queue': submitQueueDict['rundc'],
-                    'arguments':
-                        {
-                            'regions': region,
-                            'sampleIdentifier': sampleIdentifier,
-                        },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    })
-                if opts.force:
-                    jobDict['arguments']['force'] = ''
-                jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-                submit(jobName, jobDict)
+
+                # large samples can be split further
+                if config.has_option(sampleIdentifier, 'dcChunkSize'):
+                    chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
+                    print('INFO: chunk size is ', chunkSize)
+
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
+                    print('INFO: number of files is ', nFiles)
+                    nJobs = int(math.ceil(1.0*nFiles/chunkSize))
+                    print('INFO: number of jobs is ', nJobs)
+
+                    for chunkNumber in range(1, nJobs+1):
+                        jobDict = repDict.copy()
+                        jobDict.update({
+                            'arguments':
+                                {
+                                    'regions': region,
+                                    'sampleIdentifier': sampleIdentifier,
+                                    'chunkNumber': '%d'%chunkNumber,
+                                },
+                            'batch': opts.task + '_' + sampleIdentifier,
+                            })
+                        if opts.force:
+                            jobDict['arguments']['force'] = ''
+                        jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                        submit(jobName, jobDict)
+                else:
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'arguments':
+                            {
+                                'regions': region,
+                                'sampleIdentifier': sampleIdentifier,
+                            },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                    submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # MERGEDC: merge DC .root files for all samples per region and produce combined
@@ -1463,7 +1491,7 @@ if opts.task == 'checklogs':
         print "ERROR: nothing to check, there is no submission yet!"
         exit(0)
     batchSystem = BatchSystem.create(config)
-    unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
+    unfinishedJobs = {k: True for k in batchSystem.getJobNames(includeDeleted=False)}
     nFailed = 0
     nResubmitted = 0
     nComplete = 0

@@ -14,6 +14,7 @@ from BranchList import BranchList
 import array
 import re
 import itertools
+import math
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
@@ -23,6 +24,7 @@ class Datacard(object):
         self.config = config
         self.DCtype = 'TH'
         self.histograms = None
+        self.histogramCounter = 0
         self.DCprocessSeparatorDict = {'WS':':','TH':'/'}
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
@@ -572,6 +574,42 @@ class Datacard(object):
     def getAllSamples(self):
         return sum([y for x, y in self.samples.iteritems()], []) 
 
+    def getNumberOfCachedFiles(self, useSampleIdentifiers=None):
+        nFiles = -1
+        allSamples = self.getAllSamples()
+        if type(useSampleIdentifiers) == str:
+            useSampleIdentifiers = [useSampleIdentifiers]
+        if useSampleIdentifiers:
+            allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers]
+        cacheStatus = {}
+        for i, sample in enumerate(allSamples):
+            # get cuts that were used in caching for this sample
+            sampleCuts = self.getCacheCut(sample) 
+
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    config=self.config,
+                    debug=self.debug,
+                )
+            # check if fiels are complete
+            if not tc.isCached():
+                return -1
+            if nFiles == -1:
+                nFiles = len(tc.cachedFileNames)
+            else:
+                # if one of the subsamples has a different number of files, this indicates an error
+                if nFiles != len(tc.cachedFileNames):
+                    print("nF:", nFiles)
+                    print("nC:", len(tc.cachedFileNames))
+                    print("C:", tc.cachedFileNames)
+                    print('ERROR: subsample incomplete, this should not happen!!')
+                    return -1
+
+        return nFiles 
+
     def getCacheStatus(self, useSampleIdentifiers=None):
         allSamples = self.getAllSamples()
         if useSampleIdentifiers:
@@ -600,7 +638,12 @@ class Datacard(object):
         sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
         return sampleCuts
 
-    def run(self, useSampleIdentifiers=None):
+    def getUniqueHistogramName(self, sampleName, systName):
+        histogramName = "{sampleName}_{systName}_c{counter}".format(sampleName=sampleName, systName=systName, counter=self.histogramCounter)
+        self.histogramCounter += 1
+        return histogramName
+
+    def run(self, useSampleIdentifiers=None, chunkNumber=-1):
         # compute variable bin sizes to have minimum number of significance in highest BDT bin
         # rescaling of BDT score is not done anymore.
         if self.sysOptions['rebin_active']:
@@ -624,7 +667,6 @@ class Datacard(object):
         print ('\n\t...fetching histos...\n')
 
         self.histograms = {}
-        histogramCounter = 0
         # read cached sample trees, for every sample there is one SampleTree, which contains the events needed for ALL the systematics
         # use this sample tree with appropriate cuts for each systematics to fill the histograms
         for i, sample in enumerate(allSamples): 
@@ -647,8 +689,11 @@ class Datacard(object):
                 print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
                 raise Exception("NotCached")
 
-            sampleTree = tc.getTree()
-            print ("DEBUG: tree found!")
+            chunkSize = -1
+            if chunkNumber > 0:
+                chunkSize = int(self.config.get(sample.identifier, 'dcChunkSize'))
+
+            sampleTree = tc.getTree(chunkSize, chunkNumber)
 
             self.histograms[sample.name] = {}
             systematicsList = self.getSystematicsList(isData=(sample.type == 'DATA'))
@@ -683,8 +728,7 @@ class Datacard(object):
                     systematics['cutWithBlinding'] = systematics['cut']
 
                 # prepare histograms
-                histogramName = sample.name + '_' + systematics['systematicsName'] + '_c%d'%histogramCounter
-                histogramCounter += 1
+                histogramName = self.getUniqueHistogramName(sample.name, systematics['systematicsName'])
                 self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, len(self.variableBins)-1, self.variableBins) if self.variableBins else ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
                 self.histograms[sample.name][systematics['systematicsName']].Sumw2()
 
@@ -705,7 +749,6 @@ class Datacard(object):
 
             # sample scale factor, to match to cross section
             sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
-            print ("DEBUG: scale ", sampleScaleFactor)
 
             # get used branches, which are either used in cut, weight or the variable itself
             usedBranchList = BranchList()
@@ -771,7 +814,7 @@ class Datacard(object):
                 mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
                 self.histograms[sample.name][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
 
-        self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
+        self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
         for systematics in systematicsList:
             if 'mcRescale' in systematics and systematics['mcRescale'] != 1.0:
@@ -780,42 +823,66 @@ class Datacard(object):
                     print("INFO: and the additional cuts was:", systematics['addCut'])
                 break
 
+    def getChunkSize(self, sampleIdentifier):
+        return int(self.config.get(sampleIdentifier, 'dcChunkSize')) if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
+
+    def getNumberOfChunks(self, sampleIdentifier):
+        chunkSize = self.getChunkSize(sampleIdentifier)
+        if chunkSize < 1:
+            return -1
+        nFiles = self.getNumberOfCachedFiles(sampleIdentifier)
+        return int(math.ceil(1.0*nFiles/chunkSize))
+
+    def getShapeFileNames(self, sampleIdentifier):
+        nChunks = self.getNumberOfChunks(sampleIdentifier)
+        if nChunks > 0:
+            rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.root' for chunkNumber in range(1, 1+nChunks)]
+        else:
+            rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root']
+        return rootFileNames
+
     def load(self):
         self.histograms = {}
         allSamples = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
-        
+
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
 
-            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
-            rootFile = ROOT.TFile.Open(rootFileName, 'read')
-            if not rootFile or rootFile.IsZombie():
-                print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
-                raise Exception("FileIOError")
+            # all shape .root files of that sample identifier
+            rootFileNames = self.getShapeFileNames(sampleIdentifier)
+            for rootFileName in rootFileNames:
+                rootFile = ROOT.TFile.Open(rootFileName, 'read')
+                if not rootFile or rootFile.IsZombie():
+                    print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
+                    raise Exception("FileIOError")
 
-            for subsample in subsamples:
-                sampleGroup = self.sysOptions['Group'][subsample.name]
-                datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                # process all subsamples
+                for subsample in subsamples:
+                    sampleGroup = self.sysOptions['Group'][subsample.name]
+                    datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
 
-                systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
-                for systematics in systematicsToEvaluate:
-                    datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
-                    histogramPath = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
-                    histogram = rootFile.Get(histogramPath)
-                    if not histogram:
-                        print ("IN:", rootFileName)
-                        print ("FILE:", rootFile)
-                        print ("LOOKING FOR:", histogramPath)
-                        raise Exception("HistogramMissing")
-                    if subsample.name not in self.histograms:
-                        self.histograms[subsample.name] = {}
+                    systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
+                    for systematics in systematicsToEvaluate:
+                        datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
+                        histogramPath = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
+                        histogram = rootFile.Get(histogramPath)
+                        if not histogram:
+                            print ("IN:", rootFileName)
+                            print ("FILE:", rootFile)
+                            print ("LOOKING FOR:", histogramPath)
+                            raise Exception("HistogramMissing")
+                        if subsample.name not in self.histograms:
+                            self.histograms[subsample.name] = {}
 
-                    self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
-                    self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
+                        if systematics['systematicsName'] in self.histograms[subsample.name]:
+                            self.histograms[subsample.name][systematics['systematicsName']].Add(histogram)
+                        else:
+                            self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
+                            self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
 
-    def splitFilesExist(self, useSampleIdentifier=None):
+    def splitFilesExist(self, useSampleIdentifier=None, chunkNumber=-1):
         filesExist = True
         allSamples = self.getAllSamples()
         if useSampleIdentifier:
@@ -824,13 +891,13 @@ class Datacard(object):
             sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
         for sampleIdentifier in sampleIdentifiers:
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
-            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
+            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.root'
             rootFile = ROOT.TFile.Open(rootFileName, 'read')
             if not rootFile or rootFile.IsZombie():
                 filesExist = False
                 break
             rootFile.Close()
-            txtFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.txt'
+            txtFileName = self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.txt'
             filesExist = filesExist and os.path.isfile(txtFileName)
         return filesExist
 
@@ -846,7 +913,7 @@ class Datacard(object):
         systematicsName = systematicsName.replace('DOWN','Down')
         return '{process}{systematicsName}'.format(process=process, systematicsName=systematicsName)
 
-    def writeDatacards(self, samples=None, dcName=''):
+    def writeDatacards(self, samples=None, dcName='', chunkSize=-1, chunkNumber=-1):
 
         if not self.histograms:
             print("\x1b[31mERROR: no histograms found, datacard histograms must be either created with run() or loaded with load()\x1b[0m")
@@ -856,7 +923,7 @@ class Datacard(object):
             samples = self.getAllSamples()
 
         # open and prepare histogram output files
-        histogramFileName = self.getDatacardBaseName(dcName) + '.root'
+        histogramFileName = self.getDatacardBaseName(dcName, ext='.root', chunkNumber=chunkNumber)
         print("HISTOGRAM:", histogramFileName)
         try:
             datacardFolder = '/'.join(histogramFileName.split('/')[:-1])
@@ -958,7 +1025,7 @@ class Datacard(object):
         # ----------------------------------------------
         # write TEXT file
         # ----------------------------------------------
-        txtFileName = self.getDatacardBaseName(dcName, ext='.txt')
+        txtFileName = self.getDatacardBaseName(dcName, ext='.txt', chunkNumber=chunkNumber)
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
@@ -1102,10 +1169,12 @@ class Datacard(object):
 
         print("done")
 
-    def getDatacardBaseName(self, subPartName='', ext=''):
+    def getDatacardBaseName(self, subPartName='', ext='', chunkNumber=-1):
         dcType = self.DCtype
         if len(subPartName) > 0:
             # temporary
+            if chunkNumber>0:
+                subPartName += '_%d'%chunkNumber
             baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, part=subPartName, ext=ext)
         else:
             # final
@@ -1113,6 +1182,7 @@ class Datacard(object):
             if ext.endswith('txt'):
                 dcType = 'DC_' + dcType
             baseFileName = '{path}/vhbb_{dcType}_{rootName}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, ext=ext)
+        print("DEBUG:", baseFileName)
         return baseFileName
 
     @staticmethod

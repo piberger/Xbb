@@ -274,7 +274,11 @@ elif [ $task = "cachedc" ]; then
     runCommand="python ./cache_dc.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
 
 elif [ $task = "rundc" ]; then
-    runCommand="python ./run_dc.py --regions ${regions}";
+    if [ -z "$chunkNumber" ]; then
+        runCommand="python ./run_dc.py --regions ${regions}"
+    else
+        runCommand="python ./run_dc.py --regions ${regions}  --chunkNumber ${chunkNumber}";
+    fi
 
 elif [ $task = "mergedc" ]; then
     runCommand="python ./merge_dc.py --regions ${regions}";
