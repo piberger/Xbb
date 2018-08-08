@@ -103,7 +103,8 @@ class Datacard(object):
         self.blindCut = None
         if config.has_option(self.configSection, 'blindCuts'):
             self.blindCut = eval(config.get(self.configSection, 'blindCuts'))
-        print("\x1b[41m\x1b[97mblind cut:", self.blindCut,"\x1b[0m")
+        if self.verbose:
+            print("\x1b[41m\x1b[97mblind cut:", self.blindCut,"\x1b[0m")
 
         self.keep_branches = eval(config.get('Branches', 'keep_branches'))
 
@@ -168,8 +169,7 @@ class Datacard(object):
         if self.verbose:
             print("INFO: bin-by-bin:", self.sysOptions['binstat'])
 
-
-        if self.sysOptions['blind']:
+        if self.sysOptions['blind'] and self.verbose:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
             
         if self.anType.lower() != 'bdt':
@@ -813,6 +813,14 @@ class Datacard(object):
             for systematics in systematicsList:
                 mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
                 self.histograms[sample.name][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
+
+            print("nominal shape:")
+            nominalHist = self.histograms[sample.name][systematicsList[0]['systematicsName']]
+            nBins = nominalHist.GetXaxis().GetNbins()
+            binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
+            binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
+            print(binList)
+            print(binContentList)
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 

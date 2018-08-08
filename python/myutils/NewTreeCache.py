@@ -228,7 +228,7 @@ class TreeCache:
                 fileNames = self.cachedFileNames
             else:
                 raise Exception("InvalidParameters")
-            self.sampleTree = SampleTree(fileNames, config=self.config)
+            self.sampleTree = SampleTree(self.cachedFileNames, config=self.config, fileNamesToProcess=fileNames)
             self.sampleTree.sampleIdentifier = self.sampleIdentifier
 
             # check if even though all files exist, they couldn't be accessed for some reason

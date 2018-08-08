@@ -33,7 +33,7 @@ import gc
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None):
         # sequentialProcessing not much tested yet, can maybe be used as workaround for problems with ROOT version 6.12.07. (not needed in 6.10.09)
         self.sequentialProcessing = False
         self.verbose = verbose
@@ -62,6 +62,11 @@ class SampleTree(object):
             if len(sampleFileNamesParts) == self.numParts:
                 chunkIndex = self.chunkNumber - 1
                 self.sampleFileNames = sampleFileNamesParts[chunkIndex]
+
+                # per default add all files to the chain. By using fileNamesToProcess it is possible to only add a part of the files to the chain but at
+                #  the same time retain the normalization histograms from ALL files, this is needed for some split processing modes of the samples which then
+                #  can be added together (e.g. for datacards)
+                self.sampleFileNamesToProcess = fileNamesToProcess if fileNamesToProcess else self.sampleFileNames
             else:
                 raise Exception("InvalidNumberOfSplitParts")
         else:
@@ -164,25 +169,26 @@ class SampleTree(object):
                         input.Close()
 
                         # add file to chain
-                        chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
-                        if self.debug:
-                            print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
-                        statusCode = self.tree.Add(chainTree)
-                        if self.debug:
-                            print ('\x1b[42mDEBUG: ---> %r'%statusCode,'\x1b[0m')
- 
-                        # check for errors in chaining the file
-                        if statusCode != 1:
-                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
-                            raise Exception("TChain method Add failure")
-                        elif not self.tree:
-                            print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
-                        else:
-                            self.treeEmpty = False
-                            self.chainedFiles.append(rootFileName)
-                            if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
-                                print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
-                                break
+                        if rootFileName in self.sampleFileNamesToProcess:
+                            chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
+                            if self.debug:
+                                print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
+                            statusCode = self.tree.Add(chainTree)
+                            if self.debug:
+                                print ('\x1b[42mDEBUG: ---> %r'%statusCode,'\x1b[0m')
+     
+                            # check for errors in chaining the file
+                            if statusCode != 1:
+                                print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
+                                raise Exception("TChain method Add failure")
+                            elif not self.tree:
+                                print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
+                            else:
+                                self.treeEmpty = False
+                                self.chainedFiles.append(rootFileName)
+                                if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
+                                    print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
+                                    break
                     else:
                         print ('\x1b[31mERROR: file is damaged: %s\x1b[0m'%rootFileName)
                         if input:
@@ -279,7 +285,7 @@ class SampleTree(object):
     # check if all files have been chained
     # ------------------------------------------------------------------------------
     def isCompleteTree(self):
-        return len(self.chainedFiles) == len(self.sampleFileNames) and len(self.sampleFileNames) > 0
+        return len(self.chainedFiles) == len(self.sampleFileNamesToProcess) and len(self.sampleFileNamesToProcess) > 0
 
     # ------------------------------------------------------------------------------
     # return full list of sample root files 

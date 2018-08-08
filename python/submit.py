@@ -1159,7 +1159,7 @@ if opts.task.startswith('rundc'):
                     chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
                     datacard = Datacard(config=config, region=region, verbose=False)
                     nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    nJobs = datacard.getNumberOfChunks(sampleIdnetifier)
+                    nJobs = datacard.getNumberOfChunks(sampleIdentifier)
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
