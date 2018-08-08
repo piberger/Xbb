@@ -50,6 +50,7 @@ class SampleTree(object):
         self.tree = None
         self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         self.sampleIdentifier = None
+        self.numParts = -1
 
         # process only partial sample root file list
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -273,6 +274,12 @@ class SampleTree(object):
                 self.tree = None
         except e:
             print("EXCEPTION:", e)
+
+    # ------------------------------------------------------------------------------
+    # check if all files have been chained
+    # ------------------------------------------------------------------------------
+    def isCompleteTree(self):
+        return len(self.chainedFiles) == len(self.sampleFileNames) and len(self.sampleFileNames) > 0
 
     # ------------------------------------------------------------------------------
     # return full list of sample root files 

@@ -145,6 +145,9 @@ class TreeCache:
             if len(self.cachedFileNames) < 1:
                 print ('none!')
             print ('\x1b[0m(%d files found)'%len(self.cachedFileNames))
+
+        # sort
+        self.cachedFileNames = sorted(self.cachedFileNames, key=lambda x: int(x.split('_')[-1].split('of')[0]) if 'of' in x and '_' in x else -1)
         return self.cachedFileNames
 
     # check if a single part is cached, (only checks existence of the file, not validity!)
@@ -213,14 +216,26 @@ class TreeCache:
         return self
 
     # return sample tree class of cached samples if all files found
-    def getTree(self):
+    def getTree(self, chunkSize=-1, chunkNumber=-1):
         # if it has already been checked if tree is cached, then use this result dierctly
         isCached = self.isCachedChecked
         if not isCached:
             isCached = self.isCached()
         if isCached:
-            self.sampleTree = SampleTree(self.cachedFileNames, config=self.config)
+            if chunkSize > 0 and chunkNumber > 0:
+                fileNames = self.cachedFileNames[(chunkNumber-1)*chunkSize:chunkNumber*chunkSize]
+            elif chunkSize < 0 and chunkNumber < 0:
+                fileNames = self.cachedFileNames
+            else:
+                raise Exception("InvalidParameters")
+            self.sampleTree = SampleTree(fileNames, config=self.config)
             self.sampleTree.sampleIdentifier = self.sampleIdentifier
+
+            # check if even though all files exist, they couldn't be accessed for some reason
+            # and therefore the tree would be incomplete
+            if not self.sampleTree.isCompleteTree():
+                raise Exception("IncompleteTree")
+
         return self.sampleTree
 
     # delete file
