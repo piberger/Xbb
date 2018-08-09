@@ -26,6 +26,7 @@ class BTagWeights(AddCollectionsModule):
         self.includeFixPtEtaBins = includeFixPtEtaBins
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
+        self.absoluteEta = True
         
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysMap = {
@@ -104,6 +105,8 @@ class BTagWeights(AddCollectionsModule):
         # the .csv files use the convention: b=0, c=1, l=2. (fl_index)
         # hadronFlavour convention: b=5, c=4, f=0  (fl)
         fl_index = min(-fl+5,2)
+        if self.absoluteEta:
+            eta = abs(eta)
         sf = self.btag_calibrators[algo+"_iterative"].eval_auto_bounds(syst if self.applies(fl, syst) else "central", fl_index, eta, pt, val)
         return sf
 
@@ -128,11 +131,7 @@ class BTagWeights(AddCollectionsModule):
             jets_cmva = []
             treeJet_Pt = getattr(tree, self.jetPtBranchName)
             for i in range(tree.nJet):
-                #if (tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
-                #    jet_cmva = Jet(tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
-                #    jets_cmva.append(jet_cmva)
-                # modified for 2017 nano v5
-                if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
+                if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 0):
                     jet_cmva = Jet(tree.Jet_PtReg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
                     jets_cmva.append(jet_cmva)
 

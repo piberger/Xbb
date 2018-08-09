@@ -7,11 +7,14 @@ import os
 
 class METtriggerFromWS(AddCollectionsModule):
 
-    def __init__(self, branchName="weight_mettrigSF", workspace="data/met/vhbb_metsf.root", fName="data_nominal_110OR170"):
+    def __init__(self, branchName="weight_mettrigSF", workspace="data/met/vhbb_metsf.root", fName="data_nominal_110OR170", metCut=120.0):
         self.debug = 'XBBDEBUG' in os.environ
         self.workspaceFileName = workspace
         self.fName = fName
         self.branchName = branchName
+        self.metCut = metCut
+        if self.debug:
+            print "DEBUG: MET trigger SF cut:", self.metCut
         super(METtriggerFromWS, self).__init__()
 
     def loadWorkspace(self, wsName):
@@ -34,6 +37,6 @@ class METtriggerFromWS(AddCollectionsModule):
             self.markProcessed(tree)
 
             met_mht = array.array('d', [min(min(tree.MET_pt, tree.MHT_pt), 500.0)])
-            self.setBranch(self.branchName, self.met_trigger_sf.eval(met_mht) if met_mht[0] >= 120 else 0.0)
+            self.setBranch(self.branchName, self.met_trigger_sf.eval(met_mht) if met_mht[0] >= self.metCut else 0.0)
 
         return True

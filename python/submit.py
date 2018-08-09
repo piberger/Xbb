@@ -10,6 +10,7 @@ import ROOT
 import fnmatch
 import hashlib
 import json
+import math
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -1049,7 +1050,7 @@ if opts.task.startswith('cachedc'):
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -1152,20 +1153,48 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
-                jobDict = repDict.copy()
-                jobDict.update({
-                    #'queue': submitQueueDict['rundc'],
-                    'arguments':
-                        {
-                            'regions': region,
-                            'sampleIdentifier': sampleIdentifier,
-                        },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    })
-                if opts.force:
-                    jobDict['arguments']['force'] = ''
-                jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-                submit(jobName, jobDict)
+
+                # large samples can be split further
+                if config.has_option(sampleIdentifier, 'dcChunkSize'):
+                    chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
+                    nJobs = datacard.getNumberOfChunks(sampleIdentifier)
+
+                    if debugPrintOUts:
+                        print('INFO: chunk size is ', chunkSize)
+                        print('INFO: number of files is ', nFiles)
+                        print('INFO: number of jobs is ', nJobs)
+
+                    for chunkNumber in range(1, nJobs+1):
+                        jobDict = repDict.copy()
+                        jobDict.update({
+                            'arguments':
+                                {
+                                    'regions': region,
+                                    'sampleIdentifier': sampleIdentifier,
+                                    'chunkNumber': '%d'%chunkNumber,
+                                },
+                            'batch': opts.task + '_' + sampleIdentifier,
+                            })
+                        if opts.force:
+                            jobDict['arguments']['force'] = ''
+                        jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                        submit(jobName, jobDict)
+                else:
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'arguments':
+                            {
+                                'regions': region,
+                                'sampleIdentifier': sampleIdentifier,
+                            },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                    submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # MERGEDC: merge DC .root files for all samples per region and produce combined
@@ -1431,7 +1460,10 @@ if opts.task == 'sample':
             sampleObject = matchingSamples[0] if len(matchingSamples)>0 else None
             sampleTree = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=False, splitFilesChunkSize=-1, config=config)
             splitFilesChunks = sampleTree.getSampleFileNameChunks()
-            sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            try:
+                sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            except:
+                sampleScale = 1.0
             
             fileList = "\n".join(["    '{fileName}',".format(fileName=sampleFileName) for sampleFileName in splitFilesChunks[0]])
             xsWeight = '%f'%sampleScale
@@ -1460,7 +1492,7 @@ if opts.task == 'checklogs':
         print "ERROR: nothing to check, there is no submission yet!"
         exit(0)
     batchSystem = BatchSystem.create(config)
-    unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
+    unfinishedJobs = {k: True for k in batchSystem.getJobNames(includeDeleted=False)}
     nFailed = 0
     nResubmitted = 0
     nComplete = 0

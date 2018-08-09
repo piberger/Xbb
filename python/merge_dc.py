@@ -12,6 +12,7 @@ from myutils import BetterConfigParser, Sample, progbar, printc, ParseInfo, Rebi
 import re
 import json
 import glob
+import math
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.Datacard import Datacard
@@ -29,9 +30,6 @@ class MergeDatacards(object):
     def getTextFileName(self, sampleIdentifier):
         return self.dcMaker.getDatacardBaseName(sampleIdentifier)+'.txt'
 
-    def getHistogramFileName(self, sampleIdentifier):
-        return self.dcMaker.getDatacardBaseName(sampleIdentifier)+'.root'
-    
     def checkFiles(self, fileNames):
         filesComplete = True
         for textFilePath in fileNames:
@@ -47,7 +45,7 @@ class MergeDatacards(object):
     def prepare(self):
         samples = Datacard.getSamples(config=self.config, regions=[self.region])
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in samples])))
-        self.histogramFilePaths = [self.getHistogramFileName(sampleIdentifier) for sampleIdentifier in sampleIdentifiers]
+        self.histogramFilePaths = sum([self.dcMaker.getShapeFileNames(sampleIdentifier) for sampleIdentifier in sampleIdentifiers], [])
         filesComplete = self.checkFiles(fileNames=self.histogramFilePaths)
         return self if filesComplete else None
     

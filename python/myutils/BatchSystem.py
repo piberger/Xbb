@@ -25,9 +25,12 @@ class BatchSystemSGE(BatchSystem):
     def __init__(self):
         self.name = 'SGE'
 
-    def getJobNames(self):
+    def getJobNames(self, includeDeleted=True):
         xmlData = xml.etree.ElementTree.fromstring(subprocess.Popen(["qstat","-xml"], stdout=subprocess.PIPE).stdout.read())
-        jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list')]
+        if includeDeleted:
+            jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list')]
+        else:
+            jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list') if not job.find('state').text.strip().startswith('d')]
         return jobNames
     
     def getJobNamesRunning(self):

@@ -530,7 +530,7 @@ class NewStackMaker:
                 Ymax = maximumNormalized * 1.5
             else:
                 Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
-            if self.log and not self.normalize:
+            if self.log and not normalize:
                 allStack.SetMinimum(0.1)
                 Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
                 ROOT.gPad.SetLogy()
@@ -555,6 +555,17 @@ class NewStackMaker:
             if normalize and groupedHistograms[dataGroupName].Integral() > 0:
                 groupedHistograms[dataGroupName].Scale(1./groupedHistograms[dataGroupName].Integral())
             groupedHistograms[dataGroupName].Draw(drawOption)
+
+        # draw total entry number
+        if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
+            mcHistogram0 = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms0')
+            mcHistogram0.SetLineColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerStyle(1)
+            #mcHistogram0.SetMarkerSize(0.001)
+            mcHistogram0.SetStats(0)
+            mcHistogram0.Draw("SAME TEXT0")
+            print("drawn total entry histogram!!!")
 
         # draw ratio plot
         theErrorGraph = None
