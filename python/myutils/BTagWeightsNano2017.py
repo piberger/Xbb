@@ -26,6 +26,7 @@ class BTagWeights(AddCollectionsModule):
         self.includeFixPtEtaBins = includeFixPtEtaBins
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
+        self.absoluteEta = True
         
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysMap = {
@@ -104,6 +105,8 @@ class BTagWeights(AddCollectionsModule):
         # the .csv files use the convention: b=0, c=1, l=2. (fl_index)
         # hadronFlavour convention: b=5, c=4, f=0  (fl)
         fl_index = min(-fl+5,2)
+        if self.absoluteEta:
+            eta = abs(eta)
         sf = self.btag_calibrators[algo+"_iterative"].eval_auto_bounds(syst if self.applies(fl, syst) else "central", fl_index, eta, pt, val)
         return sf
 
