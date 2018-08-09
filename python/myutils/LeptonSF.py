@@ -148,40 +148,76 @@ class LeptonSF:
 
 if __name__ == "__main__":
 
+
+    #analysis = '2016'
+    analysis = '2017'
+
+
     wdir = os.environ['CMSSW_BASE']+"/src/Xbb"
-    jsons = {
-        #
-        #Muon
-        #
-        #ID and ISO
-        wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'], #eta pt
-        wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
-        ###
-        wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
-        wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
-        #Tracker
-        wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-        wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
-        #Trigg
-        #BCDEF
-        wdir+'/python/json/V25/EfficienciesAndSF_RunBtoF.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
-        #GH
-        wdir+'/python/json/V25/theJSONfile_Period4.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
-        ##
-        ##Electron
-        ##
-        ##ID and ISO (grouped as MVAid for electron)
-        wdir+'/python/json/V25/EIDISO_WH_out.json' : ['EIDISO_WH', 'eta_pt_ratio'],
-        #Tracker
-        wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio'],
-        #Trigg
-        wdir+'/python/json/V25/Tight27AfterIDISO_out.json' : ['Tight27AfterIDISO', 'eta_pt_ratio']
-        }
+    if analysis == 2016:
+        jsons = {
+            #
+            #Muon
+            #
+            #ID and ISO
+            wdir+'/python/json/V25/muon_ID_BCDEFv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'], #eta pt
+            wdir+'/python/json/V25/muon_ID_GHv2.json' : ['MC_NUM_TightID_DEN_genTracks_PAR_pt_eta', 'abseta_pt_ratio'],
+            ###
+            wdir+'/python/json/V25/muon_ISO_BCDEFv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
+            wdir+'/python/json/V25/muon_ISO_GHv2.json' : ['TightISO_TightID_pt_eta', 'abseta_pt_ratio'],
+            #Tracker
+            wdir+'/python/json/V25/trk_SF_RunBCDEF.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+            wdir+'/python/json/V25/trk_SF_RunGH.json' : ['Graph', 'ratio_eff_eta3_dr030e030_corr'],
+            #Trigg
+            #BCDEF
+            wdir+'/python/json/V25/EfficienciesAndSF_RunBtoF.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
+            #GH
+            wdir+'/python/json/V25/theJSONfile_Period4.json' : ['IsoMu24_OR_IsoTkMu24_PtEtaBins', 'abseta_pt_ratio'],
+            ##
+            ##Electron
+            ##
+            ##ID and ISO (grouped as MVAid for electron)
+            wdir+'/python/json/V25/EIDISO_WH_out.json' : ['EIDISO_WH', 'eta_pt_ratio'],
+            #Tracker
+            wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio'],
+            #Trigg
+            wdir+'/python/json/V25/Tight27AfterIDISO_out.json' : ['Tight27AfterIDISO', 'eta_pt_ratio']
+            }
+    elif analysis == '2017':
+        jsons = {
+            #
+            # Muon
+            #
+            # ID
+            wdir+'/python/json/V25/SingleLepton_2017/RunBCDEF_SF_ID.json' : ['NUM_TightID_DEN_genTracks', 'abseta_pt'],
+            #
+            # ISO
+            wdir+'/python/json/V25/SingleLepton_2017/RunBCDEF_SF_ISO.json' : ['NUM_UltraTightIso4_DEN_TightIDandIPCut', 'abseta_pt'],
+            # Tracker
+            # no tracker for 2017 (~1)
+            #Trigg
+            wdir+'/python/json/V25/SingleLepton_2017/RunBCDEF_SF_TRIGG.json' : ['NUM_IsoMu27_DEN_empty', 'abseta_pt'],
+
+            ##
+            ##Electron
+            ##
+            ##ID and ISO (grouped as MVAid for electron)
+            wdir+'/python/json/V25/SingleLepton_2017/VHbb1ElectronIDISO2017.json' : ['singleEleIDISO2017', 'eta_pt_ratio'],
+            #Tracker
+            #-------check----------
+            # no tracker for 2017, at least not used in AT
+            #Trigg
+            wdir+'/python/json/V25/SingleLepton_2017/VHbb1ElectronTrigger2017.json' : ['singleEleTrigger', 'eta_pt_ratio']
+            }
 
     for j, name in jsons.iteritems():
 
         print 'j is', j
         lepCorr = LeptonSF(j , name[0], name[1])
+
+        #test1
+        lepton_pt = 35 
+        lepton_eta = 1.7
 
         ##test2
         #lepton_pt = 75 
