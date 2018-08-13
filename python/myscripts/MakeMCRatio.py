@@ -195,6 +195,12 @@ for filename_ in filenameList:
         #print 'done !'
     
         #nlo/lo ratio histogram
+
+        rebin_factor = 3
+
+        H_nlo = H_nlo.Rebin(rebin_factor)
+        H_lo = H_lo.Rebin(rebin_factor)
+
         H_nlo.Divide(H_lo)
         #H_nlo.Scale(1.*H_nlo.GetXaxis().GetNbins()/H_nlo.Integral())
     
@@ -300,6 +306,6 @@ for filename_ in filenameList:
     
         new_filename = filename_.replace('.root','')
      
-        c.SaveAs('NLOweights_final/ratio_%s_%s_%s.png' %(func,QCD_,new_filename))
-        c.SaveAs('NLOweights_final/ratio_%s_%s_%s.pdf' %(func,QCD_,new_filename))
-        c.SaveAs('NLOweights_final/ratio_%s_%s_%s.root' %(func,QCD_,new_filename))
+        c.SaveAs('NLOweights_test2/ratio_%s_%s_%s.png' %(func,QCD_,new_filename))
+        c.SaveAs('NLOweights_test2/ratio_%s_%s_%s.pdf' %(func,QCD_,new_filename))
+        c.SaveAs('NLOweights_test2/ratio_%s_%s_%s.root' %(func,QCD_,new_filename))
