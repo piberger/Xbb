@@ -44,9 +44,9 @@ class FileLocator(object):
         self.server = None
         if self.usePythonXrootD or usePythonXrootD:
             try:
-                from XRootD import client
+                import XRootD.client
                 self.server = self.xrootdRedirectors[0].strip('/')
-                self.client = client.FileSystem(self.server)
+                self.client = XRootD.client.FileSystem(self.server)
                 if self.debug:
                     print('DEBUG: initialized xrootd client, server:', self.server)
                     print('DEBUG: client:', self.client)
@@ -180,6 +180,8 @@ class FileLocator(object):
         else:
             os.remove(path)
 
+    # attempts > 1 can be given to check existence of files multiple times
+    #  this is to workaround a storage problem where files are randomly reported as not existent
     def exists(self, path, attempts=1):
         attemptsLeft = attempts
         found = False
@@ -196,18 +198,27 @@ class FileLocator(object):
                     reconnect = False
                     if self.client:
                         self.client = None
-                        reconnect = True
+                        # don't reconnect and try to use fallback solution using xrdcp/xrdfs
+                        reconnect = False
+                        # try to reconnect
+                        #reconnect = True
                     print('INFO: wait %r seconds before trying again'%self.timeBetweenAttempts)
                     sleep(self.timeBetweenAttempts)
                     if reconnect:
                         try:
                             try:
-                                from XRootD import client
-                            except:
-                                pass
-                            self.client = client.FileSystem(self.server)
-                        except:
-                            pass
+                                reload(XRootD.client)
+                            except Exception as e:
+                                print('INFO: > ', e)
+                                try:
+                                    import XRootD.client 
+                                    print('INFO: > reloaded XrootD') 
+                                except Exception as e2:
+                                    print('INFO: >> ', e2)
+                            self.client = XRootD.client.FileSystem(self.server)
+                            print('INFO: > reconnected file system! ==>', self.client)
+                        except Exception as e3:
+                            print('INFO: >>> ', e3)
 
         return found
 
