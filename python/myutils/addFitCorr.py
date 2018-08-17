@@ -84,6 +84,7 @@ class addFitCorr(object):
                 #else:
                 #    CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
             elif 'ST' in self.identifier:
+
                 if self.dataset == '2016':
                      CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
                 elif self.dataset == '2017':
