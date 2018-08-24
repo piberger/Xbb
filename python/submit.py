@@ -54,6 +54,8 @@ parser.add_option("-F", "--folderTag", dest="ftag", default="",
                       help="Creats a new folder structure for outputs or uses an existing one with the given name")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
+parser.add_option("-g", "--forceN", dest="forceN", action="store_true", default=False,
+                      help="Force usage of -N parameter")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
@@ -797,7 +799,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
         chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
         # for some samples consisting of many files, force override the -N option!
-        if config.has_option(sampleIdentifier, 'minFilesPerJob'):
+        if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
             minFilesPerJob = int(config.get(sampleIdentifier, 'minFilesPerJob'))
             if minFilesPerJob > chunkSize:
                 chunkSize = minFilesPerJob
