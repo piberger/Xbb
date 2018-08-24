@@ -131,3 +131,12 @@ class tensorflowEvaluator(AddCollectionsModule):
                         dnnCollection[dnnCollection.name][j] = probabilities[j, i]
 
         return True
+
+    def cleanUp(self):
+        try:
+            if self.clf:
+                self.clf.cleanUp()
+                print("INFO: tensorflow session cleaned up!")
+        except Exception as e:
+            print("ERROR: clean-up failed!", e)
+

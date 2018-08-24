@@ -197,6 +197,10 @@ for fileName in filelist:
 
         print 'copy ', tmpFileName, outputFileName
 
+        # add callback for clean up
+        if hasattr(wObject, "cleanUp") and callable(getattr(wObject, "cleanUp")):
+            getattr(wObject, "cleanUp")()
+
     else:
         print 'SKIP:', localFileName
 
