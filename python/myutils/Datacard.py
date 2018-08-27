@@ -132,7 +132,7 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts', 'sys_cut_replacement_final'
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -378,7 +378,6 @@ class Datacard(object):
 
         if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
-
         else:
             temporaryBins = 1000
             targetBins = self.binning['nBinsX'] 
@@ -567,6 +566,12 @@ class Datacard(object):
         # replace temp cuts
         if tempReplacements:
             cut = cut.format(**tempReplacements)
+        
+        # now do some last final replacements if needed
+        if self.sysOptions['sys_cut_replacement_final'] and syst in self.sysOptions['sys_cut_replacement_final']:
+            for needle, replace in self.sysOptions['sys_cut_replacement_final'][syst]:
+                cut = cut.replace(needle, replace)
+
 
         return cut
 

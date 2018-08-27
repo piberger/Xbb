@@ -54,6 +54,8 @@ parser.add_option("-F", "--folderTag", dest="ftag", default="",
                       help="Creats a new folder structure for outputs or uses an existing one with the given name")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
+parser.add_option("-g", "--forceN", dest="forceN", action="store_true", default=False,
+                      help="Force usage of -N parameter")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
@@ -76,6 +78,7 @@ parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="pat
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
+parser.add_option("-v","--vars",dest="vars",default="", help="comma separated list of variables")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
 
@@ -774,7 +777,6 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
-    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # check for empty list of collections to add
     addCollections = opts.addCollections
@@ -792,8 +794,21 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
         except:
             print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
             continue
+
+        # specified with -N option
+        chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+        # for some samples consisting of many files, force override the -N option!
+        if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
+            minFilesPerJob = int(config.get(sampleIdentifier, 'minFilesPerJob'))
+            if minFilesPerJob > chunkSize:
+                chunkSize = minFilesPerJob
+                print "\x1b[34mINFO: override chunk size given by -N with value from config:", chunkSize, "\x1b[0m"
+
+        # limit numebr of files per sample
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
+
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
         # for checksysnew step: only list of missing files are printed. No jobs are submited
@@ -1004,8 +1019,12 @@ if opts.task.startswith('cacheplot'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+    if len(opts.vars.strip()) > 0:
+        plotVars = opts.vars.strip().split(',')
+    else:
+        plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
 
+    # split list of variables to plot for multiple jobs
     if opts.parallel:
         plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
     else:
@@ -1482,17 +1501,29 @@ if opts.task == 'sample':
                 print "----",sampleIdentifier,"----"
                 print skimTemplate
 
-if opts.task == 'checklogs':
-
+if opts.task.startswith('checklogs'):
+    
+    # if no task is given (with checklogs:task), then use the one from last submission for the config
+    checkTask = None
+    if ':' in opts.task:
+        checkTask = opts.task.split(':')[1]
+    
+    # define some error markers to look for besides return code
     errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc','file does not exist or is broken, will be SKIPPED']
+
+    # load list of jobs/logs from submission
     try:
-        with open('last-submission-' + opts.tag + '.json', 'r') as infile:
+        jsonFileName = 'last-submission-' + opts.tag + '_' + checkTask + '.json' if checkTask else 'last-submission-' + opts.tag + '.json'
+        with open(jsonFileName, 'r') as infile:
             lastSubmission = json.load(infile)
     except:
         print "ERROR: nothing to check, there is no submission yet!"
         exit(0)
+    
+    # check job status
     batchSystem = BatchSystem.create(config)
     unfinishedJobs = {k: True for k in batchSystem.getJobNames(includeDeleted=False)}
+
     nFailed = 0
     nResubmitted = 0
     nComplete = 0
@@ -1513,7 +1544,7 @@ if opts.task == 'checklogs':
                             if errorMarker in line:
                                 errorLines.append("line %d: %s"%(i, line))
                                 break
-                        # new job output appended to old log
+                        # new job output appended to old log -> ignore all errors up to here
                         if line.startswith('Configuration Files:'):
                             errorLines = []
 
@@ -1567,4 +1598,9 @@ if 'condor' in whereToLaunch:
 if len(submittedJobs) > 0 and not opts.resubmit:
     with open('last-submission-' + opts.tag + '.json', 'w') as outfile:
         json.dump(submittedJobs, outfile)
+    try:
+        with open('last-submission-' + opts.tag + '_' + opts.task + '.json', 'w') as outfile:
+            json.dump(submittedJobs, outfile)
+    except:
+        pass
 
