@@ -79,7 +79,13 @@ class GetTopMass(object):
         # only defined for nano at the moment
 
         if self.propagateJES and self.nano:
-            self.jetSystematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+            self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal'] 
+
+#            self.jetSystematics = ['jerReg'] 
+
+
+
+
 
             if self.sample.type != 'DATA': systList = self.jetSystematics + ['minmax']
             else: systList = ['minmax']
@@ -435,6 +441,8 @@ class GetTopMass(object):
         top = lep + met + bjet
         return top.M()
 
+
+
     def getJetPtMass(self, tree, i, variation=None):
 
         JetPtReg = getattr(tree, self.brJetPtReg)[i]
@@ -444,6 +452,13 @@ class GetTopMass(object):
         if not variation:
            JetPt =  JetPtReg
            JetMass = JetMassNom * JetPtReg /JetPtNom
+
+        elif 'jerReg' in variation:
+           Q = "Up" if "Up" in variation else "Down"
+           JetPtSys = getattr(tree,"Jet_PtReg" + Q)[i]
+   
+           JetPt =  JetPtSys 
+           JetMass = JetMassNom * JetPtSys / JetPtNom
 
         else:
            JetPtSys = getattr(tree,"Jet_pt" + "_" + variation)[i]
