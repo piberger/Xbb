@@ -7,7 +7,7 @@ from Jet import Jet
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(object):
     
-    def __init__(self, addSystematics=True, tagidx="", prefix="H"):
+    def __init__(self, addSystematics=True, prefix="H"):
         self.debug = 'XBBDEBUG' in os.environ
         self.lastEntry = -1
         self.nJet = -1
@@ -15,19 +15,26 @@ class HiggsCandidateSystematics(object):
         self.branches = []
         self.branchBuffers = {}
         self.addSystematics = addSystematics
-        self.tagidx = tagidx
         self.prefix = prefix
 
         self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
 
+
+
         # corrected dijet (Higgs candidate) properties
         self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass','pt_noFSR','eta_noFSR','phi_noFSR','mass_noFSR']]
 
-        if self.debug:
-            print "DEBUG: HiggsCandidateSystematics::__init__(), with idx=", self.tagidx, " prefix=", self.prefix
+#        if self.debug:
+#            print "DEBUG: HiggsCandidateSystematics::__init__(), with idx=", self.tagidx, " prefix=", self.prefix
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
+        self.config = initVars['config']
+
+        self.tagidx = self.config.get('General', 'hJidx')
+        if self.debug:
+            print "DEBUG: HiggsCandidateSystematics::__init__(), with idx=", self.tagidx, " prefix=", self.prefix
+
         self.higgsPropertiesWithSys = self.higgsProperties if self.sample.type != 'DATA' else []
         for higgsProperty in self.higgsProperties: 
             self.branchBuffers[higgsProperty] = array.array('f', [0.0])
@@ -94,7 +101,6 @@ class HiggsCandidateSystematics(object):
             treeJet_Pt = tree.Jet_Pt
             treeJet_bReg = tree.Jet_bReg
 
-            #treeJet_Pt = tree.Jet_Pt
             treeJet_phi = tree.Jet_phi
             treeJet_eta = tree.Jet_eta
 
@@ -107,8 +113,8 @@ class HiggsCandidateSystematics(object):
             hJ0 = ROOT.TLorentzVector()
             hJ1 = ROOT.TLorentzVector()
 
-            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0] * treeJet_bReg[hJidx0])
-            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1] * treeJet_bReg[hJidx1])
+            hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0])
+            hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1])
 
             dijet_Nominal_noFSR = hJ0 + hJ1
 
@@ -120,7 +126,7 @@ class HiggsCandidateSystematics(object):
             for i in range(len(treeJet_PtReg)):
                 if i not in [hJidx0,hJidx1] and treeJet_Pt[i]>20 and abs(tree.Jet_eta[i])<3.0 and tree.Jet_puId[i]>0 and tree.Jet_lepFilter[i] > 0:
                     FSR = ROOT.TLorentzVector()
-                    FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_bReg[i])
+                    FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_PtReg[i]/treeJet_Pt[i])
                     deltaR0 = FSR.DeltaR(hJ0)
                     deltaR1 = FSR.DeltaR(hJ1)
                     if min(deltaR0,deltaR1) < 0.8:
@@ -160,19 +166,21 @@ class HiggsCandidateSystematics(object):
                                 hJ0.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],treeJet_mass[hJidx0]*getattr(tree,'Jet_PtReg'+Q)[hJidx0]/treeJet_Pt[hJidx0])
                                 hJ1.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],treeJet_mass[hJidx1]*getattr(tree,'Jet_PtReg'+Q)[hJidx1]/treeJet_Pt[hJidx1])
                             else:
-                                hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_bReg[hJidx0])
-                                hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_bReg[hJidx1])
+                                hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0],treeJet_eta[hJidx0],treeJet_phi[hJidx0],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0])
+                                hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1],treeJet_eta[hJidx1],treeJet_phi[hJidx1],getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1])
+
+
                             
                             dijet_noFSR = hJ0 + hJ1
                             
                             # FSR recovery
                             for i in fsrIndices0:
                                 FSR = ROOT.TLorentzVector()
-                                FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_bReg[i])
+                                FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_PtReg[i]/treeJet_Pt[i])
                                 hJ0 = hJ0 + FSR
                             for i in fsrIndices1:
                                 FSR = ROOT.TLorentzVector()
-                                FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_bReg[i])
+                                FSR.SetPtEtaPhiM(treeJet_PtReg[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass[i] * treeJet_PtReg[i]/treeJet_Pt[i])
                                 hJ1 = hJ1 + FSR
                             
                             dijet = hJ0 + hJ1

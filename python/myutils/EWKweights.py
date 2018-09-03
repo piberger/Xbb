@@ -6,13 +6,13 @@ from pdgId import pdgId
 
 class EWKweights(object):
 
-    def __init__(self, sample=None, nano=False, boost= False,tagidx=""):
+    def __init__(self, sample=None, nano=False, boost= False):
         self.lastEntry = -1
         self.nano = nano
         self.branchBuffers = {}
         self.branches = []
         self.boost = boost
-        self.tagidx=tagidx
+
 
         #NLOw is not defined in booseted topologie
         if self.boost == False:
@@ -26,6 +26,10 @@ class EWKweights(object):
 
     def customInit(self, initVars):
         sample = initVars['sample']
+        self.config = initVars['config']
+
+        self.tagidx = self.config.get('General', 'hJidx')
+        print "INFO: bTag index: {}".format(self.tagidx)
         self.applyEWK = ('DY' in sample.identifier and not '10to50' in sample.identifier) or ('WJet' in sample.identifier)
         self.applyNLO = self.applyEWK and ('amc' not in sample.identifier) 
         self.sys_sample = None

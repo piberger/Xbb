@@ -312,6 +312,253 @@ class MvaTrainingHelper(object):
         trainTree = rootFile.Get('./TrainTree')
         esTrain, sTrain, bTrain = self.getExpectedSignificance(trainTree, 15, -0.8, 0.8, rescaleSig=rescaleSig, rescaleBkg=rescaleBkg)
 
+    def getbdtHistogram(self, tree):
+        hSIG = ROOT.TH1D("hSig","TMVA overtraining check for classifier: %s"%self.mvaName,40,-1,1)
+        hBKG = ROOT.TH1D("hBkg","TMVA overtraining check for classifier: %s"%self.mvaName,40,-1,1)
+        print("INFO: GetEntries() = ", tree.GetEntries())
+        for event in tree:
+            value = getattr(event, self.mvaName)
+
+            if event.classID == 1:
+                hSIG.Fill(value)
+            else:
+                hBKG.Fill(value)
+        return [hSIG, hBKG]
+
+    def setTMVASyle(self):
+        # style
+        self.hSIGtest.SetLineColor(ROOT.TColor.GetColor("#0000ee"))
+        self.hSIGtest.SetLineWidth(1)
+        self.hSIGtest.SetFillStyle(1001)
+        self.hSIGtest.SetFillColor(ROOT.TColor.GetColor("#7d99d1"))
+        self.hSIGtest.SetTitle("TMVA overtraining check for classifier: %s"%self.mvaName )
+
+        self.hBKGtest.SetLineColor(ROOT.TColor.GetColor("#ff0000"))
+        self.hBKGtest.SetLineWidth(1)
+        self.hBKGtest.SetFillStyle(3554)
+        self.hBKGtest.SetFillColor(ROOT.TColor.GetColor("#ff0000"))
+        self.hBKGtest.SetTitle(self.hSIGtest.GetTitle())
+
+
+        self.hSIGtrain.SetMarkerColor(self.hSIGtest.GetLineColor())
+        self.hSIGtrain.SetMarkerSize(0.7)
+        self.hSIGtrain.SetMarkerStyle(20)
+        self.hSIGtrain.SetLineWidth(1)
+        self.hSIGtrain.SetLineColor(self.hSIGtest.GetLineColor())
+        self.hSIGtrain.SetTitle(self.hSIGtest.GetTitle())
+
+        self.hBKGtrain.SetMarkerColor(self.hBKGtest.GetLineColor())
+        self.hBKGtrain.SetMarkerSize(0.7)
+        self.hBKGtrain.SetMarkerStyle(20)
+        self.hBKGtrain.SetLineWidth(1)
+        self.hBKGtrain.SetLineColor(self.hBKGtest.GetLineColor())
+        self.hBKGtrain.SetTitle(self.hSIGtest.GetTitle())
+
+        TMVAStyle = ROOT.TStyle(ROOT.gROOT.GetStyle("Plain"))# // our style is based on Plain
+        TMVAStyle.SetName("TMVA")
+        TMVAStyle.SetTitle("TMVA style based on \"Plain\" with modifications defined in tmvaglob.C")
+        ROOT.gROOT.GetListOfStyles().Add(TMVAStyle)
+        ROOT.gROOT.SetStyle("TMVA")
+         	
+        TMVAStyle.SetLineStyleString( 5, "[52 12]" )
+        TMVAStyle.SetLineStyleString( 6, "[22 12]" )
+        TMVAStyle.SetLineStyleString( 7, "[22 10 7 10]" )
+        
+        UsePaperStyle = False
+    
+        #// the pretty color palette of old
+        TMVAStyle.SetPalette((18 if UsePaperStyle else 1))
+    
+        #// use plain black on white colors
+        TMVAStyle.SetFrameBorderMode(0)
+        TMVAStyle.SetCanvasBorderMode(0)
+        TMVAStyle.SetPadBorderMode(0)
+        TMVAStyle.SetPadColor(0)
+        TMVAStyle.SetFillStyle(0)
+    
+        TMVAStyle.SetLegendBorderSize(0)
+    
+        c_TitleBox = ROOT.TColor.GetColor( "#5D6B7D" )
+        c_TitleText = ROOT.TColor.GetColor( "#FFFFFF" )
+        c_TitleBorder = ROOT.TColor.GetColor( "#7D8B9D" )
+        c_FrameFill = ROOT.TColor.GetColor( "#fffffd" )
+        c_Canvas = ROOT.TColor.GetColor( "#f0f0f0" )
+
+
+        TMVAStyle.SetTitleFillColor( c_TitleBox )
+        TMVAStyle.SetTitleTextColor( c_TitleText )
+        TMVAStyle.SetTitleBorderSize( 1 )
+        TMVAStyle.SetLineColor( c_TitleBorder )
+        if not UsePaperStyle:
+            TMVAStyle.SetFrameFillColor( c_FrameFill )
+            TMVAStyle.SetCanvasColor( c_Canvas )
+    
+        #// set the paper & margin sizes
+        TMVAStyle.SetPaperSize(20,26)
+        TMVAStyle.SetPadTopMargin(0.10)
+        TMVAStyle.SetPadRightMargin(0.05)
+        TMVAStyle.SetPadBottomMargin(0.11)
+        TMVAStyle.SetPadLeftMargin(0.12)
+    
+        #// use bold lines and markers
+        TMVAStyle.SetMarkerStyle(21)
+        TMVAStyle.SetMarkerSize(0.3)
+        TMVAStyle.SetHistLineWidth(2)
+        TMVAStyle.SetLineStyleString(2,"[12 12]") #// postscript dashes
+    
+        #// do not display any of the standard histogram decorations
+        TMVAStyle.SetOptTitle(1)
+        TMVAStyle.SetTitleH(0.052)
+    
+        TMVAStyle.SetOptStat(0)
+        TMVAStyle.SetOptFit(0)
+    
+        #// put tick marks on top and RHS of plots
+        TMVAStyle.SetPadTickX(1)
+        TMVAStyle.SetPadTickY(1)
+
+    def nomrmaliseHist(self,hSIG, hBKG):
+        if (hSIG.GetSumw2N() == 0):
+            hSIG.Sumw2()
+        if (hBKG and hBKG.GetSumw2N() == 0): 
+            hBKG.Sumw2()
+     
+        if(hSIG.GetSumOfWeights()!=0): 
+            dx = (hSIG.GetXaxis().GetXmax() - hSIG.GetXaxis().GetXmin())/hSIG.GetNbinsX()
+            hSIG.Scale(1.0/hSIG.GetSumOfWeights()/dx)
+        if (hBKG != 0 and hBKG.GetSumOfWeights()!=0):
+            dx = (hBKG.GetXaxis().GetXmax() - hBKG.GetXaxis().GetXmin())/hBKG.GetNbinsX()
+            hBKG.Scale( 1.0/hBKG.GetSumOfWeights()/dx )
+
+    def drawOvertraining(self):
+
+        #normalise histograms
+        self.nomrmaliseHist(self.hSIGtest, self.hBKGtest)
+        self.nomrmaliseHist(self.hSIGtrain, self.hBKGtrain)
+
+        c = ROOT.TCanvas("canvas1", "TMVA comparison %s"%self.mvaName, 0, 200, 600, 468) 
+
+        # frame limits (choose judicuous x range)
+        nrms = 10
+        xmin = ROOT.TMath.Max(ROOT.TMath.Min(self.hSIGtest.GetMean() - nrms*self.hSIGtest.GetRMS(), self.hBKGtest.GetMean() - nrms*self.hBKGtest.GetRMS() ),self.hSIGtest.GetXaxis().GetXmin() )
+        xmax = ROOT.TMath.Min(ROOT.TMath.Max(self.hSIGtest.GetMean() + nrms*self.hSIGtest.GetRMS(), self.hBKGtest.GetMean() + nrms*self.hBKGtest.GetRMS()), self.hSIGtest.GetXaxis().GetXmax())
+        ymin = 0
+        maxMult = 1.3
+        #maxMult = (htype == CompareType) ? 1.3 : 1.2
+        ymax = ROOT.TMath.Max(self.hSIGtest.GetMaximum(), self.hBKGtest.GetMaximum())*maxMult
+        ymax = ROOT.TMath.Max(ymax,ROOT.TMath.Max(self.hSIGtrain.GetMaximum(), self.hBKGtrain.GetMaximum())*maxMult)
+        #print ('ymax is', ymax)
+        #print (self.hSIGtest.GetMaximum())
+        #print (self.hBKGtest.GetMaximum())
+        #print (self.hSIGtrain.GetMaximum())
+        #print (self.hBKGtrain.GetMaximum())
+        #sys.exit()
+   
+        # build a frame
+        nb = 500
+        hFrameName = "frame" + self.mvaName
+        #o = ROOT.gROOT.FindObject(hFrameName)
+        frame = ROOT.TH2F(hFrameName, self.hSIGtest.GetTitle(), nb, xmin, xmax, nb, ymin, ymax )
+        frame.GetXaxis().SetTitle(self.mvaName + " response")
+        frame.GetYaxis().SetTitle("(1/N) dN^{ }/^{ }dx")
+
+        #TMVAGlob.SetFrameStyle( frame )
+        frame.SetLabelOffset( 0.012, "X" )
+        frame.SetLabelOffset( 0.012, "Y" )
+        frame.GetXaxis().SetTitleOffset( 1.25 )
+        frame.GetYaxis().SetTitleOffset( 1.22 )
+        frame.GetXaxis().SetTitleSize( 0.045)
+        frame.GetYaxis().SetTitleSize( 0.045)
+        frame.GetXaxis().SetLabelSize( 0.04)
+        frame.GetYaxis().SetLabelSize( 0.04)
+
+        #// global style settings
+        ROOT.gPad.SetTicks()
+        ROOT.gPad.SetLeftMargin  ( 0.108)
+        ROOT.gPad.SetRightMargin ( 0.050)
+        ROOT.gPad.SetBottomMargin( 0.120)
+   
+        # eventually: draw the frame
+        frame.Draw()  
+    
+        c.GetPad(0).SetLeftMargin(0.105 )
+        frame.GetYaxis().SetTitleOffset( 1.2 )
+
+        # Draw legend               
+        legend = ROOT.TLegend(c.GetLeftMargin(), 1 - c.GetTopMargin() - 0.12, c.GetLeftMargin() + 0.40, 1 - c.GetTopMargin() )
+        legend.SetFillStyle(1)
+        legend.AddEntry(self.hSIGtest,"Signal"     + " (test sample)", "F")
+        legend.AddEntry(self.hBKGtest,"Background" + " (test sample)", "F")
+        legend.SetBorderSize(1)
+        legend.SetMargin(0.2)
+        legend.Draw("same")
+
+        legend2= ROOT.TLegend( 1 - c.GetRightMargin() - 0.42, 1 - c.GetTopMargin() - 0.12, 1 - c.GetRightMargin(), 1 - c.GetTopMargin() )
+        legend2.SetFillStyle(1)
+        legend2.SetBorderSize(1)
+        legend2.AddEntry(self.hSIGtrain,"Signal (training sample)","P")
+        legend2.AddEntry(self.hBKGtrain,"Background (training sample)","P")
+        legend2.SetMargin( 0.1 )
+        legend2.Draw("same")
+
+        self.setTMVASyle()
+
+        self.hSIGtest.Draw('samehist')
+        self.hBKGtest.Draw('samehist')
+        self.hSIGtrain.Draw('e1same')
+        self.hBKGtrain.Draw('e1same')
+
+        #perform K-S test
+        print("--- Perform Kolmogorov-Smirnov tests")
+        #//Double_t kolS = sig->KolmogorovTest( self.hSIGtrain, "X" );
+        #//Double_t kolB = bgd->KolmogorovTest( bgdOv, "X" );
+        kolS = self.hSIGtest.KolmogorovTest( self.hSIGtrain);
+        kolB = self.hBKGtest.KolmogorovTest( self.hBKGtrain);
+        print ("--- Goodness of signal (background) consistency: " + str(kolS) + " (" + str(kolB) + ")")
+
+        probatext = "Kolmogorov-Smirnov test: signal (background) probability = % 5.3g (%5.3g)"% (kolS, kolB)
+        tt = ROOT.TText(0.12, 0.74, probatext)
+        tt.SetNDC()
+        tt.SetTextSize(0.032)
+        tt.AppendPad()
+
+        # redraw axes
+        frame.Draw("sameaxis")
+
+        #/text for overflows
+        nbin = self.hSIGtest.GetNbinsX()
+        dxu  = self.hSIGtest.GetBinWidth(0)
+        dxo  = self.hSIGtest.GetBinWidth(nbin+1)
+        uoflow =  "U/O-flow (S,B): (%.1f, %.1f)%% / (%.1f, %.1f)%%"% (self.hSIGtest.GetBinContent(0)*dxu*100, self.hBKGtest.GetBinContent(0)*dxu*100, self.hSIGtest.GetBinContent(nbin+1)*dxo*100, self.hBKGtest.GetBinContent(nbin+1)*dxo*100)
+        t = ROOT.TText( 0.975, 0.115, uoflow )
+        t.SetNDC()
+        t.SetTextSize( 0.030 )
+        t.SetTextAngle( 90 )
+        t.AppendPad()    
+   
+        # update canvas
+        c.Update()
+
+
+        MVAdir = self.config.get('Directories','vhbbpath')+'/python/weights/'
+        c.SaveAs(MVAdir+'overtraining%s.pdf'%self.mvaName)
+        print ('I saved the canvase in', MVAdir+'overtraining%s.pdf'%self.mvaName)
+
+    def saveOvertrainingPlots(self):
+        print("INFO: open ", self.trainingOutputFileName)
+        rootFile = ROOT.TFile.Open(self.trainingOutputFileName, "READ")
+        print("INFO: ->", rootFile)
+        testTree = rootFile.Get('./TestTree')
+        TESThist = self.getbdtHistogram(testTree)
+        self.hSIGtest, self.hBKGtest = TESThist[0], TESThist[1]
+        trainTree = rootFile.Get('./TrainTree')
+        TRAINhist = self.getbdtHistogram(trainTree)
+        self.hSIGtrain, self.hBKGtrain = TRAINhist[0], TRAINhist[1]
+
+        self.drawOvertraining()
+
+
+
 # read arguments
 argv = sys.argv
 parser = OptionParser()
@@ -349,5 +596,9 @@ for trainingRegion in trainingRegions:
         try:
             th.estimateExpectedSignificance()
         except:
+            pass
+        try:
+            th.saveOvertrainingPlots()
+        except: 
             pass
 
