@@ -724,6 +724,8 @@ class Datacard(object):
                 systematics['enabled'] = True
                 if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
                     if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                        if self.debug:
+                            print('\x1b[31m group', self.sysOptions['Group'][sample.name], 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
                         systematics['enabled'] = False
                 
                 # additional BLINDING cut
@@ -738,14 +740,16 @@ class Datacard(object):
                 self.histograms[sample.name][systematics['systematicsName']].Sumw2()
 
                 # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
-                if self.anType.lower() == 'bdt' and sample.type != 'DATA':
+                if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and sample.type != 'DATA':
                     systematics['addCut'] = self.EvalCut
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+                else:
+                    print('\x1b[31mINFO: using full sample!',systematics['var'].lower() ,"\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
-                
+
                 if systematics['enabled']:
                     sampleTree.addFormula(systematics['cutWithBlinding'])
                     if sample.type != 'DATA':
@@ -813,6 +817,16 @@ class Datacard(object):
                                 specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
                                 self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
                         #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+
+            # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
+            for systematics in systematicsList:
+                if self.histograms[sample.name][systematics['systematicsName']].GetEntries() < 1:
+                    if self.debug:
+                        print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
+                    self.histograms[sample.name][systematics['systematicsName']].SetEntries(1)
+                    for i in range(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetNbins()):
+                        self.histograms[sample.name][systematics['systematicsName']].SetBinContent(1+i, 0)
+                        #self.histograms[sample.name][systematics['systematicsName']].Fill(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetBinCenter(1+i), 0)
 
             # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
             for systematics in systematicsList:
