@@ -180,11 +180,8 @@ for fileName in filelist:
         resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         
         # copy temporary file to output folder
-        if opts.force and fileLocator.exists(outputFileName):
-            fileLocator.rm(outputFileName)
-
         try:
-            fileLocator.cp(tmpFileName, outputFileName)
+            fileLocator.cp(tmpFileName, outputFileName, force=True)
         except Exception as e:
             print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
             print e
