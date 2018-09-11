@@ -1,0 +1,11 @@
+B-enriched
+weight for  VPT0 is 0.736589648363
+list of broken files
+[]
+weight for  VPT200 is 0.0573150954965
+list of broken files
+[]
+weight for  VPT100 is 0.0728296509136
+list of broken files
+[]
+all broken files []

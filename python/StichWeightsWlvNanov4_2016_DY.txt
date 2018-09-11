@@ -1,0 +1,6 @@
+B-enriched
+weight for  VPT0 is 0.750426747549
+weight for  VPT100 is 0.0728296509136
+weight for  VPT200 is 0.0573150954965
+BGenFilter
+weight for  1 is 0.898837008482

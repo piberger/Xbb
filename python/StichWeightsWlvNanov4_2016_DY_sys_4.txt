@@ -1,0 +1,22 @@
+B-enriched
+weight for  VPT200 is 0.057234217387
+list of broken files
+BGenFilter
+n getStichingWeights_Wlv2016Nano.py Wlv2016NanoconfigL:q
+[31mnot found: root://t3dcachedb.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016/Wlv/sys_v4//DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/tree_arizzi-RunIIMoriond17-DeepAndR107_180517_164119_0000_16_614650e0c3d7a1f416436e15f69461472fd92f8de581fd70d47e03ec.root [0m
+[31mnot found: root://t3dcachedb.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016/Wlv/sys_v4//DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/tree_arizzi-RunIIMoriond17-DeepAndR108_180517_164151_0000_86_a2e77963ef7f2727693e4e4b3cbb808f06eaf8e20dc6ff075ddfd4dc.root [0m
+[31mnot found: root://t3dcachedb.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016/Wlv/sys_v4//DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/tree_arizzi-RunIIMoriond17-DeepAndR108_180517_164151_0000_1_2ce9b2fa35f6abb92804a181e7d5b34b7bcd672f864bdd87f84696ea.root [0m
+[31mnot found: root://t3dcachedb.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016/Wlv/sys_v4//DYJetsToLL_M-50_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/tree_arizzi-RunIIMoriond17-DeepAndR105_180517_164017_0000_1_031c5dd95eddc773ffc4bb5ee623a64755f2e282a5b2886466a435fd.root [0m
+weight for  1 is 0.89695443856
+[]
+weight for  VPT0 is 0.736589648363
+list of broken files
+[]
+weight for  VPT100 is 0.0722758578398
+list of broken files
+[]
+BGenFilter
+weight for  1 is 0.898837008482
+list of broken files
+[]
+all broken files []
