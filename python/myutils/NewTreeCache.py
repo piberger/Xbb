@@ -288,10 +288,6 @@ class TreeCache:
             print ('copy ', tmpFileName, ' to ', outputFileName)
             if self.fileLocator.fileExists(outputFileName):
                 self.deleteFile(outputFileName)
-            #command = 'xrdcp -d 1 ' + self.fileLocator.getXrootdFileName(tmpFileName) + ' ' + self.fileLocator.getXrootdFileName(outputFileName)
-            #print('the command is', command)
-            #sys.stdout.flush()
-            #returnCode = subprocess.call([command], shell=True)
             copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
             if not copySuccessful:
                 success = False

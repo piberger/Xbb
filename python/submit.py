@@ -845,7 +845,8 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
-                jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+                filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
+                jobName = 'sysnew_{sample}_part{part}{files}'.format(sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
             else:
                 if allInputFilesMissing:
@@ -1416,12 +1417,12 @@ if opts.task.split('.')[0] == 'status':
             sampleFileList = filelist(samplefiles, sampleIdentifier)
         except:
             sampleFileList = []
-        for partNumber, sampleFileName in enumerate(sampleFileList, 1):
+        for partNumber, sampleFileName in enumerate(sampleFileList):
             localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
                 fileStatus[folder][sampleIdentifier].append([fileLocator.exists(localFilePath), partNumber])
-
+   
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
     for folder in foldersToCheck:
@@ -1431,14 +1432,13 @@ if opts.task.split('.')[0] == 'status':
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
             for x,number in sampleStatus:
-                jobName = jobPrefix + '_' + sampleIdentifier + '_part%d'%(number-1) + '_' + jobSuffix
-                if jobName in jobsRunning:
+                if batchSystem.job_for_file_exists(jobsRunning, jobPrefix, sampleIdentifier, number, jobSuffix):
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[45m\x1b[97mR\x1b[0m')
-                elif jobName in jobs:
+                elif batchSystem.job_for_file_exists(jobs, jobPrefix, sampleIdentifier, number, jobSuffix):
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[43mQ\x1b[0m')
                 else:
                     if not x:
-                        failedJobs.append(jobName)
+                        failedJobs.append(batchSystem.get_single_job_name(jobPrefix, sampleIdentifier, number, jobSuffix))
                     statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x,n in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
@@ -1446,7 +1446,7 @@ if opts.task.split('.')[0] == 'status':
                 sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             elif len([x for x,n in sampleStatus if x])==len(sampleStatus):
                 sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
-            print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+            print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar, "\x1b[0m "
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
     if len(failedJobs) > 0:

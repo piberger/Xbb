@@ -1,6 +1,7 @@
 from __future__ import print_function
 import xml.etree.ElementTree
 import subprocess
+import fnmatch
 
 class BatchSystem(object):
 
@@ -19,6 +20,26 @@ class BatchSystem(object):
             return BatchSystemSGE()
         else:
             return BatchSystemHTCondor()
+    
+    def get_single_job_name(self, jobPrefix, sampleIdentifier, fileNumber, jobSuffix):
+        return jobPrefix + '_' + sampleIdentifier + '_part%d'%(fileNumber) + '_' + jobSuffix
+
+    def job_for_file_exists(self, jobList, jobPrefix, sampleIdentifier, fileNumber, jobSuffix):
+        # 1 file per job
+        if self.get_single_job_name(jobPrefix, sampleIdentifier, fileNumber, jobSuffix) in jobList:
+            return True
+
+        # multiple files per job
+        jobName = jobPrefix + '_' + sampleIdentifier + '_part*_files*'
+        for runningJob in jobList:
+            if fnmatch.fnmatch(runningJob, jobName):
+                filesSpec = runningJob.split('_files')[1].split('_')[0]
+                filesFrom = int(filesSpec.split('to')[0])
+                filesTo = int(filesSpec.split('to')[1])
+                if filesFrom <= fileNumber and fileNumber <= filesTo:
+                    return True
+        return False
+
 
 class BatchSystemSGE(BatchSystem):
     

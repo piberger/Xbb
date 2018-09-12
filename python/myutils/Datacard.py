@@ -183,11 +183,16 @@ class Datacard(object):
         if self.verbose:
             print ('Assign Pt region for sys factors')
             print ('================================\n')
-        self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
-        if len(self.ptRegion) != 1:
-            print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
+
+        if self.sysOptions['ptRegionsDict']:
+            self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
+            if len(self.ptRegion) != 1:
+                print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
+            else:
+                self.ptRegion = self.ptRegion[0]
         else:
-            self.ptRegion = self.ptRegion[0]
+            self.ptRegion = None
+
         if self.verbose:
             print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
 
@@ -1106,7 +1111,8 @@ class Datacard(object):
             dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
             
             # write non-shape systematics
-            nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion)))
+
+            nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'InUse'))
             for systematic in nonShapeSystematics:
                 systematicDict = eval(self.config.get('Datacard', systematic))
                 dcRow = [systematic, systematicDict['type']]
@@ -1175,7 +1181,7 @@ class Datacard(object):
                         dcRows.append(dcRow)
 
             # rate params
-            rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion)))
+            rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'rateParams'))
             try:
                 rateParamRange = eval(self.config.get('Datacard', 'rateParamRange'))
             except:
