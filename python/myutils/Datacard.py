@@ -28,10 +28,12 @@ class Datacard(object):
         self.DCprocessSeparatorDict = {'WS':':','TH':'/'}
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
-        if returnCode != 0:
-            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d (already loaded?)\x1b[0m"%returnCode)
-        else:
+
+        # 0=ok, 1=already loaded, others = error
+        if returnCode == 0:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
+        elif returnCode != 1:
+            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
 
         self.region = region
         self.anaTag = config.get("Analysis", "tag")
@@ -372,7 +374,13 @@ class Datacard(object):
         if self.debug:
             print ('systematics dict')
             print ('===================\n')
-            print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
+
+            # make list of differences compared to nominal
+            systematicsListDelta = [self.systematicsList[0]]
+            for i in range(1,len(self.systematicsList)):
+                delta = {k:v for k,v in self.systematicsList[i].iteritems() if systematicsListDelta[0][k] != v}
+                systematicsListDelta.append(delta)
+            print (json.dumps(systematicsListDelta, sort_keys=True, indent=8, default=str))
         
         if self.debug or self.verbose:
             print('INFO: datacard initialization complete!')
@@ -1215,7 +1223,8 @@ class Datacard(object):
             if ext.endswith('txt'):
                 dcType = 'DC_' + dcType
             baseFileName = '{path}/vhbb_{dcType}_{rootName}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, ext=ext)
-        print("DEBUG:", baseFileName)
+        if self.verbose:
+             print("DEBUG: base name =", baseFileName)
         return baseFileName
 
     @staticmethod
