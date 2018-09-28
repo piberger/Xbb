@@ -54,6 +54,7 @@ echo
 # parse named input arguments
 # todo: pass everything as named argument
 force="0"
+friend="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --trainingRegions=*)
@@ -67,6 +68,9 @@ while [ $# -gt 0 ]; do
       ;;
     --force)
       force="1"
+      ;;
+    --friend)
+      friend="1"
       ;;
     --expectedSignificance)
       expectedSignificance="1"
@@ -381,6 +385,9 @@ if [ "$runCommand" ]; then
     fi
     if [ "$force" = "1" ]; then
         runCommand="${runCommand} --force"
+    fi
+    if [ "$friend" = "1" ]; then
+        runCommand="${runCommand} --friend"
     fi
     if [ "$sampleIdentifier" ]; then
         runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"

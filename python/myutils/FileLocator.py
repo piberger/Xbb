@@ -193,6 +193,11 @@ class FileLocator(object):
             if attemptsLeft > 0:
                 if attemptsLeft < attempts-1 and self.timeBetweenAttempts and self.timeBetweenAttempts<10:
                     self.timeBetweenAttempts *= 2
+                for xrdenv in ['X509_VOMS_DIR','X509_VOMS_DIR','X509_USER_PROXY']:
+                    if xrdenv in os.environ:
+                        print('DEBUG:', xrdenv, '=', os.environ[xrdenv])
+                    else:
+                        print('DEBUG: not found:', xrdenv)
                 print('INFO: file was not found:'+path+', trying %d more times...'%attemptsLeft)
                 if self.timeBetweenAttempts:
                     reconnect = False
