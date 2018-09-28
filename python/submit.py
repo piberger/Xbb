@@ -1460,6 +1460,14 @@ if opts.task.startswith('checklogs'):
                     nResubmitted += 1
     print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
 
+# -----------------------------------------------------------------------------
+# postfitplot 
+# -----------------------------------------------------------------------------
+if opts.task.startswith('postfitplot'):
+    jobDict = repDict.copy()
+    jobName = 'postfitplot'
+    submit(jobName, jobDict)
+
 # if there are still jobs in the local queue, submit them to the batch queue
 batchSystem.submitQueue()
 

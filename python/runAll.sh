@@ -273,6 +273,8 @@ elif [ $task = "runplot" ]; then
     else
         runCommand="python ./run_plot.py --regions ${regions} --vars ${vars}";
     fi
+elif [ $task = "postfitplot" ]; then
+    runCommand="python ./postfit_plot.py"
 
 elif [ $task = "cachedc" ]; then
     runCommand="python ./cache_dc.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
