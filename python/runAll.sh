@@ -55,6 +55,7 @@ echo
 # todo: pass everything as named argument
 force="0"
 friend="0"
+join="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --trainingRegions=*)
@@ -71,6 +72,9 @@ while [ $# -gt 0 ]; do
       ;;
     --friend)
       friend="1"
+      ;;
+    --join)
+      join="1"
       ;;
     --expectedSignificance)
       expectedSignificance="1"
@@ -390,6 +394,9 @@ if [ "$runCommand" ]; then
     fi
     if [ "$friend" = "1" ]; then
         runCommand="${runCommand} --friend"
+    fi
+    if [ "$join" = "1" ]; then
+        runCommand="${runCommand} --join"
     fi
     if [ "$sampleIdentifier" ]; then
         runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"

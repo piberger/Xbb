@@ -27,7 +27,7 @@ except:
     print "unable to detect python version!"
 
 parser = OptionParser()
-parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
+parser.add_option("-b", "--addCollections", "--modules", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
 parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true", default=False,
@@ -43,6 +43,7 @@ parser.add_option("-f", "--force", dest="force", action="store_true", default=Fa
 parser.add_option("-g", "--forceN", dest="forceN", action="store_true", default=False,
                       help="Force usage of -N parameter")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
+parser.add_option("-j", "--join", dest="join", action="store_true", default=False, help="(experimental) chain all files per sample together in sys step")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
 parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
@@ -81,6 +82,10 @@ if opts.tag == "":
 if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
+
+if opts.task == "run":
+    opts.task = "sysnew"
+
 
 batchSystem = None
 
@@ -726,6 +731,8 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                     jobDict['arguments']['force'] = ''
                 if opts.friend:
                     jobDict['arguments']['friend'] = ''
+                if opts.join:
+                    jobDict['arguments']['join'] = ''
                 filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
                 jobName = 'sysnew_{sample}_part{part}{files}'.format(sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
