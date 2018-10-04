@@ -618,7 +618,14 @@ class SampleTree(object):
             outputTree['friend'] = {'treeName': self.treeName + '_f'}
 
         self.outputTrees.append(outputTree)
-    
+
+    def disableOutput(self):
+        print("INFO: output disabled - no files will be written!")
+        self.outputTrees = []
+
+    def getNumberOfOutputTrees(self):
+        return len(self.outputTrees)
+
     # these branches are ALWAYS removed (e.g. because they will be recomputed), even when they are in the 'keep_branches' list
     def addBranchToBlacklist(self, branchName):
         if branchName != '*':
