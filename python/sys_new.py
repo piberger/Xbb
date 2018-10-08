@@ -209,7 +209,7 @@ class XbbRun:
                 if sampleTree.getNumberOfOutputTrees() > 0: 
                     try:
                         self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
-                        print 'copy ', tmpFileName, outputFileName
+                        print 'copy ', subJob['tmpFileName'], subJob['outputFileName']
                     except Exception as e:
                         print e
                         print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
