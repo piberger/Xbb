@@ -78,7 +78,7 @@ class XbbRun:
             
             # create separate subjob for all files (default!)
             for inputFileName in self.filelist:
-                inputFileNamesAfterPrep = [fileLocator.getFilenameAfterPrep(inputFileName)]
+                inputFileNamesAfterPrep = [self.fileLocator.getFilenameAfterPrep(inputFileName)]
 
                 self.subJobs.append({
                     'inputFileNames': [inputFileName],
@@ -128,7 +128,7 @@ class XbbRun:
                         # try original naming scheme if reading directly from Heppy/Nano ntuples (without prep)
                         fileNameOriginal = self.pathIN + '/' + subJob['inputFileNames']
                         print "FO:", fileNameOriginal
-                        xrootdRedirector = fileLocator.getRedirector(fileNameOriginal)
+                        xrootdRedirector = self.fileLocator.getRedirector(fileNameOriginal)
                         sampleTree = SampleTree([fileNameOriginal], config=self.config, xrootdRedirector=xrootdRedirector)
                         if not sampleTree.tree:
                             print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
@@ -208,7 +208,7 @@ class XbbRun:
                 # if output trees have been produced: copy temporary file to output folder
                 if sampleTree.getNumberOfOutputTrees() > 0: 
                     try:
-                        fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
+                        self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
                         print 'copy ', tmpFileName, outputFileName
                     except Exception as e:
                         print e
@@ -216,7 +216,7 @@ class XbbRun:
                     
                     # delete temporary file
                     try:
-                        fileLocator.rm(subJob['tmpFileName'])
+                        self.fileLocator.rm(subJob['tmpFileName'])
                     except Exception as e:
                         print e
                         print "WARNING: could not delete file on scratch!"
