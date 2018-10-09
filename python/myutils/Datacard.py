@@ -134,7 +134,7 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts', 'sys_cut_replacement_final'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final'
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -392,6 +392,7 @@ class Datacard(object):
         if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
         else:
+            # below is the old method, that was used for 2016 Heppy analysis
             temporaryBins = 1000
             targetBins = self.binning['nBinsX'] 
             tolerance = 0.35
@@ -550,9 +551,14 @@ class Datacard(object):
     def getSystematicsCut(self, syst, Q):
         cut = self.treecut
         tempReplacements = {}
-        if self.sysOptions['sys_cut_dict']:
+
+        # case 1: cuts are given as dictionary
+        # use specific cut dict or default one if no specific one exists
+        cutDict = self.sysOptions['sys_cut_dict_per_syst'][syst] if self.sysOptions['sys_cut_dict_per_syst'] and syst in self.sysOptions['sys_cut_dict_per_syst'] else self.sysOptions['sys_cut_dict']
+
+        if cutDict: 
             cut = cut.replace(' ', '')
-            for k,v in self.sysOptions['sys_cut_dict'].iteritems():
+            for k,v in cutDict.iteritems():
                 if syst == 'minmax':
                     # only for the minmax the direction is given by the comparison (>/<)
                     if k in cut:
@@ -565,8 +571,10 @@ class Datacard(object):
                         tempName = 'cut%d'%(1+len(tempReplacements.items()))
                         tempReplacements[tempName] = v.format(syst=syst, Up=Q, Down=Q)
                         cut = cut.replace(k, '{%s}'%tempName)
-        # now do normal replacements
-        if syst != 'minmax' or not self.sysOptions['sys_cut_dict']:
+
+        # case 2: (DEPRECATED)
+        # now do "old style" list based replacements
+        if (syst != 'minmax' or not cutDict) and self.sysOptions['sys_cut_suffix']:
             new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
             for new_cut in new_cut_list:
                 if self.debug:
@@ -576,15 +584,14 @@ class Datacard(object):
                     new_str = new_str.format(syst=syst, UD=Q).replace('SYS', syst).replace('UD', Q).replace('?', Q)
                     cut = cut.replace(old_str, new_str)
 
-        # replace temp cuts
+        # replace temporary cuts back
         if tempReplacements:
             cut = cut.format(**tempReplacements)
         
-        # now do some last final replacements if needed
+        # optional: now do some last final replacements
         if self.sysOptions['sys_cut_replacement_final'] and syst in self.sysOptions['sys_cut_replacement_final']:
             for needle, replace in self.sysOptions['sys_cut_replacement_final'][syst]:
                 cut = cut.replace(needle, replace)
-
 
         return cut
 

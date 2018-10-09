@@ -235,7 +235,7 @@ class HiggsCandidateSystematics(object):
                     for syst in self.jetSystematics:
                         for Q in ['Up', 'Down']:
                             if syst == 'jerReg':
-                                ptList.append(treeJet_pt_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i])
+                                ptList.append(treeJet_pt_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
                                 massList.append(treeJet_mass_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
                             else:
                                 ptList.append(treeJet_pt_sys[syst+Q][i])
