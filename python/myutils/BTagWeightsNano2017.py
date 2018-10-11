@@ -7,18 +7,19 @@ from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 
 class Jet:
-    def __init__(self, pt, eta, fl, csv) :
+    def __init__(self, pt, eta, fl, csv, sf=1.0):
         self.pt = pt
         self.eta = eta
         self.hadronFlavour = fl
         self.csv = csv
+        self.sf = sf
 
 # example how to included it in config for sys step:
 # BTagWeights = BTagWeightsNano2017.BTagWeights(calibName='DeepCSV',calibFile='DeepCSV_94XSF_V1_B_F.csv')
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt"):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
@@ -26,6 +27,13 @@ class BTagWeights(AddCollectionsModule):
         self.includeFixPtEtaBins = includeFixPtEtaBins
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
+        self.absoluteEta = True
+        self.includeLeptons = includeLeptons 
+        self.ptCut = ptCut
+        self.etaCut = etaCut
+
+        if self.includeLeptons:
+            print "INFO: Jet_lepFilter will not be applied!"
         
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysMap = {
@@ -86,7 +94,6 @@ class BTagWeights(AddCollectionsModule):
 
             self.btagCollection = Collection(self.branchBaseName, self.systBranches, leaves=False)
             self.addCollection(self.btagCollection)
-            print "sys:", self.systBranches
 
     # depending on flavour, only a sample of systematics matter
     def applies(self, flavour, syst):
@@ -104,7 +111,13 @@ class BTagWeights(AddCollectionsModule):
         # the .csv files use the convention: b=0, c=1, l=2. (fl_index)
         # hadronFlavour convention: b=5, c=4, f=0  (fl)
         fl_index = min(-fl+5,2)
+        if self.absoluteEta:
+            eta = abs(eta)
         sf = self.btag_calibrators[algo+"_iterative"].eval_auto_bounds(syst if self.applies(fl, syst) else "central", fl_index, eta, pt, val)
+
+        # eval_auto_bounds returns 0 if outside of range
+        if sf < 1.0e-5:
+            sf = 1.0
         return sf
 
     def get_event_SF(self, ptmin, ptmax, etamin, etamax, jets=[], syst="central", algo="CSV"):
@@ -113,9 +126,11 @@ class BTagWeights(AddCollectionsModule):
         #print 'gonna add the jet SF'
         for jet in jets:
             if (jet.pt > ptmin and jet.pt < ptmax and abs(jet.eta) > etamin and abs(jet.eta) < etamax):
-                weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="")
+                weightJet = self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst=syst, algo=algo, wp="")
             else:
-                weight *= self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="")
+                weightJet = self.get_SF(pt=jet.pt, eta=jet.eta, fl=jet.hadronFlavour, val=jet.csv, syst="central", algo=algo, wp="")
+
+            weight *= weightJet
         return weight
     
     # compute all the btag weights
@@ -128,24 +143,27 @@ class BTagWeights(AddCollectionsModule):
             jets_cmva = []
             treeJet_Pt = getattr(tree, self.jetPtBranchName)
             for i in range(tree.nJet):
-                #if (tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
-                #    jet_cmva = Jet(tree.Jet_bReg[i]*treeJet_Pt[i]/tree.Jet_pt[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
-                #    jets_cmva.append(jet_cmva)
-                # modified for 2017 nano v5
-                if (tree.Jet_PtReg[i] > 20 and abs(tree.Jet_eta[i]) < 2.4 and tree.Jet_lepFilter[i] > 0):
-                    jet_cmva = Jet(tree.Jet_PtReg[i], tree.Jet_eta[i], tree.Jet_hadronFlavour[i], getattr(tree,self.jetBtagBranchName)[i])
+                #if (tree.Jet_Pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.5 and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 0):
+                if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and (self.includeLeptons or tree.Jet_lepFilter[i] > 0) and tree.Jet_puId[i] > 0):
+                    jet_cmva = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
                     jets_cmva.append(jet_cmva)
 
             ptmin = 20.
             ptmax = 1000.
             etamin = 0.
             etamax = 2.4
-
+            
+            #print "----"
+            #print tree.event
             central_SF = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", self.calibName)
             self.btagCollection[''][0] = central_SF
+            #print "nominal:", central_SF
+            #return True
 
-            for syst in ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]:
-                for sdir in ["Up", "Down"]:
+            #print "computed sf is:", central_SF, " btagWeight_DeepCSVB is:", tree.btagWeight_DeepCSVB
+
+            for syst in self.systList: 
+                for sdir in self.systVars:
                     self.btagCollection[syst + sdir][0] = self.get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
 
                     if self.includeFixPtEtaBins:
@@ -185,4 +203,5 @@ class BTagWeights(AddCollectionsModule):
 
                                 sysName = syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
                                 self.btagCollection[sysName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
+
         return True

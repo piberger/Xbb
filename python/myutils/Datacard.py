@@ -14,6 +14,7 @@ from BranchList import BranchList
 import array
 import re
 import itertools
+import math
 
 class Datacard(object):
     def __init__(self, config, region, verbose=True):
@@ -23,13 +24,16 @@ class Datacard(object):
         self.config = config
         self.DCtype = 'TH'
         self.histograms = None
+        self.histogramCounter = 0
         self.DCprocessSeparatorDict = {'WS':':','TH':'/'}
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
-        if returnCode != 0:
-            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d (already loaded?)\x1b[0m"%returnCode)
-        else:
+
+        # 0=ok, 1=already loaded, others = error
+        if returnCode == 0:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
+        elif returnCode != 1:
+            print ("\x1b[31mERROR: loading VHbbNameSpace failed with code %d\x1b[0m"%returnCode)
 
         self.region = region
         self.anaTag = config.get("Analysis", "tag")
@@ -101,7 +105,8 @@ class Datacard(object):
         self.blindCut = None
         if config.has_option(self.configSection, 'blindCuts'):
             self.blindCut = eval(config.get(self.configSection, 'blindCuts'))
-        print("\x1b[41m\x1b[97mblind cut:", self.blindCut,"\x1b[0m")
+        if self.verbose:
+            print("\x1b[41m\x1b[97mblind cut:", self.blindCut,"\x1b[0m")
 
         self.keep_branches = eval(config.get('Branches', 'keep_branches'))
 
@@ -129,10 +134,9 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'useMinmaxCuts'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final'
                 ]
         for sysOptionName in sysOptionNames:
-            print("-->", sysOptionName)
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
             if self.debug:
                 print (" > \x1b[34m{name}\x1b[0m:{value}".format(name=sysOptionName.ljust(40), value=self.sysOptions[sysOptionName]))
@@ -157,17 +161,17 @@ class Datacard(object):
         # checks on read options
         #on control region cr never blind. Overwrite whatever is in the config
         if self.anType.lower() == 'cr':
-            if self.sysOptions['blind']:
+            if self.sysOptions['blind'] and self.verbose:
                 print ('@WARNING: Changing blind to false since you are running for control region.')
             self.sysOptions['blind'] = False
             
             # binstat_cr can be used to disable BBB in CR
             if self.sysOptions['binstat_cr'] is not None:
                 self.sysOptions['binstat'] = self.sysOptions['binstat_cr']
-        print("INFO: bin-by-bin:", self.sysOptions['binstat'])
+        if self.verbose:
+            print("INFO: bin-by-bin:", self.sysOptions['binstat'])
 
-
-        if self.sysOptions['blind']:
+        if self.sysOptions['blind'] and self.verbose:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
             
         if self.anType.lower() != 'bdt':
@@ -181,11 +185,16 @@ class Datacard(object):
         if self.verbose:
             print ('Assign Pt region for sys factors')
             print ('================================\n')
-        self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
-        if len(self.ptRegion) != 1:
-            print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
+
+        if self.sysOptions['ptRegionsDict']:
+            self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
+            if len(self.ptRegion) != 1:
+                print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
+            else:
+                self.ptRegion = self.ptRegion[0]
         else:
-            self.ptRegion = self.ptRegion[0]
+            self.ptRegion = None
+
         if self.verbose:
             print ("\x1b[33mptRegion:\x1b[0m", self.ptRegion)
 
@@ -365,7 +374,13 @@ class Datacard(object):
         if self.debug:
             print ('systematics dict')
             print ('===================\n')
-            print (json.dumps(self.systematicsList, sort_keys=True, indent=8, default=str))
+
+            # make list of differences compared to nominal
+            systematicsListDelta = [self.systematicsList[0]]
+            for i in range(1,len(self.systematicsList)):
+                delta = {k:v for k,v in self.systematicsList[i].iteritems() if systematicsListDelta[0][k] != v}
+                systematicsListDelta.append(delta)
+            print (json.dumps(systematicsListDelta, sort_keys=True, indent=8, default=str))
         
         if self.debug or self.verbose:
             print('INFO: datacard initialization complete!')
@@ -376,8 +391,8 @@ class Datacard(object):
 
         if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
-
         else:
+            # below is the old method, that was used for 2016 Heppy analysis
             temporaryBins = 1000
             targetBins = self.binning['nBinsX'] 
             tolerance = 0.35
@@ -536,9 +551,14 @@ class Datacard(object):
     def getSystematicsCut(self, syst, Q):
         cut = self.treecut
         tempReplacements = {}
-        if self.sysOptions['sys_cut_dict']:
+
+        # case 1: cuts are given as dictionary
+        # use specific cut dict or default one if no specific one exists
+        cutDict = self.sysOptions['sys_cut_dict_per_syst'][syst] if self.sysOptions['sys_cut_dict_per_syst'] and syst in self.sysOptions['sys_cut_dict_per_syst'] else self.sysOptions['sys_cut_dict']
+
+        if cutDict: 
             cut = cut.replace(' ', '')
-            for k,v in self.sysOptions['sys_cut_dict'].iteritems():
+            for k,v in cutDict.iteritems():
                 if syst == 'minmax':
                     # only for the minmax the direction is given by the comparison (>/<)
                     if k in cut:
@@ -551,8 +571,10 @@ class Datacard(object):
                         tempName = 'cut%d'%(1+len(tempReplacements.items()))
                         tempReplacements[tempName] = v.format(syst=syst, Up=Q, Down=Q)
                         cut = cut.replace(k, '{%s}'%tempName)
-        # now do normal replacements
-        if syst != 'minmax' or not self.sysOptions['sys_cut_dict']:
+
+        # case 2: (DEPRECATED)
+        # now do "old style" list based replacements
+        if (syst != 'minmax' or not cutDict) and self.sysOptions['sys_cut_suffix']:
             new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
             for new_cut in new_cut_list:
                 if self.debug:
@@ -562,15 +584,56 @@ class Datacard(object):
                     new_str = new_str.format(syst=syst, UD=Q).replace('SYS', syst).replace('UD', Q).replace('?', Q)
                     cut = cut.replace(old_str, new_str)
 
-        # replace temp cuts
+        # replace temporary cuts back
         if tempReplacements:
             cut = cut.format(**tempReplacements)
+        
+        # optional: now do some last final replacements
+        if self.sysOptions['sys_cut_replacement_final'] and syst in self.sysOptions['sys_cut_replacement_final']:
+            for needle, replace in self.sysOptions['sys_cut_replacement_final'][syst]:
+                cut = cut.replace(needle, replace)
 
         return cut
 
     # return full (flattened) list of sample objects
     def getAllSamples(self):
         return sum([y for x, y in self.samples.iteritems()], []) 
+
+    def getNumberOfCachedFiles(self, useSampleIdentifiers=None):
+        nFiles = -1
+        allSamples = self.getAllSamples()
+        if type(useSampleIdentifiers) == str:
+            useSampleIdentifiers = [useSampleIdentifiers]
+        if useSampleIdentifiers:
+            allSamples = [sample for sample in allSamples if sample.identifier in useSampleIdentifiers]
+        cacheStatus = {}
+        for i, sample in enumerate(allSamples):
+            # get cuts that were used in caching for this sample
+            sampleCuts = self.getCacheCut(sample) 
+
+            # get sample tree from cache
+            tc = TreeCache.TreeCache(
+                    sample=sample,
+                    cutList=sampleCuts,
+                    inputFolder=self.path,
+                    config=self.config,
+                    debug=self.debug,
+                )
+            # check if fiels are complete
+            if not tc.isCached():
+                return -1
+            if nFiles == -1:
+                nFiles = len(tc.cachedFileNames)
+            else:
+                # if one of the subsamples has a different number of files, this indicates an error
+                if nFiles != len(tc.cachedFileNames):
+                    print("nF:", nFiles)
+                    print("nC:", len(tc.cachedFileNames))
+                    print("C:", tc.cachedFileNames)
+                    print('ERROR: subsample incomplete, this should not happen!!')
+                    return -1
+
+        return nFiles 
 
     def getCacheStatus(self, useSampleIdentifiers=None):
         allSamples = self.getAllSamples()
@@ -600,7 +663,12 @@ class Datacard(object):
         sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
         return sampleCuts
 
-    def run(self, useSampleIdentifiers=None):
+    def getUniqueHistogramName(self, sampleName, systName):
+        histogramName = "{sampleName}_{systName}_c{counter}".format(sampleName=sampleName, systName=systName, counter=self.histogramCounter)
+        self.histogramCounter += 1
+        return histogramName
+
+    def run(self, useSampleIdentifiers=None, chunkNumber=-1):
         # compute variable bin sizes to have minimum number of significance in highest BDT bin
         # rescaling of BDT score is not done anymore.
         if self.sysOptions['rebin_active']:
@@ -624,7 +692,6 @@ class Datacard(object):
         print ('\n\t...fetching histos...\n')
 
         self.histograms = {}
-        histogramCounter = 0
         # read cached sample trees, for every sample there is one SampleTree, which contains the events needed for ALL the systematics
         # use this sample tree with appropriate cuts for each systematics to fill the histograms
         for i, sample in enumerate(allSamples): 
@@ -647,8 +714,11 @@ class Datacard(object):
                 print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
                 raise Exception("NotCached")
 
-            sampleTree = tc.getTree()
-            print ("DEBUG: tree found!")
+            chunkSize = -1
+            if chunkNumber > 0:
+                chunkSize = int(self.config.get(sample.identifier, 'dcChunkSize'))
+
+            sampleTree = tc.getTree(chunkSize, chunkNumber)
 
             self.histograms[sample.name] = {}
             systematicsList = self.getSystematicsList(isData=(sample.type == 'DATA'))
@@ -674,6 +744,8 @@ class Datacard(object):
                 systematics['enabled'] = True
                 if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
                     if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                        if self.debug:
+                            print('\x1b[31m group', self.sysOptions['Group'][sample.name], 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
                         systematics['enabled'] = False
                 
                 # additional BLINDING cut
@@ -683,20 +755,21 @@ class Datacard(object):
                     systematics['cutWithBlinding'] = systematics['cut']
 
                 # prepare histograms
-                histogramName = sample.name + '_' + systematics['systematicsName'] + '_c%d'%histogramCounter
-                histogramCounter += 1
+                histogramName = self.getUniqueHistogramName(sample.name, systematics['systematicsName'])
                 self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, len(self.variableBins)-1, self.variableBins) if self.variableBins else ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
                 self.histograms[sample.name][systematics['systematicsName']].Sumw2()
 
                 # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
-                if self.anType.lower() == 'bdt' and sample.type != 'DATA':
+                if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and sample.type != 'DATA':
                     systematics['addCut'] = self.EvalCut
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+                else:
+                    print('\x1b[31mINFO: using full sample!',systematics['var'].lower() ,"\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
-                
+
                 if systematics['enabled']:
                     sampleTree.addFormula(systematics['cutWithBlinding'])
                     if sample.type != 'DATA':
@@ -705,7 +778,6 @@ class Datacard(object):
 
             # sample scale factor, to match to cross section
             sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
-            print ("DEBUG: scale ", sampleScaleFactor)
 
             # get used branches, which are either used in cut, weight or the variable itself
             usedBranchList = BranchList()
@@ -766,12 +838,30 @@ class Datacard(object):
                                 self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
                         #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
 
+            # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
+            for systematics in systematicsList:
+                if self.histograms[sample.name][systematics['systematicsName']].GetEntries() < 1:
+                    if self.debug:
+                        print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
+                    self.histograms[sample.name][systematics['systematicsName']].SetEntries(1)
+                    for i in range(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetNbins()):
+                        self.histograms[sample.name][systematics['systematicsName']].SetBinContent(1+i, 0)
+                        #self.histograms[sample.name][systematics['systematicsName']].Fill(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetBinCenter(1+i), 0)
+
             # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
             for systematics in systematicsList:
                 mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
                 self.histograms[sample.name][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
 
-        self.writeDatacards(samples=allSamples, dcName=usedSamplesString)
+            print("nominal shape:")
+            nominalHist = self.histograms[sample.name][systematicsList[0]['systematicsName']]
+            nBins = nominalHist.GetXaxis().GetNbins()
+            binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
+            binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
+            print(binList)
+            print(binContentList)
+
+        self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
         for systematics in systematicsList:
             if 'mcRescale' in systematics and systematics['mcRescale'] != 1.0:
@@ -780,42 +870,66 @@ class Datacard(object):
                     print("INFO: and the additional cuts was:", systematics['addCut'])
                 break
 
+    def getChunkSize(self, sampleIdentifier):
+        return int(self.config.get(sampleIdentifier, 'dcChunkSize')) if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
+
+    def getNumberOfChunks(self, sampleIdentifier):
+        chunkSize = self.getChunkSize(sampleIdentifier)
+        if chunkSize < 1:
+            return -1
+        nFiles = self.getNumberOfCachedFiles(sampleIdentifier)
+        return int(math.ceil(1.0*nFiles/chunkSize))
+
+    def getShapeFileNames(self, sampleIdentifier):
+        nChunks = self.getNumberOfChunks(sampleIdentifier)
+        if nChunks > 0:
+            rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.root' for chunkNumber in range(1, 1+nChunks)]
+        else:
+            rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root']
+        return rootFileNames
+
     def load(self):
         self.histograms = {}
         allSamples = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
-        
+
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
 
-            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
-            rootFile = ROOT.TFile.Open(rootFileName, 'read')
-            if not rootFile or rootFile.IsZombie():
-                print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
-                raise Exception("FileIOError")
+            # all shape .root files of that sample identifier
+            rootFileNames = self.getShapeFileNames(sampleIdentifier)
+            for rootFileName in rootFileNames:
+                rootFile = ROOT.TFile.Open(rootFileName, 'read')
+                if not rootFile or rootFile.IsZombie():
+                    print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
+                    raise Exception("FileIOError")
 
-            for subsample in subsamples:
-                sampleGroup = self.sysOptions['Group'][subsample.name]
-                datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                # process all subsamples
+                for subsample in subsamples:
+                    sampleGroup = self.sysOptions['Group'][subsample.name]
+                    datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
 
-                systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
-                for systematics in systematicsToEvaluate:
-                    datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
-                    histogramPath = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
-                    histogram = rootFile.Get(histogramPath)
-                    if not histogram:
-                        print ("IN:", rootFileName)
-                        print ("FILE:", rootFile)
-                        print ("LOOKING FOR:", histogramPath)
-                        raise Exception("HistogramMissing")
-                    if subsample.name not in self.histograms:
-                        self.histograms[subsample.name] = {}
+                    systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
+                    for systematics in systematicsToEvaluate:
+                        datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
+                        histogramPath = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
+                        histogram = rootFile.Get(histogramPath)
+                        if not histogram:
+                            print ("IN:", rootFileName)
+                            print ("FILE:", rootFile)
+                            print ("LOOKING FOR:", histogramPath)
+                            raise Exception("HistogramMissing")
+                        if subsample.name not in self.histograms:
+                            self.histograms[subsample.name] = {}
 
-                    self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
-                    self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
+                        if systematics['systematicsName'] in self.histograms[subsample.name]:
+                            self.histograms[subsample.name][systematics['systematicsName']].Add(histogram)
+                        else:
+                            self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
+                            self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
 
-    def splitFilesExist(self, useSampleIdentifier=None):
+    def splitFilesExist(self, useSampleIdentifier=None, chunkNumber=-1):
         filesExist = True
         allSamples = self.getAllSamples()
         if useSampleIdentifier:
@@ -824,13 +938,13 @@ class Datacard(object):
             sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
         for sampleIdentifier in sampleIdentifiers:
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
-            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root'
+            rootFileName = self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.root'
             rootFile = ROOT.TFile.Open(rootFileName, 'read')
             if not rootFile or rootFile.IsZombie():
                 filesExist = False
                 break
             rootFile.Close()
-            txtFileName = self.getDatacardBaseName(subPartName=sampleIdentifier) + '.txt'
+            txtFileName = self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.txt'
             filesExist = filesExist and os.path.isfile(txtFileName)
         return filesExist
 
@@ -846,7 +960,7 @@ class Datacard(object):
         systematicsName = systematicsName.replace('DOWN','Down')
         return '{process}{systematicsName}'.format(process=process, systematicsName=systematicsName)
 
-    def writeDatacards(self, samples=None, dcName=''):
+    def writeDatacards(self, samples=None, dcName='', chunkSize=-1, chunkNumber=-1):
 
         if not self.histograms:
             print("\x1b[31mERROR: no histograms found, datacard histograms must be either created with run() or loaded with load()\x1b[0m")
@@ -856,7 +970,7 @@ class Datacard(object):
             samples = self.getAllSamples()
 
         # open and prepare histogram output files
-        histogramFileName = self.getDatacardBaseName(dcName) + '.root'
+        histogramFileName = self.getDatacardBaseName(dcName, ext='.root', chunkNumber=chunkNumber)
         print("HISTOGRAM:", histogramFileName)
         try:
             datacardFolder = '/'.join(histogramFileName.split('/')[:-1])
@@ -958,7 +1072,7 @@ class Datacard(object):
         # ----------------------------------------------
         # write TEXT file
         # ----------------------------------------------
-        txtFileName = self.getDatacardBaseName(dcName, ext='.txt')
+        txtFileName = self.getDatacardBaseName(dcName, ext='.txt', chunkNumber=chunkNumber)
         print("TEXTFILE:", txtFileName)
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
@@ -1012,7 +1126,8 @@ class Datacard(object):
             dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
             
             # write non-shape systematics
-            nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion)))
+
+            nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'InUse'))
             for systematic in nonShapeSystematics:
                 systematicDict = eval(self.config.get('Datacard', systematic))
                 dcRow = [systematic, systematicDict['type']]
@@ -1081,7 +1196,7 @@ class Datacard(object):
                         dcRows.append(dcRow)
 
             # rate params
-            rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion)))
+            rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'rateParams'))
             try:
                 rateParamRange = eval(self.config.get('Datacard', 'rateParamRange'))
             except:
@@ -1102,10 +1217,12 @@ class Datacard(object):
 
         print("done")
 
-    def getDatacardBaseName(self, subPartName='', ext=''):
+    def getDatacardBaseName(self, subPartName='', ext='', chunkNumber=-1):
         dcType = self.DCtype
         if len(subPartName) > 0:
             # temporary
+            if chunkNumber>0:
+                subPartName += '_%d'%chunkNumber
             baseFileName = '{path}/vhbb_{dcType}_{rootName}/{rootName}_{part}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, part=subPartName, ext=ext)
         else:
             # final
@@ -1113,6 +1230,8 @@ class Datacard(object):
             if ext.endswith('txt'):
                 dcType = 'DC_' + dcType
             baseFileName = '{path}/vhbb_{dcType}_{rootName}{ext}'.format(dcType=dcType, path=self.outpath, rootName=self.ROOToutname, ext=ext)
+        if self.verbose:
+             print("DEBUG: base name =", baseFileName)
         return baseFileName
 
     @staticmethod

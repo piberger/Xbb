@@ -33,7 +33,7 @@ import gc
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None):
         # sequentialProcessing not much tested yet, can maybe be used as workaround for problems with ROOT version 6.12.07. (not needed in 6.10.09)
         self.sequentialProcessing = False
         self.verbose = verbose
@@ -50,6 +50,12 @@ class SampleTree(object):
         self.tree = None
         self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         self.sampleIdentifier = None
+        self.numParts = -1
+
+        # friends
+        # {'name': 'DNN_reeval_v2', 'tree': tree, 'treeName': 'Events'}
+        self.friends = []
+        self.friendTreeIndex = ['run', 'event']
 
         # process only partial sample root file list
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -61,6 +67,11 @@ class SampleTree(object):
             if len(sampleFileNamesParts) == self.numParts:
                 chunkIndex = self.chunkNumber - 1
                 self.sampleFileNames = sampleFileNamesParts[chunkIndex]
+
+                # per default add all files to the chain. By using fileNamesToProcess it is possible to only add a part of the files to the chain but at
+                #  the same time retain the normalization histograms from ALL files, this is needed for some split processing modes of the samples which then
+                #  can be added together (e.g. for datacards)
+                self.sampleFileNamesToProcess = fileNamesToProcess if fileNamesToProcess else self.sampleFileNames
             else:
                 raise Exception("InvalidNumberOfSplitParts")
         else:
@@ -163,25 +174,26 @@ class SampleTree(object):
                         input.Close()
 
                         # add file to chain
-                        chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
-                        if self.debug:
-                            print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
-                        statusCode = self.tree.Add(chainTree)
-                        if self.debug:
-                            print ('\x1b[42mDEBUG: ---> %r'%statusCode,'\x1b[0m')
- 
-                        # check for errors in chaining the file
-                        if statusCode != 1:
-                            print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
-                            raise Exception("TChain method Add failure")
-                        elif not self.tree:
-                            print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
-                        else:
-                            self.treeEmpty = False
-                            self.chainedFiles.append(rootFileName)
-                            if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
-                                print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
-                                break
+                        if rootFileName in self.sampleFileNamesToProcess:
+                            chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
+                            if self.debug:
+                                print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
+                            statusCode = self.tree.Add(chainTree)
+                            if self.debug:
+                                print ('\x1b[42mDEBUG: ---> %r'%statusCode,'\x1b[0m')
+     
+                            # check for errors in chaining the file
+                            if statusCode != 1:
+                                print ('ERROR: failed to chain ' + chainTree + ', returned: ' + str(statusCode), 'tree:', self.tree)
+                                raise Exception("TChain method Add failure")
+                            elif not self.tree:
+                                print ('\x1b[31mERROR: tree died after adding %s.\x1b[0m'%rootFileName)
+                            else:
+                                self.treeEmpty = False
+                                self.chainedFiles.append(rootFileName)
+                                if self.limitFiles > 0 and len(self.chainedFiles) >= self.limitFiles:
+                                    print ('\x1b[35mDEBUG: limit reached! no more files will be chained!!!\x1b[0m')
+                                    break
                     else:
                         print ('\x1b[31mERROR: file is damaged: %s\x1b[0m'%rootFileName)
                         if input:
@@ -274,21 +286,64 @@ class SampleTree(object):
         except e:
             print("EXCEPTION:", e)
 
+    def addFriend(self, samples, treeName='Events_f', index=None, name='<friend>'):
+        if not index:
+            index = ['run', 'event']
+        
+        friend = {
+                'tree': ROOT.TChain(treeName),
+                'treeName': treeName,
+                'name': name
+                }
+        
+        sampleFileNamesParts = self.getSampleFileNameChunks(samples)
+        sampleFileNames = []
+        if self.chunkNumber > 0 and self.chunkNumber <= self.numParts:
+            if len(sampleFileNamesParts) == self.numParts:
+                chunkIndex = self.chunkNumber - 1
+                sampleFileNames = sampleFileNamesParts[chunkIndex]
+            else:
+                raise Exception("addFriend__nFiles_mismatch")
+        else:
+            raise Exception("addFriend__chunkNumber_mismatch")
+
+        for sampleFileName in sampleFileNames:
+            friend['tree'].Add(sampleFileName + '/' + treeName)
+            if self.debug:
+                print("DEBUG: add to friend chain:", sampleFileName)
+
+        if self.debug:
+            print("DEBUG: building index for friend tree...")
+
+        friend['tree'].BuildIndex
+
+
+    # ------------------------------------------------------------------------------
+    # check if all files have been chained
+    # ------------------------------------------------------------------------------
+    def isCompleteTree(self):
+        return len(self.chainedFiles) == len(self.sampleFileNamesToProcess) and len(self.sampleFileNamesToProcess) > 0
+
     # ------------------------------------------------------------------------------
     # return full list of sample root files 
     # ------------------------------------------------------------------------------
-    def getAllSampleFileNames(self): 
+    def getAllSampleFileNames(self, samples=None): 
+
+        # if no argument is given, use default files
+        if not samples:
+            samples = self.samples
+
         # given argument is list -> this is already the list of root files
-        if type(self.samples) == list:
-            sampleFileNames = self.samples
+        if type(samples) == list:
+            sampleFileNames = samples
         # given argument is name and folder -> glob
-        elif type(self.samples) == dict:
-            if 'sample' in self.samples:
-                sampleName = self.samples['sample'].identifier
+        elif type(samples) == dict:
+            if 'sample' in samples:
+                sampleName = samples['sample'].identifier
             else:
-                sampleName = self.samples['name']
+                sampleName = samples['name']
             self.sampleIdentifier = sampleName
-            sampleFolder = self.samples['folder']
+            sampleFolder = samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             redirector = self.fileLocator.getRedirector(sampleFolder)
             if self.verbose:
@@ -299,7 +354,7 @@ class SampleTree(object):
                 print ("INFO: found ", len(sampleFileNames), " files.")
         # given argument is a single file name -> read this .txt file 
         else:
-            sampleTextFileName = self.samples
+            sampleTextFileName = samples
             if os.path.isfile(sampleTextFileName):
                 self.sampleTextFileName = sampleTextFileName
                 if self.verbose:
@@ -349,6 +404,7 @@ class SampleTree(object):
             print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
             print(" WARNING !!! ROOT.TTreeFormula of length %d, this might cause problems !!"%len(formula))
             print(" reduce length of formulas if problems occur, e.g. by passing lists of cut formulas!")
+            print("\x1b[32m",formula,"\x1b[97m")
             print("------------------------------------------------------------------------------\x1b[0m")
 
         self.formulaDefinitions.append({'name': formulaName, 'formula': formula})
@@ -534,7 +590,7 @@ class SampleTree(object):
     # ------------------------------------------------------------------------------
     # add output tree to be written during the process() function
     # ------------------------------------------------------------------------------
-    def addOutputTree(self, outputFileName, cut, hash='', branches=None, callbacks=None, cutSequenceMode='AND', name=''):
+    def addOutputTree(self, outputFileName, cut, hash='', branches=None, callbacks=None, cutSequenceMode='AND', name='', friend=False):
 
         # write events which satisfy either ONE of the conditions given in the list or ALL
         if cutSequenceMode not in ['AND', 'OR', 'TREE']:
@@ -558,8 +614,18 @@ class SampleTree(object):
             'passed': 0,
         }
 
+        if friend:
+            outputTree['friend'] = {'treeName': self.treeName + '_f'}
+
         self.outputTrees.append(outputTree)
-    
+
+    def disableOutput(self):
+        print("INFO: output disabled - no files will be written!")
+        self.outputTrees = []
+
+    def getNumberOfOutputTrees(self):
+        return len(self.outputTrees)
+
     # these branches are ALWAYS removed (e.g. because they will be recomputed), even when they are in the 'keep_branches' list
     def addBranchToBlacklist(self, branchName):
         if branchName != '*':
@@ -682,7 +748,14 @@ class SampleTree(object):
 
             # clone tree structure, but don't copy any entries
             outputTree['file'].cd()
-            outputTree['tree'] = self.tree.CloneTree(0)
+            if 'friend' in outputTree:
+                outputTree['tree'] = ROOT.TTree(outputTree['friend']['treeName'], 'friend tree' ) 
+                outputTree['friend']['addr_run'] = array.array('i', [-1])
+                outputTree['friend']['addr_event'] = array.array('l', [-1])
+                outputTree['tree'].Branch('run', outputTree['friend']['addr_run'], 'run/i')
+                outputTree['tree'].Branch('event', outputTree['friend']['addr_event'], 'event/l')
+            else:
+                outputTree['tree'] = self.tree.CloneTree(0)
             # can be used to reduce memory consumption
             if self.outputTreeBasketSize:
                 outputTree['tree'].SetBasketSize("*", self.outputTreeBasketSize)
@@ -727,6 +800,7 @@ class SampleTree(object):
                 if 'leaflist' in branch:
                     leafList = branch['leaflist']
                 else:
+                    # TODO: branch type conversion could be done with dicts instead of upper to use unsigned ints...
                     leafList = '{name}{length}/{type}'.format(name=branch['name'], length='[%d]'%branch['length'] if branch['length'] > 1 else '', type=branch['type'].upper())
                 outputTree['newBranches'][branch['name']] = outputTree['tree'].Branch(branch['name'], outputTree['newBranchArrays'][branch['name']], leafList)
         if len(self.newBranches) > 0:
@@ -810,17 +884,34 @@ class SampleTree(object):
                     passedCut = self.evaluateCutDictRecursive(outputTree['cutSequence'])
                 else:
                     raise Exception("InvalidCutSequenceMode")
+                
 
                 # fill event if it passed the selection
                 if passedCut:
+                    
+                    # fill index variables for friend trees
+                    if 'friend' in outputTree:
+                        outputTree['friend']['addr_run'][0] = self.tree.run
+                        outputTree['friend']['addr_event'][0] = self.tree.event
+
                     outputTree['tree'].Fill()
                     outputTree['passed'] += 1
 
         print('INFO: end of processing. time ', time.ctime())
         passedTime = time.time() - self.timeStart
-        perfStats = 'INPUT: {erps}/s, OUTPUT: {ewps}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
+        perfStats = 'INPUT: {erps:1.4f}/s, OUTPUT: {ewps:1.4f}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
         print('INFO: throughput:', perfStats)
         sys.stdout.flush()
+
+        # build indices for friend trees
+        for outputTree in self.outputTrees:
+            if 'friend' in outputTree:
+                if self.debug:
+                    print("DEBUG: building index for friend tree...")
+                indexStatus = outputTree['tree'].BuildIndex(self.friendTreeIndex[0], self.friendTreeIndex[1])
+                if indexStatus < 0:
+                    print("\x1b[31mERROR: building the index of friend tree failed with status ", indexStatus, "\x1b[0m")
+                    raise Exception("sampleTree__process_do__build_index_failed")
 
         # write files
         for outputTree in self.outputTrees:

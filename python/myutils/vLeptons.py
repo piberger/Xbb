@@ -111,8 +111,14 @@ class vLeptonSelector(object):
     def getZelectrons(self):
         return self.zElectrons
 
+    def getWelectrons(self):
+        return self.wElectrons
+
     def getZmuons(self):
         return self.zMuons
+
+    def getWmuons(self):
+        return self.wMuons
 
 class vLeptons(object):
     def __init__(self):

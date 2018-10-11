@@ -47,12 +47,14 @@ class NewStackMaker:
 
         self.plotTitle = title if title else "CMS"
 
-        # TODO: make simpler
         self.rebin = 1
         self.histogramOptions = {
                 'rebin': 1,
                 'var': self.var,
                 }
+        self.additionalTextLines = [""]
+        if self.config.has_option('Plot_general', 'additionalText'):
+            self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -72,6 +74,9 @@ class NewStackMaker:
                     'yAxis': 'yAxis',
                     'drawOption': 'drawOption',
                     'draw': 'draw',
+                    'binList': 'binList',
+                    'plotEqualSize': 'plotEqualSize',
+                    'visualizeBlindCutThreshold': 'visualizeBlindCutThreshold',
                     'min': ['min', 'minX'],
                     'max': ['max', 'maxX'],
                     'blindCut': 'blindCut',
@@ -86,6 +91,7 @@ class NewStackMaker:
                     'nBinsY': ['nBinsY', 'nBins'],
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
+        evalOptions = ['binList', 'plotEqualSize']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -99,6 +105,11 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
+        
+        # evaluate options given as python code
+        for evalOption in evalOptions: 
+            if evalOption in self.histogramOptions and type(evalOption) == str:
+                self.histogramOptions[evalOption] = eval(self.histogramOptions[evalOption])
 
         # region/variable specific blinding cut
         if self.config.has_option(self.configSection, 'blindCuts'):
@@ -129,6 +140,14 @@ class NewStackMaker:
 
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
+
+    def setPlotText(self, text):
+        if type(text) == list:
+            self.additionalTextLines = text
+        elif type(text) == str:
+            self.additionalTextLines = [text]
+        else:
+            print("ERROR: can't set plto text, unknown type:", type(text))
 
     # ------------------------------------------------------------------------------
     # draw text
@@ -231,6 +250,19 @@ class NewStackMaker:
         self.legends['ratio'].SetTextSize(0.075)
         self.legends['ratio'].SetNColumns(2)
 
+        # convert TGraphAsymmErrors to TH1D
+        if type(dataHistogram) == ROOT.TGraphAsymmErrors:
+            print("INFO: converting TGraphAsymmErrors to TH1D for ratio plot...")
+            convertedDataHistogram = ROOT.TH1D("data_th1d","data_th1d",self.histogramOptions['nBins'],self.histogramOptions['minX'], self.histogramOptions['maxX'])
+            pointX = array.array('d', [0.0, 0.0])
+            pointY = array.array('d', [0.0, 0.0])
+            for i in range(dataHistogram.GetN()):
+                dataHistogram.GetPoint(i, pointX, pointY)
+                convertedDataHistogram.SetBinContent(1+i, pointY[0])
+                convertedDataHistogram.SetBinError(1+i, 0.5*(dataHistogram.GetErrorYhigh(i)+dataHistogram.GetErrorYlow(i)))
+                convertedDataHistogram.SetDrawOption("EP")
+            dataHistogram = convertedDataHistogram
+
         # draw ratio plot
         self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
 
@@ -255,16 +287,20 @@ class NewStackMaker:
             isSimpleCut = False
             print("DEBUG:", self.histogramOptions['blindCut'], self.histogramOptions['treeVar'], self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']))
             if self.histogramOptions['blindCut'].startswith(self.histogramOptions['treeVar']):
-                cond = self.histogramOptions['blindCut'].split(self.histogramOptions['treeVar'])[1]
-                print("DEBUG: cond=", cond)
-                if cond.startswith('<'):
-                    num = cond.replace('<=','').replace('<','')
-                    print("DEBUG: num=",num)
-                    try:
-                        blindingCutThreshold = float(num)
-                        isSimpleCut = True
-                    except:
-                        pass
+                if 'visualizeBlindCutThreshold' in self.histogramOptions:
+                    isSimpleCut = True
+                    blindingCutThreshold = float(self.histogramOptions['visualizeBlindCutThreshold'])
+                else:
+                    cond = self.histogramOptions['blindCut'].split(self.histogramOptions['treeVar'])[1]
+                    print("DEBUG: cond=", cond)
+                    if cond.startswith('<'):
+                        num = cond.replace('<=','').replace('<','')
+                        print("DEBUG: num=",num)
+                        try:
+                            blindingCutThreshold = float(num)
+                            isSimpleCut = True
+                        except:
+                            pass
 
             if isSimpleCut:
                 if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
@@ -355,7 +391,7 @@ class NewStackMaker:
         self.addObject(self.myText(self.plotTitle,0.17+(0.03 if self.is2D else 0),0.88,1.04))
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} =  %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
+            self.addObject(self.myText("#sqrt{s} = %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
         except Exception as e:
             print ("WARNING: exception while adding text: ", e)
             pass
@@ -389,10 +425,8 @@ class NewStackMaker:
             pass
 
         try:
-            if self.config.has_option('Plot_general', 'additionalText'):
-                additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
-                for j, additionalTextLine in enumerate(additionalTextLines):
-                    self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
+            for j, additionalTextLine in enumerate(self.additionalTextLines):
+                self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
         except Exception as e:
             print(e)
 
@@ -425,7 +459,10 @@ class NewStackMaker:
         for histogramGroup in histogramGroups:
             histogramsInGroup = [histogram['histogram'] for histogram in self.histograms if histogram['group'] == histogramGroup]
             groupedHistograms[histogramGroup] = NewStackMaker.sumHistograms(histograms=histogramsInGroup, outputName="group_" + histogramGroup)
-            groupedHistograms[histogramGroup].SetStats(0)
+            try:
+                groupedHistograms[histogramGroup].SetStats(0)
+            except:
+                pass
 
         # MC histograms, defined in setup
         mcHistogramGroups = list(set([histogram['group'] for histogram in self.histograms if histogram['group']!=dataGroupName]))
@@ -507,19 +544,22 @@ class NewStackMaker:
         if self.is2D:
             yTitle = self.yAxis
         else:
-            if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
-                yTitle = 'S/(S+B) weighted entries'
-            else:
-                yTitle = 'Entries'
-            if '/' not in yTitle:
-                if allStack and allStack.GetXaxis():
-                    if 'GeV' in self.xAxis:
-                        yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1))
-                    else:
-                        yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1))
-                    yTitle = '%s / %s' %(yTitle, yAppend)
-                    if 'GeV' in self.xAxis:
-                        yTitle += ' GeV'
+            try:
+                if dataGroupName in groupedHistograms and not groupedHistograms[dataGroupName].GetSumOfWeights() % 1 == 0.0:
+                    yTitle = 'S/(S+B) weighted entries'
+                else:
+                    yTitle = 'Entries'
+                if '/' not in yTitle:
+                    if allStack and allStack.GetXaxis():
+                        if 'GeV' in self.xAxis:
+                            yAppend = '%.0f' %(allStack.GetXaxis().GetBinWidth(1))
+                        else:
+                            yAppend = '%.2f' %(allStack.GetXaxis().GetBinWidth(1))
+                        yTitle = '%s / %s' %(yTitle, yAppend)
+                        if 'GeV' in self.xAxis:
+                            yTitle += ' GeV'
+            except:
+                yTitle = "Entries"
         if allStack and allStack.GetXaxis():
             allStack.GetYaxis().SetTitle(yTitle if yTitle else '-')
             allStack.GetXaxis().SetRangeUser(self.histogramOptions['minX'], self.histogramOptions['maxX'])
@@ -530,7 +570,7 @@ class NewStackMaker:
                 Ymax = maximumNormalized * 1.5
             else:
                 Ymax = max(allStack.GetMaximum(), groupedHistograms[dataGroupName].GetMaximum() if dataGroupName in groupedHistograms else 0) * 1.7
-            if self.log and not self.normalize:
+            if self.log and not normalize:
                 allStack.SetMinimum(0.1)
                 Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
                 ROOT.gPad.SetLogy()
@@ -555,6 +595,17 @@ class NewStackMaker:
             if normalize and groupedHistograms[dataGroupName].Integral() > 0:
                 groupedHistograms[dataGroupName].Scale(1./groupedHistograms[dataGroupName].Integral())
             groupedHistograms[dataGroupName].Draw(drawOption)
+
+        # draw total entry number
+        if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
+            mcHistogram0 = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms0')
+            mcHistogram0.SetLineColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerColor(ROOT.kBlack)
+            mcHistogram0.SetMarkerStyle(1)
+            #mcHistogram0.SetMarkerSize(0.001)
+            mcHistogram0.SetStats(0)
+            mcHistogram0.Draw("SAME TEXT0")
+            print("drawn total entry histogram!!!")
 
         # draw ratio plot
         theErrorGraph = None
@@ -590,36 +641,38 @@ class NewStackMaker:
                 print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
-        for histogram in self.histograms:
-            self.histoCounts['weighted'][histogram['name']] = histogram['histogram'].Integral()
-            self.histoCounts['unweighted'][histogram['name']] = histogram['histogram'].GetEntries()
+        try:
+            for histogram in self.histograms:
+                self.histoCounts['weighted'][histogram['name']] = histogram['histogram'].Integral()
+                self.histoCounts['unweighted'][histogram['name']] = histogram['histogram'].GetEntries()
 
-        # print n events and weights for each sample
-        keys = list(set(sorted([histogram['name'] for histogram in self.histograms])))
-        for key in keys:
-            print(key.ljust(50),("%d"%self.histoCounts['unweighted'][key]).ljust(10), ("%f"%self.histoCounts['weighted'][key]).ljust(10))
+            # print n events and weights for each sample
+            keys = list(set(sorted([histogram['name'] for histogram in self.histograms])))
+            for key in keys:
+                print(key.ljust(50),("%d"%self.histoCounts['unweighted'][key]).ljust(10), ("%f"%self.histoCounts['weighted'][key]).ljust(10))
 
-        ## print n events and weights for group
-        self.groupCounts =  {'unweighted':{}, 'weighted': {}}
-        for histogram in self.histograms:
-            group_ = histogram['group']
-            if not group_ in self.groupCounts['weighted']:
-                self.groupCounts['weighted'][group_] = histogram['histogram'].Integral()
-                self.groupCounts['unweighted'][group_] = histogram['histogram'].GetEntries()
-            else:
-                self.groupCounts['weighted'][group_] += histogram['histogram'].Integral()
-                self.groupCounts['unweighted'][group_] += histogram['histogram'].GetEntries()
+            ## print n events and weights for group
+            self.groupCounts =  {'unweighted':{}, 'weighted': {}}
+            for histogram in self.histograms:
+                group_ = histogram['group']
+                if not group_ in self.groupCounts['weighted']:
+                    self.groupCounts['weighted'][group_] = histogram['histogram'].Integral()
+                    self.groupCounts['unweighted'][group_] = histogram['histogram'].GetEntries()
+                else:
+                    self.groupCounts['weighted'][group_] += histogram['histogram'].Integral()
+                    self.groupCounts['unweighted'][group_] += histogram['histogram'].GetEntries()
 
+            print('--------------------')
+            print('Printing the #events and yield by group')
+            print('--------------------\n')
 
-        print('--------------------')
-        print('Printing the #events and yield by group')
-        print('--------------------\n')
-
-        #print('self.groupCounts[weighted] is',self.groupCounts['weighted'])
-        keys = list(set(sorted([histogram['group'] for histogram in self.histograms])))
-        for key in keys:
-            #print('groupName is', key)
-            print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
+            #print('self.groupCounts[weighted] is',self.groupCounts['weighted'])
+            keys = list(set(sorted([histogram['group'] for histogram in self.histograms])))
+            for key in keys:
+                #print('groupName is', key)
+                print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
+        except Exception as e:
+            print("ERROR: could not obtain counts (not implemented for TGraphAsymErrors yet)", e)
 
         # save data histogram
         if self.config.has_option('Plot_general','saveDataHistograms') and eval(self.config.get('Plot_general','saveDataHistograms')):

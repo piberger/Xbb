@@ -54,6 +54,8 @@ echo
 # parse named input arguments
 # todo: pass everything as named argument
 force="0"
+friend="0"
+join="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --trainingRegions=*)
@@ -67,6 +69,12 @@ while [ $# -gt 0 ]; do
       ;;
     --force)
       force="1"
+      ;;
+    --friend)
+      friend="1"
+      ;;
+    --join)
+      join="1"
       ;;
     --expectedSignificance)
       expectedSignificance="1"
@@ -269,12 +277,18 @@ elif [ $task = "runplot" ]; then
     else
         runCommand="python ./run_plot.py --regions ${regions} --vars ${vars}";
     fi
+elif [ $task = "postfitplot" ]; then
+    runCommand="python ./postfit_plot.py"
 
 elif [ $task = "cachedc" ]; then
     runCommand="python ./cache_dc.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"
 
 elif [ $task = "rundc" ]; then
-    runCommand="python ./run_dc.py --regions ${regions}";
+    if [ -z "$chunkNumber" ]; then
+        runCommand="python ./run_dc.py --regions ${regions}"
+    else
+        runCommand="python ./run_dc.py --regions ${regions}  --chunkNumber ${chunkNumber}";
+    fi
 
 elif [ $task = "mergedc" ]; then
     runCommand="python ./merge_dc.py --regions ${regions}";
@@ -377,6 +391,12 @@ if [ "$runCommand" ]; then
     fi
     if [ "$force" = "1" ]; then
         runCommand="${runCommand} --force"
+    fi
+    if [ "$friend" = "1" ]; then
+        runCommand="${runCommand} --friend"
+    fi
+    if [ "$join" = "1" ]; then
+        runCommand="${runCommand} --join"
     fi
     if [ "$sampleIdentifier" ]; then
         runCommand="${runCommand} --sampleIdentifier ${sampleIdentifier}"

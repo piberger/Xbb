@@ -144,6 +144,12 @@ class ParseInfo:
             if config.has_option(sample, 'skipParts'):
                 newsample.skipParts = eval(config.get(sample, 'skipParts'))
 
+            newsample.idnex = -999999
+            try:
+                newsample.index = eval(config.get(sample, 'sampleIndex'))
+            except:
+                pass
+
       #add and fills all the subsamples
             if eval(config.get(sample,'subsamples')):
                 subgroups = eval((config.get(sample,'sampleGroup')))
@@ -169,6 +175,8 @@ class ParseInfo:
                         subspecialweights = []
                 except:
                     subspecialweights = []
+
+                subindices = None
                 newsamples = []
                 for i,cut in enumerate(subcuts):
                     newsubsample = copy(newsample)
@@ -181,6 +189,10 @@ class ParseInfo:
                         newsubsample.xsec = float(subxsecs[i])
                     if len(subspecialweights) == len(subcuts):
                         newsubsample.specialweight = subspecialweights[i] 
+
+                    if type(newsample.index) == list:
+                        newsubsample.index = newsample.index[i]
+
                     newsamples.append(newsubsample)
                     #print 'newsubsample:', newsubsample
 

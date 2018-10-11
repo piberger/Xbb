@@ -5,10 +5,9 @@ import array
 
 class addFitCorr(object):
 
-    def __init__(self, sample=None, nano=False, dataset = 'year'):
+    def __init__(self, sample=None, nano=False):
 
         self.nano = nano
-        self.dataset= dataset
         self.branchBuffers = {}
         self.branches = []
         self.branchBuffers['FitCorr'] = np.ones(3, dtype=np.float32)
@@ -19,6 +18,9 @@ class addFitCorr(object):
 
     def customInit(self, initVars):
         sample = initVars['sample']
+        self.config = initVars['config']
+        
+        self.dataset = self.config.get('General','dataset')
         self.isData = sample.type == 'DATA'
         #print 'sample type is', sample.type
         self.identifier = sample.identifier
@@ -53,6 +55,8 @@ class addFitCorr(object):
                 elif self.dataset== '2017':
                     CorrFactor =  [1.103 - 0.00061*V_pt, 1.103 - 0.00069*V_pt, 1.103 - 0.00053*V_pt]
                     #print "Data set is 2017"
+                else:
+                    print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
             elif ('WJets' in self.identifier or 'WBJets' in self.identifier ):
                 count = 0
                 if not self.nano:
@@ -66,30 +70,35 @@ class addFitCorr(object):
                             count += 1
 
                 # Fix
-                if count >= 1:
+                if count >= 1: # Whf
                     if self.dataset == '2016':
                         CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
                     elif self.dataset == '2017':
-                        CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0018*V_pt, 1.337 - 0.0015*V_pt]
+                        CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0017*V_pt, 1.337 - 0.0015*V_pt]
                         #print "Data set is 2017"
-                else:
+                    else:
+                        print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
+                else: #Wlf
                     if self.dataset == '2016':
                         CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
                     elif self.dataset == '2017':
                         CorrFactor = [1.115 - 0.00064*V_pt, 1.115 - 0.00068*V_pt, 1.115 - 0.00060*V_pt]
                         #print "Data set is 2017"
+                    else:
+                        print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
                 # BUG
                 #if count >= 1:
                 #    CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
                 #else:
                 #    CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
             elif 'ST' in self.identifier:
-
                 if self.dataset == '2016':
                      CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
                 elif self.dataset == '2017':
-                     CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0018*V_pt, 1.337 - 0.0015*V_pt]
+                     CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0017*V_pt, 1.337 - 0.0015*V_pt]
                      #print "Data set is 2017"
+                else:
+                    print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
 
             self.branchBuffers['FitCorr'][0] = CorrFactor[0]
             self.branchBuffers['FitCorr'][1] = CorrFactor[1]

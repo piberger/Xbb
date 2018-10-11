@@ -3,6 +3,7 @@ import ROOT
 import TdrStyles
 import os
 import sys
+import array
 
 from NewTreeCache import TreeCache as TreeCache
 from sampleTree import SampleTree
@@ -22,19 +23,34 @@ class NewHistoMaker:
         self.EvalCut = config.get('Cuts', 'EvalCut')
         TdrStyles.tdrStyle()
 
-    def initializeHistogram(self):
-        self.histogramName = (self.histogramOptions['name']+'_') if 'name' in self.histogramOptions else ''
-        self.histogramName += self.sample.name + ('_' + self.histogramOptions['var'] if 'var' in self.histogramOptions else '')
+    def create1Dhistogram(self, histogramName, histogramOptions):
+        if 'binList' in histogramOptions:
+            binArray = array.array('d', histogramOptions['binList']) 
+            return ROOT.TH1F(histogramName, histogramName, len(histogramOptions['binList']) - 1, binArray)
+        else:
+            return ROOT.TH1F(histogramName, histogramName, histogramOptions['nBinsX'], histogramOptions['minX'], histogramOptions['maxX'])
+
+    def create2Dhistogram(self, histogramName, histogramOptions):
+        return ROOT.TH2F(histogramName, histogramName, histogramOptions['nBinsX'], histogramOptions['minX'], histogramOptions['maxX'], histogramOptions['nBinsY'], histogramOptions['minY'], histogramOptions['maxY'])
+
+    def getHistogramName(self):
+        histogramName = (self.histogramOptions['name']+'_') if 'name' in self.histogramOptions else ''
+        histogramName += self.sample.name + ('_' + self.histogramOptions['var'] if 'var' in self.histogramOptions else '')
+
         # add unique instance counter to avoid same name for histogram and ROOT complaining
         if 'uniqueid' in self.histogramOptions and self.histogramOptions['uniqueid']:
-            self.histogramName += '_instance%d'%NewHistoMaker.instanceCounter
+            histogramName += '_instance%d'%NewHistoMaker.instanceCounter
+        return histogramName
+
+    def initializeHistogram(self):
+        self.histogramName = self.getHistogramName()
+
         is2D = ':' in self.histogramOptions['treeVar'].replace('::', '')
-        if is2D:
-            self.histogram = ROOT.TH2F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'], self.histogramOptions['nBinsY'], self.histogramOptions['minY'], self.histogramOptions['maxY'])
-        else:
-            self.histogram = ROOT.TH1F(self.histogramName, self.histogramName, self.histogramOptions['nBinsX'], self.histogramOptions['minX'], self.histogramOptions['maxX'])
+        self.histogram = self.create2Dhistogram(self.histogramName, self.histogramOptions) if is2D else self.create1Dhistogram(self.histogramName, self.histogramOptions)
+
         self.histogram.Sumw2()
         self.histogram.SetTitle(self.sample.name)
+
         return self.histogram
 
     def scaleHistogram(self):
@@ -85,7 +101,6 @@ class NewHistoMaker:
                     print ("\x1b[31mUSE BLINDING CUT FOR DATA in BDT!!", self.blindingCut ,"\x1b[0m")
 
             # region/var specific blinding cut
-            # TODO: switch to this type only
             if 'blindCut' in self.histogramOptions and self.sample.type == 'DATA':
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.histogramOptions['blindCut'])
                 print("INFO: found region/var specific blinding cut in histogramOptions:\n--->{cut}".format(cut=self.histogramOptions['blindCut']))
@@ -123,6 +138,22 @@ class NewHistoMaker:
             self.histogram.SetBinContent(self.histogram.GetNbinsX(),oFlow)
             self.histogram.SetBinError(1,uFlowErr)
             self.histogram.SetBinError(self.histogram.GetNbinsX(),oFlowErr)
+
+
+        if 'plotEqualSize' in self.histogramOptions:
+            self.histogramOptionsEqualBins = self.histogramOptions.copy()
+            del self.histogramOptionsEqualBins['binList']
+            
+            equalHistogram = self.create1Dhistogram(self.histogramName+'_eqBins', self.histogramOptionsEqualBins)
+            nBinsSource = self.histogram.GetXaxis().GetNbins()
+            nBinsDest = equalHistogram.GetXaxis().GetNbins()
+            if nBinsSource != nBinsDest:
+                print("ERROR: bin list not compatiable!!", nBinsSource, nBinsDest)
+                raise Exception("HistogramDefinitionError")
+            for i in range(1, nBinsSource+1):
+                equalHistogram.SetBinContent(i, self.histogram.GetBinContent(i))
+                equalHistogram.SetBinError(i, self.histogram.GetBinError(i))
+            self.histogram = equalHistogram
 
         return self.histogram
 
