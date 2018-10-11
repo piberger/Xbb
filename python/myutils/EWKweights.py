@@ -3,6 +3,7 @@ import ROOT
 import numpy as np
 import array
 from pdgId import pdgId
+import sys
 
 class EWKweights(object):
 
@@ -26,7 +27,10 @@ class EWKweights(object):
 
     def customInit(self, initVars):
         sample = initVars['sample']
-        self.applyEWK = ('DY' in sample.identifier and not '10to50' in sample.identifier) or ('WJet' in sample.identifier)
+        self.applyEWK = ('DY' in sample.identifier and not '10to50' in sample.identifier) or sample.identifier.startswith('WJet') or  sample.identifier.startswith('WB')
+        #print "sample identifier is", sample.identifier
+        #print 'self.applyEWK is', self.applyEWK, self.applyEWK
+        #sys.exit()
         self.applyNLO = self.applyEWK and ('amc' not in sample.identifier) 
         self.sys_sample = None
         if 'ZH_HToBB_ZToLL' in sample.identifier and not 'ggZH_HToBB_ZToLL' in sample.identifier:
