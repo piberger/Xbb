@@ -91,6 +91,9 @@ class SampleTreesToNumpyConverter(object):
                     'SIG_ALL': eval(self.config.get('Plot_general', 'allSIG')),
                     'BKG_ALL': eval(self.config.get('Plot_general', 'allBKG')),
                 }
+        if self.config.has_option(mvaName, 'classDict'):
+            self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
+            print("classes dict:", self.sampleNames)
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
 
 

@@ -32,6 +32,9 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.scalerDump = self.config.get(self.mvaName, 'scalerDump')
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint')
         self.branchName = self.config.get(self.mvaName, 'branchName')
+        self.signalIndex = 0
+        if self.config.has_option(self.mvaName, 'signalIndex'):
+            self.signalIndex = int(self.config.get(self.mvaName, 'signalIndex'))
         try:
             self.nClasses = int(self.config.get(self.mvaName, 'nClasses'))
         except Exception as e:
@@ -98,9 +101,12 @@ class tensorflowEvaluator(AddCollectionsModule):
             for j, syst in enumerate(self.systematics):
                 for i, var in enumerate(self.inputVariables[syst]):
                     self.data['test']['X'][j,i] = self.sampleTree.evaluate(var)
-
+            
             # standardize
             self.data['test']['X_sc'] = self.scaler.transform(self.data['test']['X'])
+            
+            if self.debug:
+                print("INPUTS:", "".join([("%1.3f"%self.data['test']['X_sc'][0,i]).ljust(11) for i in range(self.clf.nFeatures)]))
             
             # evaluate
             probabilities = self.clf.session.run(self.clf.predictions, feed_dict={
@@ -113,8 +119,24 @@ class tensorflowEvaluator(AddCollectionsModule):
                             })
 
             # fill output branches
-            for i,dnnCollection in enumerate(self.dnnCollections):
-                for j, syst in enumerate(self.systematics):
-                    dnnCollection[dnnCollection.name][j] = probabilities[j, i]
+            if len(self.dnnCollections) == 1:
+                # for signal/background store just one of the two, selected by self.signalIndex
+                for i,dnnCollection in enumerate(self.dnnCollections):
+                    for j, syst in enumerate(self.systematics):
+                        dnnCollection[dnnCollection.name][j] = probabilities[j, self.signalIndex]
+            else:
+                # for multi-class, store all
+                for i,dnnCollection in enumerate(self.dnnCollections):
+                    for j, syst in enumerate(self.systematics):
+                        dnnCollection[dnnCollection.name][j] = probabilities[j, i]
 
         return True
+
+    def cleanUp(self):
+        try:
+            if self.clf:
+                self.clf.cleanUp()
+                print("INFO: tensorflow session cleaned up!")
+        except Exception as e:
+            print("ERROR: clean-up failed!", e)
+

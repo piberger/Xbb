@@ -3,6 +3,7 @@ class Sample:
         self.name=name
         self.type=type
         self.identifier=''
+        self.index=-999999
         self.prefix=''
         self.active=True
         self.group=''

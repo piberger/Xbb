@@ -13,18 +13,19 @@ from myutils.Datacard import Datacard
 # ------------------------------------------------------------------------------
 class RunDatacards(object):
 
-    def __init__(self, config, region, useSampleIdentifiers=None, verbose=False, forceRedo=True):
+    def __init__(self, config, region, chunkNumber=-1, useSampleIdentifiers=None, verbose=False, forceRedo=True):
         self.verbose = verbose
         self.forceRedo = forceRedo
         self.config = config
         self.region = region
+        self.chunkNumber = chunkNumber
         self.useSampleIdentifiers = useSampleIdentifiers
         self.dcMaker = Datacard(config=self.config, region=region)
 
     def run(self):
         if self.dcMaker:
-            if not self.dcMaker.splitFilesExist(useSampleIdentifier=self.useSampleIdentifiers) or self.forceRedo:
-                self.dcMaker.run(useSampleIdentifiers=self.useSampleIdentifiers)
+            if not self.dcMaker.splitFilesExist(useSampleIdentifier=self.useSampleIdentifiers, chunkNumber=self.chunkNumber) or self.forceRedo:
+                self.dcMaker.run(useSampleIdentifiers=self.useSampleIdentifiers, chunkNumber=self.chunkNumber)
             else:
                 print ("nothing to do.")
         else:
@@ -44,6 +45,8 @@ if __name__ == "__main__":
                           help="sample identifier (no subsample!)")
     parser.add_option("-f", "--force", action="store_true", dest="force", default=False,
                           help="force overwriting of already existing datacards")
+    parser.add_option("-i", "--chunkNumber", dest="chunkNumber", default='-1',
+                          help="number of part to cache")
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
             opts.config = "config"
@@ -61,7 +64,7 @@ if __name__ == "__main__":
     useSampleIdentifiers = opts.sampleIdentifier.split(',') if len(opts.sampleIdentifier) > 0 else None
     print("regions:", regions)
     for region in regions:
-        print("init...")
-        runDC = RunDatacards(config=config, region=region, useSampleIdentifiers=useSampleIdentifiers, forceRedo=opts.force)
-        print("run...")
+        print("init...", opts.chunkNumber)
+        runDC = RunDatacards(config=config, region=region, chunkNumber=int(opts.chunkNumber), useSampleIdentifiers=useSampleIdentifiers, forceRedo=opts.force)
+        print("run...", opts.chunkNumber)
         runDC.run()

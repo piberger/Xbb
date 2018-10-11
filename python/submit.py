@@ -10,6 +10,7 @@ import ROOT
 import fnmatch
 import hashlib
 import json
+import math
 ROOT.gROOT.SetBatch(True)
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
@@ -25,35 +26,24 @@ try:
 except:
     print "unable to detect python version!"
 
-class BatchJob(object):
-    def __init__(self, jobName='', submitCommand=''):
-        self.data = {
-                'jobName': jobName,
-                'submitCommand': submitCommand,
-                'log': '',
-                'err': '',
-                'outputFiles': []
-                }
-
-    def setProperty(self, prop, value):
-        self.data[prop] = value
-
-    def toDict(self):
-        return self.data
-
 parser = OptionParser()
-parser.add_option("-b", "--addCollections", dest="addCollections", default=None, help="collections to add in sysnew step")
+parser.add_option("-b", "--addCollections", "--modules", dest="addCollections", default=None, help="collections to add in sysnew step")
 parser.add_option("-B", "--batch", dest="override_to_run_in_batch", action="store_true", default=False,
                       help="Override run_locally option to run in batch")
 parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true", default=False,
                       help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
+parser.add_option("-d", "--friend", dest="friend", action="store_true", default=False,
+                      help="use friend trees")
 parser.add_option("-F", "--folderTag", dest="ftag", default="",
                       help="Creats a new folder structure for outputs or uses an existing one with the given name")
 parser.add_option("-f", "--force", dest="force", action="store_true", default=False,
                       help="Force overwriting of files if they already exist")
+parser.add_option("-g", "--forceN", dest="forceN", action="store_true", default=False,
+                      help="Force usage of -N parameter")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
+parser.add_option("-j", "--join", dest="join", action="store_true", default=False, help="(experimental) chain all files per sample together in sys step")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
 parser.add_option("-k", "--skipExisting", dest="skipExisting", action="store_true", default=False,
@@ -75,6 +65,7 @@ parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="pat
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
+parser.add_option("-v","--vars",dest="vars",default="", help="comma separated list of variables")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
 
@@ -92,16 +83,17 @@ if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
 
+if opts.task == "run":
+    opts.task = "sysnew"
 
-globalFilesSubmitted = 0
-globalFilesSkipped = 0
-submittedJobs = []
+
+batchSystem = None
 
 def signal_handler(signal, frame):
-    if (globalFilesSubmitted > 0 or globalFilesSkipped > 0):
+    if (batchSystem and (batchSystem.nJobsSubmitted > 0 or batchSystem.nJobsSkipped > 0)):
         print('\n----------------------------\n')
-        print('Files submitted:'+str(globalFilesSubmitted))
-        print('Files skipped:'+str(globalFilesSkipped))
+        print('Files submitted:'+str(batchSystem.nJobsSubmitted))
+        print('Files skipped:'+str(batchSystem.nJobsSkipped))
     print('You pressed Ctrl+C!')
     print('\n----------------------------\n')
     sys.exit(0)
@@ -110,8 +102,6 @@ signal.signal(signal.SIGINT, signal_handler)
 # split list into sublists of given length
 def partitionFileList(sampleFileList, chunkSize=1):
     return [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
-
-en = opts.tag
 
 #create the list with the samples to run over
 samplesList = [x.strip() for x in opts.samples.strip().split(',') if len(x.strip()) > 0]
@@ -242,7 +232,6 @@ if 'condor' in whereToLaunch:
         print 'export X509_USER_PROXY=${HOME}/.x509up_${UID}'
         print '--------------'
 
-
 def dump_config(configs, output_file):
     """
     Dump all the configs in a output file
@@ -266,43 +255,8 @@ if not os.path.isdir(logPath):
     print 'Exit'
     sys.exit(-1)
 
-
 # ------------------------------------------------------------------------------
 # SUBMIT SCRIPT options defined in config general.ini [SubmitOptions]
-
-# Template: 
-#[SubmitOptions]
-#
-#submitScriptTemplate = qsub {options} -o {logfile} {runscript}
-#submitScriptOptionsTemplate = -V -cwd -q %%(queue)s -N %%(name)s -j y -pe smp %%(nprocesses)s
-#submitScriptSpecialOptions = {
-#        'mergesyscachingdcsplit': ' -l h_vmem=6g ',
-#        'singleeval': ' -l h_vmem=6g ',
-#        'runtraining': ' -l h_vmem=6g ',
-#        'eval': ' -l h_vmem=4g ',
-#        'cachedc': ' -l h_vmem=6g ',
-#        'cacheplot': ' -l h_vmem=6g ',
-#        'cachetraining': ' -l h_vmem=6g ',
-#        'hadd': ' -l h_vmem=6g ',
-#        }
-#
-#
-# ------------------------------------------------------------------------------
-
-# Default values
-submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
-submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
-submitScriptSpecialOptions = {
-    'mergesyscachingdcsplit': ' -l h_vmem=6g ',
-    'singleeval': ' -l h_vmem=6g ',
-    'runtraining': ' -l h_vmem=6g ',
-    'eval': ' -l h_vmem=4g ',
-    'cachedc': ' -l h_vmem=6g ',
-    'cacheplot': ' -l h_vmem=6g ',
-    'cachetraining': ' -l h_vmem=6g ',
-    'hadd': ' -l h_vmem=6g ',
-}
-
 submitQueueDict = {
         'hadd': 'short.q',
         'prep': 'all.q',
@@ -320,15 +274,6 @@ submitQueueDict = {
 
 # Overwrite by config
 if pathconfig.has_section('SubmitOptions'):
-    if pathconfig.has_option('SubmitOptions', 'submitScriptTemplate'):
-        submitScriptTemplate = pathconfig.get('SubmitOptions', 'submitScriptTemplate')
-
-    if pathconfig.has_option('SubmitOptions', 'submitScriptOptionsTemplate'):
-        submitScriptOptionsTemplate = pathconfig.get('SubmitOptions', 'submitScriptOptionsTemplate')
-
-    if pathconfig.has_option('SubmitOptions', 'submitScriptSpecialOptions'):
-        submitScriptSpecialOptions.update(eval(pathconfig.get('SubmitOptions', 'submitScriptSpecialOptions')))
-
     if pathconfig.has_option('SubmitOptions', 'submitQueueDict'):
         submitQueueDict.update(eval(pathconfig.get('SubmitOptions', 'submitQueueDict')))
 
@@ -346,7 +291,7 @@ else:
 # CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
 #  ------------------------------------------------------------------------------
 repDict = {
-    'en': en,
+    'en': opts.tag,
     'logpath': logPath,
     'job': '',
     'task': opts.task,
@@ -364,7 +309,6 @@ condorBatchGroups = {}
 # get job queue
 # ------------------------------------------------------------------------------
 def getJobQueue():
-    batchSystem = BatchSystem.create(config)
     return batchSystem.getJobNames()
 
 # ------------------------------------------------------------------------------
@@ -405,120 +349,13 @@ def filterSampleList(sampleIdentifiers, samplesList):
 
 # ------------------------------------------------------------------------------
 # STANDARD WORKFLOW SUBMISSION FUNCTION
-# TODO: separate classes for SGE and HTCondor
 # ------------------------------------------------------------------------------
 def submit(job, repDict):
-    global counter
-    global submitScriptSubmitAll
-    global submitScriptRunAllLocally
-    repDict['job'] = job
-    counter += 1
-    repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
+    batchSystem.submit(job, repDict)
 
-    # -----------------------------------------------------------------------------
-    # prepare RUN SCRIPT
-    # (this is independent of batch system or local)
-    # -----------------------------------------------------------------------------
-    runScript = 'runAll.sh %(job)s %(en)s '%(repDict)
-    runScript += opts.task + ' ' + repDict['nprocesses'] + ' ' + repDict['job_id'] + ' ' + repDict['additional']
-
-    # add named arguments to run script
-    if 'arguments' in repDict:
-        for argument, value in repDict['arguments'].iteritems():
-            runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
-
-    # log=batch system log, out=stdout of process
-    logOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.log' %(repDict)
-    errorOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.err' %(repDict)
-    outOutputPath = '%(logpath)s/%(task)s_%(timestamp)s_%(job)s_%(en)s_%(additional)s.out' %(repDict)
-
-    # -----------------------------------------------------------------------------
-    # CONDOR
-    # -----------------------------------------------------------------------------
-    if 'condor' in whereToLaunch:
-        with open('batch/condor/template.sub', 'r') as template:
-            lines = template.readlines()
-
-        firstFileOfBatch = False
-        isBatched = 'batch' in repDict and not opts.condorNobatch
-        if isBatched:
-            if repDict['batch'] not in condorBatchGroups:
-                # first file of batch -> make new submit file
-                firstFileOfBatch = True
-                condorBatchGroups[repDict['batch']] = '%(task)s_%(timestamp)s_%(batch)s'%(repDict)
-            # use existing submit file and append
-            dictHash = condorBatchGroups[repDict['batch']]
-        else:
-            # create a new submit file
-            dictHash = '%(task)s_%(timestamp)s'%(repDict) + '_%x'%hash('%r'%repDict)
-
-        condorDict = {
-            'runscript': runScript.split(' ')[0],
-            'arguments': ' '.join(runScript.split(' ')[1:]),
-            'output': outOutputPath,
-            'log': logOutputPath,
-            'error': errorOutputPath,
-            'queue': 'workday',
-        }
-        submitFileName = 'condor_{hash}.sub'.format(hash=dictHash)
-
-        # append to existing bath
-        if isBatched:
-            with open(submitFileName, 'a') as submitFile:
-                submitFile.write("\n")
-                for line in lines:
-                    submitFile.write(line.format(**condorDict))
-            command = None
-        else:
-            with open(submitFileName, 'w') as submitFile:
-                for line in lines:
-                    submitFile.write(line.format(**condorDict))
-            command = 'condor_submit {submitFileName}'.format(submitFileName=submitFileName)
-        print "COMMAND:\x1b[35m", runScript, "\x1b[0m"
-
-    # -----------------------------------------------------------------------------
-    # SGE
-    # -----------------------------------------------------------------------------
-    else:
-        qsubOptions = submitScriptOptionsTemplate%(repDict)
-
-        if opts.task in submitScriptSpecialOptions:
-            qsubOptions += submitScriptSpecialOptions[opts.task]
-
-        command = submitScriptTemplate.format(options=qsubOptions, logfile=outOutputPath, runscript=runScript)
-        dumpConfigFileName = "%(logpath)s/%(timestamp)s_%(task)s.config" %(repDict)
-        if not os.path.isfile(dumpConfigFileName):
-            dump_config(configs, dumpConfigFileName)
-
-    # -----------------------------------------------------------------------------
-    # RUN command
-    # -----------------------------------------------------------------------------
-    if command:
-        if opts.interactive and not submitScriptSubmitAll:
-            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)"
-            if submitScriptRunAllLocally:
-                answer = 'l'
-            else:
-                answer = raw_input().strip()
-            if answer.lower() in ['no', 'n']:
-                return
-            elif answer.lower() == 's':
-                submitScriptSubmitAll = True
-            elif answer.lower() in ['l', 'local', 'a','d']:
-                if answer.lower() == 'a':
-                    submitScriptRunAllLocally = True
-                print "run locally"
-                command = 'sh {runscript}'.format(runscript=runScript)
-                if answer.lower() == 'd':
-                    command = "XBBDEBUG=1 " + command
-        else:
-            print "the command is ", command
-        subprocess.call([command], shell=True)
-
-        batchJob = BatchJob(repDict['name'], command)
-        batchJob.setProperty('log', outOutputPath)
-        submittedJobs.append(batchJob.toDict())
-
+# ------------------------------------------------------------------------------
+# status 
+# ------------------------------------------------------------------------------
 def printSamplesStatus(samples, regions, status):
     print("regions:")
     for i,region in enumerate(regions):
@@ -545,6 +382,18 @@ def printSamplesStatus(samples, regions, status):
         print line
     print('summary:\n----------\nfound: %d\nnot found:%d'%(nFound, nNotFound))
     return nFound, nNotFound
+
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+#                              process commands
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+# initialize batch system 
+# -----------------------------------------------------------------------------
+batchSystem = BatchSystem.create(config, interactive=opts.interactive, local=opts.override_to_run_locally)
 
 # -----------------------------------------------------------------------------
 # check prerequisities
@@ -761,6 +610,45 @@ if opts.task == 'hadd':
 
 
 # -----------------------------------------------------------------------------
+# count: files and events
+# -----------------------------------------------------------------------------
+if opts.task == 'count':
+
+    # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
+    pathIN = config.get("Directories", "SYSin")
+    samplefiles = config.get('Directories','samplefiles')
+    info = ParseInfo(samplesinfo, pathIN)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+
+    # process all sample identifiers (correspond to folders with ROOT files)
+    eventNumberOffsetDict = {}
+    for sampleIdentifier in sampleIdentifiers:
+        try:
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+        except:
+            print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
+            continue
+        offset = 0
+
+        if sampleIdentifier not in eventNumberOffsetDict:
+            eventNumberOffsetDict[sampleIdentifier] = {}
+
+        for fileName in sampleFileList:
+            localFileName = fileLocator.getFilenameAfterPrep(fileName)
+            inputFileName = "{path}/{subfolder}/{filename}".format(path=pathIN, subfolder=sampleIdentifier, filename=localFileName)
+            eventNumberOffsetDict[sampleIdentifier][inputFileName] = offset
+
+            sampleTree = SampleTree([inputFileName], config=config)
+            nEvents = sampleTree.tree.GetEntries()
+            print fileName, nEvents
+            offset += nEvents
+    print "---"
+    countsFileName = opts.tag + 'config/event_counts.dat'
+    with open(countsFileName, 'w') as ofile:
+        ofile.write('%r'%eventNumberOffsetDict)
+
+
+# -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew' or opts.task == 'checksysnew':
@@ -773,7 +661,6 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
-    chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
     # check for empty list of collections to add
     addCollections = opts.addCollections
@@ -791,8 +678,21 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
         except:
             print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
             continue
+
+        # specified with -N option
+        chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+        # for some samples consisting of many files, force override the -N option!
+        if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
+            minFilesPerJob = int(config.get(sampleIdentifier, 'minFilesPerJob'))
+            if minFilesPerJob > chunkSize:
+                chunkSize = minFilesPerJob
+                print "\x1b[34mINFO: override chunk size given by -N with value from config:", chunkSize, "\x1b[0m"
+
+        # limit numebr of files per sample
         if opts.limit and len(sampleFileList) > int(opts.limit):
             sampleFileList = sampleFileList[0:int(opts.limit)]
+
         splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
         # for checksysnew step: only list of missing files are printed. No jobs are submited
@@ -829,7 +729,12 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
-                jobName = 'sysnew_{sample}_part{part}'.format(sample=sampleIdentifier, part=chunkNumber)
+                if opts.friend:
+                    jobDict['arguments']['friend'] = ''
+                if opts.join:
+                    jobDict['arguments']['join'] = ''
+                filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
+                jobName = 'sysnew_{sample}_part{part}{files}'.format(sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
             else:
                 if allInputFilesMissing:
@@ -1003,8 +908,12 @@ if opts.task.startswith('cacheplot'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+    if len(opts.vars.strip()) > 0:
+        plotVars = opts.vars.strip().split(',')
+    else:
+        plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
 
+    # split list of variables to plot for multiple jobs
     if opts.parallel:
         plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
     else:
@@ -1049,7 +958,7 @@ if opts.task.startswith('cachedc'):
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
-    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
@@ -1152,20 +1061,48 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
-                jobDict = repDict.copy()
-                jobDict.update({
-                    #'queue': submitQueueDict['rundc'],
-                    'arguments':
-                        {
-                            'regions': region,
-                            'sampleIdentifier': sampleIdentifier,
-                        },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    })
-                if opts.force:
-                    jobDict['arguments']['force'] = ''
-                jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-                submit(jobName, jobDict)
+
+                # large samples can be split further
+                if config.has_option(sampleIdentifier, 'dcChunkSize'):
+                    chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
+                    nJobs = datacard.getNumberOfChunks(sampleIdentifier)
+
+                    if debugPrintOUts:
+                        print('INFO: chunk size is ', chunkSize)
+                        print('INFO: number of files is ', nFiles)
+                        print('INFO: number of jobs is ', nJobs)
+
+                    for chunkNumber in range(1, nJobs+1):
+                        jobDict = repDict.copy()
+                        jobDict.update({
+                            'arguments':
+                                {
+                                    'regions': region,
+                                    'sampleIdentifier': sampleIdentifier,
+                                    'chunkNumber': '%d'%chunkNumber,
+                                },
+                            'batch': opts.task + '_' + sampleIdentifier,
+                            })
+                        if opts.force:
+                            jobDict['arguments']['force'] = ''
+                        jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                        submit(jobName, jobDict)
+                else:
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'arguments':
+                            {
+                                'regions': region,
+                                'sampleIdentifier': sampleIdentifier,
+                            },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    jobName = 'dc_run_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+                    submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # MERGEDC: merge DC .root files for all samples per region and produce combined
@@ -1350,7 +1287,7 @@ if opts.task.split('.')[0] == 'status':
     jobPrefix = opts.task.split('.')[1] if '.' in opts.task else ''
     jobSuffix = opts.tag + jobPrefix
     try:
-        batchSystem = BatchSystem.create(config)
+        #batchSystem = BatchSystem.create(config)
         jobs = {k: True for k in batchSystem.getJobNames()}
         jobsRunning = {k: True for k in batchSystem.getJobNamesRunning()}
     except Exception as e:
@@ -1368,12 +1305,12 @@ if opts.task.split('.')[0] == 'status':
             sampleFileList = filelist(samplefiles, sampleIdentifier)
         except:
             sampleFileList = []
-        for partNumber, sampleFileName in enumerate(sampleFileList, 1):
+        for partNumber, sampleFileName in enumerate(sampleFileList):
             localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
                 fileStatus[folder][sampleIdentifier].append([fileLocator.exists(localFilePath), partNumber])
-
+   
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
     for folder in foldersToCheck:
@@ -1383,14 +1320,13 @@ if opts.task.split('.')[0] == 'status':
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
             for x,number in sampleStatus:
-                jobName = jobPrefix + '_' + sampleIdentifier + '_part%d'%(number-1) + '_' + jobSuffix
-                if jobName in jobsRunning:
+                if batchSystem.job_for_file_exists(jobsRunning, jobPrefix, sampleIdentifier, number, jobSuffix):
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[45m\x1b[97mR\x1b[0m')
-                elif jobName in jobs:
+                elif batchSystem.job_for_file_exists(jobs, jobPrefix, sampleIdentifier, number, jobSuffix):
                     statusBar = statusBar + ('\x1b[44m\x1b[97m?\x1b[0m' if x else '\x1b[43mQ\x1b[0m')
                 else:
                     if not x:
-                        failedJobs.append(jobName)
+                        failedJobs.append(batchSystem.get_single_job_name(jobPrefix, sampleIdentifier, number, jobSuffix))
                     statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
             if len([x for x,n in sampleStatus if x]) != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
@@ -1398,7 +1334,7 @@ if opts.task.split('.')[0] == 'status':
                 sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             elif len([x for x,n in sampleStatus if x])==len(sampleStatus):
                 sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
-            print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar
+            print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar, "\x1b[0m "
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
     if len(failedJobs) > 0:
@@ -1431,7 +1367,10 @@ if opts.task == 'sample':
             sampleObject = matchingSamples[0] if len(matchingSamples)>0 else None
             sampleTree = SampleTree({'name': sampleIdentifier, 'folder': path}, countOnly=False, splitFilesChunkSize=-1, config=config)
             splitFilesChunks = sampleTree.getSampleFileNameChunks()
-            sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            try:
+                sampleScale = sampleTree.getScale(sampleObject) if sampleObject else 1.0
+            except:
+                sampleScale = 1.0
             
             fileList = "\n".join(["    '{fileName}',".format(fileName=sampleFileName) for sampleFileName in splitFilesChunks[0]])
             xsWeight = '%f'%sampleScale
@@ -1450,17 +1389,29 @@ if opts.task == 'sample':
                 print "----",sampleIdentifier,"----"
                 print skimTemplate
 
-if opts.task == 'checklogs':
-
+if opts.task.startswith('checklogs'):
+    
+    # if no task is given (with checklogs:task), then use the one from last submission for the config
+    checkTask = None
+    if ':' in opts.task:
+        checkTask = opts.task.split(':')[1]
+    
+    # define some error markers to look for besides return code
     errorMarkers = ['Traceback (most recent call last)', '[FATAL] Auth failed', 'bad alloc', 'EXCEPTION:', 'segmentation', 'glibc','file does not exist or is broken, will be SKIPPED']
+
+    # load list of jobs/logs from submission
     try:
-        with open('last-submission-' + opts.tag + '.json', 'r') as infile:
+        jsonFileName = 'last-submission-' + opts.tag + '_' + checkTask + '.json' if checkTask else 'last-submission-' + opts.tag + '.json'
+        with open(jsonFileName, 'r') as infile:
             lastSubmission = json.load(infile)
     except:
         print "ERROR: nothing to check, there is no submission yet!"
         exit(0)
+    
+    # check job status
     batchSystem = BatchSystem.create(config)
-    unfinishedJobs = {k: True for k in batchSystem.getJobNames()}
+    unfinishedJobs = {k: True for k in batchSystem.getJobNames(includeDeleted=False)}
+
     nFailed = 0
     nResubmitted = 0
     nComplete = 0
@@ -1481,7 +1432,7 @@ if opts.task == 'checklogs':
                             if errorMarker in line:
                                 errorLines.append("line %d: %s"%(i, line))
                                 break
-                        # new job output appended to old log
+                        # new job output appended to old log -> ignore all errors up to here
                         if line.startswith('Configuration Files:'):
                             errorLines = []
 
@@ -1516,23 +1467,21 @@ if opts.task == 'checklogs':
                     nResubmitted += 1
     print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
 
+# -----------------------------------------------------------------------------
+# postfitplot 
+# -----------------------------------------------------------------------------
+if opts.task.startswith('postfitplot'):
+    jobDict = repDict.copy()
+    jobName = 'postfitplot'
+    submit(jobName, jobDict)
 
-# submit all jobs, which have been grouped in a batch
-if 'condor' in whereToLaunch:
-    for batchName, submitFileIdentifier in condorBatchGroups.iteritems():
-        submitFileName = 'condor_{identifier}.sub'.format(identifier=submitFileIdentifier)
-        command = 'condor_submit {submitFileName}  -batch-name {batchName}'.format(submitFileName=submitFileName, batchName=batchName)
-        if opts.interactive:
-            print "SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue)"
-            answer = raw_input().strip()
-            if answer.lower() in ['no', 'n', 'skip']:
-                continue
-        else:
-            print "the command is ", command
-        subprocess.call([command], shell=True)
+# if there are still jobs in the local queue, submit them to the batch queue
+batchSystem.submitQueue()
 
 # dump submitted jobs
-if len(submittedJobs) > 0 and not opts.resubmit:
-    with open('last-submission-' + opts.tag + '.json', 'w') as outfile:
-        json.dump(submittedJobs, outfile)
-
+if batchSystem.getNJobsSubmitted() > 0 and not opts.resubmit:
+    for fileName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
+        try:
+            batchSystem.dumpSubmittedJobs(fileName)
+        except Exception as e:
+            print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e

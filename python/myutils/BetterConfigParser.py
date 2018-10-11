@@ -20,7 +20,7 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
 
     def get(self, section, option):
         result = ConfigParser.SafeConfigParser.get(self, section, option, raw=False)
-        result = self.__replaceSectionwideTemplates(result)
+        result = self.__replaceSectionwideTemplates(result, section=section)
         return result
 
     def optionxform(self, optionstr):
@@ -29,7 +29,7 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
         '''
         return optionstr
 
-    def __replaceSectionwideTemplates(self, data):
+    def __replaceSectionwideTemplates(self, data, section=None):
         '''
         replace <section|option> with get(section,option) recursivly
         '''
@@ -40,7 +40,10 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
             while result != data:
                 groups = findExpression.search(data).groups()
                 if not groups == (None, None, None, None, None): # expression not matched
-                    data = self.__replaceSectionwideTemplates(groups[1]) + self.get(groups[2], groups[3]) + self.__replaceSectionwideTemplates(groups[4])
+                    # use . to refer to the current section
+                    if groups[2] == "." and section:
+                        groups = groups[:2] + (section, ) + groups[3:] 
+                    data = self.__replaceSectionwideTemplates(groups[1], section=section) + self.get(groups[2], groups[3]) + self.__replaceSectionwideTemplates(groups[4], section=section)
                 else:
                     result = data
         # old behavior
