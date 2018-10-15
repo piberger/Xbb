@@ -126,7 +126,7 @@ class XbbRun:
 
                     if len(subJob['inputFileNames']) == 1:
                         # try original naming scheme if reading directly from Heppy/Nano ntuples (without prep)
-                        fileNameOriginal = self.pathIN + '/' + subJob['inputFileNames']
+                        fileNameOriginal = self.pathIN + '/' + subJob['inputFileNames'][0]
                         print "FO:", fileNameOriginal
                         xrootdRedirector = self.fileLocator.getRedirector(fileNameOriginal)
                         sampleTree = SampleTree([fileNameOriginal], config=self.config, xrootdRedirector=xrootdRedirector)

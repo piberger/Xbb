@@ -1007,8 +1007,9 @@ if opts.task.startswith('cachedc'):
             else:
                 print 'INFO: files do not exist yet!'
 
-        # number of files to process per job 
-        sampleSizesList = [sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier]
+        # number of files to process per job
+        #  each entry in the array is for a subsample, always take same size for all subsamples for now
+        sampleSizesList = [sample.mergeCachingSize if int(opts.nevents_split_nfiles_single) < 0 else int(opts.nevents_split_nfiles_single) for sample in samples if sample.identifier == sampleIdentifier]
         splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
