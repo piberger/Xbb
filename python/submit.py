@@ -7,11 +7,12 @@ import shutil
 import subprocess
 import signal
 import ROOT
+ROOT.gROOT.SetBatch(True)
 import fnmatch
 import hashlib
 import json
 import math
-ROOT.gROOT.SetBatch(True)
+import datetime
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
 from myutils.Datacard import Datacard
@@ -74,6 +75,7 @@ parser.add_option("--unfinished", dest="unfinished", action="store_true", defaul
 submitScriptRunAllLocally = False
 submitScriptSubmitAll = False
 debugPrintOUts = opts.verbose
+submitTimestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 if opts.tag == "":
     print "Please provide tag to run the analysis with, example '-T 8TeV' uses config8TeV and pathConfig8TeV to run the analysis."
@@ -127,11 +129,17 @@ if debugPrintOUts:
     print 'configs', configs
     print 'opts.ftag', opts.ftag
 
+# read config
+config = BetterConfigParser()
+config.read(configs)
+
 # ------------------------------------------------------------------------------
 # COPY CONFIG files to log output folder
 # TODO: clean up
 # ------------------------------------------------------------------------------
-if not opts.ftag == '':
+configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
+combinedConfigFileName = None
+if configurationNeeded:
     tagDir = pathconfig.get('Directories', 'tagDir')
     if debugPrintOUts:
         print 'tagDir', tagDir
@@ -160,6 +168,7 @@ if not opts.ftag == '':
         outputFile.write('plotpath: %s\n'%DirStruct['plotpath'])
         outputFile.write('logpath: %s\n'%DirStruct['logpath'])
         outputFile.write('limits: %s\n'%DirStruct['limitpath'])
+    config.read("{tag}config/volatile.ini".format(tag=opts.tag))
 
     # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!)
     pathfile = open('%sconfig/paths.ini'%opts.tag)
@@ -187,12 +196,12 @@ if not opts.ftag == '':
         # if relative path to other config folder, just take file name
         destConfigFileName = item.split('/')[-1]
         shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
+    # combined config
+    combinedConfigFileName = '%s/submission_%s.ini'%(DirStruct['confpath'], submitTimestamp)
+    with open(combinedConfigFileName, 'w') as combinedConfigFile:
+        config.write(combinedConfigFile)
+        print 'wrote config to:', combinedConfigFileName
 
-if debugPrintOUts:
-    print configs
-
-config = BetterConfigParser()
-config.read(configs)
 
 # ------------------------------------------------------------------------------
 # RETRIEVE RELEVANT VARIABLES FROM CONFIG FILES AND FROM COMMAND LINE OPTIONS
@@ -231,22 +240,6 @@ if 'condor' in whereToLaunch:
         print 'voms-proxy-init -voms cms -rfc -out ${HOME}/.x509up_${UID} -valid 192:00'
         print 'export X509_USER_PROXY=${HOME}/.x509up_${UID}'
         print '--------------'
-
-def dump_config(configs, output_file):
-    """
-    Dump all the configs in a output file
-    Args:
-        output_file: the file where the log will be dumped
-        configs: list of files (string) to be dumped
-    Returns:
-        nothing
-    """
-    outf = open(output_file, 'w')
-    for i in configs:
-        try:
-            f = open(i, 'r')
-            outf.write(f.read())
-        except: print '@WARNING: Config' + i + ' not found. It will not be used.'
 
 # check if the logPath exist. If not exit
 if not os.path.isdir(logPath):
@@ -393,7 +386,7 @@ def printSamplesStatus(samples, regions, status):
 # -----------------------------------------------------------------------------
 # initialize batch system 
 # -----------------------------------------------------------------------------
-batchSystem = BatchSystem.create(config, interactive=opts.interactive, local=opts.override_to_run_locally)
+batchSystem = BatchSystem.create(config, interactive=opts.interactive, local=opts.override_to_run_locally, configFile=combinedConfigFileName)
 
 # -----------------------------------------------------------------------------
 # check prerequisities
@@ -548,65 +541,71 @@ if opts.task == 'hadd':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     for sampleIdentifier in sampleIdentifiers:
-
-        chunkSize = 10
-        if config.has_section('Hadd') and config.has_option('Hadd', sampleIdentifier):
-            chunkSize = int(config.get('Hadd', sampleIdentifier).strip())
-            print "INFO: chunkSize read from config => ", chunkSize
-
-        sampleFileList = filelist(samplefiles, sampleIdentifier)
-        if opts.limit and len(sampleFileList) > int(opts.limit):
-            sampleFileList = sampleFileList[0:int(opts.limit)]
-        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
-
-        mergedFileNames = []
-        for i, splitFilesChunk in enumerate(splitFilesChunks):
-
-            # only give good files to hadd
-            fileNames = []
-            for fileName in splitFilesChunk:
-                fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
-                #if fileLocator.isValidRootFile(fileNameAfterPrep):
-                if fileLocator.exists(fileNameAfterPrep):
-                    fileNames.append(fileName)
-                    print ".",
-                else:
-                    print "x",
-            print "INFO: #files=", len(splitFilesChunk), ", good=", len(fileNames)
-
-            if len(fileNames) > 0:
-                # 'fake' filenames to write into text file for merged files
-                partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
-                mergedFileName = partialFileMerger.getMergedFakeFileName()
-                mergedFileNames.append(mergedFileName)
-
-                outputFileName = partialFileMerger.getOutputFileName()
-
-                if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
-                    jobDict = repDict.copy()
-                    jobDict.update({
-                        #'queue': submitQueueDict['hadd'],
-                        'arguments':{
-                            'sampleIdentifier': sampleIdentifier,
-                            'fileList': FileList.compress(fileNames),
-                            'chunkNumber': i,
-                        },
-                        'batch': opts.task + '_' + sampleIdentifier,
-                        })
-                    if opts.force:
-                        jobDict['arguments']['force'] = ''
-                    jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
-                    submit(jobName, jobDict)
+        
+        try: 
+            chunkSize = -1
+            if config.has_section('Hadd') and config.has_option('Hadd', sampleIdentifier):
+                chunkSize = int(config.get('Hadd', sampleIdentifier).strip())
+                print "INFO: chunkSize read from config => ", chunkSize
             else:
-                print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
+                raise Exception("HaddChunkSizeUndefined")
 
-        # write text file for merged files
-        mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
-        with open(mergedFileListFileName, 'w') as mergedFileListFile:
-            mergedFileListFile.write('\n'.join(mergedFileNames))
+            sampleFileList = filelist(samplefiles, sampleIdentifier)
+            if opts.limit and len(sampleFileList) > int(opts.limit):
+                sampleFileList = sampleFileList[0:int(opts.limit)]
+            splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
-        print "INFO: hadd {sample}: {a} => {b}".format(sample=sampleIdentifier, a=len(sampleFileList), b=len(splitFilesChunks))
-        print "INFO:  > {mergedFileListFileName}".format(mergedFileListFileName=mergedFileListFileName)
+            mergedFileNames = []
+            for i, splitFilesChunk in enumerate(splitFilesChunks):
+
+                # only give good files to hadd
+                fileNames = []
+                for fileName in splitFilesChunk:
+                    fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
+                    #if fileLocator.isValidRootFile(fileNameAfterPrep):
+                    if fileLocator.exists(fileNameAfterPrep):
+                        fileNames.append(fileName)
+                        print ".",
+                    else:
+                        print "x",
+                print "INFO: #files=", len(splitFilesChunk), ", good=", len(fileNames)
+
+                if len(fileNames) > 0:
+                    # 'fake' filenames to write into text file for merged files
+                    partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+                    mergedFileName = partialFileMerger.getMergedFakeFileName()
+                    mergedFileNames.append(mergedFileName)
+
+                    outputFileName = partialFileMerger.getOutputFileName()
+
+                    if (opts.force or not fileLocator.isValidRootFile(outputFileName)):
+                        jobDict = repDict.copy()
+                        jobDict.update({
+                            #'queue': submitQueueDict['hadd'],
+                            'arguments':{
+                                'sampleIdentifier': sampleIdentifier,
+                                'fileList': FileList.compress(fileNames),
+                                'chunkNumber': i,
+                            },
+                            'batch': opts.task + '_' + sampleIdentifier,
+                            })
+                        if opts.force:
+                            jobDict['arguments']['force'] = ''
+                        jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
+                        submit(jobName, jobDict)
+                else:
+                    print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
+
+            # write text file for merged files
+            mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
+            with open(mergedFileListFileName, 'w') as mergedFileListFile:
+                mergedFileListFile.write('\n'.join(mergedFileNames))
+
+            print "INFO: hadd {sample}: {a} => {b}".format(sample=sampleIdentifier, a=len(sampleFileList), b=len(splitFilesChunks))
+            print "INFO:  > {mergedFileListFileName}".format(mergedFileListFileName=mergedFileListFileName)
+        except Exception as e:
+            print "\x1b[31mERROR: hadd failed for sample", sampleIdentifier, ": ", e, "\x1b[0m"
+
 
 
 # -----------------------------------------------------------------------------
@@ -622,6 +621,7 @@ if opts.task == 'count':
 
     # process all sample identifiers (correspond to folders with ROOT files)
     eventNumberOffsetDict = {}
+    chunkSizes = []
     for sampleIdentifier in sampleIdentifiers:
         try:
             sampleFileList = filelist(samplefiles, sampleIdentifier)
@@ -642,6 +642,14 @@ if opts.task == 'count':
             nEvents = sampleTree.tree.GetEntries()
             print fileName, nEvents
             offset += nEvents
+        numberOfTrees = len(sampleFileList)
+        totalEvents = offset
+        eventsPerTree = totalEvents*1.0/numberOfTrees
+        chunkSize = math.ceil(30000/eventsPerTree)
+        chunkSizes.append([sampleIdentifier, chunkSize])
+    print "---"
+    for sampleIdentifier, chunkSize in chunkSizes:
+        print "{s}: {c}".format(s=sampleIdentifier, c=chunkSize)
     print "---"
     countsFileName = opts.tag + 'config/event_counts.dat'
     with open(countsFileName, 'w') as ofile:
@@ -1270,7 +1278,7 @@ if opts.task == 'summary':
         print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
 
 # checks file status for several steps/folders at once
-if opts.task.split('.')[0] == 'status':
+if opts.task.replace(':','.').split('.')[0] == 'status':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
@@ -1284,7 +1292,7 @@ if opts.task.split('.')[0] == 'status':
 
     # get list of running jobs
     jobs = {}
-    jobPrefix = opts.task.split('.')[1] if '.' in opts.task else ''
+    jobPrefix = opts.task.replace(':','.').split('.')[1] if '.' in opts.task or ':' in opts.task else ''
     jobSuffix = opts.tag + jobPrefix
     try:
         #batchSystem = BatchSystem.create(config)

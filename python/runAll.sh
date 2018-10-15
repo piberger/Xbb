@@ -109,6 +109,9 @@ while [ $# -gt 0 ]; do
     --addCollections=*)
       addCollections="${1#*=}"
       ;;
+    --configFile=*)
+      configFile="${1#*=}"
+      ;;
     *)
       ;;
   esac
@@ -404,7 +407,14 @@ if [ "$runCommand" ]; then
     if [ "$verbose" = "1" ]; then
         runCommand="${runCommand} --verbose"
     fi
-    runCommand="${runCommand} ${config_filenames[@]}"
+    
+    if [ "$configFile" ]; then 
+        runCommand="${runCommand} --config ${configFile}"
+    else
+        runCommand="${runCommand} ${config_filenames[@]}"
+    fi
+    
+    
     echo "$runCommand"
     eval "$runCommand"
 fi
