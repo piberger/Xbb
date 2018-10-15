@@ -23,7 +23,7 @@ class SampleTreesToNumpyConverter(object):
         self.mvaName = mvaName
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
-        self.dataFormatVersion = 2
+        self.dataFormatVersion = 3
         self.sampleTrees = []
         self.config = config
         self.samplesPath = config.get('Directories', 'MVAin')
@@ -37,6 +37,7 @@ class SampleTreesToNumpyConverter(object):
         # split in train/eval sets
         self.trainCut = config.get('Cuts', 'TrainCut') 
         self.evalCut = config.get('Cuts', 'EvalCut')
+        
         # rescale MC by 2 because of train/eval split
         self.globalRescale = 2.0
 
@@ -47,50 +48,51 @@ class SampleTreesToNumpyConverter(object):
         self.weightSYS = []
         self.weightSYSweights = {}
 
+        #if useSyst:
+        #    print ("including systematics")
+        #    self.systematics = config.get('systematics', 'systematics').strip().split(' ')
+        #    
+        #    for sys in self.systematics:
+        #        self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
+        #else:
+        #    self.systematics = []
+        #print ("systematics: "+", ".join(self.systematics))
+
+        #if useWeightSyst:
+        #    print ("including Btag weight systematics")
+        #    self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
+        #    self.bTagWeight = self.config.get('Weights','bTagWeight')
+        #    
+        #    for d in ['Up','Down']:
+        #        for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
+        #          for npt in ["0","1","2","3"]:
+        #            for neta in ["1","2","3"]:
+        #                systFullName = "btag_" + syst + "_pt"+ npt + "_eta" + neta + "_" + d
+        #                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + "_pt"+ npt + "_eta" + neta  + d
+        #            self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
+        #            self.weightSYS.append(systFullName)
+        #print ("btag weights: "+", ".join(self.weightSYS))
+
         if useSyst:
-            print ("including systematics")
-            self.systematics = config.get('systematics', 'systematics').strip().split(' ')
-            
-            for sys in self.systematics:
-                self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
-        else:
+            print('INFO: use systematics in training!')
             self.systematics = []
-        print ("systematics: "+", ".join(self.systematics))
+            self.systList = eval(self.config.get(mvaName, 'systematics')) if self.config.has_option(mvaName, 'systematics') else []
+            for syst in self.systList:
+                systNameUp   = syst+'_UP'   if self.config.has_option('Weights',syst+'_UP')   else syst+'_Up'
+                systNameDown = syst+'_DOWN' if self.config.has_option('Weights',syst+'_DOWN') else syst+'_Down'
 
-        if useWeightSyst:
-            print ("including Btag weight systematics")
-            self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
-            self.bTagWeight = self.config.get('Weights','bTagWeight')
-            
-            for d in ['Up','Down']:
-                for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
-                  for npt in ["0","1","2","3"]:
-                    for neta in ["1","2","3"]:
-			#splitted systematics
-                        systFullName = "btag_" + syst + "_pt"+ npt + "_eta" + neta + "_" + d
-                        weightName = "bTagWeightCMVAV2_Moriond_" +  syst + "_pt"+ npt + "_eta" + neta  + d
-			
-			#not splitted systematics			
-#                    systFullName = "btag_" + syst + "_" + d
-#                    weightName = self.bTagWeight + "_" +  syst + d
-                    self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
-                    self.weightSYS.append(systFullName)
-        print ("btag weights: "+", ".join(self.weightSYS))
+                self.systematics.append({
+                    'name': syst,
+                    'U': self.config.get('Weights', systNameUp),
+                    'D': self.config.get('Weights', systNameDown),
+                    })
 
-
-        # samples
+        # default: signal vs. background
         self.sampleNames = {
-#                   'BKG_TT': eval(self.config.get('Plot_general', 'TT')),
-#                   'BKG_ST': eval(self.config.get('Plot_general', 'ST')),
-#                   'BKG_VV': eval(self.config.get('Plot_general', 'VV')),
-#                   'BKG_DY2b': eval(self.config.get('Plot_general', 'DY2b')),
-#                   'BKG_DY1b': eval(self.config.get('Plot_general', 'DY1b')),
-#                   'BKG_DY0b': eval(self.config.get('Plot_general', 'DYlight')),
-#                   'SIG_ggZH': eval(self.config.get('Plot_general', 'ggZH')),
-#                   'SIG_qqZH': eval(self.config.get('Plot_general', 'qqZH')),
                     'SIG_ALL': eval(self.config.get('Plot_general', 'allSIG')),
                     'BKG_ALL': eval(self.config.get('Plot_general', 'allBKG')),
                 }
+        # for multi-output classifiers load dictionary from config
         if self.config.has_option(mvaName, 'classDict'):
             self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
             print("classes dict:", self.sampleNames)
@@ -106,7 +108,7 @@ class SampleTreesToNumpyConverter(object):
 
         systematics = self.systematics
         arrayLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
-        arrayLists_sys = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in systematics}
+        #arrayLists_sys = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in systematics}
         weightLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         targetLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
@@ -114,6 +116,8 @@ class SampleTreesToNumpyConverter(object):
         
         # standard weight expression
         weightF = self.config.get('Weights','weightF')
+
+        weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
         for category in categories:
             for sample in self.samples[category]:
@@ -143,52 +147,68 @@ class SampleTreesToNumpyConverter(object):
                         # initialize numpy array
                         nSamples = sampleTree.GetEntries()
                         features = self.MVA_Vars['Nominal']
-                        features_sys = {x: self.MVA_Vars[x] for x in systematics} 
+                        #features_sys = {x: self.MVA_Vars[x] for x in systematics} 
                         nFeatures = len(features) 
                         print('nFeatures:', nFeatures)
                         inputData = np.zeros((nSamples, nFeatures), dtype=np.float32)
-                        inputData_sys = {x: np.zeros((nSamples, nFeatures), dtype=np.float32) for x in systematics}
+                        #inputData_sys = {x: np.zeros((nSamples, nFeatures), dtype=np.float32) for x in systematics}
 
                         # initialize formulas for ROOT tree
                         for feature in features:
                             sampleTree.addFormula(feature)
-                        for k, features_s in features_sys.iteritems():
-                            for feature in features_s:
-                                sampleTree.addFormula(feature)
+                        #for k, features_s in features_sys.iteritems():
+                        #    for feature in features_s:
+                        #        sampleTree.addFormula(feature)
                         sampleTree.addFormula(weightF)
-                        for syst in self.weightSYS:
-                            sampleTree.addFormula(self.weightSYSweights[syst])
+                        #for syst in self.weightSYS:
+                        #    sampleTree.addFormula(self.weightSYSweights[syst])
+                        for syst in self.systematics:
+                            sampleTree.addFormula(syst['U'])
+                            sampleTree.addFormula(syst['D'])
+
                         
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
                             for j, feature in enumerate(features):
                                 inputData[i, j] = sampleTree.evaluate(feature)
                             # total weight comes from weightF (btag, lepton sf, ...) and treeScale to scale MC to x-section
-                            totalWeight = treeScale * sampleTree.evaluate(weightF)
+                            eventWeight = sampleTree.evaluate(weightF)
+                            totalWeight = treeScale * eventWeight 
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
                             
                             # add weights varied by (btag) systematics
-                            for syst in self.weightSYS:
-                                weightListsSYS[syst][datasetName].append(treeScale * sampleTree.evaluate(self.weightSYSweights[syst]))
+                            #for syst in self.weightSYS:
+                            #    weightListsSYS[syst][datasetName].append(treeScale * sampleTree.evaluate(self.weightSYSweights[syst]))
+                            deltas = []
+                            for syst in self.systematics:
+                                delta_up   = sampleTree.evaluate(syst['U']) - eventWeight
+                                delta_down = sampleTree.evaluate(syst['D']) - eventWeight
+                                delta = 0.5 * (np.abs(delta_up) + np.abs(delta_down))
+                                deltas.append(delta*delta)
+                            totalDelta = np.sqrt(sum(deltas))
+
+                            # convert to absolute error on total event weight
+                            weightListSYStotal[datasetName].append(treeScale * totalDelta)
 
                             # fill systematics 
-                            for k, feature_s in features_sys.iteritems():
-                                for j, feature in enumerate(feature_s):
-                                    inputData_sys[k][i,j] = sampleTree.evaluate(feature)
+                            #for k, feature_s in features_sys.iteritems():
+                            #    for j, feature in enumerate(feature_s):
+                            #        inputData_sys[k][i,j] = sampleTree.evaluate(feature)
 
                         arrayLists[datasetName].append(inputData)
-                        for sys in systematics:
-                            arrayLists_sys[sys][datasetName].append(inputData_sys[sys])
+                        #for sys in systematics:
+                        #    arrayLists_sys[sys][datasetName].append(inputData_sys[sys])
 
                     else:
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
 
-       #systematics for training
-        puresystematics = deepcopy(systematics)
-        if 'Nominal' in puresystematics:
-            puresystematics.remove('Nominal')
+        ##systematics for training
+        #puresystematics = deepcopy(systematics)
+        #if 'Nominal' in puresystematics:
+        #    puresystematics.remove('Nominal')
+        puresystematics = [x['name'] for x in self.systematics]
 
         # concatenate all data from different samples
         self.data = {
@@ -196,11 +216,13 @@ class SampleTreesToNumpyConverter(object):
                     'X': np.concatenate(arrayLists['train'], axis=0),
                     'y': np.array(targetLists['train'], dtype=np.float32),
                     'sample_weight': np.array(weightLists['train'], dtype=np.float32),
+                    'sample_weight_error': np.array(weightListSYStotal['train'], dtype=np.float32),
                     },
                 'test': {
                     'X': np.concatenate(arrayLists['test'], axis=0), 
                     'y': np.array(targetLists['test'], dtype=np.float32), 
                     'sample_weight': np.array(weightLists['test'], dtype=np.float32),
+                    'sample_weight_error': np.array(weightListSYStotal['test'], dtype=np.float32),
                     },
                 'category_labels': {idx: label for idx, label in enumerate(categories)},
                 'meta': {
@@ -217,11 +239,12 @@ class SampleTreesToNumpyConverter(object):
                     'systematics': puresystematics,
                     }
                 }
-        # add systematics variations
-        for sys in systematics:
-            self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
-        for syst in self.weightSYS:
-            self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
+        ## add systematics variations
+        #for sys in systematics:
+        #    self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
+        #for syst in self.weightSYS:
+        #    self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
+
         if not os.path.exists("./dumps"):
                 os.makedirs("dumps")
         numpyOutputFileName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '.dmpz'

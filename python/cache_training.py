@@ -32,13 +32,20 @@ class CacheTraining(object):
         for trainingRegion in self.trainingRegions:
             treeCutName = config.get(trainingRegion, 'treeCut')
             treeVarSet = config.get(trainingRegion, 'treeVarSet').strip()
-            systematics = [x for x in config.get('systematics', 'systematics').split(' ') if len(x.strip())>0]
-            mvaVars = []
-            for systematic in systematics:
-                mvaVars += config.get(treeVarSet, systematic).strip().split(' ')
+            #systematics = [x for x in config.get('systematics', 'systematics').split(' ') if len(x.strip())>0]
+            systematics = eval(config.get(trainingRegion, 'systematics')) if config.has_option(trainingRegion, 'systematics') else []
+            mvaVars = config.get(treeVarSet, 'Nominal').split(' ')
+            weightVars = []
+            #for systematic in systematics:
+            for syst in systematics: 
+                systNameUp   = syst+'_UP'   if self.config.has_option('Weights',syst+'_UP')   else syst+'_Up'
+                systNameDown = syst+'_DOWN' if self.config.has_option('Weights',syst+'_DOWN') else syst+'_Down'
+                weightVars += [self.config.get('Weights',systNameUp), self.config.get('Weights',systNameDown)]
+
             self.trainingRegionsDict[trainingRegion] = {
                     'cut': config.get('Cuts', treeCutName),
                     'vars': mvaVars,
+                    'weightVars': weightVars,
                     }
 
         self.TrainCut = config.get('Cuts', 'TrainCut') 
@@ -77,6 +84,8 @@ class CacheTraining(object):
                 for trainingRegion,trainingRegionInfo in self.trainingRegionsDict.iteritems():
                     for additionalCut in [self.TrainCut, self.EvalCut]:
                         branchListOfMVAVars.addCut(trainingRegionInfo['vars'])
+                    for weightVar in trainingRegionInfo['weightVars']:
+                        branchListOfMVAVars.addCut(weightVar)
             branchListOfMVAVars.addCut(self.config.get('Weights', 'weightF'))
             mvaBranches = branchListOfMVAVars.getListOfBranches()
 

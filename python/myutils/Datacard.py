@@ -765,7 +765,8 @@ class Datacard(object):
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
                 else:
-                    print('\x1b[31mINFO: using full sample!',systematics['var'].lower() ,"\x1b[0m")
+                    if self.debug:
+                        print('\x1b[31mDEBUG: using full sample!',systematics['var'].lower() ,"\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
