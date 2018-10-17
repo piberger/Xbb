@@ -56,6 +56,7 @@ echo
 force="0"
 friend="0"
 join="0"
+noretry="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --trainingRegions=*)
@@ -75,6 +76,9 @@ while [ $# -gt 0 ]; do
       ;;
     --join)
       join="1"
+      ;;
+    --noretry)
+      noretry="1"
       ;;
     --expectedSignificance)
       expectedSignificance="1"
@@ -296,6 +300,9 @@ elif [ $task = "rundc" ]; then
 elif [ $task = "mergedc" ]; then
     runCommand="python ./merge_dc.py --regions ${regions}";
 
+elif [ $task = "export_h5" ] || [ $task = "export_hdf5" ]; then
+    runCommand="python ./write_numpy_array_for_training.py -t ${trainingRegions}"
+
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True
@@ -384,7 +391,6 @@ elif [ $task = "stack" ]; then
 elif [ $task = "plot_sys" ]; then
     echo "python ./plot_systematics.py ${config_filenames[@]}"
     python ./plot_systematics.py ${config_filenames[@]}
-
 fi
 
 # add standard arguments, print command and run 
@@ -426,7 +432,24 @@ echo "exit code: $EXITCODE"
 ENDTIME=$(date +%s.%N)
 DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
 echo "duration (real time): $DIFFTIME minutes"
-
+if [ "$EXITCODE" -ne "0" ]; then
+    if [ "$noretry" = "1" ]; then
+        echo "--- STOP ---"
+    else
+        echo "--- RETRY ---"
+        if [ "$runCommand" ]; then
+            echo "$runCommand"
+            eval "$runCommand"
+            EXITCODE=$?
+            echo "exit code: $EXITCODE"
+            ENDTIME=$(date +%s.%N)
+            DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
+            echo "duration (real time): $DIFFTIME minutes, including retry"
+        fi
+    fi
+else
+    echo "--- OK ---"
+fi
 echo
 echo "Exiting runAll.sh"
 echo

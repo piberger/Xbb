@@ -376,6 +376,16 @@ def printSamplesStatus(samples, regions, status):
     print('summary:\n----------\nfound: %d\nnot found:%d'%(nFound, nNotFound))
     return nFound, nNotFound
 
+def getCachingChunkSize(sample, config):
+    # number of files to process per job
+    chunkSize = int(config.get('General', 'mergeCachingSize')) if config.has_option('General', 'mergeCachingSize') else 100
+    if sample.mergeCachingSize > 0:
+        chunkSize = sample.mergeCachingSize
+    if int(opts.nevents_split_nfiles_single) > 0:
+        chunkSize = int(opts.nevents_split_nfiles_single)
+        print "\x1b[31mINFO: chunk size overwritten with -N parameter!\x1b[0m"
+    return chunkSize
+
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 #                              process commands
@@ -800,7 +810,7 @@ if opts.task.startswith('cachetraining'):
     for sampleIdentifier in sampleIdentifiers:
 
         # number of files to process per job 
-        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier==sampleIdentifier])
+        splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier==sampleIdentifier])
         splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
@@ -810,7 +820,6 @@ if opts.task.startswith('cachetraining'):
             for regionChunkNumber, regionChunk in enumerate(regionChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
-                    #'queue': submitQueueDict['cachetraining'],
                     'arguments':
                         {
                             'trainingRegions': ','.join(regionChunk),
@@ -829,6 +838,20 @@ if opts.task.startswith('cachetraining'):
                     jobDict['arguments']['fileList'] = compressedFileList
                 jobName = 'training_cache_{sample}_part{part}_{regionChunkNumber}'.format(sample=sampleIdentifier, part=chunkNumber, regionChunkNumber=regionChunkNumber)
                 submit(jobName, jobDict)
+
+# -----------------------------------------------------------------------------
+# EXPORT HDF5: export training regions to HDF5 format for DNN training 
+# -----------------------------------------------------------------------------
+if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
+    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    for region in trainingRegions:
+        jobDict = repDict.copy()
+        jobDict.update({
+            'arguments': {'trainingRegions': region}, 
+            })
+        jobName = 'export_h5_{trainingRegions}'.format(trainingRegions=region)
+        submit(jobName, jobDict)
+
 
 # -----------------------------------------------------------------------------
 # RUNTRAINING: train mva, outputs .xml file. Needs cachetraining before.
@@ -877,7 +900,7 @@ if opts.task.startswith('cacheplot'):
             regionChunks = [regions]
 
         # number of files to process per job 
-        splitFilesChunkSize = min([sample.mergeCachingSize for sample in samples if sample.identifier == sampleIdentifier])
+        splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
                 'folder': config.get('Directories', 'plottingSamples')
@@ -980,7 +1003,7 @@ if opts.task.startswith('cachedc'):
             print "INFO: done checking files for region\x1b[34m",region, "\x1b[0m(",i, "of", len(regions),")"
         printSamplesStatus(samples=samples, regions=regions, status=status)
     
-    # per job parallelization parameter can split regions into several job
+    # per job parallelization parameter can split regions into several jobs
     if opts.parallel:
         regionChunkSize = int(opts.parallel)
         regionChunks = [regions[i:i + regionChunkSize] for i in xrange(0, len(regions), regionChunkSize)]
@@ -1008,8 +1031,11 @@ if opts.task.startswith('cachedc'):
                 print 'INFO: files do not exist yet!'
 
         # number of files to process per job
-        #  each entry in the array is for a subsample, always take same size for all subsamples for now
-        sampleSizesList = [sample.mergeCachingSize if int(opts.nevents_split_nfiles_single) < 0 else int(opts.nevents_split_nfiles_single) for sample in samples if sample.identifier == sampleIdentifier]
+        chunkSize = getCachingChunkSize(sample, config)
+
+        # each entry in the array is for a subsample
+        # use same size for all subsamples for now
+        sampleSizesList = [chunkSize for sample in samples if sample.identifier == sampleIdentifier]
         splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
@@ -1322,6 +1348,8 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
    
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
+    nFiles = 0
+    nFilesDone = 0
     for folder in foldersToCheck:
         folderStatus = fileStatus[folder]
         print "---",folder,"-"*100
@@ -1344,6 +1372,9 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
             elif len([x for x,n in sampleStatus if x])==len(sampleStatus):
                 sampleShort = "\x1b[32m" + sampleShort + "\x1b[0m"
             print sampleShort, ("%03d/%03d"%(len([x for x,n in sampleStatus if x]),len(sampleStatus))).ljust(8), statusBar, "\x1b[0m "
+            nFiles += len(sampleStatus)
+            nFilesDone += len([x for x,n in sampleStatus if x])
+        print "total: %d/%d"%(nFilesDone, nFiles)
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
     if len(failedJobs) > 0:
@@ -1424,6 +1455,7 @@ if opts.task.startswith('checklogs'):
     nFailed = 0
     nResubmitted = 0
     nComplete = 0
+    nRetries = 0
     for job in lastSubmission:
         errorLines = []
         errorStatus = False
@@ -1444,6 +1476,10 @@ if opts.task.startswith('checklogs'):
                         # new job output appended to old log -> ignore all errors up to here
                         if line.startswith('Configuration Files:'):
                             errorLines = []
+                        # retry
+                        if line.strip() == '--- RETRY ---':
+                            errorLines = []
+                            nRetries += 1
 
             if 'exitCode' in job:
                 if job['exitCode'] == 0:
@@ -1474,7 +1510,7 @@ if opts.task.startswith('checklogs'):
                 if opts.resubmit:
                     subprocess.call([job['submitCommand']], shell=True)
                     nResubmitted += 1
-    print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted"%(len(lastSubmission), nComplete, nFailed, nResubmitted)
+    print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted, %d retries"%(len(lastSubmission), nComplete, nFailed, nResubmitted, nRetries)
 
 # -----------------------------------------------------------------------------
 # postfitplot 

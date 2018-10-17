@@ -16,16 +16,20 @@ import numpy as np
 import math
 from copy import deepcopy
 import gzip
+import h5py
+import json
+import datetime
 
 class SampleTreesToNumpyConverter(object):
 
-    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True):
+    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True, testRun=False):
         self.mvaName = mvaName
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
         self.dataFormatVersion = 3
         self.sampleTrees = []
         self.config = config
+        self.testRun = testRun
         self.samplesPath = config.get('Directories', 'MVAin')
         self.samplesDefinitions = config.get('Directories','samplesinfo')
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
@@ -48,34 +52,9 @@ class SampleTreesToNumpyConverter(object):
         self.weightSYS = []
         self.weightSYSweights = {}
 
-        #if useSyst:
-        #    print ("including systematics")
-        #    self.systematics = config.get('systematics', 'systematics').strip().split(' ')
-        #    
-        #    for sys in self.systematics:
-        #        self.MVA_Vars[sys] = [x for x in config.get(self.treeVarSet, sys).strip().split(' ') if len(x.strip()) > 0]
-        #else:
-        #    self.systematics = []
-        #print ("systematics: "+", ".join(self.systematics))
-
-        #if useWeightSyst:
-        #    print ("including Btag weight systematics")
-        #    self.weightWithoutBtag = self.config.get('Weights','weight_noBTag')
-        #    self.bTagWeight = self.config.get('Weights','bTagWeight')
-        #    
-        #    for d in ['Up','Down']:
-        #        for syst in ['HFStats1','HFStats2','LF','HF','LFStats1','LFStats2','cErr2','cErr1','JES']:
-        #          for npt in ["0","1","2","3"]:
-        #            for neta in ["1","2","3"]:
-        #                systFullName = "btag_" + syst + "_pt"+ npt + "_eta" + neta + "_" + d
-        #                weightName = "bTagWeightCMVAV2_Moriond_" +  syst + "_pt"+ npt + "_eta" + neta  + d
-        #            self.weightSYSweights[systFullName] = self.weightWithoutBtag + '*' + weightName
-        #            self.weightSYS.append(systFullName)
-        #print ("btag weights: "+", ".join(self.weightSYS))
-
+        self.systematics = []
         if useSyst:
             print('INFO: use systematics in training!')
-            self.systematics = []
             self.systList = eval(self.config.get(mvaName, 'systematics')) if self.config.has_option(mvaName, 'systematics') else []
             for syst in self.systList:
                 systNameUp   = syst+'_UP'   if self.config.has_option('Weights',syst+'_UP')   else syst+'_Up'
@@ -97,6 +76,8 @@ class SampleTreesToNumpyConverter(object):
             self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
             print("classes dict:", self.sampleNames)
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
+        if self.testRun:
+            print("\x1b[31mDEBUG: TEST-RUN, using only small subset of samples!\x1b[0m")
 
 
     def run(self):
@@ -120,6 +101,8 @@ class SampleTreesToNumpyConverter(object):
         weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
         for category in categories:
+            if self.testRun:
+                self.samples[category] = self.samples[category][0:1]
             for sample in self.samples[category]:
                 print ('*'*80,'\n%s\n'%sample,'*'*80)
                 for datasetName, additionalCut in datasetParts.iteritems():
@@ -246,12 +229,36 @@ class SampleTreesToNumpyConverter(object):
         #    self.data['train']['sample_weight_'+syst] = np.array(weightListsSYS[syst]['train'], dtype=np.float32)
 
         if not os.path.exists("./dumps"):
-                os.makedirs("dumps")
-        numpyOutputFileName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '.dmpz'
-        with gzip.open(numpyOutputFileName, 'wb') as outputFile:
+            os.makedirs("dumps")
+        baseName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '_' + datetime.datetime.now().strftime("%y%m%d")
+        numpyOutputFileName = baseName + '.dmpz'
+        hdf5OutputFileName = baseName + '.h5'
+        
+        try:
+            self.saveAsPickledNumpy(numpyOutputFileName)
+        except Exception as e:
+            print(e)
+
+        try:
+            self.saveAsHDF5(hdf5OutputFileName)
+        except Exception as e:
+            print(e)
+
+    def saveAsPickledNumpy(self, outputFileName):
+        with gzip.open(outputFileName, 'wb') as outputFile:
             pickle.dump(self.data, outputFile)
-        print(self.data['meta'])
-        print("written to:\x1b[34m", numpyOutputFileName, " \x1b[0m")
+        print("written to:\x1b[34m", outputFileName, " \x1b[0m")
+
+    def saveAsHDF5(self, outputFileName):
+        f = h5py.File(outputFileName, 'w')
+        for k in ['meta', 'category_labels']:
+            f.attrs[k] = json.dumps(self.data[k].items())
+        for k in ['train', 'test']:
+            for k2 in self.data[k].keys():
+                f.create_dataset(k + '/' + k2, data=self.data[k][k2], compression="gzip", compression_opts=9)
+        f.close()
+        print("written to:\x1b[34m", outputFileName, " \x1b[0m")
+
 
 # read arguments
 argv = sys.argv
@@ -264,6 +271,7 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
 parser.add_option("-S","--systematics", dest="systematics", default=2,
                       help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
+parser.add_option("-x", "--test", dest="test", action="store_true", help="for debugging only!!!", default=False)
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -287,5 +295,5 @@ if int(opts.systematics) > 0:
 # load config
 config = BetterConfigParser()
 config.read(opts.config)
-converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys)
+converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys, testRun=opts.test)
 converter.run()
