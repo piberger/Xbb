@@ -31,7 +31,7 @@ class BatchSystem(object):
         self.interactive = interactive
         self.submittedJobs = []
         self.runLocally = local
-        self.configFile = configFile
+        self.configFile = None if interactive else configFile
 
     def getName(self):
         return self.name
@@ -85,6 +85,9 @@ class BatchSystem(object):
         # add path to config file (Can be dumped combined config instead of single files!)
         if self.configFile:
             runScript += " --configFile=" + self.configFile
+        
+        if self.interactive:
+            runScript += " --noretry"
 
         return runScript
 
