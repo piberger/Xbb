@@ -211,6 +211,17 @@ class AddCollectionsModule(object):
     def addIntegerBranch(self, branchName, default=0):
         self.branchBuffers[branchName] = array.array('i', [default])
         self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName, 'type': 'i'})
+    
+    def addIntegerVectorBranch(self, branchName, default=0, length=1):
+        self.branchBuffers[branchName] = array.array('i', [default]*length)
+        self.branches.append({
+                'name': branchName,
+                'formula': self.fillVectorBranch,
+                'type': 'i',
+                'arguments': {'branch': branchName, 'size': length},
+                'length': length,
+                'arrayStyle': True,
+            })
 
     def getBranches(self):
         return self.branches
@@ -221,6 +232,20 @@ class AddCollectionsModule(object):
 
     def setBranch(self, branchName, value):
         self.branchBuffers[branchName][0] = value
+
+    def _b(self, branchName):
+        return self.branchBuffers[branchName]
+
+    def fillVectorBranch(self, event, arguments=None, destinationArray=None):
+        size = 1
+        if 'size' in arguments:
+            if type(arguments['size']) == int:
+                size = arguments['size']
+            elif arguments['size'] in self.branchBuffers:
+                size = self.branchBuffers[arguments['size']][0]
+            elif type(arguments['size']) == str:
+                size = getattr(event, arguments['size'])
+        destinationArray[:size] = self.branchBuffers[arguments['branch']][:size]
 
     def hasBeenProcessed(self, tree):
         return tree.GetReadEntry() == self.lastEntry

@@ -16,24 +16,28 @@ import resource
 class XbbRun:
 
     def __init__(self, opts):
+
+        # get file list
         self.filelist = FileList.decompress(opts.fileList) if len(opts.fileList) > 0 else None
         print "len(filelist)",len(self.filelist),
         if len(self.filelist) > 0:
             print "filelist[0]:", self.filelist[0]
         else:
             print ''
+
+        # config
         self.debug = 'XBBDEBUG' in os.environ
         self.opts = opts
-
         self.config = BetterConfigParser()
         self.config.read(opts.config)
-
         samplesinfo = self.config.get('Directories', 'samplesinfo')
         self.channel = self.config.get('Configuration', 'channel')
 
+        # load namespace, TODO
         VHbbNameSpace = self.config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
 
+        # directories
         self.pathIN = self.config.get('Directories','SYSin')
         self.pathOUT = self.config.get('Directories','SYSout')
         self.tmpDir = self.config.get('Directories','scratch')
@@ -62,8 +66,8 @@ class XbbRun:
         # input files
         self.subJobs = []
         if opts.join:
-            print("INFO: join input files!")
-            
+            print("INFO: join input files! This is an experimental feature!")
+
             # translate naming convention of .txt file to imported files after the prep step
             inputFileNamesAfterPrep = [self.fileLocator.getFilenameAfterPrep(x) for x in self.filelist]
 
@@ -107,22 +111,28 @@ class XbbRun:
             else:
                 collectionsListsReplaced.append(collection)
         return collectionsListsReplaced
-    
+
     # run all subjobs
     def run(self):
 
+        nFilesProcessed = 0
+        nFilesFailed = 0
+
         for subJob in self.subJobs:
 
+            # only process if output is non-existing/broken or --force was used
             if self.opts.force or not self.fileLocator.isValidRootFile(subJob['outputFileName']):
-                
+
+                # create directories
                 outputFolder = '/'.join(subJob['outputFileName'].split('/')[:-1])
                 tmpFolder = '/'.join(subJob['tmpFileName'].split('/')[:-1])
                 self.fileLocator.makedirs(outputFolder)
                 self.fileLocator.makedirs(tmpFolder)
 
-                # load sample tree and initialize vtype corrector
+                # load sample tree
                 sampleTree = SampleTree(subJob['localInputFileNames'], config=self.config)
                 if not sampleTree.tree:
+                    print "trying fallback...", len(subJob['inputFileNames'])
 
                     if len(subJob['inputFileNames']) == 1:
                         # try original naming scheme if reading directly from Heppy/Nano ntuples (without prep)
@@ -132,9 +142,11 @@ class XbbRun:
                         sampleTree = SampleTree([fileNameOriginal], config=self.config, xrootdRedirector=xrootdRedirector)
                         if not sampleTree.tree:
                             print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
+                            nFilesFailed += 1
                             continue
                     else:
                         print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED! (old naming scheme not supported for joining multipel files)\x1b[0m"
+                        nFilesFailed += 1
                         continue
 
                 # to use this syntax, use "--addCollections Sys.Vtype" for a config file entry like this:
@@ -222,12 +234,15 @@ class XbbRun:
                         print "WARNING: could not delete file on scratch!"
 
 
-                # add callback for clean up
+                # clean up
                 if hasattr(wObject, "cleanUp") and callable(getattr(wObject, "cleanUp")):
                     getattr(wObject, "cleanUp")()
 
             else:
                 print 'SKIP:', subJob['inputFileNames']
+
+        if nFilesFailed > 0:
+            raise Exception("ProcessingIncomplete")
 
 argv = sys.argv
 parser = OptionParser()

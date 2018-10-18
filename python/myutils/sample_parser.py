@@ -27,7 +27,7 @@ def check_correspondency(sample,list,config):
 
 class ParseInfo:
     '''Class containing a list of Sample. Is filled during the prep stage.'''
-    def __init__(self,samples_config,samples_path):
+    def __init__(self,samples_config,samples_path,config=None):
         '''
         Methode filling a list of Sample "self._samplelist = []" contained in the class. 
         "sample_path" contains the path where the samples are stored (PREPin). 
@@ -35,15 +35,19 @@ class ParseInfo:
         the sample list are generated from the input folder (PREPin) or the list in "samples_nosplit.cfg" '''
 
         self.debug = 'XBBDEBUG' in os.environ
-        if self.debug:
-            print "Start getting infos on all the samples (ParseInfo)"
-            print "==================================================\n"
-            print 'samples_config is', samples_config
-        try:
-            os.stat(samples_config)
-        except:
-            raise Exception('config file is wrong/missing')
-          
+        if not config:
+            if self.debug:
+                print "Start getting infos on all the samples (ParseInfo)"
+                print "==================================================\n"
+                print 'samples_config is', samples_config
+            try:
+                os.stat(samples_config)
+            except:
+                raise Exception('config file is wrong/missing')
+            config = BetterConfigParser()
+            config.read(samples_config)
+        
+        # TODO: needed?
         if samples_path and '/pnfs/psi.ch/cms/' in samples_path:
             T3 = True
             _,p2=samples_path.split('/pnfs/')
@@ -51,8 +55,6 @@ class ParseInfo:
         else:
             T3 = False
 
-        config = BetterConfigParser()
-        config.read(samples_config)
 
         # TODO: 08.03.2018: newprefix and weightexpression needed?
         newprefix = config.get('General','newprefix') if config.has_option('General','newprefix') else ''

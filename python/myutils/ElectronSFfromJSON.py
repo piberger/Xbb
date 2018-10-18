@@ -16,12 +16,15 @@ class ElectronSFfromJSON(AddCollectionsModule):
         # load JOSN files
         self.jsonTable = JsonTable(jsonFiles)
         self.channel = channel 
+        self.trackerSfName = None
         if self.channel== 'Zll':
          self.idIsoSfName = 'doubleEleIDISO2017'
          self.triggerLegNames = ['doubleEleTriggerLeg1', 'doubleEleTriggerLeg2']
+         self.trackerSfName = 'ScaleFactor_tracker_80x'
         elif self.channel == 'Wlv':
          self.idIsoSfName = 'singleEleIDISO2017'
          self.triggerLegNames = ['singleEleTrigger']
+         self.trackerSfName = 'ScaleFactor_tracker_80x'
         else: 
          print "Channel not defined!"
          quit()
@@ -29,6 +32,7 @@ class ElectronSFfromJSON(AddCollectionsModule):
         self.systVariations = [None, 'Down', 'Up']
         self.idIsoSf = self.jsonTable.getEtaPtTable(self.idIsoSfName)
         self.triggerSf = [self.jsonTable.getEtaPtTable(x) for x in self.triggerLegNames]
+        self.trackerSf = self.jsonTable.getEtaPtTable(self.trackerSfName)
 #        print "Channel is: {}".format(self.channel)
 #        print "ISO files: {}".format(self.idIsoSfName)
 #        print "Trigg files: {}".format(self.triggerLegNames)
@@ -44,7 +48,7 @@ class ElectronSFfromJSON(AddCollectionsModule):
         self.branchBuffers = {}
         self.lastEntry = -1
         if not self.isData:
-            for branchName in [self.branchName, self.branchName + '_IdIso', self.branchName + '_trigger']:
+            for branchName in [self.branchName, self.branchName + '_IdIso', self.branchName + '_trigger', self.branchName + '_tracker']:
                 self.branchBuffers[branchName] = array.array('f', [1.0, 1.0, 1.0])
                 self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':3}, 'length': 3})
             for branchName in [self.branchName + '_IdIso_B', self.branchName + '_IdIso_E']:
@@ -56,8 +60,7 @@ class ElectronSFfromJSON(AddCollectionsModule):
 
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
-        for i in range(arguments['length']):
-            destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
+        destinationArray[:arguments['length']] = self.branchBuffers[arguments['branch']][:arguments['length']]
 
     def processEvent(self, tree):
         # if current entry has not been processed yet
@@ -94,14 +97,14 @@ class ElectronSFfromJSON(AddCollectionsModule):
 #                lep_pt = [vElectrons[0].pt,vElectrons[1].pt]
 #            print " number of electrons" len(vElectrons)
 
-            self.computeSF(self.branchBuffers[self.branchName + '_trigger'], self.branchBuffers[self.branchName + '_IdIso'], self.branchBuffers[self.branchName + '_IdIso_B'], self.branchBuffers[self.branchName + '_IdIso_E'], self.branchBuffers[self.branchName], lep_eta, lep_pt, len(vLidx), 1.566)
+            self.computeSF(self.branchBuffers[self.branchName + '_trigger'], self.branchBuffers[self.branchName + '_tracker'], self.branchBuffers[self.branchName + '_IdIso'], self.branchBuffers[self.branchName + '_IdIso_B'], self.branchBuffers[self.branchName + '_IdIso_E'], self.branchBuffers[self.branchName], lep_eta, lep_pt, len(vLidx), 1.566)
 
         return True
 
 
 #Separated weight_Iso in eta (Barrel/Endcap) :
 #----------------------------------------------------------------------------------------------------
-    def computeSF(self, weight_trigg, weight_Iso, weight_Iso_LowEta, weight_Iso_HighEta, weight_SF, lep_eta, lep_pt, lep_n, etacut):
+    def computeSF(self, weight_trigg, weight_tracker, weight_Iso, weight_Iso_LowEta, weight_Iso_HighEta, weight_SF, lep_eta, lep_pt, lep_n, etacut):
         '''Computes the trigger, IdIso (including separated variations in eta) and final event SF'''
         # require two electrons
 
@@ -117,8 +120,10 @@ class ElectronSFfromJSON(AddCollectionsModule):
             #Calculating the trigger and IdIso weights and Down/Up variations
             for i, syst in enumerate(self.systVariations):
                weight_trigg[i] = self.getTriggerSf(lep_eta, lep_pt, lep_n, syst=syst)
+               weight_tracker[i] = self.getTrackerSf(lep_eta, lep_pt, lep_n, syst=syst)
                weight_Iso[i] = weight[0][i] if lep_n == 1 else weight[0][i] * weight[1][i] 
-               weight_SF[i] = weight_trigg[i] * weight_Iso[i]
+               weight_SF[i] = weight_trigg[i] * weight_Iso[i] * weight_tracker[i]
+
             #Barrel and Endcap separated
             self.electronSf_BE(weight, weight_Iso_LowEta, weight_Iso_HighEta, lep_eta, lep_pt, lep_n, etacut)
 
@@ -210,6 +215,12 @@ class ElectronSFfromJSON(AddCollectionsModule):
 
 #        print "triggSF:", triggSF
         return triggSF
+    
+    def getTrackerSf(self, eta, pt, len_n, syst=None):
+        SF = 1.
+        for i in range(len_n):
+            SF = SF * self.jsonTable.find(self.trackerSf, eta[i], pt[i], syst=syst)
+        return SF
 
 if __name__ == "__main__":
     sfObject = ElectronSFfromJSON([
