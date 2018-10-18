@@ -546,7 +546,7 @@ if opts.task == 'hadd':
     info = ParseInfo(samplesinfo, inputPath)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
-    samplefilesMerged = samplefiles + '/merged/'
+    samplefilesMerged = samplefiles + '/merged_' + opts.tag + '/'
     fileLocator.makedirs(samplefilesMerged)
 
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -659,7 +659,7 @@ if opts.task == 'count':
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
     for sampleIdentifier, chunkSize in chunkSizes:
-        print "{s}: {c}".format(s=sampleIdentifier, c=chunkSize)
+        print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"
     countsFileName = opts.tag + 'config/event_counts.dat'
     with open(countsFileName, 'w') as ofile:
