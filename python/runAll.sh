@@ -272,6 +272,11 @@ elif [ $task = "runtraining" ]; then
 elif [ $task = "runtraining_scikit" ]; then
     runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions}"
 
+elif [ $task = "dnn" ]; then
+    runCommand="python tfZllDNN/train.py -c tfZllDNN/config.cfg -i ${trainingRegions}"
+    config_filenames=()
+    unset configFile
+
 elif [ $task = "hadd" ]; then
     runCommand="python ./hadd.py --chunkNumber ${chunkNumber}"
 

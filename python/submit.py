@@ -870,6 +870,26 @@ if opts.task.startswith('runtraining'):
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
+if opts.task.startswith('dnn'):
+    # training regions
+    trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
+
+    # separate job for all training regions
+    for trainingRegion in trainingRegions:
+        if config.has_option(trainingRegion, 'h5'):
+            h5file = config.get(trainingRegion, 'h5')
+            jobDict = repDict.copy()
+            jobDict.update({
+                'arguments': {'trainingRegions': h5file}, 
+                #'queue': submitQueueDict['runtraining']
+                })
+            jobName = 'dnn_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
+            submit(jobName, jobDict)
+        else:
+            print "\x1b[31mERROR: DNN training region needs option 'h5' to specify location of .h5 file. This region will be skipped:", trainingRegion, "\x1b[0m"
+
+
+
 # -----------------------------------------------------------------------------
 # CACHEPLOT: prepare skimmed trees with cuts for the CR/SR
 # -----------------------------------------------------------------------------
