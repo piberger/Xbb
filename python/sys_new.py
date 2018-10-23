@@ -231,6 +231,7 @@ class XbbRun:
                                 print 'INFO: second attempt copy done!'
                                 if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
                                     print '\x1b[31mERROR: output still broken!\x1b[0m'
+                                    nFilesFailed += 1
                                     raise Exception("FileCopyError")
                                 else:
                                     print 'INFO: file is good after second attempt!'

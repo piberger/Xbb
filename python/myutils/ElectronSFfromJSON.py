@@ -9,6 +9,7 @@ from BranchTools import AddCollectionsModule
 class ElectronSFfromJSON(AddCollectionsModule):
     
     def __init__(self, jsonFiles=None, branchName="electronSF",channel='None'):
+        super(ElectronSFfromJSON, self).__init__()
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
         self.branchName = branchName

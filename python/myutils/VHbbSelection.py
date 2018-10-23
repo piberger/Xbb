@@ -5,7 +5,7 @@ from BranchTools import AddCollectionsModule
 import array
 import os
 
-# create branches for gen level particles with HEPPY naming (only for those used)
+# do jet/lepton selection and skimming 
 class VHbbSelection(AddCollectionsModule):
 
     def __init__(self, debug=False, year="2017", channels=["Wln","Zll","Znn"]):
@@ -31,13 +31,23 @@ class VHbbSelection(AddCollectionsModule):
             self.metFilters.append("Flag_eeBadScFilter")
 
         self.taggerName = "Jet_btagDeepB"
-        self.btagWP = {
-                'loose':  0.1522,
-                'medium': 0.4941,
-                'tight':  0.8001,
+        self.btagWPs = {
+                'Jet_btagDeepB': {
+                    'loose':  0.1522,
+                    'medium': 0.4941,
+                    'tight':  0.8001,
+                    'none': -1.0,
+                    }
                 }
+        self.btagWP = self.btagWPs[self.taggerName]
         if self.year == "2016": 
             pass
+            
+        self.HltPaths = {
+                    '0-lep': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
+                    '1-lep': ['HLT_Ele32_WPTight_Gsf_L1DoubleEG','HLT_IsoMu27'],
+                    '2-lep': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
+                    }
 
         self.cutFlow = [0] * 16
 
@@ -108,7 +118,7 @@ class VHbbSelection(AddCollectionsModule):
                     else:
                         if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[1]]:
                             indices[1] = i
-        
+
         if len(indices) > 1:
             if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
                 indices = [indices[1], indices[0]]
@@ -127,17 +137,21 @@ class VHbbSelection(AddCollectionsModule):
             self._b("V_eta")[0] = -99.0
             self._b("V_phi")[0] = -99.0
             self._b("V_mass")[0] = -99.0
+            self._b("hJidx")[0] = -1
+            self._b("hJidx")[1] = -1
+            self._b("vLidx")[0] = -1
+            self._b("vLidx")[1] = -1
 
             self.cutFlow[0] += 1
 
             # TRIGGER
-            if self.year == "2017":
-                if tree.Vtype == 4 and tree.HLT_PFMET120_PFMHT120_IDTight != 1 and tree.HLT_PFMET120_PFMHT120_IDTight_PFHT60 != 1:
-                    return False
-                elif (tree.Vtype == 2 or tree.Vtype == 3) and tree.HLT_Ele32_WPTight_Gsf_L1DoubleEG != 1 and tree.HLT_IsoMu27 != 1:
-                    return False
-                elif (tree.Vtype == 0 or tree.Vtype == 1) and tree.HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8 != 1 and tree.HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8 != 1 and tree.HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL != 1:
-                    return False
+            triggerPassed = {k: any([getattr(tree, x) for x in v if hasattr(tree,x)])  for k,v in self.HltPaths.items()}
+            if tree.Vtype == 4 and not triggerPassed['0-lep']: 
+                return False
+            elif (tree.Vtype == 2 or tree.Vtype == 3) and not triggerPassed['1-lep']: 
+                return False
+            elif (tree.Vtype == 0 or tree.Vtype == 1) and not triggerPassed['2-lep']: 
+                return False
             self.cutFlow[1] += 1
             
             # LEPTONS
@@ -189,30 +203,30 @@ class VHbbSelection(AddCollectionsModule):
             if self._b("isZnn")[0]:
                 j1ptCut = 35.0
                 j2ptCut = 35.0
-                j1Btag = self.btagWP['tight']
+                j1Btag = self.btagWP['loose']
             elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
                 j1ptCut = 25.0
                 j2ptCut = 25.0
-                j1Btag = self.btagWP['tight']
+                j1Btag = self.btagWP['loose']
             elif self._b("isZmm")[0] or self._b("isZee")[0]:
                 j1ptCut = 20.0
                 j2ptCut = 20.0
                 j1Btag = self.btagWP['loose']
             else:
                 return False
-            j2Btag = self.btagWP['loose'] 
+            j2Btag = self.btagWP['none'] 
 
             selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName)
-            
+
             if len(selectedJets) == 2:
                 self._b("hJidx")[0] = selectedJets[0]
                 self._b("hJidx")[1] = selectedJets[1]
                 if getattr(tree, self.taggerName)[selectedJets[0]] < j1Btag:
                     return False
-                elif getattr(tree, self.taggerName)[selectedJets[0]] < j2Btag:
+                elif getattr(tree, self.taggerName)[selectedJets[1]] < j2Btag:
                     return False
                 elif self._b("isZnn")[0]:
-                    if max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]]) > 60.0:
+                    if max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]]) < 60.0:
                         return False
             else:
                 return False
@@ -282,6 +296,15 @@ class VHbbSelection(AddCollectionsModule):
         return True
 
     def afterProcessing(self):
-        print "cut-flow:", self.cutFlow
+        print "cut-flow:"
+        print "  beginning          ", self.cutFlow[0]
+        print "  HLT                ", self.cutFlow[1]
+        print "  Leptons            ", self.cutFlow[2]
+        print "  Channel            ", self.cutFlow[3]
+        print "  Jets               ", self.cutFlow[4]
+        print "  Vector boson       ", self.cutFlow[5]
+        print "  Vpt                ", self.cutFlow[6]
+        print "  Vmass              ", self.cutFlow[7]
+
         print "efficiency:", 1.0*self.cutFlow[7]/self.cutFlow[0]
 
