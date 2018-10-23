@@ -27,6 +27,7 @@ class XbbRun:
 
         # config
         self.debug = 'XBBDEBUG' in os.environ
+        self.verifyCopy = True
         self.opts = opts
         self.config = BetterConfigParser()
         self.config.read(opts.config)
@@ -222,6 +223,17 @@ class XbbRun:
                     try:
                         self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
                         print 'copy ', subJob['tmpFileName'], subJob['outputFileName']
+                        
+                        if self.verifyCopy:
+                            if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
+                                print 'INFO: output at final destination broken, try to copy again from scratch disk to final destination...'
+                                self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
+                                print 'INFO: second attempt copy done!'
+                                if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
+                                    print '\x1b[31mERROR: output still broken!\x1b[0m'
+                                    raise Exception("FileCopyError")
+                                else:
+                                    print 'INFO: file is good after second attempt!'
                     except Exception as e:
                         print e
                         print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"

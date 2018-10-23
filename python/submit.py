@@ -629,6 +629,9 @@ if opts.task == 'count':
     info = ParseInfo(samplesinfo, pathIN)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
+    haddTargetNumEvents = int(config.get('Configuration', 'haddTargetNumEvents')) if config.has_option('Configuration', 'haddTargetNumEvents') else 30000
+    print "INFO: target number of events after merge:", haddTargetNumEvents
+
     # process all sample identifiers (correspond to folders with ROOT files)
     eventNumberOffsetDict = {}
     chunkSizes = []
@@ -655,7 +658,7 @@ if opts.task == 'count':
         numberOfTrees = len(sampleFileList)
         totalEvents = offset
         eventsPerTree = totalEvents*1.0/numberOfTrees
-        chunkSize = math.ceil(30000/eventsPerTree)
+        chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree)
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
     for sampleIdentifier, chunkSize in chunkSizes:
