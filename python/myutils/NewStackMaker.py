@@ -137,6 +137,8 @@ class NewStackMaker:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
+        
+        self.plotTextMarginLeft = 0.16
 
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
@@ -331,7 +333,7 @@ class NewStackMaker:
             self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat. + syst.)","f")
         self.legends['ratio'].Draw() 
         if not self.blind:
-            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), 0.17, 0.895, 1.55))
+            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
             t0 = ROOT.TText()
             t0.SetTextSize(ROOT.gStyle.GetLabelSize()*2.4)
             t0.SetTextFont(ROOT.gStyle.GetLabelFont())
@@ -388,10 +390,19 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.addObject(self.myText(self.plotTitle,0.17+(0.03 if self.is2D else 0),0.88,1.04))
+        if type(self.plotTitle) == list:
+            posY = 0.88
+            size = 1.04
+            for plotTitleLine in self.plotTitle:
+                self.addObject(self.myText(plotTitleLine, self.plotTextMarginLeft + (0.03 if self.is2D else 0),posY,size))
+                posY -= 0.05
+                size *= 0.77
+        else:
+            self.addObject(self.myText(self.plotTitle,self.plotTextMarginLeft+(0.03 if self.is2D else 0),posY,1.04))
+            posY -= 0.05
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} = %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
+            self.addObject(self.myText("#sqrt{s} = %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), self.plotTextMarginLeft+(0.03 if self.is2D else 0), posY, 0.75))
         except Exception as e:
             print ("WARNING: exception while adding text: ", e)
             pass
@@ -416,7 +427,7 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag, 0.17+(0.03 if self.is2D else 0), 0.78))
+        self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
 
         try:
             for labelName, label in self.plotLabels.iteritems():
@@ -426,7 +437,7 @@ class NewStackMaker:
 
         try:
             for j, additionalTextLine in enumerate(self.additionalTextLines):
-                self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
+                self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
         except Exception as e:
             print(e)
 

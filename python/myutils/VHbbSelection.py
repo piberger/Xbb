@@ -290,9 +290,6 @@ class VHbbSelection(AddCollectionsModule):
                 return False
             self.cutFlow[7] += 1
 
-            #if self.debug:
-            #    print self._b("isZmm")[0], self._b("isZee")[0],  self._b("isWmunu")[0],  self._b("isWenu")[0],  self._b("isZnn")[0], "Vpt=",  self._b("V_pt")[0], " jetIndices=",  self._b("hJidx")[0], self._b("hJidx")[1]
-
         return True
 
     def afterProcessing(self):
