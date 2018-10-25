@@ -60,6 +60,15 @@ class tensorflowEvaluator(AddCollectionsModule):
                 self.inputVariables[syst] = self.config.get(self.config.get(self.mvaName, "treeVarSet"), syst if self.sample.isMC() else 'Nominal').split(' ')
                 for var in self.inputVariables[syst]:
                     self.sampleTree.addFormula(var)
+        
+        if self.nClasses > 1:
+            self.dnnCollectionArgmax  = Collection(self.branchName + "_argmax", self.systematics, leaves=True)
+            self.dnnCollectionMax     = Collection(self.branchName + "_max",    self.systematics, leaves=True)
+            self.dnnCollectionMax2    = Collection(self.branchName + "_max2",   self.systematics, leaves=True)
+            self.dnnCollectionDefault = Collection(self.branchName,   self.systematics, leaves=True)
+
+            for x in [self.dnnCollectionArgmax, self.dnnCollectionMax, self.dnnCollectionMax2, self.dnnCollectionDefault]:
+                self.addCollection(x)
 
         # create tensorflow graph
         self.reloadModel()
@@ -129,6 +138,14 @@ class tensorflowEvaluator(AddCollectionsModule):
                 for i,dnnCollection in enumerate(self.dnnCollections):
                     for j, syst in enumerate(self.systematics):
                         dnnCollection[dnnCollection.name][j] = probabilities[j, i]
+                for j, syst in enumerate(self.systematics):
+                    self.dnnCollectionArgmax._b()[j] = np.argmax(probabilities[j])
+                    sortedValues = np.sort(probabilities[j])
+                    self.dnnCollectionMax._b()[j] = sortedValues[-1]
+                    self.dnnCollectionMax2._b()[j] = sortedValues[-2]
+
+                    # default linearization method
+                    self.dnnCollectionDefault._b()[j] = self.dnnCollectionArgmax._b()[j] + np.power(sortedValues[-1] - sortedValues[-2], 0.25) 
 
         return True
 
