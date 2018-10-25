@@ -144,6 +144,9 @@ class Collection(object):
                             'leaflist': leaflist,
                         })
 
+    def _b(self, n=None):
+        return self.branchBuffers[n] if n else self.branchBuffers[self.name]
+
     # direct access to branch arrays
     def __getitem__(self, key):
         return self.branchBuffers[key]
