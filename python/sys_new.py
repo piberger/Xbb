@@ -39,19 +39,18 @@ class XbbRun:
         ROOT.gSystem.Load(VHbbNameSpace)
 
         # directories
-        self.pathIN = self.config.get('Directories','SYSin')
-        self.pathOUT = self.config.get('Directories','SYSout')
-        self.tmpDir = self.config.get('Directories','scratch')
+        self.pathIN = self.config.get('Directories', opts.inputDir)
+        self.pathOUT = self.config.get('Directories', opts.outputDir)
+        self.tmpDir = self.config.get('Directories', 'scratch')
         print 'INput samples:\t%s'%self.pathIN
         print 'OUTput samples:\t%s'%self.pathOUT
 
         self.fileLocator = FileLocator(config=self.config)
 
-        # samples
-        info = ParseInfo(samplesinfo, self.pathIN)
-        matchingSamples = [x for x in info if x.identifier==opts.sampleIdentifier and not x.subsample]
+        # check if given sample identifier uniquely matches a samples from config
+        matchingSamples = ParseInfo(samplesinfo, self.pathIN).find(identifier=opts.sampleIdentifier)
         if len(matchingSamples) != 1:
-            print "need exactly 1 sample identifier as input with -S !!"
+            print "ERROR: need exactly 1 sample identifier as input with -S !!"
             print matchingSamples
             exit(1)
         self.sample = matchingSamples[0]
@@ -206,7 +205,7 @@ class XbbRun:
 
                 # define output file 
                 sampleTree.addOutputTree(subJob['tmpFileName'], cut='1', branches='*', friend=self.opts.friend)
-                
+
                 # run processing
                 for pyModule in pyModules:
                     if hasattr(pyModule, "beforeProcessing"):
@@ -223,7 +222,7 @@ class XbbRun:
                     try:
                         self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
                         print 'copy ', subJob['tmpFileName'], subJob['outputFileName']
-                        
+
                         if self.verifyCopy:
                             if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
                                 print 'INFO: output at final destination broken, try to copy again from scratch disk to final destination...'
@@ -238,7 +237,7 @@ class XbbRun:
                     except Exception as e:
                         print e
                         print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
-                    
+
                     # delete temporary file
                     try:
                         self.fileLocator.rm(subJob['tmpFileName'])
@@ -259,17 +258,16 @@ class XbbRun:
 
 argv = sys.argv
 parser = OptionParser()
-parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="", 
-                      help="samples you want to run on")
-parser.add_option("-C", "--config", dest="config", default=[], action="append",
-                      help="configuration defining the plots to make")
-parser.add_option("-f", "--fileList", dest="fileList", default="",
-                              help="list of files you want to run on")
-parser.add_option("-b", "--addCollections", dest="addCollections", default="",
-                              help="collections to add: vtype")
+parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="", help="samples you want to run on")
+parser.add_option("-C", "--config", dest="config", default=[], action="append", help="configuration defining the plots to make")
+parser.add_option("-f", "--fileList", dest="fileList", default="", help="list of files you want to run on")
+parser.add_option("-b", "--addCollections", dest="addCollections", default="", help="collections to add, e.g. Sys.all")
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files", default=False)
 parser.add_option("-J", "--join", dest="join", action="store_true", help="chain all files of the sample", default=False)
 parser.add_option("-d", "--friend", dest="friend", action="store_true", help="create a friend tree", default=False)
+parser.add_option("-I", "--input", dest="inputDir", default="SYSin", help="name of input folder in config, e.g. SYSin")
+parser.add_option("-O", "--output", dest="outputDir", default="SYSout", help="name of output folder in config, e.g. SYSout")
+
 
 (opts, args) = parser.parse_args(argv)
 if opts.config == "":
