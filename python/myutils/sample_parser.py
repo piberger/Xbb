@@ -3,27 +3,7 @@ from copy import copy
 from optparse import OptionParser
 from BetterConfigParser import BetterConfigParser
 from samplesclass import Sample
-
-def findnth(haystack, needle, n):
-        parts= haystack.split(needle, n+1)
-        if len(parts)<=n+1:
-            return -1
-        return len(haystack)-len(parts[-1])-len(needle)
-
-
-def test_samples(run_on_fileList,__fileslist,config_sections):
-        for _listed_file,_config_entry in map(None,__fileslist,config_sections): # loop in both, fileList and config
-                if( run_on_fileList and _listed_file == None ): # check the option to know whether to run in fileList mode or in config mode
-                        return False
-                elif( (not run_on_fileList) and _config_entry == None ):
-                        return False
-                else: return True
-
-def check_correspondency(sample,list,config):
-        '''Check the samples that are available in the PREPin directory and in the samples_nosplit file '''
-        if not any( sample in file for file in list ):
-                warnings.warn('@INFO: Sample %s is NOT! present'%(config.get(sample,'sampleName')))
-
+import fnmatch
 
 class ParseInfo:
     '''Class containing a list of Sample. Is filled during the prep stage.'''
@@ -44,116 +24,63 @@ class ParseInfo:
                 os.stat(samples_config)
             except:
                 raise Exception('config file is wrong/missing')
-            config = BetterConfigParser()
-            config.read(samples_config)
-        
-        # TODO: needed?
-        if samples_path and '/pnfs/psi.ch/cms/' in samples_path:
-            T3 = True
-            _,p2=samples_path.split('/pnfs/')
-            t3_path = '/pnfs/'+p2.strip('\n')
-        else:
-            T3 = False
 
+            # if no config object given, read full config again
+            # this should be avoided by passing config object to ParseInfo class
+            pathConfig = '/'.join(samples_config.split('/')[:-1]) + '/paths.ini'
+            if os.path.isfile(pathConfig):
+                config = BetterConfigParser()
+                config.read(pathConfig)
+                configList = config.get('Configuration', 'List').split(' ')
+                for configFileName in configList:
+                    configFileName = '/'.join(samples_config.split('/')[:-1]) + '/' + configFileName
+                    if os.path.isfile(configFileName):
+                        config.read(configFileName)
+                print "WARNING (performance): whole config read again, pass the config obect to ParseInfo class to avoid this."
+            else:
+                # old behavior: read only one file, config might be inconsistent
+                config = BetterConfigParser()
+                config.read(samples_config)
+        elif self.debug:
+            print "DEBUG: config object passed to sample parser."
 
-        # TODO: 08.03.2018: newprefix and weightexpression needed?
-        newprefix = config.get('General','newprefix') if config.has_option('General','newprefix') else ''
-        lumi=float(config.get('General','lumi'))
-        weightexpression=config.get('General','weightexpression') if config.has_option('General','weightexpression') else ''
+        lumi = float(config.get('General','lumi'))
 
         self._samplelist = []
-        self.__fileslist=[]
-    
-        # TODO: 08.03.2018: clean up this file !!!!!!
+        self.__fileslist = []
 
-        if samples_path:
-            #!! Store the list of input samples in __fileslist. Reads them directly from the folder defined in PREPin  
-            # print 'T3',T3,'samples_path',samples_path,'t3_path',t3_path
-            if T3:
-                ls = os.popen("ls "+t3_path)
-            else:
-                ls = os.popen("ls "+samples_path)
-        
-      #print 'will start the loop over the lines.'
-      #print ls.read()
-            for line in ls.readlines():
-        #print 'loop over the lines'
-                    if('.root' in line):
-                            truncated_line = line[line.rfind('/')+1:]
-                            _p = findnth(truncated_line,'.',2)
-                            self.__fileslist.append(truncated_line[_p+1:truncated_line.rfind('.')])
-          #print 'added a new line !'
-
-            print '@DEBUG: ' + str(self.__fileslist)
-
-      #Deleteme: Do a loop to check on __fileslist
-      #Start the loop
-      #for i in range(0,len(self.__fileslist)):
-        #print 'Is the ',i ,'th file None ? Answer:', (self.__fileslist[i] == None) 
-
-      #End Deleteme
-
-        run_on_fileList = eval(config.get('Samples_running','run_on_fileList'))#Evaluate run_on_fileList from samples_nosplit.cfg 
-
-  #print 'Is Sample None ? Answer: ', (self.__fileslist == None)
-
-        if( not test_samples(run_on_fileList,self.__fileslist,config.sections()) ): # stop if it finds None as sample
-                sys.exit('@ERROR: Sample == None. Check RunOnFileList flag in section General, the sample_config of the sample directory.')
-
-        #!! Start to loop over the samples. If run_on_files list is true, use the sample from the PREPin folder (_listed_file). 
-  #!! Else use the sample from  samples_nosplit.cfg (_config_entry).
-        #!! The sample description from samples_nosplit.cfg are then applied.
-        for _listed_file,_config_entry in map(None,self.__fileslist,config.sections()):
-            if( run_on_fileList ): 
-                _sample = _listed_file
-                self._list = self.__fileslist
-            else:
-                _sample = _config_entry
-                self._list = config.sections()
-
-            sample = self.checkSplittedSample(_sample)#Check if is splitted and remove the _
-            if not config.has_option(sample,'sampleName'): continue #Check if the sample has the infile parameter. If not skip
-            infile = _sample
-            # print 'infile',infile
-            sampleName = config.get(sample,'sampleName')
+        configSamples = [x for x in config.sections() if config.has_option(x, 'sampleName')]
+        if self.debug:
+            print "DEBUG:", len(configSamples), " samples found."
             
-            check_correspondency(sample,self._list,config)#Check if the sample exists, not fully understood yet                    
-            
-            #Initialize samplecalss element
+        for sample in configSamples:
+            sampleName = config.get(sample, 'sampleName')
             sampleType = config.get(sample,'sampleType')
             cut = config.get(sample, 'cut')
-            if config.has_option(sample, 'specialweight'):
-                specialweight = config.get(sample, 'specialweight')
-            else:
-                specialweight = "1"
 
-            fullname = config.get(sample,'sampleName')
-
+            specialweight = config.get(sample, 'specialweight') if config.has_option(sample, 'specialweight') else "1"
+            fullname = config.get(sample, 'sampleName')
             mergeCachingSize = int(config.get(sample, 'mergeCachingSize')) if config.has_option(sample, 'mergeCachingSize') else -1
 
-      #fill the sample
-            newsample = Sample(sampleName,sampleType)
+            #fill the sample
+            newsample = Sample(sampleName, sampleType)
             newsample.addtreecut = cut
-            newsample.identifier=infile
-            newsample.weightexpression=weightexpression
-            newsample.specialweight=specialweight
-            newsample.lumi=lumi
-            newsample.prefix=newprefix
-            newsample.FullName = fullname
-            
+            newsample.identifier = sample
+            newsample.weightexpression = '' 
+            newsample.specialweight = specialweight
+            newsample.lumi = lumi
+            newsample.prefix = '' 
+            newsample.FullName = sampleName 
+
             if mergeCachingSize > 0:
                 newsample.mergeCachingSize = mergeCachingSize
             if config.has_option(sample, 'skipParts'):
                 newsample.skipParts = eval(config.get(sample, 'skipParts'))
 
-            newsample.idnex = -999999
-            try:
-                newsample.index = eval(config.get(sample, 'sampleIndex'))
-            except:
-                pass
+            newsample.index = eval(config.get(sample, 'sampleIndex')) if config.has_option(sample, 'sampleIndex') else -999999
 
-      #add and fills all the subsamples
-            if eval(config.get(sample,'subsamples')):
+            # add and fill all the subsamples
+            if config.has_option(sample,'subsamples') and eval(config.get(sample,'subsamples')):
                 subgroups = eval((config.get(sample,'sampleGroup')))
                 try:
                     subnames = eval((config.get(sample, 'subnames')))
@@ -169,12 +96,13 @@ class ParseInfo:
                 
                 if sampleType != 'DATA':
                     subxsecs = eval((config.get(sample, 'xSec')))
-                    subsfs = eval((config.get(sample, 'SF')))
+                    subsfs = eval((config.get(sample, 'SF'))) if config.has_option(sample, 'SF') else [1.0]*len(subxsecs)
                 try:
                     subspecialweights = eval((config.get(sample, 'specialweight')))
                     #print 'specialweights=', subspecialweights
                     if len(subspecialweights) < 2:
                         subspecialweights = []
+                        print "\x1b[31mWARNING: specialweight not defined for subsamples but for full sample only!\x1b[0m"
                 except:
                     subspecialweights = []
 
@@ -196,19 +124,15 @@ class ParseInfo:
                         newsubsample.index = newsample.index[i]
 
                     newsamples.append(newsubsample)
-                    #print 'newsubsample:', newsubsample
 
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
             else:
                 if sampleType != 'DATA':
                     newsample.xsec = eval((config.get(sample,'xSec')))    
-                    newsample.sf = eval((config.get(sample, 'SF')))
+                    newsample.sf = eval((config.get(sample, 'SF'))) if config.has_option(sample, 'SF') else 1.0
                 newsample.group = config.get(sample,'sampleGroup')
                 self._samplelist.append(newsample)
-        if self.debug:
-            print "Finished getting infos on all the samples (ParseInfo)"
-            print "=====================================================\n"
 
     def __iter__(self):
         for sample in self._samplelist:
@@ -248,10 +172,20 @@ class ParseInfo:
                                 samples.append(sample)
                                 thenames.append(sample.name)
         return samples
-    
+
+    # return list of all identifiers
     def getSampleIdentifiers(self):
         return list(set([x.identifier for x in self]))
+    
+    # return list of all samples with matching identifier
+    def find(self, identifier, subsamples=False):
+        return [x for x in self if (
+                    ('*' in identifier and fnmatch.fnmatch(x.identifier, identifier)) or 
+                    ('*' not in identifier and x.identifier==identifier)
+                ) and (not x.subsample or subsamples)
+            ]
 
+    # DEPRECATED
     #it checks whether filename is a splitted sample or is a pure samples and returns the file name without the _#
     def checkSplittedSample(self, filename):
             try:
@@ -261,7 +195,7 @@ class ParseInfo:
                     return filename[:filename.rfind('_')]
             except:
                     return filename
-
+    # DEPRECATED
     #bool
     def checkSplittedSampleName(self,filename):
             #print '### CHECKSPLITTEDSAMPLENAME ###',filename
@@ -273,4 +207,4 @@ class ParseInfo:
                             return False
             else:
                     return False
-            
+    
