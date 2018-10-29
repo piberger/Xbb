@@ -215,16 +215,19 @@ class AddCollectionsModule(object):
         self.branchBuffers[branchName] = array.array('i', [default])
         self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName, 'type': 'i'})
 
-    def addVectorBranch(self, branchName, default=0, branchType='d', length=1):
+    def addVectorBranch(self, branchName, default=0, branchType='d', length=1, leaflist=None):
         self.branchBuffers[branchName] = array.array(branchType, [default]*length)
-        self.branches.append({
+        newBranch = {
                 'name': branchName,
                 'formula': self.fillVectorBranch,
                 'type': branchType,
                 'arguments': {'branch': branchName, 'size': length},
                 'length': length,
                 'arrayStyle': True,
-            })
+            }
+        if leaflist:
+            newBranch['leaflist'] = leaflist
+        self.branches.append(newBranch)
 
     def addIntegerVectorBranch(self, branchName, default=0, length=1):
         self.addVectorBranch(branchName, default=default, length=length, branchType='i')

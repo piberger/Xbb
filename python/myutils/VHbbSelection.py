@@ -146,11 +146,7 @@ class VHbbSelection(AddCollectionsModule):
 
             # TRIGGER
             triggerPassed = {k: any([getattr(tree, x) for x in v if hasattr(tree,x)])  for k,v in self.HltPaths.items()}
-            if tree.Vtype == 4 and not triggerPassed['0-lep']: 
-                return False
-            elif (tree.Vtype == 2 or tree.Vtype == 3) and not triggerPassed['1-lep']: 
-                return False
-            elif (tree.Vtype == 0 or tree.Vtype == 1) and not triggerPassed['2-lep']: 
+            if not ((triggerPassed['0-lep'] and "Znn" in self.channels) or (triggerPassed['1-lep'] and "Wln" in self.channels) or (triggerPassed['2-lep'] and  "Zll" in self.channels)):
                 return False
             self.cutFlow[1] += 1
             

@@ -122,7 +122,7 @@ class SampleTree(object):
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
                 # check root file existence
-                if self.fileLocator.exists(rootFileName, attempts=5):
+                if self.fileLocator.exists(rootFileName, attempts=3):
                     remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
