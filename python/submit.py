@@ -733,7 +733,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
                 # skip, if all input files do not exist/are broken
                 #allInputFilesMissing = False
-                allInputFilesMissing = all([not fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+                allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
                 allInputFilesMissing = False
