@@ -10,6 +10,7 @@ from myutils.FileLocator import FileLocator
 import importlib
 from myutils.sampleTree import SampleTree
 import resource
+import uuid
 
 # ntuple processing class (former "sys-step")
 
@@ -63,6 +64,9 @@ class XbbRun:
         self.collections = self.parseCollectionList(self.collections)
         print 'after parsing:', self.collections
 
+        # temorary folder to save the files of this job on the scratch
+        temporaryName = self.sample.identifier + '/' + uuid.uuid4().hex
+
         # input files
         self.subJobs = []
         if opts.join:
@@ -75,7 +79,7 @@ class XbbRun:
                 'inputFileNames': self.filelist,
                 'localInputFileNames': ["{path}/{subfolder}/{filename}".format(path=self.pathIN, subfolder=self.sample.identifier, filename=localFileName) for localFileName in inputFileNamesAfterPrep],
                 'outputFileName': "{path}/{subfolder}/{filename}".format(path=self.pathOUT, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
-                'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
+                'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=temporaryName, filename=inputFileNamesAfterPrep[0]),
                 })
 
         else:
@@ -88,7 +92,7 @@ class XbbRun:
                     'inputFileNames': [inputFileName],
                     'localInputFileNames': ["{path}/{subfolder}/{filename}".format(path=self.pathIN, subfolder=self.sample.identifier, filename=localFileName) for localFileName in inputFileNamesAfterPrep],
                     'outputFileName': "{path}/{subfolder}/{filename}".format(path=self.pathOUT, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
-                    'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
+                    'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=temporaryName, filename=inputFileNamesAfterPrep[0]),
                     })
 
     # lists of single modules can be given instead of a module, "--addCollections Sys.all"
