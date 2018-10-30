@@ -265,8 +265,8 @@ parser.add_option("-b", "--addCollections", dest="addCollections", default="", h
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files", default=False)
 parser.add_option("-J", "--join", dest="join", action="store_true", help="chain all files of the sample", default=False)
 parser.add_option("-d", "--friend", dest="friend", action="store_true", help="create a friend tree", default=False)
-parser.add_option("-I", "--input", dest="inputDir", default="SYSin", help="name of input folder in config, e.g. SYSin")
-parser.add_option("-O", "--output", dest="outputDir", default="SYSout", help="name of output folder in config, e.g. SYSout")
+parser.add_option("-I", "--inputDir", dest="inputDir", default="SYSin", help="name of input folder in config, e.g. SYSin")
+parser.add_option("-O", "--outputDir", dest="outputDir", default="SYSout", help="name of output folder in config, e.g. SYSout")
 
 
 (opts, args) = parser.parse_args(argv)

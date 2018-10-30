@@ -43,8 +43,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                     higgsPropertySyst = "{p}_{s}_{q}".format(p=higgsProperty, s=syst, q=Q)
                     self.addBranch(higgsPropertySyst)
 
-        self.addBranch('hJets_0_pt')
-        self.addBranch('hJets_1_pt')
+        self.addBranch('hJets_0_pt_noFSR')
+        self.addBranch('hJets_1_pt_noFSR')
         self.addBranch('hJets_0_pt_FSRrecovered')
         self.addBranch('hJets_1_pt_FSRrecovered')
         self.addIntegerBranch('nFSRrecovered')

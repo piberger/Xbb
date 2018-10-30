@@ -390,8 +390,8 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
+        posY = 0.88
         if type(self.plotTitle) == list:
-            posY = 0.88
             size = 1.04
             for plotTitleLine in self.plotTitle:
                 self.addObject(self.myText(plotTitleLine, self.plotTextMarginLeft + (0.03 if self.is2D else 0),posY,size))

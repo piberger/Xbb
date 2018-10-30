@@ -36,7 +36,8 @@ class ParseInfo:
                     configFileName = '/'.join(samples_config.split('/')[:-1]) + '/' + configFileName
                     if os.path.isfile(configFileName):
                         config.read(configFileName)
-                print "WARNING (performance): whole config read again, pass the config obect to ParseInfo class to avoid this."
+                if self.debug:
+                    print "WARNING (performance): whole config read again, pass the config obect to ParseInfo class to avoid this."
             else:
                 # old behavior: read only one file, config might be inconsistent
                 config = BetterConfigParser()
