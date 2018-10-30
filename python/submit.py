@@ -707,7 +707,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
             continue
 
         # specified with -N option
-        chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+        chunkSize = 1 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
         # for some samples consisting of many files, force override the -N option!
         if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
