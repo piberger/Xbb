@@ -19,6 +19,7 @@ class NewStackMaker:
     def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
+        self.saveShapes = True
         self.var = var
         self.region = region
         self.configSection = 'Plot:%s'%region
@@ -652,6 +653,20 @@ class NewStackMaker:
                 print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
+        # save shapes
+        if not normalize and self.saveShapes:
+            try:
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
+                shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
+                groupedHistograms[dataGroupName].SetDirectory(shapesFile)
+                mcHistogram.SetDirectory(shapesFile)
+                for histogram in self.histograms:
+                    histogram['histogram'].SetDirectory(shapesFile)
+                shapesFile.Write()
+            except Exception as e:
+                print("ERROR: could not save shapes:", e)
+
+        # print yield tables
         try:
             for histogram in self.histograms:
                 self.histoCounts['weighted'][histogram['name']] = histogram['histogram'].Integral()
