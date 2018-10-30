@@ -207,7 +207,7 @@ class VHbbSelection(AddCollectionsModule):
             elif self._b("isZmm")[0] or self._b("isZee")[0]:
                 j1ptCut = 20.0
                 j2ptCut = 20.0
-                j1Btag = self.btagWP['loose']
+                j1Btag = self.btagWP['none']
             else:
                 return False
             j2Btag = self.btagWP['none'] 
@@ -281,9 +281,8 @@ class VHbbSelection(AddCollectionsModule):
             elif not (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 150.0:
                 return False
             self.cutFlow[6] += 1
-            
-            if (self._b("isZee")[0] or self._b("isZmm")[0]) and (self._b("V_mass")[0] < 75.0 or self._b("V_mass")[0] > 105.0):
-                return False
+
+            # yield in the end
             self.cutFlow[7] += 1
 
         return True
@@ -297,7 +296,7 @@ class VHbbSelection(AddCollectionsModule):
         print "  Jets               ", self.cutFlow[4]
         print "  Vector boson       ", self.cutFlow[5]
         print "  Vpt                ", self.cutFlow[6]
-        print "  Vmass              ", self.cutFlow[7]
+        print "  end                ", self.cutFlow[7]
 
         print "efficiency:", 1.0*self.cutFlow[7]/self.cutFlow[0]
 
