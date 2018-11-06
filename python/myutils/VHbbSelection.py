@@ -20,9 +20,15 @@ class VHbbSelection(AddCollectionsModule):
 
         # settings
         self.electronID = {
-                "2017": "Electron_mvaFall17Iso_WP80",
-                "2016": "Electron_mvaSpring16GP_WP80",
-                }
+                    1: {
+                                "2017": "Electron_mvaFall17Iso_WP80",
+                                "2016": "Electron_mvaSpring16GP_WP80",
+                            },
+                    2: {
+                                "2017": "Electron_mvaFall17Iso_WP90",
+                                "2016": "Electron_mvaSpring16GP_WP90",
+                            }
+                    }
         if self.year == "2016":
             self.metFilters = ["Flag_goodVertices", "Flag_globalTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter"]
         elif self.year == "2017":
@@ -71,7 +77,7 @@ class VHbbSelection(AddCollectionsModule):
     def HighestPtGoodElectronsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton):
         indices = []
         for i in range(tree.nElectron):
-            passEleIDCut = getattr(tree, self.electronID[self.year])[i]
+            passEleIDCut = getattr(tree, self.electronID[1 if isOneLepton else 2][self.year])[i]
             if abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt and tree.Electron_pfRelIso03_all[i] < max_rel_iso and passEleIDCut:
                 if len(indices) < 1:
                     indices.append(i)
@@ -254,8 +260,8 @@ class VHbbSelection(AddCollectionsModule):
                     sel_lepton_phi  = tree.Muon_phi[i1]
                     sel_lepton_mass = tree.Muon_mass[i1]
                 self._b("lepMetDPhi")[0] = abs(ROOT.TVector2.Phi_mpi_pi(sel_lepton_phi - tree.MET_Phi))
-                if self._b("lepMetDPhi")[0] > 2.0:
-                    return False
+                #if self._b("lepMetDPhi")[0] > 2.0:
+                #    return False
 
                 MET = ROOT.TLorentzVector()
                 Lep = ROOT.TLorentzVector()
