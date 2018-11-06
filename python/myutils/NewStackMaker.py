@@ -6,6 +6,7 @@ import os
 import array
 import time
 import subprocess
+import math
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -658,10 +659,40 @@ class NewStackMaker:
             try:
                 outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
-                groupedHistograms[dataGroupName].SetDirectory(shapesFile)
+                if dataGroupName and dataGroupName in groupedHistograms:
+                    groupedHistograms[dataGroupName].SetDirectory(shapesFile)
                 mcHistogram.SetDirectory(shapesFile)
                 for histogram in self.histograms:
                     histogram['histogram'].SetDirectory(shapesFile)
+
+                try:
+                    signals = self.config.get('Plot_general','allSIG') 
+                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] not in signals], outputName='summedBackgroundHistograms')
+                    signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
+                    backgroundHistogram.SetDirectory(shapesFile)
+                    signalHistogram.SetDirectory(shapesFile)
+                    
+                    sspb_sum = 0.0
+                    q_a_sum = 0.0
+                    s_sum = 0.0
+                    b_sum = 0.0
+                    for i in range(backgroundHistogram.GetXaxis().GetNbins()):
+                        s = signalHistogram.GetBinContent(1+i)
+                        b = backgroundHistogram.GetBinContent(1+i)
+                        sspb = s/math.sqrt(s+b) if s+b > 0 else 0
+                        sspb_sum += sspb*sspb
+                        q_a = math.sqrt(2*((s+b)*math.log(1+s/b)-s)) if b>0 else 0
+                        q_a_sum += q_a*q_a
+                        s_sum += s
+                        b_sum += b
+                        print("{s: <12.3f}{b: <12.3f}{a: <12.3f}{q: <12.3f}".format(s=s, b=b, a=sspb, q=q_a))
+                    print("-"*48)
+                    q_a_sum = math.sqrt(q_a_sum)
+                    sspb_sum = math.sqrt(sspb_sum)
+                    print("{s: <12.3f}{b: <12.3f}{a: <12.3f}{q: <12.3f}".format(s=s_sum, b=b_sum, a=sspb_sum, q=q_a_sum))
+
+                except Exception as e:
+                    print("EXCEPTION:", e)
                 shapesFile.Write()
             except Exception as e:
                 print("ERROR: could not save shapes:", e)
