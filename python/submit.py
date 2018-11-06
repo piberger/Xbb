@@ -20,6 +20,7 @@ from myutils import BetterConfigParser, ParseInfo
 from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
+from myutils.BranchList import BranchList
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -998,6 +999,60 @@ if opts.task.startswith('runplot'):
                     })
                 jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
                 submit(jobName, jobDict)
+
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+if opts.task.startswith('dcyields'):
+    # get list of all sample names used in DC step
+    sampleNames = []
+    regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
+    for region in regions:
+        for sampleType in ['data']:
+            sampleNames += eval(config.get('dc:%s'%region, sampleType))
+    sampleNames = list(set(sampleNames))
+    
+    # get samples info
+    sampleFolder = config.get('Directories', 'dcSamples')
+    info = ParseInfo(samplesinfo, sampleFolder)
+    samples = info.get_samples(sampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+        sampleObject = [x for x in samples if x.identifier == sampleIdentifier]
+        if len(sampleObject) != 1:
+            print "ERROR: samples missing or not unique!!"
+            continue
+        sample = sampleObject[0]
+        sampleTree = SampleTree({
+                'name': sampleIdentifier,
+                'folder': sampleFolder,
+            }, config=config)
+        branchList = BranchList(sample.subcut) 
+        cutDict = {}
+        for region in regions:
+            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') )
+            branchList.addCut(cutDict[region])
+            sampleTree.addFormula(cutDict[region])
+        branchList.addCut(config.get('Weights', 'weightF'))
+        branchList.addCut(eval(config.get('Branches', 'keep_branches')))
+        branchesToKeep = branchList.getListOfBranches()
+
+        sampleTree.enableBranches(branchesToKeep)
+        
+        eventsPassed = {x:0 for x,v in cutDict.items()}
+        for event in sampleTree:
+            for region in regions:
+                if sampleTree.evaluate(cutDict[region]):
+                    eventsPassed[region] += 1
+        print "events passed:", eventsPassed
+
+
 
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
