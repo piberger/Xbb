@@ -127,6 +127,10 @@ except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
+configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
+if opts.ftag == '':
+    opts.ftag = opts.task
+
 if debugPrintOUts:
     print 'configs', configs
     print 'opts.ftag', opts.ftag
@@ -139,7 +143,6 @@ config.read(configs)
 # COPY CONFIG files to log output folder
 # TODO: clean up
 # ------------------------------------------------------------------------------
-configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
 combinedConfigFileName = None
 if configurationNeeded:
     tagDir = pathconfig.get('Directories', 'tagDir')
@@ -1194,6 +1197,10 @@ if opts.task.startswith('rundc'):
                         print('INFO: chunk size is ', chunkSize)
                         print('INFO: number of files is ', nFiles)
                         print('INFO: number of jobs is ', nJobs)
+
+                    if nJobs < 1:
+                        print '\x1b[31mERROR: not cached:', sampleIdentifier, ", run cachedc again\x1b[0m"
+                        raise Exception("NotCached")
 
                     for chunkNumber in range(1, nJobs+1):
                         jobDict = repDict.copy()
