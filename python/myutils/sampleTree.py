@@ -826,7 +826,7 @@ class SampleTree(object):
             if self.callbacks and 'event' in self.callbacks:
                 # if callbacks return false, skip event!
                 callbackResults = [fcn(event) for fcn in self.callbacks['event']]
-                if not all(callbackResults):
+                if any(x==False for x in callbackResults):
                     continue
 
             # fill branches
