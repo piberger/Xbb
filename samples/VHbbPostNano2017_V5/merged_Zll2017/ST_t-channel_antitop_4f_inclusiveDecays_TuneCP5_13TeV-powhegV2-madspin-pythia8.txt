@@ -1,0 +1,1 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/19406b312b7df880f6379a5256c7340189629c17d310affe92cf3d90/000000_000000/0000/tree_0.root

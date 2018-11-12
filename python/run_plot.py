@@ -113,7 +113,8 @@ class PlotHelper(object):
         # draw
         for var in self.vars:
             self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
-            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
+            if self.config.has_option('Plot_general', 'drawNormalizedPlots') and eval(self.config.get('Plot_general', 'drawNormalizedPlots')):
+                self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
 
         return self
 

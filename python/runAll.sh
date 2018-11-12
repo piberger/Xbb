@@ -59,6 +59,12 @@ join="0"
 noretry="0"
 while [ $# -gt 0 ]; do
   case "$1" in
+    --inputDir=*)
+      inputDir="${1#*=}"
+      ;;
+    --outputDir=*)
+      outputDir="${1#*=}"
+      ;;
     --trainingRegions=*)
       trainingRegions="${1#*=}"
       ;;
@@ -423,6 +429,12 @@ if [ "$runCommand" ]; then
         runCommand="${runCommand} --config ${configFile}"
     else
         runCommand="${runCommand} ${config_filenames[@]}"
+    fi
+    if [ "$inputDir" ]; then
+        runCommand="${runCommand} --inputDir ${inputDir}"
+    fi
+    if [ "$outputDir" ]; then
+        runCommand="${runCommand} --outputDir ${outputDir}"
     fi
     
     

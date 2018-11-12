@@ -20,9 +20,15 @@ class VHbbSelection(AddCollectionsModule):
 
         # settings
         self.electronID = {
-                "2017": "Electron_mvaFall17Iso_WP80",
-                "2016": "Electron_mvaSpring16GP_WP80",
-                }
+                    1: {
+                                "2017": "Electron_mvaFall17Iso_WP80",
+                                "2016": "Electron_mvaSpring16GP_WP80",
+                            },
+                    2: {
+                                "2017": "Electron_mvaFall17Iso_WP90",
+                                "2016": "Electron_mvaSpring16GP_WP90",
+                            }
+                    }
         if self.year == "2016":
             self.metFilters = ["Flag_goodVertices", "Flag_globalTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter"]
         elif self.year == "2017":
@@ -71,7 +77,7 @@ class VHbbSelection(AddCollectionsModule):
     def HighestPtGoodElectronsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton):
         indices = []
         for i in range(tree.nElectron):
-            passEleIDCut = getattr(tree, self.electronID[self.year])[i]
+            passEleIDCut = getattr(tree, self.electronID[1 if isOneLepton else 2][self.year])[i]
             if abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt and tree.Electron_pfRelIso03_all[i] < max_rel_iso and passEleIDCut:
                 if len(indices) < 1:
                     indices.append(i)
@@ -146,11 +152,7 @@ class VHbbSelection(AddCollectionsModule):
 
             # TRIGGER
             triggerPassed = {k: any([getattr(tree, x) for x in v if hasattr(tree,x)])  for k,v in self.HltPaths.items()}
-            if tree.Vtype == 4 and not triggerPassed['0-lep']: 
-                return False
-            elif (tree.Vtype == 2 or tree.Vtype == 3) and not triggerPassed['1-lep']: 
-                return False
-            elif (tree.Vtype == 0 or tree.Vtype == 1) and not triggerPassed['2-lep']: 
+            if not ((triggerPassed['0-lep'] and "Znn" in self.channels) or (triggerPassed['1-lep'] and "Wln" in self.channels) or (triggerPassed['2-lep'] and  "Zll" in self.channels)):
                 return False
             self.cutFlow[1] += 1
             
@@ -211,7 +213,7 @@ class VHbbSelection(AddCollectionsModule):
             elif self._b("isZmm")[0] or self._b("isZee")[0]:
                 j1ptCut = 20.0
                 j2ptCut = 20.0
-                j1Btag = self.btagWP['loose']
+                j1Btag = self.btagWP['none']
             else:
                 return False
             j2Btag = self.btagWP['none'] 
@@ -258,8 +260,8 @@ class VHbbSelection(AddCollectionsModule):
                     sel_lepton_phi  = tree.Muon_phi[i1]
                     sel_lepton_mass = tree.Muon_mass[i1]
                 self._b("lepMetDPhi")[0] = abs(ROOT.TVector2.Phi_mpi_pi(sel_lepton_phi - tree.MET_Phi))
-                if self._b("lepMetDPhi")[0] > 2.0:
-                    return False
+                #if self._b("lepMetDPhi")[0] > 2.0:
+                #    return False
 
                 MET = ROOT.TLorentzVector()
                 Lep = ROOT.TLorentzVector()
@@ -285,9 +287,8 @@ class VHbbSelection(AddCollectionsModule):
             elif not (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 150.0:
                 return False
             self.cutFlow[6] += 1
-            
-            if (self._b("isZee")[0] or self._b("isZmm")[0]) and (self._b("V_mass")[0] < 75.0 or self._b("V_mass")[0] > 105.0):
-                return False
+
+            # yield in the end
             self.cutFlow[7] += 1
 
         return True
@@ -301,7 +302,7 @@ class VHbbSelection(AddCollectionsModule):
         print "  Jets               ", self.cutFlow[4]
         print "  Vector boson       ", self.cutFlow[5]
         print "  Vpt                ", self.cutFlow[6]
-        print "  Vmass              ", self.cutFlow[7]
+        print "  end                ", self.cutFlow[7]
 
         print "efficiency:", 1.0*self.cutFlow[7]/self.cutFlow[0]
 

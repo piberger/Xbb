@@ -20,6 +20,7 @@ from myutils import BetterConfigParser, ParseInfo
 from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
+from myutils.BranchList import BranchList
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -44,6 +45,7 @@ parser.add_option("-f", "--force", dest="force", action="store_true", default=Fa
 parser.add_option("-g", "--forceN", dest="forceN", action="store_true", default=False,
                       help="Force usage of -N parameter")
 parser.add_option("-i", "--interactive", dest="interactive", action="store_true", default=False, help="Interactive mode")
+parser.add_option("--input", dest="input", default=None, help="input")
 parser.add_option("-j", "--join", dest="join", action="store_true", default=False, help="(experimental) chain all files per sample together in sys step")
 parser.add_option("-J", "--task", dest="task", default="",
                       help="Task to be done, i.e. 'dc' for Datacards, 'prep' for preparation of Trees, 'plot' to produce plots or 'eval' to write the MVA output or 'sys' to write regression and systematics (or 'syseval' for both). ")
@@ -125,6 +127,10 @@ except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
+configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
+if opts.ftag == '':
+    opts.ftag = opts.task
+
 if debugPrintOUts:
     print 'configs', configs
     print 'opts.ftag', opts.ftag
@@ -137,7 +143,6 @@ config.read(configs)
 # COPY CONFIG files to log output folder
 # TODO: clean up
 # ------------------------------------------------------------------------------
-configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
 combinedConfigFileName = None
 if configurationNeeded:
     tagDir = pathconfig.get('Directories', 'tagDir')
@@ -539,8 +544,10 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 if opts.task == 'hadd':
     from hadd import PartialFileMerger
 
-    inputPath = config.get("Directories", "HADDin")
-    outputPath = config.get("Directories", "HADDout")
+    inputDir          = opts.input if opts.input else "HADDin"
+    outputDir         = opts.output if opts.output else "HADDout"
+    inputPath = config.get("Directories", inputDir)
+    outputPath = config.get("Directories", outputDir) 
 
     samplefiles = config.get('Directories', 'samplefiles')
     info = ParseInfo(samplesinfo, inputPath)
@@ -596,6 +603,8 @@ if opts.task == 'hadd':
                                 'sampleIdentifier': sampleIdentifier,
                                 'fileList': FileList.compress(fileNames),
                                 'chunkNumber': i,
+                                'inputDir': inputDir,
+                                'outputDir': outputDir,
                             },
                             'batch': opts.task + '_' + sampleIdentifier,
                             })
@@ -624,7 +633,7 @@ if opts.task == 'hadd':
 if opts.task == 'count':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
-    pathIN = config.get("Directories", "SYSin")
+    pathIN = config.get("Directories", opts.input if opts.input else "SYSin")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samplesinfo, pathIN)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
@@ -658,7 +667,7 @@ if opts.task == 'count':
         numberOfTrees = len(sampleFileList)
         totalEvents = offset
         eventsPerTree = totalEvents*1.0/numberOfTrees
-        chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree)
+        chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
     for sampleIdentifier, chunkSize in chunkSizes:
@@ -675,13 +684,14 @@ if opts.task == 'count':
 if opts.task == 'sysnew' or opts.task == 'checksysnew':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
-    prepOUT = config.get("Directories", "PREPout")
-    path = config.get("Directories", "SYSin")
-    pathOUT = config.get("Directories", "SYSout")
-    samplefiles = config.get('Directories','samplefiles')
-    info = ParseInfo(samplesinfo, path)
+    prepOUT           = config.get("Directories", "PREPout")
+    inputDir          = opts.input if opts.input else "SYSin"
+    outputDir         = opts.output if opts.output else "SYSout"
+    path              = config.get("Directories", inputDir) 
+    pathOUT           = config.get("Directories", outputDir)
+    samplefiles       = config.get('Directories','samplefiles')
+    info              = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
-
 
     # check for empty list of collections to add
     addCollections = opts.addCollections
@@ -701,7 +711,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
             continue
 
         # specified with -N option
-        chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+        chunkSize = 1 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
         # for some samples consisting of many files, force override the -N option!
         if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
@@ -733,7 +743,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
                 # skip, if all input files do not exist/are broken
                 #allInputFilesMissing = False
-                allInputFilesMissing = all([not fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+                allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
                 allInputFilesMissing = False
@@ -745,6 +755,8 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
                         'addCollections': addCollections,
+                        'inputDir': inputDir,
+                        'outputDir': outputDir,
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
                     })
@@ -992,6 +1004,60 @@ if opts.task.startswith('runplot'):
                 submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+if opts.task.startswith('dcyields'):
+    # get list of all sample names used in DC step
+    sampleNames = []
+    regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
+    for region in regions:
+        for sampleType in ['data']:
+            sampleNames += eval(config.get('dc:%s'%region, sampleType))
+    sampleNames = list(set(sampleNames))
+    
+    # get samples info
+    sampleFolder = config.get('Directories', 'dcSamples')
+    info = ParseInfo(samplesinfo, sampleFolder)
+    samples = info.get_samples(sampleNames)
+
+    # find all sample identifiers that have to be cached, if given list is empty, run it on all
+    sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
+    print "sample identifiers: (", len(sampleIdentifiers), ")"
+    for sampleIdentifier in sampleIdentifiers:
+        print " >", sampleIdentifier
+    
+    # submit jobs, 1 to n separate jobs per sample
+    for sampleIdentifier in sampleIdentifiers:
+        sampleObject = [x for x in samples if x.identifier == sampleIdentifier]
+        if len(sampleObject) != 1:
+            print "ERROR: samples missing or not unique!!"
+            continue
+        sample = sampleObject[0]
+        sampleTree = SampleTree({
+                'name': sampleIdentifier,
+                'folder': sampleFolder,
+            }, config=config)
+        branchList = BranchList(sample.subcut) 
+        cutDict = {}
+        for region in regions:
+            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') )
+            branchList.addCut(cutDict[region])
+            sampleTree.addFormula(cutDict[region])
+        branchList.addCut(config.get('Weights', 'weightF'))
+        branchList.addCut(eval(config.get('Branches', 'keep_branches')))
+        branchesToKeep = branchList.getListOfBranches()
+
+        sampleTree.enableBranches(branchesToKeep)
+        
+        eventsPassed = {x:0 for x,v in cutDict.items()}
+        for event in sampleTree:
+            for region in regions:
+                if sampleTree.evaluate(cutDict[region]):
+                    eventsPassed[region] += 1
+        print "events passed:", eventsPassed
+
+
+
+# -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
 # variations of systematics. 
 # -----------------------------------------------------------------------------
@@ -1131,6 +1197,10 @@ if opts.task.startswith('rundc'):
                         print('INFO: chunk size is ', chunkSize)
                         print('INFO: number of files is ', nFiles)
                         print('INFO: number of jobs is ', nJobs)
+
+                    if nJobs < 1:
+                        print '\x1b[31mERROR: not cached:', sampleIdentifier, ", run cachedc again\x1b[0m"
+                        raise Exception("NotCached")
 
                     for chunkNumber in range(1, nJobs+1):
                         jobDict = repDict.copy()
@@ -1277,6 +1347,28 @@ if opts.task == 'summary':
     print "-"*80
     print " pre-selection ('prep')"
     print "-"*80
+    
+    _configs = config.get('Configuration', 'List').split(" ")
+    configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
+    cumulativeConfig = BetterConfigParser()
+    cumulativeConfig2 = BetterConfigParser()
+
+    for addConfig in configs:
+        print "CONFIG:", addConfig
+        cumulativeConfig2.read(addConfig)
+
+        for s in cumulativeConfig2.sections():
+            for v in cumulativeConfig2.options(s):
+                try:
+                    if cumulativeConfig.has_section(s) and cumulativeConfig.has_option(s, v) and cumulativeConfig.get(s, v) != cumulativeConfig2.get(s, v):
+                        print "\x1b[31mWARNING: overwrite config '", s, "' -> '", v , "'"
+                        print " from:", cumulativeConfig.get(s, v)
+                        print "   to:", cumulativeConfig2.get(s, v)
+                        print "\x1b[0m"
+                except:
+                    pass
+        cumulativeConfig.read(addConfig)
+
 
     cutDict = {}
     samplesinfo=config.get('Directories','samplesinfo')
@@ -1371,6 +1463,7 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
    
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
+    completely_empty_samples_list = []
     nFiles = 0
     nFilesDone = 0
     for folder in foldersToCheck:
@@ -1388,8 +1481,11 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
                     if not x:
                         failedJobs.append(batchSystem.get_single_job_name(jobPrefix, sampleIdentifier, number, jobSuffix))
                     statusBar = statusBar + ('\x1b[42m+\x1b[0m' if x else '\x1b[41mX\x1b[0m')
-            if len([x for x,n in sampleStatus if x]) != len(sampleStatus):
+            nSamplesGood = len([x for x,n in sampleStatus if x])
+            if nSamplesGood != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
+            if nSamplesGood == 0:
+                completely_empty_samples_list.append(sampleIdentifier)
             if len(sampleStatus) < 1:
                 sampleShort = "\x1b[31m" + sampleShort + "\x1b[0m"
             elif len([x for x,n in sampleStatus if x])==len(sampleStatus):
@@ -1400,6 +1496,8 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
         print "total: %d/%d"%(nFilesDone, nFiles)
     if len(missing_samples_list) > 0:
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
+    if len(completely_empty_samples_list) > 0:
+        print '\nTo submit empty samples, used option -S', ','.join(completely_empty_samples_list)
     if len(failedJobs) > 0:
         print "-"*20
         print "failed jobs (%d):"%len(failedJobs)

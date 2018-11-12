@@ -122,7 +122,7 @@ class SampleTree(object):
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
                 # check root file existence
-                if self.fileLocator.exists(rootFileName, attempts=5):
+                if self.fileLocator.exists(rootFileName, attempts=3):
                     remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
@@ -826,7 +826,7 @@ class SampleTree(object):
             if self.callbacks and 'event' in self.callbacks:
                 # if callbacks return false, skip event!
                 callbackResults = [fcn(event) for fcn in self.callbacks['event']]
-                if not all(callbackResults):
+                if any(x==False for x in callbackResults):
                     continue
 
             # fill branches

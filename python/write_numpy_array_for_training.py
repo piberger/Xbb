@@ -149,14 +149,18 @@ class SampleTreesToNumpyConverter(object):
                             sampleTree.addFormula(syst['U'])
                             sampleTree.addFormula(syst['D'])
 
-                        
+                        useSpecialWeight = self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')) 
+                        if useSpecialWeight:
+                            sampleTree.addFormula(sample.specialweight)
+
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
                             for j, feature in enumerate(features):
                                 inputData[i, j] = sampleTree.evaluate(feature)
                             # total weight comes from weightF (btag, lepton sf, ...) and treeScale to scale MC to x-section
                             eventWeight = sampleTree.evaluate(weightF)
-                            totalWeight = treeScale * eventWeight 
+                            specialWeight =  sampleTree.evaluate(sample.specialweight) if useSpecialWeight else 1.0 
+                            totalWeight = treeScale * eventWeight * specialWeight 
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
                             
@@ -172,7 +176,7 @@ class SampleTreesToNumpyConverter(object):
                             totalDelta = np.sqrt(sum(deltas))
 
                             # convert to absolute error on total event weight
-                            weightListSYStotal[datasetName].append(treeScale * totalDelta)
+                            weightListSYStotal[datasetName].append(treeScale * totalDelta * specialWeight)
 
                             # fill systematics 
                             #for k, feature_s in features_sys.iteritems():
@@ -233,6 +237,7 @@ class SampleTreesToNumpyConverter(object):
         baseName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '_' + datetime.datetime.now().strftime("%y%m%d")
         numpyOutputFileName = baseName + '.dmpz'
         hdf5OutputFileName = baseName + '.h5'
+        print("INFO: saving output...")
         
         try:
             self.saveAsPickledNumpy(numpyOutputFileName)
@@ -243,6 +248,7 @@ class SampleTreesToNumpyConverter(object):
             self.saveAsHDF5(hdf5OutputFileName)
         except Exception as e:
             print(e)
+        print("INFO: done.")
 
     def saveAsPickledNumpy(self, outputFileName):
         with gzip.open(outputFileName, 'wb') as outputFile:
