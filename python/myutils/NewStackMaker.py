@@ -57,6 +57,12 @@ class NewStackMaker:
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
             self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+            if self.config.has_option(self.configSection, 'additionalText'):
+                aText = eval(self.config.get(self.configSection, 'additionalText'))
+                if type(aText) == list:
+                    self.additionalTextLines += aText
+                else:
+                    self.additionalTextLines.append(aText)
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -170,13 +176,13 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # create histogram out of a tree
     # ------------------------------------------------------------------------------
-    def addSampleTree(self, sample, sampleTree, groupName):
+    def addSampleTree(self, sample, sampleTree, groupName, cut='1'):
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
 
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
-        sampleHistogram = histoMaker.getHistogram()
+        sampleHistogram = histoMaker.getHistogram(cut)
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
@@ -429,7 +435,7 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
+        #self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
 
         try:
             for labelName, label in self.plotLabels.iteritems():
@@ -622,6 +628,7 @@ class NewStackMaker:
 
         # draw ratio plot
         theErrorGraph = None
+        mcHistogram   = None
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
@@ -649,13 +656,15 @@ class NewStackMaker:
             outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
             c.SaveAs(outputFileName)
             if os.path.isfile(outputFileName):
-                print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+                print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
-                print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+                print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
         # save shapes
         if not normalize and self.saveShapes:
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+            print("MC:", mcHistogram)
             try:
                 outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")

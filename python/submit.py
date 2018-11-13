@@ -61,6 +61,7 @@ parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine 
 parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
+parser.add_option("--set", dest="setOptions", help="set config option. --set='Section.option:value'")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
@@ -168,11 +169,28 @@ if configurationNeeded:
 
     # new behavior: write special .ini file, which is not under version control and is always recreated again
     with open("{tag}config/volatile.ini".format(tag=opts.tag), "w") as outputFile:
+        vConfig = BetterConfigParser()
+        vConfig.add_section('Directories')
+        vConfig.set('Directories', 'plotpath', DirStruct['plotpath'])
+        vConfig.set('Directories', 'logpath', DirStruct['logpath'])
+        vConfig.set('Directories', 'limits', DirStruct['limitpath'])
+
+        if opts.setOptions:
+            for optValue in opts.setOptions.split("|"):
+                if ':=' in optValue:
+                    opt = optValue.split(':=')[0]
+                    value = optValue.split(':=')[1]
+                else:
+                    opt = optValue.split(':')[0]
+                    value = optValue.split(':')[1]
+                if not vConfig.has_section(opt.split('.')[0]):
+                    vConfig.add_section(opt.split('.')[0])
+                vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
+                print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
-        outputFile.write('[Directories]\n')
-        outputFile.write('plotpath: %s\n'%DirStruct['plotpath'])
-        outputFile.write('logpath: %s\n'%DirStruct['logpath'])
-        outputFile.write('limits: %s\n'%DirStruct['limitpath'])
+        vConfig.write(outputFile)
+
     config.read("{tag}config/volatile.ini".format(tag=opts.tag))
 
     # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!)
@@ -880,11 +898,13 @@ if opts.task.startswith('runtraining'):
         jobDict = repDict.copy()
         jobDict.update({
             'arguments': {'trainingRegions': trainingRegion}, 
-            #'queue': submitQueueDict['runtraining']
             })
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# DNN: DNN training 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('dnn'):
     # training regions
     trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
@@ -896,7 +916,6 @@ if opts.task.startswith('dnn'):
             jobDict = repDict.copy()
             jobDict.update({
                 'arguments': {'trainingRegions': h5file}, 
-                #'queue': submitQueueDict['runtraining']
                 })
             jobName = 'dnn_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
             submit(jobName, jobDict)
@@ -973,6 +992,17 @@ if opts.task.startswith('cacheplot'):
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
+    # if only a subset of samples is plotted
+    if len(opts.samples.strip()) > 0:
+        # get samples info
+        info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+        sampleNames = eval(config.get('Plot_general', 'samples'))
+        dataSampleNames = eval(config.get('Plot_general', 'Data'))
+        samples = info.get_samples(sampleNames + dataSampleNames)
+        sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
+    else:
+        sampleIdentifiers = None
+
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
     if len(opts.vars.strip()) > 0:
         plotVars = opts.vars.strip().split(',')
@@ -1000,10 +1030,13 @@ if opts.task.startswith('runplot'):
                             'vars': ','.join(plotVarList),
                         }
                     })
+                if sampleIdentifiers:
+                    jobDict['arguments']['sampleIdentifier'] = ','.join(sampleIdentifiers)
                 jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
                 submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
+# DCYIELDS: print yields table for data in datacar regions, without caching
 # -----------------------------------------------------------------------------
 if opts.task.startswith('dcyields'):
     # get list of all sample names used in DC step
@@ -1054,8 +1087,6 @@ if opts.task.startswith('dcyields'):
                 if sampleTree.evaluate(cutDict[region]):
                     eventsPassed[region] += 1
         print "events passed:", eventsPassed
-
-
 
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
