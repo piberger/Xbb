@@ -128,7 +128,7 @@ except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
-configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
+configurationNeeded = not opts.task.startswith('status') and not opts.task.startswith('checklogs')
 if opts.ftag == '':
     opts.ftag = opts.task
 
@@ -175,18 +175,35 @@ if configurationNeeded:
         vConfig.set('Directories', 'logpath', DirStruct['logpath'])
         vConfig.set('Directories', 'limits', DirStruct['limitpath'])
 
+        # replace arbitrary options with --set command line argument:
+        # e.g. --set='Plot_general.var:=<!Plot_general|vars_reduced!>'
+        # this will set var in [Plot_general] to: <!Plot_general|vars_reduced!>
+        # to set multiple options, use ; to separate, e.g. --set='Plot_general.var:=Hmass;Plot_general.saveDataHistograms:=True'
         if opts.setOptions:
-            for optValue in opts.setOptions.split("|"):
-                if ':=' in optValue:
-                    opt = optValue.split(':=')[0]
-                    value = optValue.split(':=')[1]
-                else:
-                    opt = optValue.split(':')[0]
-                    value = optValue.split(':')[1]
-                if not vConfig.has_section(opt.split('.')[0]):
-                    vConfig.add_section(opt.split('.')[0])
-                vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
-                print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+            # escaping of semicolon
+            opts.setOptions = opts.setOptions.replace('\;', '##SEMICOLON##')
+            for optValue in opts.setOptions.split(";"):
+                optValue = optValue.replace('##SEMICOLON##', ';')
+                syntaxOk = True
+                try:
+                    if ':=' in optValue:
+                        opt = optValue.split(':=')[0]
+                        value = optValue.split(':=')[1]
+                    else:
+                        opt = optValue.split(':')[0]
+                        value = optValue.split(':')[1]
+                except Exception as e:
+                    print "ERROR:",e
+                    print "ERROR: syntax error in:", optValue
+                    print "ERROR: use ; to separate options and use \; to escape semicolons in case they are inside the value. Use := for assignment."
+                    syntaxOk = False
+                    raise
+
+                if syntaxOk:
+                    if not vConfig.has_section(opt.split('.')[0]):
+                        vConfig.add_section(opt.split('.')[0])
+                    vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
+                    print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
 
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
         vConfig.write(outputFile)
