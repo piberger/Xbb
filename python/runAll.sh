@@ -279,7 +279,7 @@ elif [ $task = "runtraining_scikit" ]; then
     runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions}"
 
 elif [ $task = "dnn" ]; then
-    runCommand="python tfZllDNN/train.py -c tfZllDNN/config.cfg -i ${trainingRegions}"
+    runCommand="python tfZllDNN/train.py -c tfZllDNN/config.cfg -i ${trainingRegions} -l"
     config_filenames=()
     unset configFile
 
