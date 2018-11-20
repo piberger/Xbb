@@ -113,11 +113,11 @@ class BatchSystem(object):
             batchJob = BatchJob(repDict['name'], command, self.getLogPaths(repDict)['out'])
             batchJob.setProperty('repDict', repDict)
 
-            if self.interactive:
-                print("SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)")
+            if self.interactive or self.runLocally:
                 if self.runLocally:
                     answer = 'l'
                 else:
+                    print("SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)")
                     answer = raw_input().strip()
                 if answer.lower() in ['no', 'n']:
                     self.nJobsSkipped += 1

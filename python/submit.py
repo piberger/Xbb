@@ -1033,11 +1033,13 @@ if opts.task.startswith('runplot'):
         plotVarChunks = [plotVars]
 
     # submit all the plot regions as separate jobs
+    nRegionsMatched = 0
     for region in regions:
 
         # if --regions is given, only plot those regions
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
+            nRegionsMatched += 1
             for j, plotVarList in enumerate(plotVarChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
@@ -1051,6 +1053,8 @@ if opts.task.startswith('runplot'):
                     jobDict['arguments']['sampleIdentifier'] = ','.join(sampleIdentifiers)
                 jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
                 submit(jobName, jobDict)
+    if nRegionsMatched < 1:
+        print "WARNING: no plot regions found - nothing to do."
 
 # -----------------------------------------------------------------------------
 # DCYIELDS: print yields table for data in datacar regions, without caching
