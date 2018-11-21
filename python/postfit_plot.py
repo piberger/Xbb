@@ -127,7 +127,7 @@ if __name__ == "__main__":
                           help="configuration file")
     parser.add_option("-r","--regions", dest="regions", default='',
                           help="cut region identifiers, separated by comma")
-    parser.add_option("-t","--type", dest="fitType", default='shapes_prefit',
+    parser.add_option("-t","--type", dest="fitType", default='',
                           help="shapes_prefit, shapes_fit_b, shapes_fit_s")
 
     (opts, args) = parser.parse_args(argv)
@@ -138,6 +138,12 @@ if __name__ == "__main__":
     from myutils import BetterConfigParser, mvainfo, ParseInfo
     config = BetterConfigParser()
     config.read(opts.config)
+
+    if len(opts.fitType) < 1:
+        if config.has_option('Fit','FitType'):
+            opts.fitType = config.get('Fit','FitType')
+        else:
+            opts.fitType = "shapes_prefit"
 
     # run plotter
     if len(opts.regions) < 1:
