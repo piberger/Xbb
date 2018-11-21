@@ -30,7 +30,7 @@ class NewStackMaker:
         self.forceLog = None
         self.normalize = eval(self.config.get(self.configSection, 'Normalize'))
         self.log = eval(self.config.get(self.configSection, 'log'))
-        self.AddErrors = False
+        self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
         if self.config.has_option('plotDef:%s'%var, 'log'):
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
         self.blind = eval(self.config.get(self.configSection,'blind'))
@@ -335,10 +335,7 @@ class NewStackMaker:
         self.m_one_line.SetLineStyle(ROOT.kSolid)
         self.m_one_line.Draw("Same")
 
-        if not self.AddErrors:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat.)","f")
-        else:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat. + syst.)","f")
+        self.legends['ratio'].AddEntry(self.ratioError, self.mcUncertaintyLegend,"f")
         self.legends['ratio'].Draw() 
         if not self.blind:
             self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
@@ -382,10 +379,7 @@ class NewStackMaker:
             elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
         if theErrorGraph: 
-            if not self.AddErrors:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
-            else:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.+ syst.)", "fl")
+            self.legends['right'].AddEntry(theErrorGraph, self.mcUncertaintyLegend, "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
         self.legends['left'].SetFillColor(0)
