@@ -5,15 +5,16 @@ import sys
 print 'DEBUG'
 
 
-path = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zll2016Nano_V4/rundc-v3/Limits'
+path = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/Zvv_Wlv_dc/fit2/'
 dirname = 'remove1'
 
 
-remove_sys = ['VV','ZH_hbb']
+#remove_sys = ['VV','ZH_hbb']
+remove_sys = ['all']
 
-remove_sys_dic = {
-        'CMS_vhbb_puWeight':remove_sys,
-        }
+#remove_sys_dic = {
+#        'CMS_vhbb_puWeight':remove_sys,
+#        }
 
 #some other example below
 #remove_sys_dic = {
@@ -43,6 +44,12 @@ remove_sys_dic = {
 #        'CMS_vhbb_scale_j_TimePtEta_13TeV':remove_sys,
 #        'CMS_vhbb_scale_j_FlavorQCD_13TeV':remove_sys,
 #        }
+
+remove_sys_dic = {
+        'CMS_vhbb_bTagWeight*':remove_sys,
+        'CMS_vhbb_scale_j_*':remove_sys,
+        'CMS_vhbb_res_j_13TeV':remove_sys
+}
 
 
 
@@ -88,13 +95,21 @@ for file in os.listdir(path):
             if sys_name in remove_sys_dic:
                 found  = True
                 #'print sysname is found'
+            if not found:
+                for key in remove_sys_dic:
+                    if key.replace('*','') in sys_name:
+                        found = True
+                        sys_name = key
+
             for key in remove_sys_dic:
                 if key in sys_name:
                     found = True
                     sys_name = key
             if found:
-                #print 'going to remove some bin from sys', sys_name
-                position = [binList.index(c) for c in remove_sys_dic[sys_name]]
+                if remove_sys_dic[sys_name] == ['all']:
+                    position = [binList.index(c) for c in binList]
+                else: 
+                    position = [binList.index(c) for c in remove_sys_dic[sys_name]]
                 #print 'position is', position
                 #print 'line is', line
                 newline = line

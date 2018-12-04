@@ -29,7 +29,8 @@ masses = ['125']
 #Test and test complementary
 #channels = ['ZeeBDT_lowpt', 'ZuuBDT_highpt']
 #channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt']
-channels = ['Wlm_SR_HighPt']
+#channels = ['Wlm_SR_HighPt']
+channels = ['Znn_13TeV_Signal']
 
 #All
 #channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
@@ -81,7 +82,8 @@ channels = ['Wlm_SR_HighPt']
 
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v7_all_newKinFit_firstDCfix/Limits'
 #path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Wlv2016_rundc_evalv3_Limits/remove1'
-path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Wlv2016_rundc_eval_v4_Limits'
+#path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Wlv2016_rundc_eval_v4_Limits'
+path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zvv2016Nano_V4/rundc_v21/Limits'
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
