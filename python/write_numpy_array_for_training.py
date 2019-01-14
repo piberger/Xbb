@@ -72,10 +72,17 @@ class SampleTreesToNumpyConverter(object):
                     'BKG_ALL': eval(self.config.get('Plot_general', 'allBKG')),
                 }
         # for multi-output classifiers load dictionary from config
+        self.categories = None
         if self.config.has_option(mvaName, 'classDict'):
             self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
+            self.categories = self.samples.keys()
             print("classes dict:", self.sampleNames)
+        elif self.config.has_option(mvaName, 'classes'):
+            self.sampleNames = dict(eval(self.config.get(mvaName, 'classes')))
+            self.categories = [x[0] for x in eval(self.config.get(mvaName, 'classes'))]
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
+        if not self.categories:
+            self.categories = self.samples.keys()
         if self.testRun:
             print("\x1b[31mDEBUG: TEST-RUN, using only small subset of samples!\x1b[0m")
 
@@ -84,7 +91,11 @@ class SampleTreesToNumpyConverter(object):
         # ----------------------------------------------------------------------------------------------------------------------
         # add sig/bkg x training/testing trees
         # ----------------------------------------------------------------------------------------------------------------------
-        categories = self.samples.keys()
+        categories = self.categories 
+        if categories:
+            print("categories:")
+            for i,category in enumerate(categories):
+                print(" ",i,":", category)
         datasetParts = {'train': self.trainCut, 'test': self.evalCut}
 
         systematics = self.systematics
@@ -100,11 +111,11 @@ class SampleTreesToNumpyConverter(object):
 
         weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
-        for category in categories:
+        for i,category in enumerate(categories):
             if self.testRun:
                 self.samples[category] = self.samples[category][0:1]
-            for sample in self.samples[category]:
-                print ('*'*80,'\n%s\n'%sample,'*'*80)
+            for j,sample in enumerate(self.samples[category]):
+                print ('*'*80,'\n%s (category %d/%d sample %d/%d)\n'%(sample, i+1, len(categories), j+1, len(self.samples[category])),'*'*80)
                 for datasetName, additionalCut in datasetParts.iteritems():
                     # cuts
                     sampleCuts = [sample.subcut]

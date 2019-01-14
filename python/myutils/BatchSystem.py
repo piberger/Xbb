@@ -86,7 +86,7 @@ class BatchSystem(object):
         if self.configFile:
             runScript += " --configFile=" + self.configFile
         
-        if self.interactive:
+        if self.interactive or self.runLocally:
             runScript += " --noretry"
 
         return runScript

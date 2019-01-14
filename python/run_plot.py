@@ -52,7 +52,8 @@ class PlotHelper(object):
         self.subcut = None
         if self.config.has_option(self.configSection, 'subcut'):
             self.subcut = self.config.get(self.configSection, 'subcut')
-        
+            print("INFO: use cut:", self.subcut)
+
         # additional global blinding cut:
         self.addBlindingCut = None
         if self.config.has_option('Plot_general','addBlindingCut'): #contained in plots, cut on the event number
