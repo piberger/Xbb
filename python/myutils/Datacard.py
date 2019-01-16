@@ -1036,6 +1036,7 @@ class Datacard(object):
                     else:
                         systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
+        # DEPRECATED! now done by combine harvester!!
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
             binsBelowThreshold = {}

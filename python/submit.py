@@ -208,7 +208,6 @@ if configurationNeeded:
 
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
         vConfig.write(outputFile)
-        print("v.ini written")
 
     config.read("{tag}config/volatile.ini".format(tag=opts.tag))
 
@@ -733,7 +732,6 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     pathOUT           = config.get("Directories", outputDir)
     samplefiles       = config.get('Directories','samplefiles')
     samplesinfo       = config.get('Directories', 'samplesinfo')
-    print(">>>", samplefiles)
     info              = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -1464,8 +1462,6 @@ if opts.task == 'summary':
         for sample in samplesUsed:
             if sample.identifier == sampleIdentifier:
                 print " >>> ", sample.name
-
-
 
     print "-"*80
     print " CR and SR definitions:"
