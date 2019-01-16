@@ -314,6 +314,9 @@ elif [ $task = "mergedc" ]; then
 elif [ $task = "export_h5" ] || [ $task = "export_hdf5" ]; then
     runCommand="python ./write_numpy_array_for_training.py -t ${trainingRegions}"
 
+elif [ $task = "make_skims" ]; then
+    runCommand="python ./make_skims.py --regions ${regions}";
+
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
     python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True

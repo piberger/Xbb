@@ -181,6 +181,8 @@ class XbbRun:
                                                 'tree': sampleTree.tree,
                                                 'sample': self.sample,
                                                 'channel': self.channel,
+                                                'pathIN': self.pathIN,
+                                                'pathOUT': self.pathOUT,
                                                 })
 
                         # add callbacks if the objects provides any
