@@ -972,8 +972,8 @@ class SampleTree(object):
         try:
             sample.xsec = sample.xsec[0]
         except Exception as e:
-            print("XS:", sample.xsec, sample, type(sample))
-            print("\x1b[31mEXCEPTION:",e,"\x1b[0m")
+            if self.verbose:
+                print("DEBUG: XS = ", sample.xsec, sample, type(sample))
 
         if self.totalNanoTreeCounts:
             if self.config.has_option('Configuration', 'countsFromAutoPU') and eval(self.config.get('Configuration', 'countsFromAutoPU')):

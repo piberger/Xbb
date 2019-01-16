@@ -250,16 +250,26 @@ class SampleTreesToNumpyConverter(object):
         hdf5OutputFileName = baseName + '.h5'
         print("INFO: saving output...")
         
+        success = False
         try:
-            self.saveAsPickledNumpy(numpyOutputFileName)
+            if self.config.has_option(self.mvaName, 'writeNumpy') and eval(self.config.get(self.mvaName, 'writeNumpy')):
+                self.saveAsPickledNumpy(numpyOutputFileName)
+                success = True
         except Exception as e:
-            print(e)
+            print("ERROR: writing numpy array failed.", e)
 
         try:
             self.saveAsHDF5(hdf5OutputFileName)
+            success = True
         except Exception as e:
-            print(e)
-        print("INFO: done.")
+            print("ERROR: writing HDF5 file failed.", e)
+
+        if success:
+            print("INFO: done.")
+            return True
+        else:
+            print("ERROR: no output file written")
+            return False
 
     def saveAsPickledNumpy(self, outputFileName):
         with gzip.open(outputFileName, 'wb') as outputFile:
@@ -313,4 +323,6 @@ if int(opts.systematics) > 0:
 config = BetterConfigParser()
 config.read(opts.config)
 converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys, testRun=opts.test)
-converter.run()
+success = converter.run()
+if not success:
+    raise Exception("WriteTrainingDataFailed")
