@@ -1335,6 +1335,43 @@ return puw[i];
 
 }
 
+float MindRDoubleSingleBtag(double FatJet_eta, double FatJet_phi, double Jet1_eta, double Jet1_phi, int Jet1_ind,double Jet2_eta, double Jet2_phi, int Jet2_ind) {
+    double dR1 = 999;
+    double dR2 = 999;
+    double dRMin = 999;
+
+    if (Jet1_ind != -1){
+        dR1 = deltaR(FatJet_eta,FatJet_phi,Jet1_eta,Jet1_phi);
+    };
+    if (Jet2_ind != -1){
+        dR2 = deltaR(FatJet_eta,FatJet_phi,Jet2_eta,Jet2_phi);
+    };
+
+   dRMin = min(dR1,dR2); 
+   if (dRMin == 999){
+       return 0;} 
+   else{return dRMin;}
+}
+
+float MaxdRDoubleSingleBtag(double FatJet_eta, double FatJet_phi, double Jet1_eta, double Jet1_phi, int Jet1_ind,double Jet2_eta, double Jet2_phi, int Jet2_ind) {
+    double dR1 = 999;
+    double dR2 = 999;
+    double dRMax = 999;
+
+    if (Jet1_ind != -1){
+        dR1 = deltaR(FatJet_eta,FatJet_phi,Jet1_eta,Jet1_phi);
+    };
+    if (Jet2_ind != -1){
+        dR2 = deltaR(FatJet_eta,FatJet_phi,Jet2_eta,Jet2_phi);
+    };
+
+   dRMax = max(dR1,dR2); 
+   if (dRMax == 999){
+       return 0;} 
+   else{return dRMax;}
+
+}
+
 
 }
 
@@ -1349,4 +1386,6 @@ float triggerMetUp(float x) {
 float triggerMetDown(float x) {
   return ((0.5+(0.5*erf((x-83.7549)/47.6344)))*0.990415)-0.00492778;
 }
+
+
 
