@@ -2,10 +2,9 @@ import re
 import os
 from shutil import copyfile
 import sys
-print 'DEBUG'
 
 
-path = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/Zvv_Wlv_dc/fit2/'
+path = '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/Zvv_Wlv_dc_v9'
 dirname = 'remove1'
 
 
@@ -46,7 +45,7 @@ remove_sys = ['all']
 #        }
 
 remove_sys_dic = {
-        'CMS_vhbb_bTagWeight*':remove_sys,
+#        'CMS_vhbb_bTagWeight*':remove_sys,
         'CMS_vhbb_scale_j_*':remove_sys,
         'CMS_vhbb_res_j_13TeV':remove_sys
 }

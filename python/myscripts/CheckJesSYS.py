@@ -24,7 +24,7 @@ ROOT.gROOT.SetBatch()
 #TT
 
 # global path
-pathin_ = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016_V4_Zvv/MVA/v3/TT_TuneCUETP8M2T4_13TeV-powheg-pythia8/'
+pathin_ = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/gaperrin/VHbb/VHbbPostNano2016_V4_Zvv/MVA/v4/TT_TuneCUETP8M2T4_13TeV-powheg-pythia8/'
 
 samples = [
     'tree_arizzi-RunIIMoriond17-DeepAndR133_180517_165540_0000_121_431eec543c586d7843839b0e4fea5846e068ed7c3cd75a00d552af18.root',
