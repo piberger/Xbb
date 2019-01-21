@@ -1615,6 +1615,11 @@ if opts.task == 'sample':
             else:
                 print "----",sampleIdentifier,"----"
                 print skimTemplate
+                if opts.output:
+                    with open(opts.output, "w") as outFile:
+                        outFile.write(skimTemplate)
+                    print "----",sampleIdentifier,"----"
+                    print "written to:", opts.output
 
 if opts.task.startswith('checklogs'):
     
