@@ -129,7 +129,7 @@ except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
-configurationNeeded = not opts.task.startswith('status') and not opts.task.startswith('checklogs')
+configurationNeeded = True #not opts.task.startswith('checklogs')
 if opts.ftag == '':
     opts.ftag = opts.task
 
