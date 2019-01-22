@@ -314,11 +314,20 @@ class NewStackMaker:
 
             if isSimpleCut:
                 if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
-                    blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+
+                    # get list of bin boundaries of ratio histogram, those might be different from the ones from the main histogram and are provided by the external ratio.C code.
+                    bin_list = array.array('d', [0.0]*(self.ratioPlot.GetXaxis().GetNbins() + 1))
+                    for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                        bin_list[i] = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                    bin_list[self.ratioPlot.GetXaxis().GetNbins()] = self.ratioPlot.GetXaxis().GetXmax()
+
+                    # make histogram to visualize blind cut with same bins as the ratio plot
+                    blindedRegion = ROOT.TH1D("blind", "blind", self.ratioPlot.GetXaxis().GetNbins(), bin_list)
                     for i in range(self.ratioPlot.GetXaxis().GetNbins()):
                         binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
                         value = 1.1
                         if binLowEdgeValue >= blindingCutThreshold:
+                            # shaded area
                             error = 0.6
                         else:
                             error = 0.0
@@ -329,7 +338,6 @@ class NewStackMaker:
                     blindedRegion.SetMarkerSize(0)
                     blindedRegion.Draw("SAME E2")
                     self.addObject(blindedRegion)
-                    print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
