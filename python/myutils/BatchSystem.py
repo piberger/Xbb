@@ -160,6 +160,7 @@ class BatchSystemSGE(BatchSystem):
             'cacheplot': ' -l h_vmem=6g ',
            'cachetraining': ' -l h_vmem=6g ',
             'hadd': ' -l h_vmem=6g ',
+            'sysnew': ' -l h_vmem=6g ',
         }
         if self.config and self.config.has_section('SubmitOptions'):
             if self.config.has_option('SubmitOptions', 'submitScriptTemplate'):
