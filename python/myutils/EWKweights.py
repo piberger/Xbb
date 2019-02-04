@@ -59,8 +59,9 @@ class EWKweights(object):
         else:
             print "Missing bTag index. Check general.ini"
             raise Exception("bTagIndexNotSpecified")
+
         
-        if self.applyNLO:
+        if self.applyNLO and (idx0 > -1 and idx1 > -1):
 #            if self.nano:
 #                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
 #            else:
