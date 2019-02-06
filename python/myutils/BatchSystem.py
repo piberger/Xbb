@@ -23,7 +23,7 @@ class BatchJob(object):
 
 class BatchSystem(object):
 
-    def __init__(self, interactive=False, local=False):
+    def __init__(self, interactive=False, local=False, configFile=None):
         self.name = 'undefined'
         self.nJobsProcessed = 0
         self.nJobsSubmitted = 0
@@ -31,6 +31,7 @@ class BatchSystem(object):
         self.interactive = interactive
         self.submittedJobs = []
         self.runLocally = local
+        self.configFile = None if interactive else configFile
 
     def getName(self):
         return self.name
@@ -39,12 +40,12 @@ class BatchSystem(object):
         raise Exception("not implemented")
     
     @staticmethod
-    def create(config, interactive=False, local=False):
+    def create(config, interactive=False, local=False, configFile=None):
         whereToLaunch = config.get('Configuration', 'whereToLaunch')
         if 'condor' in whereToLaunch.lower():
-            return BatchSystemHTCondor(config, interactive=interactive, local=local)
+            return BatchSystemHTCondor(config, interactive=interactive, local=local, configFile=configFile)
         else:
-            return BatchSystemSGE(config, interactive=interactive, local=local)
+            return BatchSystemSGE(config, interactive=interactive, local=local, configFile=configFile)
     
     def get_single_job_name(self, jobPrefix, sampleIdentifier, fileNumber, jobSuffix):
         return jobPrefix + '_' + sampleIdentifier + '_part%d'%(fileNumber) + '_' + jobSuffix
@@ -80,6 +81,14 @@ class BatchSystem(object):
         if 'arguments' in repDict:
             for argument, value in repDict['arguments'].iteritems():
                 runScript += (' --{argument}={value} '.format(argument=argument, value=value)) if len('{value}'.format(value=value)) > 0 else ' --{argument} '.format(argument=argument)
+
+        # add path to config file (Can be dumped combined config instead of single files!)
+        if self.configFile:
+            runScript += " --configFile=" + self.configFile
+        
+        if self.interactive or self.runLocally:
+            runScript += " --noretry"
+
         return runScript
 
     def getLogPaths(self, repDict):
@@ -104,11 +113,11 @@ class BatchSystem(object):
             batchJob = BatchJob(repDict['name'], command, self.getLogPaths(repDict)['out'])
             batchJob.setProperty('repDict', repDict)
 
-            if self.interactive:
-                print("SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)")
+            if self.interactive or self.runLocally:
                 if self.runLocally:
                     answer = 'l'
                 else:
+                    print("SUBMIT:\x1b[34m", command, "\x1b[0m\n(press ENTER to run it and continue, \x1b[34ml\x1b[0m to run it locally, \x1b[34md\x1b[0m for debug mode, \x1b[34ma\x1b[0m to run all jobs locally and \x1b[34ms\x1b[0m to submit the remaining jobs)")
                     answer = raw_input().strip()
                 if answer.lower() in ['no', 'n']:
                     self.nJobsSkipped += 1
@@ -144,8 +153,8 @@ class BatchSystem(object):
 
 class BatchSystemSGE(BatchSystem):
     
-    def __init__(self, config=None, interactive=False, local=False):
-        super(BatchSystemSGE, self).__init__(interactive=interactive, local=local)
+    def __init__(self, config=None, interactive=False, local=False, configFile=None):
+        super(BatchSystemSGE, self).__init__(interactive=interactive, local=local, configFile=configFile)
         self.name = 'SGE'
         self.config = config
 
@@ -158,9 +167,10 @@ class BatchSystemSGE(BatchSystem):
             'eval': ' -l h_vmem=4g ',
             'cachedc': ' -l h_vmem=6g ',
             'cacheplot': ' -l h_vmem=6g ',
-           'cachetraining': ' -l h_vmem=6g ',
+            'cachetraining': ' -l h_vmem=6g ',
             'hadd': ' -l h_vmem=6g ',
             'sysnew': ' -l h_vmem=6g ',
+            'dnn': ' -l h_vmem=12g ',
         }
         if self.config and self.config.has_section('SubmitOptions'):
             if self.config.has_option('SubmitOptions', 'submitScriptTemplate'):
@@ -210,8 +220,8 @@ class BatchSystemSGE(BatchSystem):
 
 class BatchSystemHTCondor(BatchSystem):
     
-    def __init__(self, config=None, local=False):
-        super(BatchSystemHTCondor, self).__init__()
+    def __init__(self, config=None, local=False, configFile=None):
+        super(BatchSystemHTCondor, self).__init__(configFile=configFile)
         self.name = 'HTCondor'
         self.config = config
         self.noBatch = False

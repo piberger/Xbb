@@ -63,7 +63,8 @@ class TreeCache:
         if isinstance(sample, Sample):
             # sample passed as Sample object
             # count number of chunks the cached data is split into
-            splitFilesChunkSize = sample.mergeCachingSize 
+            defaultChunkSize = int(config.get('General', 'mergeCachingSize')) if config.has_option('General', 'mergeCachingSize') else 100
+            splitFilesChunkSize = sample.mergeCachingSize if sample.mergeCachingSize > 0 else defaultChunkSize
             splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
             # if sample passed as object, it can be a 'subsample' and habe different name and identifier
             self.sample = sample.name

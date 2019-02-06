@@ -13,11 +13,12 @@ import os,sys
 
 class PlotHelper(object):
 
-    def __init__(self, config, region, vars = None, title=None):
+    def __init__(self, config, region, vars = None, title=None, sampleIdentifier=None):
         self.config = config
         self.region = region
         self.vars = vars
         self.title = title if title and len(title)>0 else None
+        self.sampleIdentifiers = sampleIdentifier.split(',') if sampleIdentifier and len(sampleIdentifier) > 0 else None
 
         # VHbb namespace
         VHbbNameSpace=config.get('VHbbNameSpace','library')
@@ -27,12 +28,7 @@ class PlotHelper(object):
         else:
             print ("INFO: loaded VHbbNameSpace: %s"%VHbbNameSpace)
 
-        # additional blinding cut:
-        self.addBlindingCut = None
-        if self.config.has_option('Plot_general','addBlindingCut'): #contained in plots, cut on the event number
-            self.addBlindingCut = self.config.get('Plot_general','addBlindingCut')
-            print ('adding add. blinding cut:', self.addBlindingCut)
-
+        # input/output paths
         self.samplesPath = config.get('Directories', 'plottingSamples')
         self.samplesDefinitions = config.get('Directories','samplesinfo') 
         self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
@@ -41,13 +37,28 @@ class PlotHelper(object):
 
         # plot regions
         self.configSection='Plot:%s'%region
+
+        # variables
         if self.vars and type(self.vars) == list:
             self.vars = [x.strip() for x in self.vars if len(x.strip()) > 0] 
-        
+
+        # if variables not specified in command line, read from config
         if not self.vars or len(self.vars) < 1:
             varListFromConfig = self.config.get(self.configSection, 'vars').split(',')
             print ("VARS::", self.configSection, " => ", varListFromConfig)
             self.vars = [x.strip() for x in varListFromConfig if len(x.strip()) > 0]
+        
+        # additional cut to only plot a subset of the region
+        self.subcut = None
+        if self.config.has_option(self.configSection, 'subcut'):
+            self.subcut = self.config.get(self.configSection, 'subcut')
+            print("INFO: use cut:", self.subcut)
+
+        # additional global blinding cut:
+        self.addBlindingCut = None
+        if self.config.has_option('Plot_general','addBlindingCut'): #contained in plots, cut on the event number
+            self.addBlindingCut = self.config.get('Plot_general','addBlindingCut')
+            print ('adding add. blinding cut:', self.addBlindingCut)
 
         # load samples
         self.data = eval(self.config.get(self.configSection, 'Datas')) # read the data corresponding to each CR (section)
@@ -59,6 +70,11 @@ class PlotHelper(object):
             self.signalRegion = True
         self.dataSamples = self.samplesInfo.get_samples(self.data)
         self.mcSamples = self.samplesInfo.get_samples(self.mc)
+
+        # filter samples used in the plot
+        if self.sampleIdentifiers:
+            self.dataSamples = [x for x in self.dataSamples if x.identifier in self.sampleIdentifiers]
+            self.mcSamples =   [x for x in self.mcSamples   if x.identifier in self.sampleIdentifiers]
 
         self.groupDict = eval(self.config.get('Plot_general', 'Group'))
         self.subcutPlotName = ''
@@ -103,7 +119,7 @@ class PlotHelper(object):
                 
                 # add the sample tree for all the variables
                 for var in self.vars:
-                    self.histogramStacks[var].addSampleTree(sample=sample, sampleTree=sampleTree, groupName=groupName)
+                    self.histogramStacks[var].addSampleTree(sample=sample, sampleTree=sampleTree, groupName=groupName, cut=self.subcut if self.subcut else '1')
             else:
                 print ("\x1b[31mERROR: sampleTree not available for ", sample,", run caching again!!\x1b[0m")
                 raise Exception("CachedTreeMissing")
@@ -113,7 +129,8 @@ class PlotHelper(object):
         # draw
         for var in self.vars:
             self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
-            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
+            if self.config.has_option('Plot_general', 'drawNormalizedPlots') and eval(self.config.get('Plot_general', 'drawNormalizedPlots')):
+                self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
 
         return self
 
@@ -137,6 +154,8 @@ if __name__ == "__main__":
                           help="plot variables, separated by comma")
     parser.add_option("-t","--title", dest="title", default='',
                           help="plot title")
+    parser.add_option("-s","--sampleIdentifier", dest="sampleIdentifier", default='',
+                                      help="sample identifier (no subsample!)")
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
             opts.config = ["config"]
@@ -146,15 +165,13 @@ if __name__ == "__main__":
 
     # load config
     config = BetterConfigParser()
-    vhbbPlotDef = opts.config[0].split('/')[0]+'/vhbbPlotDef.ini'
-    opts.config.append(vhbbPlotDef)
     config.read(opts.config)
 
     # run plotter
     regions = opts.regions.split(',')
     vars = opts.vars.split(',')
     for region in regions:
-        plotter = PlotHelper(config=config, region=region, vars=vars, title=opts.title)
+        plotter = PlotHelper(config=config, region=region, vars=vars, title=opts.title, sampleIdentifier=opts.sampleIdentifier)
         plotter.prepare()
         plotter.run()
 

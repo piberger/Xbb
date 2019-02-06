@@ -34,7 +34,6 @@
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_129.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_13.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_130.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_131.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_132.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_133.root
 /store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/QCD_HT500to700_TuneCP5_13TeV-madgraph-pythia8/arizzi-RunIIFall17MiniAODv2-Ne80/180527_192429/0000/tree_134.root

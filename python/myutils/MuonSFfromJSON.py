@@ -3,29 +3,31 @@ import os
 import array
 from JsonTable import JsonTable
 from vLeptons import vLeptonSelector
+from BranchTools import Collection
+from BranchTools import AddCollectionsModule
 
-class MuonSFfromJSON(object):
+class MuonSFfromJSON(AddCollectionsModule):
 
     def __init__(self, jsonFiles=None, branchName='muonSF',channel='None'):
+        super(MuonSFfromJSON, self).__init__()
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
         self.branchName = branchName
 
         # load JOSN files
-
         self.jsonTable = JsonTable(jsonFiles)
         self.channel = channel 
         if self.channel== 'Zll':
-         self.idSf = self.jsonTable.getEtaPtTable('NUM_LooseID_DEN_genTracks', 'abseta_pt')
-         self.isoSf = self.jsonTable.getEtaPtTable('NUM_LooseRelIso_DEN_LooseID', 'abseta_pt')
-#         self.triggerSf = ; not implemented yet
+            self.idSf = self.jsonTable.getEtaPtTable('NUM_LooseID_DEN_genTracks', 'abseta_pt')
+            self.isoSf = self.jsonTable.getEtaPtTable('NUM_LooseRelIso_DEN_LooseID', 'abseta_pt')
+            #self.triggerSf = ; not implemented yet
         elif self.channel == 'Wlv':
-         self.idSf = self.jsonTable.getEtaPtTable('NUM_TightID_DEN_genTracks', 'abseta_pt')
-         self.isoSf = self.jsonTable.getEtaPtTable('NUM_UltraTightIso4_DEN_TightIDandIPCut', 'abseta_pt')
-         self.triggerSf = [self.jsonTable.getEtaPtTable('NUM_IsoMu27_DEN_empty', 'abseta_pt')]
+            self.idSf = self.jsonTable.getEtaPtTable('NUM_TightID_DEN_genTracks', 'abseta_pt')
+            self.isoSf = self.jsonTable.getEtaPtTable('NUM_UltraTightIso4_DEN_TightIDandIPCut', 'abseta_pt')
+            self.triggerSf = [self.jsonTable.getEtaPtTable('NUM_IsoMu27_DEN_empty', 'abseta_pt')]
         else: 
-         print "Channel not defined!"
-         quit()
+            print "Channel not defined!"
+            raise Exception("ChannelNotDefined")
         self.systVariations = [None, 'Down', 'Up']
 
     def customInit(self, initVars):
@@ -38,31 +40,15 @@ class MuonSFfromJSON(object):
         self.branchBuffers = {}
         self.lastEntry = -1
         if not self.isData:
-            for branchName in [self.branchName, self.branchName + '_Id', self.branchName + '_Iso', self.branchName + '_trigger']:
-                self.branchBuffers[branchName] = array.array('f', [1.0, 1.0, 1.0])
-                self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':3}, 'length': 3})
-
-    def getBranches(self):
-        return self.branches
-
-    def getVectorBranch(self, event, arguments=None, destinationArray=None):
-        self.processEvent(event)
-        for i in range(arguments['length']):
-            destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
-
-    # read from buffers which have been filled in processEvent()    
-    def getBranch(self, event, arguments=None):
-        self.processEvent(event)
-        if arguments:
-            return self.branchBuffers[arguments][0]
+            for n in ['', '_Id', '_Iso', '_trigger']:
+                self.addVectorBranch(self.branchName + n, default=1.0, length=3)
 
     def processEvent(self, tree):
-        currentEntry = tree.GetReadEntry()
         # if current entry has not been processed yet
-        if currentEntry != self.lastEntry and not self.isData:
-            self.lastEntry = currentEntry
+        if not self.hasBeenProcessed(tree) and not self.isData:
+            self.markProcessed(tree)
 
-#TODO check the assigned weights for events with more than 2 letpns
+            #TODO check the assigned weights for events with more than 2 letpns
             Vtype = tree.Vtype
             vLidx = []
             lep_eta = []
@@ -72,30 +58,20 @@ class MuonSFfromJSON(object):
                vLidx = [tree.vLidx[0]]
                lep_pt = [tree.Muon_pt[vLidx[0]]]
                lep_eta = [tree.Muon_eta[vLidx[0]]]
-            elif self.channel == "Zll" and Vtype ==0:
+            elif self.channel == "Zll" and Vtype == 0:
                vLidx = [tree.vLidx[0],tree.vLidx[1]]
-               lep_pt = [tree.Muon_pt[vLidx[0]],tree.Muon_pt[vLidx[1]]]
-               lep_eta = [tree.Muon_eta[vLidx[0]],tree.Muon_eta[vLidx[1]]]
+               lep_pt = [tree.Muon_pt[vLidx[0]], tree.Muon_pt[vLidx[1]]]
+               lep_eta = [tree.Muon_eta[vLidx[0]], tree.Muon_eta[vLidx[1]]]
 
-#Old version
-#            vLeptons = vLeptonSelector(tree, config=self.config)
-#
-#            if self.channel == "Wlv":
-#             vMuons = vLeptons.getWmuons()
-#            if self.channel == "Zll":
-#             vMuons = vLeptons.getZmuons()
-#
-#            lep_eta = []
-#            lep_pt = []
-#            if len(vMuons) == 1: 
-#                lep_eta = [vMuons[0].eta]
-#                lep_pt = [vMuons[0].pt]
-#            elif len(vMuons) == 2: 
-#                lep_eta = [vMuons[0].eta,vMuons[1].eta]
-#                lep_pt = [vMuons[0].pt,vMuons[1].pt]
-#            print " number of electrons" len(vMuons)
-
-            self.computeSF(self.branchBuffers[self.branchName + '_trigger'], self.branchBuffers[self.branchName + '_Id'], self.branchBuffers[self.branchName + '_Iso'], self.branchBuffers[self.branchName], lep_eta, lep_pt, len(vLidx))
+            self.computeSF(
+                    weight_trigg=self._b(self.branchName + '_trigger'),
+                    weight_Id=self._b(self.branchName + '_Id'),
+                    weight_Iso=self._b(self.branchName + '_Iso'),
+                    weight_SF=self._b(self.branchName),
+                    lep_eta=lep_eta,
+                    lep_pt=lep_pt,
+                    lep_n=len(vLidx)
+                    )
 
         return True
 
@@ -127,8 +103,9 @@ class MuonSFfromJSON(object):
 
     def getIdSf(self, eta, pt, len_n, syst=None):
         idSF = 1.
-        for i in range(len_n):
-            idSF = idSF * self.jsonTable.find(self.idSf, eta[i], pt[i], syst=syst)
+        if self.idSf:
+            for i in range(len_n):
+                idSF = idSF * self.jsonTable.find(self.idSf, eta[i], pt[i], syst=syst)
 
         return idSF
 
