@@ -10,7 +10,7 @@ from myutils.sampleTree import SampleTree
 
 # merges files only partially to reduce IO overhead and balance job load
 class PartialFileMerger(object):
-    def __init__(self, fileNames, chunkNumber, submitTime='000000_000000', force=False, config=None, sampleIdentifier=None):
+    def __init__(self, fileNames, chunkNumber, submitTime='000000_000000', force=False, config=None, sampleIdentifier=None, inputDir=None, outputDir=None):
         self.fileNames = fileNames
         self.debug = 'XBBDEBUG' in os.environ
         self.submitTime = submitTime
@@ -23,7 +23,12 @@ class PartialFileMerger(object):
         self.force = force
         
         # use sampleTree class as replacement for hadd
+        # this way baskets will be also optimized and unused branches can be stripped off
         self.useChain = True
+
+        self.inputDir  = self.config.get('Directories', inputDir if inputDir else 'HADDin')
+        self.outputDir = self.config.get('Directories', outputDir if outputDir else 'HADDout')
+        self.scratchDir = self.config.get('Directories','scratch')
 
         treeHashes = []
         for fileName in self.fileNames: 
@@ -40,21 +45,21 @@ class PartialFileMerger(object):
     def getOutputFileName(self):
         fakeFileName = self.getMergedFakeFileName()
         outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName) 
-        return "{path}/{sample}/{fileName}".format(path=self.config.get('Directories','HADDout'), sample=self.sampleIdentifier, fileName=outputFileName)
+        return "{path}/{sample}/{fileName}".format(path=self.outputDir, sample=self.sampleIdentifier, fileName=outputFileName)
     
     def getTemporaryFileName(self):
         fakeFileName = self.getMergedFakeFileName()
         outputFileName = self.fileLocator.getFilenameAfterPrep(fakeFileName) 
-        return "{path}/hadd/{sample}/{fileName}".format(path=self.config.get('Directories','scratch'), sample=self.sampleIdentifier, fileName=outputFileName)
+        return "{path}/hadd/{sample}/{fileName}".format(path=self.scratchDir, sample=self.sampleIdentifier, fileName=outputFileName)
     
     def run(self):
-        inputFileNames = ["{path}/{sample}/{fileName}".format(path=self.config.get('Directories','HADDin'), sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in self.fileNames]
+        inputFileNames = ["{path}/{sample}/{fileName}".format(path=self.inputDir, sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in self.fileNames]
         outputFileName = self.getTemporaryFileName()
         self.fileLocator.makedirs('/'.join(outputFileName.split('/')[:-1]))
         command = self.commandTemplate.format(output=outputFileName, inputs=' '.join(inputFileNames), f="-f" if self.force else "")
         if self.debug:
             print ("DEBUG: run \x1b[34m", command, "\x1b[0m")
-        
+
         if self.useChain:
             # use sampleTree class (can e.g. drop branches at the same time)
             sampleTree = SampleTree(inputFileNames, config=self.config)
@@ -108,6 +113,9 @@ if __name__ == "__main__":
                           help="force overwriting of already cached files")
     parser.add_option("-l","--fileList", dest="fileList", default="",
                           help="file list")
+    parser.add_option("-I", "--inputDir", dest="inputDir", default="HADDin", help="name of input folder in config, e.g. SYSin")
+    parser.add_option("-O", "--outputDir", dest="outputDir", default="HADDout", help="name of output folder in config, e.g. SYSout")
+
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
             opts.config = "config"
@@ -119,6 +127,6 @@ if __name__ == "__main__":
     config = BetterConfigParser()
     config.read(opts.config)
 
-    partialFileMerger = PartialFileMerger(FileList.decompress(opts.fileList), int(opts.chunkNumber), config=config, sampleIdentifier=opts.sampleIdentifier, force=opts.force)
+    partialFileMerger = PartialFileMerger(FileList.decompress(opts.fileList), int(opts.chunkNumber), config=config, sampleIdentifier=opts.sampleIdentifier, force=opts.force, inputDir=opts.inputDir, outputDir=opts.outputDir)
     partialFileMerger.run()
 

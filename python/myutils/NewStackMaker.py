@@ -6,6 +6,7 @@ import os
 import array
 import time
 import subprocess
+import math
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -19,6 +20,7 @@ class NewStackMaker:
     def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
+        self.saveShapes = True
         self.var = var
         self.region = region
         self.configSection = 'Plot:%s'%region
@@ -28,7 +30,7 @@ class NewStackMaker:
         self.forceLog = None
         self.normalize = eval(self.config.get(self.configSection, 'Normalize'))
         self.log = eval(self.config.get(self.configSection, 'log'))
-        self.AddErrors = False
+        self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
         if self.config.has_option('plotDef:%s'%var, 'log'):
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
         self.blind = eval(self.config.get(self.configSection,'blind'))
@@ -55,6 +57,12 @@ class NewStackMaker:
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
             self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+            if self.config.has_option(self.configSection, 'additionalText'):
+                aText = eval(self.config.get(self.configSection, 'additionalText'))
+                if type(aText) == list:
+                    self.additionalTextLines += aText
+                else:
+                    self.additionalTextLines.append(aText)
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -137,6 +145,8 @@ class NewStackMaker:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
+        
+        self.plotTextMarginLeft = 0.16
 
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
@@ -166,13 +176,13 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # create histogram out of a tree
     # ------------------------------------------------------------------------------
-    def addSampleTree(self, sample, sampleTree, groupName):
+    def addSampleTree(self, sample, sampleTree, groupName, cut='1'):
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
 
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
-        sampleHistogram = histoMaker.getHistogram()
+        sampleHistogram = histoMaker.getHistogram(cut)
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
@@ -325,13 +335,10 @@ class NewStackMaker:
         self.m_one_line.SetLineStyle(ROOT.kSolid)
         self.m_one_line.Draw("Same")
 
-        if not self.AddErrors:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat.)","f")
-        else:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat. + syst.)","f")
+        self.legends['ratio'].AddEntry(self.ratioError, self.mcUncertaintyLegend,"f")
         self.legends['ratio'].Draw() 
         if not self.blind:
-            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), 0.17, 0.895, 1.55))
+            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
             t0 = ROOT.TText()
             t0.SetTextSize(ROOT.gStyle.GetLabelSize()*2.4)
             t0.SetTextFont(ROOT.gStyle.GetLabelFont())
@@ -372,10 +379,7 @@ class NewStackMaker:
             elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
         if theErrorGraph: 
-            if not self.AddErrors:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
-            else:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.+ syst.)", "fl")
+            self.legends['right'].AddEntry(theErrorGraph, self.mcUncertaintyLegend, "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
         self.legends['left'].SetFillColor(0)
@@ -388,10 +392,19 @@ class NewStackMaker:
     def drawPlotTexts(self):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.addObject(self.myText(self.plotTitle,0.17+(0.03 if self.is2D else 0),0.88,1.04))
+        posY = 0.88
+        if type(self.plotTitle) == list:
+            size = 1.04
+            for plotTitleLine in self.plotTitle:
+                self.addObject(self.myText(plotTitleLine, self.plotTextMarginLeft + (0.03 if self.is2D else 0),posY,size))
+                posY -= 0.05
+                size *= 0.77
+        else:
+            self.addObject(self.myText(self.plotTitle,self.plotTextMarginLeft+(0.03 if self.is2D else 0),posY,1.04))
+            posY -= 0.05
         print ('self.lumi is', self.lumi)
         try:
-            self.addObject(self.myText("#sqrt{s} = %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), 0.17+(0.03 if self.is2D else 0), 0.83))
+            self.addObject(self.myText("#sqrt{s} = %s, L = %.2f fb^{-1}"%(self.anaTag, (float(self.lumi)/1000.0)), self.plotTextMarginLeft+(0.03 if self.is2D else 0), posY, 0.75))
         except Exception as e:
             print ("WARNING: exception while adding text: ", e)
             pass
@@ -416,7 +429,7 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag, 0.17+(0.03 if self.is2D else 0), 0.78))
+        #self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
 
         try:
             for labelName, label in self.plotLabels.iteritems():
@@ -426,7 +439,7 @@ class NewStackMaker:
 
         try:
             for j, additionalTextLine in enumerate(self.additionalTextLines):
-                self.addObject(self.myText(additionalTextLine, 0.17, 0.73-0.03*j, 0.6))
+                self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
         except Exception as e:
             print(e)
 
@@ -609,6 +622,7 @@ class NewStackMaker:
 
         # draw ratio plot
         theErrorGraph = None
+        mcHistogram   = None
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
@@ -636,11 +650,57 @@ class NewStackMaker:
             outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
             c.SaveAs(outputFileName)
             if os.path.isfile(outputFileName):
-                print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+                print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
-                print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+                print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
+        # save shapes
+        if not normalize and self.saveShapes:
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+            print("MC:", mcHistogram)
+            try:
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
+                shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
+                if dataGroupName and dataGroupName in groupedHistograms:
+                    groupedHistograms[dataGroupName].SetDirectory(shapesFile)
+                mcHistogram.SetDirectory(shapesFile)
+                for histogram in self.histograms:
+                    histogram['histogram'].SetDirectory(shapesFile)
+
+                try:
+                    signals = self.config.get('Plot_general','allSIG') 
+                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] not in signals], outputName='summedBackgroundHistograms')
+                    signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
+                    backgroundHistogram.SetDirectory(shapesFile)
+                    signalHistogram.SetDirectory(shapesFile)
+                    
+                    sspb_sum = 0.0
+                    q_a_sum = 0.0
+                    s_sum = 0.0
+                    b_sum = 0.0
+                    for i in range(backgroundHistogram.GetXaxis().GetNbins()):
+                        s = signalHistogram.GetBinContent(1+i)
+                        b = backgroundHistogram.GetBinContent(1+i)
+                        sspb = s/math.sqrt(s+b) if s+b > 0 else 0
+                        sspb_sum += sspb*sspb
+                        q_a = math.sqrt(2*((s+b)*math.log(1+s/b)-s)) if b>0 else 0
+                        q_a_sum += q_a*q_a
+                        s_sum += s
+                        b_sum += b
+                        print("{s: <12.3f}{b: <12.3f}{a: <12.3f}{q: <12.3f}".format(s=s, b=b, a=sspb, q=q_a))
+                    print("-"*48)
+                    q_a_sum = math.sqrt(q_a_sum)
+                    sspb_sum = math.sqrt(sspb_sum)
+                    print("{s: <12.3f}{b: <12.3f}{a: <12.3f}{q: <12.3f}".format(s=s_sum, b=b_sum, a=sspb_sum, q=q_a_sum))
+
+                except Exception as e:
+                    print("EXCEPTION:", e)
+                shapesFile.Write()
+            except Exception as e:
+                print("ERROR: could not save shapes:", e)
+
+        # print yield tables
         try:
             for histogram in self.histograms:
                 self.histoCounts['weighted'][histogram['name']] = histogram['histogram'].Integral()

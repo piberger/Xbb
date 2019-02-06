@@ -122,9 +122,10 @@ class SampleTree(object):
                     print('DEBUG: next file is:', rootFileName, ", check existence")
 
                 # check root file existence
-                if self.fileLocator.exists(rootFileName, attempts=5):
+                if self.fileLocator.exists(rootFileName, attempts=3):
                     remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
+                    print(remoteRootFileName)
 
                     # check file validity
                     if input and not input.IsZombie() and input.GetNkeys() > 0 and not input.TestBit(ROOT.TFile.kRecovered):
@@ -231,7 +232,11 @@ class SampleTree(object):
                 print("tree".ljust(25), ''.join([countBranch.ljust(25) for countBranch in countBranches]))
                 if depth:
                     for treeNum in range(depth):
-                        print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
+                        try:
+                            print(("%d"%(treeNum+1)).ljust(25),''.join([('%r'%self.nanoTreeCounts[countBranch][treeNum]).ljust(25) for countBranch in countBranches]))
+                        except Exception as e:
+                            print(e)
+
                 print("\x1b[34m","sum".ljust(24), ''.join([('%r'%self.totalNanoTreeCounts[countBranch]).ljust(25) for countBranch in countBranches]),"\x1b[0m")
                 print("-"*160)
 
@@ -826,7 +831,7 @@ class SampleTree(object):
             if self.callbacks and 'event' in self.callbacks:
                 # if callbacks return false, skip event!
                 callbackResults = [fcn(event) for fcn in self.callbacks['event']]
-                if not all(callbackResults):
+                if any(x==False for x in callbackResults):
                     continue
 
             # fill branches
@@ -966,8 +971,9 @@ class SampleTree(object):
     def getScale(self, sample, countHistogram=None):
         try:
             sample.xsec = sample.xsec[0]
-        except:
-            pass
+        except Exception as e:
+            if self.verbose:
+                print("DEBUG: XS = ", sample.xsec, sample, type(sample))
 
         if self.totalNanoTreeCounts:
             if self.config.has_option('Configuration', 'countsFromAutoPU') and eval(self.config.get('Configuration', 'countsFromAutoPU')):

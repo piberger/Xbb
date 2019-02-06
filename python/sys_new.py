@@ -10,43 +10,48 @@ from myutils.FileLocator import FileLocator
 import importlib
 from myutils.sampleTree import SampleTree
 import resource
+import uuid
 
 # ntuple processing class (former "sys-step")
 
 class XbbRun:
 
     def __init__(self, opts):
+
+        # get file list
         self.filelist = FileList.decompress(opts.fileList) if len(opts.fileList) > 0 else None
         print "len(filelist)",len(self.filelist),
         if len(self.filelist) > 0:
             print "filelist[0]:", self.filelist[0]
         else:
             print ''
-        self.debug = 'XBBDEBUG' in os.environ
-        self.opts = opts
 
+        # config
+        self.debug = 'XBBDEBUG' in os.environ
+        self.verifyCopy = True
+        self.opts = opts
         self.config = BetterConfigParser()
         self.config.read(opts.config)
-
         samplesinfo = self.config.get('Directories', 'samplesinfo')
         self.channel = self.config.get('Configuration', 'channel')
 
+        # load namespace, TODO
         VHbbNameSpace = self.config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
 
-        self.pathIN = self.config.get('Directories','SYSin')
-        self.pathOUT = self.config.get('Directories','SYSout')
-        self.tmpDir = self.config.get('Directories','scratch')
+        # directories
+        self.pathIN = self.config.get('Directories', opts.inputDir)
+        self.pathOUT = self.config.get('Directories', opts.outputDir)
+        self.tmpDir = self.config.get('Directories', 'scratch')
         print 'INput samples:\t%s'%self.pathIN
         print 'OUTput samples:\t%s'%self.pathOUT
 
         self.fileLocator = FileLocator(config=self.config)
 
-        # samples
-        info = ParseInfo(samplesinfo, self.pathIN)
-        matchingSamples = [x for x in info if x.identifier==opts.sampleIdentifier and not x.subsample]
+        # check if given sample identifier uniquely matches a samples from config
+        matchingSamples = ParseInfo(samplesinfo, self.pathIN).find(identifier=opts.sampleIdentifier)
         if len(matchingSamples) != 1:
-            print "need exactly 1 sample identifier as input with -S !!"
+            print "ERROR: need exactly 1 sample identifier as input with -S !!"
             print matchingSamples
             exit(1)
         self.sample = matchingSamples[0]
@@ -59,11 +64,14 @@ class XbbRun:
         self.collections = self.parseCollectionList(self.collections)
         print 'after parsing:', self.collections
 
+        # temorary folder to save the files of this job on the scratch
+        temporaryName = self.sample.identifier + '/' + uuid.uuid4().hex
+
         # input files
         self.subJobs = []
         if opts.join:
-            print("INFO: join input files!")
-            
+            print("INFO: join input files! This is an experimental feature!")
+
             # translate naming convention of .txt file to imported files after the prep step
             inputFileNamesAfterPrep = [self.fileLocator.getFilenameAfterPrep(x) for x in self.filelist]
 
@@ -71,7 +79,7 @@ class XbbRun:
                 'inputFileNames': self.filelist,
                 'localInputFileNames': ["{path}/{subfolder}/{filename}".format(path=self.pathIN, subfolder=self.sample.identifier, filename=localFileName) for localFileName in inputFileNamesAfterPrep],
                 'outputFileName': "{path}/{subfolder}/{filename}".format(path=self.pathOUT, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
-                'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
+                'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=temporaryName, filename=inputFileNamesAfterPrep[0]),
                 })
 
         else:
@@ -84,7 +92,7 @@ class XbbRun:
                     'inputFileNames': [inputFileName],
                     'localInputFileNames': ["{path}/{subfolder}/{filename}".format(path=self.pathIN, subfolder=self.sample.identifier, filename=localFileName) for localFileName in inputFileNamesAfterPrep],
                     'outputFileName': "{path}/{subfolder}/{filename}".format(path=self.pathOUT, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
-                    'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=self.sample.identifier, filename=inputFileNamesAfterPrep[0]),
+                    'tmpFileName': "{path}/{subfolder}/{filename}".format(path=self.tmpDir, subfolder=temporaryName, filename=inputFileNamesAfterPrep[0]),
                     })
 
     # lists of single modules can be given instead of a module, "--addCollections Sys.all"
@@ -107,34 +115,42 @@ class XbbRun:
             else:
                 collectionsListsReplaced.append(collection)
         return collectionsListsReplaced
-    
+
     # run all subjobs
     def run(self):
 
+        nFilesProcessed = 0
+        nFilesFailed = 0
+
         for subJob in self.subJobs:
 
+            # only process if output is non-existing/broken or --force was used
             if self.opts.force or not self.fileLocator.isValidRootFile(subJob['outputFileName']):
-                
+
+                # create directories
                 outputFolder = '/'.join(subJob['outputFileName'].split('/')[:-1])
                 tmpFolder = '/'.join(subJob['tmpFileName'].split('/')[:-1])
                 self.fileLocator.makedirs(outputFolder)
                 self.fileLocator.makedirs(tmpFolder)
 
-                # load sample tree and initialize vtype corrector
+                # load sample tree
                 sampleTree = SampleTree(subJob['localInputFileNames'], config=self.config)
                 if not sampleTree.tree:
+                    print "trying fallback...", len(subJob['inputFileNames'])
 
                     if len(subJob['inputFileNames']) == 1:
                         # try original naming scheme if reading directly from Heppy/Nano ntuples (without prep)
-                        fileNameOriginal = self.pathIN + '/' + subJob['inputFileNames']
+                        fileNameOriginal = self.pathIN + '/' + subJob['inputFileNames'][0]
                         print "FO:", fileNameOriginal
                         xrootdRedirector = self.fileLocator.getRedirector(fileNameOriginal)
                         sampleTree = SampleTree([fileNameOriginal], config=self.config, xrootdRedirector=xrootdRedirector)
                         if not sampleTree.tree:
                             print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED!\x1b[0m"
+                            nFilesFailed += 1
                             continue
                     else:
                         print "\x1b[31mERROR: file does not exist or is broken, will be SKIPPED! (old naming scheme not supported for joining multipel files)\x1b[0m"
+                        nFilesFailed += 1
                         continue
 
                 # to use this syntax, use "--addCollections Sys.Vtype" for a config file entry like this:
@@ -165,6 +181,8 @@ class XbbRun:
                                                 'tree': sampleTree.tree,
                                                 'sample': self.sample,
                                                 'channel': self.channel,
+                                                'pathIN': self.pathIN,
+                                                'pathOUT': self.pathOUT,
                                                 })
 
                         # add callbacks if the objects provides any
@@ -193,7 +211,7 @@ class XbbRun:
 
                 # define output file 
                 sampleTree.addOutputTree(subJob['tmpFileName'], cut='1', branches='*', friend=self.opts.friend)
-                
+
                 # run processing
                 for pyModule in pyModules:
                     if hasattr(pyModule, "beforeProcessing"):
@@ -210,10 +228,22 @@ class XbbRun:
                     try:
                         self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
                         print 'copy ', subJob['tmpFileName'], subJob['outputFileName']
+
+                        if self.verifyCopy:
+                            if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
+                                print 'INFO: output at final destination broken, try to copy again from scratch disk to final destination...'
+                                self.fileLocator.cp(subJob['tmpFileName'], subJob['outputFileName'], force=True)
+                                print 'INFO: second attempt copy done!'
+                                if not self.fileLocator.isValidRootFile(subJob['outputFileName']):
+                                    print '\x1b[31mERROR: output still broken!\x1b[0m'
+                                    nFilesFailed += 1
+                                    raise Exception("FileCopyError")
+                                else:
+                                    print 'INFO: file is good after second attempt!'
                     except Exception as e:
                         print e
                         print "\x1b[31mERROR: copy from scratch to final destination failed!!\x1b[0m"
-                    
+
                     # delete temporary file
                     try:
                         self.fileLocator.rm(subJob['tmpFileName'])
@@ -222,26 +252,28 @@ class XbbRun:
                         print "WARNING: could not delete file on scratch!"
 
 
-                # add callback for clean up
+                # clean up
                 if hasattr(wObject, "cleanUp") and callable(getattr(wObject, "cleanUp")):
                     getattr(wObject, "cleanUp")()
 
             else:
                 print 'SKIP:', subJob['inputFileNames']
 
+        if nFilesFailed > 0:
+            raise Exception("ProcessingIncomplete")
+
 argv = sys.argv
 parser = OptionParser()
-parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="", 
-                      help="samples you want to run on")
-parser.add_option("-C", "--config", dest="config", default=[], action="append",
-                      help="configuration defining the plots to make")
-parser.add_option("-f", "--fileList", dest="fileList", default="",
-                              help="list of files you want to run on")
-parser.add_option("-b", "--addCollections", dest="addCollections", default="",
-                              help="collections to add: vtype")
+parser.add_option("-S", "--sampleIdentifier", dest="sampleIdentifier", default="", help="samples you want to run on")
+parser.add_option("-C", "--config", dest="config", default=[], action="append", help="configuration defining the plots to make")
+parser.add_option("-f", "--fileList", dest="fileList", default="", help="list of files you want to run on")
+parser.add_option("-b", "--addCollections", dest="addCollections", default="", help="collections to add, e.g. Sys.all")
 parser.add_option("-F", "--force", dest="force", action="store_true", help="overwrite existing files", default=False)
 parser.add_option("-J", "--join", dest="join", action="store_true", help="chain all files of the sample", default=False)
 parser.add_option("-d", "--friend", dest="friend", action="store_true", help="create a friend tree", default=False)
+parser.add_option("-I", "--inputDir", dest="inputDir", default="SYSin", help="name of input folder in config, e.g. SYSin")
+parser.add_option("-O", "--outputDir", dest="outputDir", default="SYSout", help="name of output folder in config, e.g. SYSout")
+
 
 (opts, args) = parser.parse_args(argv)
 if opts.config == "":

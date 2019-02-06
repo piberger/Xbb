@@ -134,7 +134,8 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final',
+                'normalizeShapes'
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -189,7 +190,7 @@ class Datacard(object):
         if self.sysOptions['ptRegionsDict']:
             self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
             if len(self.ptRegion) != 1:
-                print("\x1b[31mERROR: invalid pt region:", self.ptRegion,"\1b[0m")
+                print("WARNING: invalid pt region:", self.ptRegion, ", use default.")
             else:
                 self.ptRegion = self.ptRegion[0]
         else:
@@ -765,7 +766,8 @@ class Datacard(object):
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
                 else:
-                    print('\x1b[31mINFO: using full sample!',systematics['var'].lower() ,"\x1b[0m")
+                    if self.debug:
+                        print('\x1b[31mDEBUG: using full sample!',systematics['var'].lower() ,"\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
@@ -860,6 +862,23 @@ class Datacard(object):
             binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
             print(binList)
             print(binContentList)
+
+            # normalize up/down variations
+            for systematics in systematicsList:
+                if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
+                    print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
+                    normNominal = nominalHist.Integral()
+                    normVariation = self.histograms[sample.name][systematics['systematicsName']].Integral()
+                    if normVariation > 0:
+                        self.histograms[sample.name][systematics['systematicsName']].Scale(normNominal/normVariation)
+                        print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
+
+            # force positive shapes
+            for systematics in systematicsList:
+                if self.histograms[sample.name][systematics['systematicsName']].Integral() < 0:
+                    self.histograms[sample.name][systematics['systematicsName']].Scale(-0.00001)
+                    print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
+
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
@@ -1017,6 +1036,7 @@ class Datacard(object):
                     else:
                         systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
+        # DEPRECATED! now done by combine harvester!!
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
             binsBelowThreshold = {}

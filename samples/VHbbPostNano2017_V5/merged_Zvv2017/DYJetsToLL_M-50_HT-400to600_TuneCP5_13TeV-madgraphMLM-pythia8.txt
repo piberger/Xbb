@@ -1,0 +1,10 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/f3f7c8d63ae365a9867a165b6fd208a719d93056055894752fa0ffa4/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/9dfe4810c1fbaa601e0c12bdf8e86fc5ee5598ace5651f07d62a98a2/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/6e61d02aa8306ec600a90bb7d1bbda26f66785afbbdd0de70178fc4b/000000_000000/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/173e4cbbea87c03e3fca8f09d235166441e1de442ddb1022b634a110/000000_000000/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/3e1bd477659573cb6055cba524e832e47556475f535e8504b97ca178/000000_000000/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/560405bb26397f95089ae0ff08ad7e593969a4cce7a757fc9ae4d771/000000_000000/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/9097b5a417da6d0712075860e3afd8f3eccec56602689d4a48465790/000000_000000/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/4615fa255f2091b382c91fd36e58f2347016110f77ddf4fe8a532a3e/000000_000000/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/e3454af2567167e3bdf8ed8ba2092f8656016ffa70058dcac61bbc07/000000_000000/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/01c622ba7f54c8d338155f08adf73474be246f7b94248d46393bd122/000000_000000/0000/tree_9.root

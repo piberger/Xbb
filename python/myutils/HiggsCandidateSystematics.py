@@ -3,17 +3,18 @@ import ROOT
 import array
 import os
 from Jet import Jet
+from BranchTools import Collection
+from BranchTools import AddCollectionsModule
 
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
-class HiggsCandidateSystematics(object):
+class HiggsCandidateSystematics(AddCollectionsModule):
     
     def __init__(self, addSystematics=True, prefix="H", addBoostSystematics=False):
+        super(HiggsCandidateSystematics, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.lastEntry = -1
         self.nJet = -1
         self.nJetMax = 100
-        self.branches = []
-        self.branchBuffers = {}
         self.addSystematics = addSystematics
         self.prefix = prefix
         self.addBoostSystematics = addBoostSystematics
@@ -47,36 +48,29 @@ class HiggsCandidateSystematics(object):
 
         self.higgsPropertiesWithSys = self.higgsProperties if self.sample.type != 'DATA' else []
         for higgsProperty in self.higgsProperties: 
-            self.branchBuffers[higgsProperty] = array.array('f', [0.0])
-            self.branches.append({'name': higgsProperty, 'formula': self.getBranch, 'arguments': higgsProperty})
+            self.addBranch(higgsProperty)
+            
             # for data only include the min/max (set to nominal) to simplify cutting
             systList = self.jetSystematics + ['minmax'] if higgsProperty in self.higgsPropertiesWithSys else ['minmax']
 
             for syst in systList:
                 for Q in ['Up', 'Down']:
                     higgsPropertySyst = "{p}_{s}_{q}".format(p=higgsProperty, s=syst, q=Q)
-                    self.branchBuffers[higgsPropertySyst] = array.array('f', [0.0])
-                    self.branches.append({'name': higgsPropertySyst, 'formula': self.getBranch, 'arguments': higgsPropertySyst})
+                    self.addBranch(higgsPropertySyst)
 
-        self.branchBuffers['hJets_0_pt_FSRrecovered'] = array.array('f', [0.0])
-        self.branchBuffers['hJets_1_pt_FSRrecovered'] = array.array('f', [0.0])
-        self.branches.append({'name': 'hJets_0_pt_FSRrecovered', 'formula': self.getBranch, 'arguments': 'hJets_0_pt_FSRrecovered'})
-        self.branches.append({'name': 'hJets_1_pt_FSRrecovered', 'formula': self.getBranch, 'arguments': 'hJets_1_pt_FSRrecovered'})
+        self.addBranch('hJets_0_pt_noFSR')
+        self.addBranch('hJets_1_pt_noFSR')
+        self.addBranch('hJets_0_pt_FSRrecovered')
+        self.addBranch('hJets_1_pt_FSRrecovered')
+        self.addIntegerBranch('nFSRrecovered')
 
         for p in ['Jet_pt_minmax', 'Jet_mass_minmax']:
             for q in ['Up', 'Down']:
                 self.branchBuffers[p+q] = array.array('f', [0.0]*self.nJetMax)
                 self.branches.append({'name': p+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+q}, 'length': self.nJetMax, 'leaflist': p+q+'[nJet]/F'})
+                ## wrong values when using this. Use two lines above instead.
+                #self.addVectorBranch(p+q, length=self.nJetMax, leaflist=p+q+'[nJet]/F')
 
-    def getBranches(self):
-        return self.branches
- 
-    # read from buffers which have been filled in processEvent()    
-    def getBranch(self, event, arguments=None):
-        self.processEvent(event)
-        if arguments:
-            return self.branchBuffers[arguments][0]
-    
     # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
         self.processEvent(event)
@@ -84,10 +78,9 @@ class HiggsCandidateSystematics(object):
         destinationArray[:length] = self.branchBuffers[arguments['branch']][:length]
 
     def processEvent(self, tree):
-        currentEntry = tree.GetReadEntry()
         # if current entry has not been processed yet
-        if currentEntry != self.lastEntry:
-            self.lastEntry = currentEntry
+        if not self.hasBeenProcessed(tree):
+            self.markProcessed(tree)
 
 
             if self.addBoostSystematics:
@@ -117,12 +110,14 @@ class HiggsCandidateSystematics(object):
             treeJet_eta = tree.Jet_eta
 
             if self.sample.type != 'DATA':
-                treeJet_mass = tree.Jet_mass_nom
+                treeJet_mass_nom = tree.Jet_mass_nom
+                treeJet_mass = tree.Jet_mass
             else:
+                treeJet_mass_nom = tree.Jet_mass
                 treeJet_mass = tree.Jet_mass
 
             # in case of boosted analysis (there aren't two resolved jets)
-            if not (hJidx0 > -1 and hJidx0 > -1):
+            if not (hJidx0 > -1 and hJidx1 > -1):
                 pass
             else:
                 # nominal value
@@ -133,6 +128,14 @@ class HiggsCandidateSystematics(object):
                 hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], treeJet_mass[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1])
 
                 dijet_Nominal_noFSR = hJ0 + hJ1
+                
+                self.branchBuffers['hJets_0_pt_noFSR'][0] = hJ0.Pt()
+                self.branchBuffers['hJets_1_pt_noFSR'][0] = hJ1.Pt()
+                
+                self.branchBuffers[self.prefix + '_pt_noFSR'][0] = dijet_Nominal_noFSR.Pt()
+                self.branchBuffers[self.prefix + '_eta_noFSR'][0] = dijet_Nominal_noFSR.Eta()
+                self.branchBuffers[self.prefix + '_phi_noFSR'][0] = dijet_Nominal_noFSR.Phi()
+                self.branchBuffers[self.prefix + '_mass_noFSR'][0] = dijet_Nominal_noFSR.M()
                 
                 # save information which FSR jets have been added for nominal
                 fsrIndices0 = []
@@ -153,20 +156,15 @@ class HiggsCandidateSystematics(object):
                                 hJ1 = hJ1 + FSR
                                 fsrIndices1.append(i)
 
-                dijet_Nominal = hJ0 + hJ1
-
+                    dijet_Nominal = hJ0 + hJ1
                 self.branchBuffers[self.prefix + '_pt'][0] = dijet_Nominal.Pt()
                 self.branchBuffers[self.prefix + '_eta'][0] = dijet_Nominal.Eta()
                 self.branchBuffers[self.prefix + '_phi'][0] = dijet_Nominal.Phi()
                 self.branchBuffers[self.prefix + '_mass'][0] = dijet_Nominal.M()
-                
-                self.branchBuffers[self.prefix + '_pt_noFSR'][0] = dijet_Nominal_noFSR.Pt()
-                self.branchBuffers[self.prefix + '_eta_noFSR'][0] = dijet_Nominal_noFSR.Eta()
-                self.branchBuffers[self.prefix + '_phi_noFSR'][0] = dijet_Nominal_noFSR.Phi()
-                self.branchBuffers[self.prefix + '_mass_noFSR'][0] = dijet_Nominal_noFSR.M()
 
                 self.branchBuffers['hJets_0_pt_FSRrecovered'][0] = hJ0.Pt()
                 self.branchBuffers['hJets_1_pt_FSRrecovered'][0] = hJ1.Pt()
+                self.branchBuffers['nFSRrecovered'][0] = len(fsrIndices0) + len(fsrIndices1)
 
             # systematics
             valueList = {x:[self.branchBuffers[x][0]] for x in self.higgsProperties}
@@ -178,11 +176,12 @@ class HiggsCandidateSystematics(object):
                             if self.addBoostSystematics  and boosttagidx > -1: 
                                 msoftdrop_sys = msoftdrop*getattr(tree, 'FatJet_pt_{s}{d}'.format(s=syst, d=Q))[boosttagidx]/getattr(tree, 'FatJet_pt_nom')[boosttagidx]
                             # nothing to compute if no resolved jet
-                            if not (hJidx0 > -1 and hJidx0 > -1):
+                            if not (hJidx0 > -1 and hJidx1 > -1):
                                 pass
                             else:
                                 hJ0 = ROOT.TLorentzVector()
                                 hJ1 = ROOT.TLorentzVector()
+
 
                                 if syst == 'jerReg':
                                     # vary the regression for the regression systematic
@@ -194,11 +193,15 @@ class HiggsCandidateSystematics(object):
                                     # vary unregressed pt
                                     #  pt_reg_var   = pt_reg * pt_var / pt_nom
                                     #  mass_reg_var = mass_var * pt_reg / pt_nom
-                                    hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0])
-                                    hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1])
+                                    # SYNC with AT: added * treeJet_mass[hJidx0]/treeJet_mass_nom[hJidx0] to have nominal value at Jet_mass instead of Jet_mass_nom
+                                    hJ0mass = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0] * (treeJet_mass[hJidx0]/treeJet_mass_nom[hJidx0] if treeJet_mass_nom[hJidx0] > 0 else 1)
+                                    hJ1mass = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1] * (treeJet_mass[hJidx1]/treeJet_mass_nom[hJidx1] if treeJet_mass_nom[hJidx1] > 0 else 1)
+                                    hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], hJ0mass) 
+                                    hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], hJ1mass)
+                                    
 
                                 dijet_noFSR = hJ0 + hJ1
-                                
+
                                 # FSR recovery for systematic variations
                                 #  the same jets are recovered as for nominal, but with variation applied
                                 for i in fsrIndices0:
@@ -225,7 +228,7 @@ class HiggsCandidateSystematics(object):
                             self.branchBuffers['FatJet_msoftdrop_sys_{s}_{d}'.format(s=syst, d=Q)][0] = msoftdrop_sys
                             valueList['FatJet_msoftdrop_sys'].append(msoftdrop_sys)
 
-                        if not (hJidx0 > -1 and hJidx0 > -1):
+                        if not (hJidx0 > -1 and hJidx1 > -1):
                             pass
                         else:
                             self.branchBuffers[self.prefix + '_pt_{s}_{d}'.format(s=syst, d=Q)][0] = dijet.Pt()
@@ -243,6 +246,12 @@ class HiggsCandidateSystematics(object):
                             valueList[self.prefix + '_eta'].append(dijet.Eta())
                             valueList[self.prefix + '_phi'].append(dijet.Phi())
                             valueList[self.prefix + '_mass'].append(dijet.M())
+
+                            ## add to the list for min/max
+                            valueList[self.prefix + '_pt_noFSR'].append(dijet.Pt())
+                            valueList[self.prefix + '_eta_noFSR'].append(dijet.Eta())
+                            valueList[self.prefix + '_phi_noFSR'].append(dijet.Phi())
+                            valueList[self.prefix + '_mass_noFSR'].append(dijet.M())
 
             # get minimum and maximum variation
             for syst in ['minmax']:

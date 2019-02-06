@@ -56,8 +56,15 @@ echo
 force="0"
 friend="0"
 join="0"
+noretry="0"
 while [ $# -gt 0 ]; do
   case "$1" in
+    --inputDir=*)
+      inputDir="${1#*=}"
+      ;;
+    --outputDir=*)
+      outputDir="${1#*=}"
+      ;;
     --trainingRegions=*)
       trainingRegions="${1#*=}"
       ;;
@@ -75,6 +82,9 @@ while [ $# -gt 0 ]; do
       ;;
     --join)
       join="1"
+      ;;
+    --noretry)
+      noretry="1"
       ;;
     --expectedSignificance)
       expectedSignificance="1"
@@ -108,6 +118,9 @@ while [ $# -gt 0 ]; do
       ;;
     --addCollections=*)
       addCollections="${1#*=}"
+      ;;
+    --configFile=*)
+      configFile="${1#*=}"
       ;;
     *)
       ;;
@@ -265,6 +278,11 @@ elif [ $task = "runtraining" ]; then
 elif [ $task = "runtraining_scikit" ]; then
     runCommand="python ./run_training_scikit.py --trainingRegions ${trainingRegions}"
 
+elif [ $task = "dnn" ]; then
+    runCommand="python tfZllDNN/train.py -c tfZllDNN/config.cfg -i ${trainingRegions} -l"
+    config_filenames=()
+    unset configFile
+
 elif [ $task = "hadd" ]; then
     runCommand="python ./hadd.py --chunkNumber ${chunkNumber}"
 
@@ -292,6 +310,12 @@ elif [ $task = "rundc" ]; then
 
 elif [ $task = "mergedc" ]; then
     runCommand="python ./merge_dc.py --regions ${regions}";
+
+elif [ $task = "export_h5" ] || [ $task = "export_hdf5" ]; then
+    runCommand="python ./write_numpy_array_for_training.py -t ${trainingRegions}"
+
+elif [ $task = "make_skims" ]; then
+    runCommand="python ./make_skims.py --regions ${regions}";
 
 elif [ $task = "mva_opt" ] || [ $task = "splitsubcaching" ]; then
     echo "python ./train.py --training $sample ${config_filenames[@]} --setting $bdt_params --local True"
@@ -381,7 +405,6 @@ elif [ $task = "stack" ]; then
 elif [ $task = "plot_sys" ]; then
     echo "python ./plot_systematics.py ${config_filenames[@]}"
     python ./plot_systematics.py ${config_filenames[@]}
-
 fi
 
 # add standard arguments, print command and run 
@@ -404,7 +427,20 @@ if [ "$runCommand" ]; then
     if [ "$verbose" = "1" ]; then
         runCommand="${runCommand} --verbose"
     fi
-    runCommand="${runCommand} ${config_filenames[@]}"
+    
+    if [ "$configFile" ]; then 
+        runCommand="${runCommand} --config ${configFile}"
+    else
+        runCommand="${runCommand} ${config_filenames[@]}"
+    fi
+    if [ "$inputDir" ]; then
+        runCommand="${runCommand} --inputDir ${inputDir}"
+    fi
+    if [ "$outputDir" ]; then
+        runCommand="${runCommand} --outputDir ${outputDir}"
+    fi
+    
+    
     echo "$runCommand"
     eval "$runCommand"
 fi
@@ -416,7 +452,24 @@ echo "exit code: $EXITCODE"
 ENDTIME=$(date +%s.%N)
 DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
 echo "duration (real time): $DIFFTIME minutes"
-
+if [ "$EXITCODE" -ne "0" ]; then
+    if [ "$noretry" = "1" ]; then
+        echo "--- STOP ---"
+    else
+        echo "--- RETRY ---"
+        if [ "$runCommand" ]; then
+            echo "$runCommand"
+            eval "$runCommand"
+            EXITCODE=$?
+            echo "exit code: $EXITCODE"
+            ENDTIME=$(date +%s.%N)
+            DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
+            echo "duration (real time): $DIFFTIME minutes, including retry"
+        fi
+    fi
+else
+    echo "--- OK ---"
+fi
 echo
 echo "Exiting runAll.sh"
 echo

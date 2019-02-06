@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/WZ_TuneCP5_13TeV-pythia8/d4e4af75924388b6a7de586ee16dc202d8333580f7707769d05cb167/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V5/WZ_TuneCP5_13TeV-pythia8/3e9347c81a6b3b040ce93248318cade9e765eaeb06368803b7f0331b/000000_000000/0000/tree_1.root

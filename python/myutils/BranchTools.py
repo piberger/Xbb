@@ -144,6 +144,9 @@ class Collection(object):
                             'leaflist': leaflist,
                         })
 
+    def _b(self, n=None):
+        return self.branchBuffers[n] if n else self.branchBuffers[self.name]
+
     # direct access to branch arrays
     def __getitem__(self, key):
         return self.branchBuffers[key]
@@ -212,6 +215,23 @@ class AddCollectionsModule(object):
         self.branchBuffers[branchName] = array.array('i', [default])
         self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName, 'type': 'i'})
 
+    def addVectorBranch(self, branchName, default=0, branchType='d', length=1, leaflist=None):
+        self.branchBuffers[branchName] = array.array(branchType, [default]*length)
+        newBranch = {
+                'name': branchName,
+                'formula': self.fillVectorBranch,
+                'type': branchType,
+                'arguments': {'branch': branchName, 'size': length},
+                'length': length,
+                'arrayStyle': True,
+            }
+        if leaflist:
+            newBranch['leaflist'] = leaflist
+        self.branches.append(newBranch)
+
+    def addIntegerVectorBranch(self, branchName, default=0, length=1):
+        self.addVectorBranch(branchName, default=default, length=length, branchType='i')
+
     def getBranches(self):
         return self.branches
 
@@ -221,6 +241,20 @@ class AddCollectionsModule(object):
 
     def setBranch(self, branchName, value):
         self.branchBuffers[branchName][0] = value
+
+    def _b(self, branchName):
+        return self.branchBuffers[branchName]
+
+    def fillVectorBranch(self, event, arguments=None, destinationArray=None):
+        size = 1
+        if 'size' in arguments:
+            if type(arguments['size']) == int:
+                size = arguments['size']
+            elif arguments['size'] in self.branchBuffers:
+                size = self.branchBuffers[arguments['size']][0]
+            elif type(arguments['size']) == str:
+                size = getattr(event, arguments['size'])
+        destinationArray[:size] = self.branchBuffers[arguments['branch']][:size]
 
     def hasBeenProcessed(self, tree):
         return tree.GetReadEntry() == self.lastEntry
