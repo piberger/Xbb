@@ -548,13 +548,12 @@ class MvaTrainingHelper(object):
         print("INFO: open ", self.trainingOutputFileName)
         rootFile = ROOT.TFile.Open(self.trainingOutputFileName, "READ")
         print("INFO: ->", rootFile)
-        testTree = rootFile.Get('./TestTree')
-        TESThist = self.getbdtHistogram(testTree)
-        self.hSIGtest, self.hBKGtest = TESThist[0], TESThist[1]
-        trainTree = rootFile.Get('./TrainTree')
-        TRAINhist = self.getbdtHistogram(trainTree)
-        self.hSIGtrain, self.hBKGtrain = TRAINhist[0], TRAINhist[1]
 
+        self.hSIGtest = rootFile.Get('./Method_%s/%s/MVA_%s_S'%(self.mvaName,self.mvaName,self.mvaName))
+        self.hBKGtest = rootFile.Get('./Method_%s/%s/MVA_%s_B'%(self.mvaName,self.mvaName,self.mvaName))
+        self.hSIGtrain = rootFile.Get('./Method_%s/%s/MVA_%s_Train_S'%(self.mvaName,self.mvaName,self.mvaName))
+        self.hBKGtrain = rootFile.Get('./Method_%s/%s/MVA_%s_Train_B'%(self.mvaName,self.mvaName,self.mvaName))
+        print("./Method_%s/%s/MVA_%s_Train_B"%(self.mvaName,self.mvaName,self.mvaName))
         self.drawOvertraining()
 
 
