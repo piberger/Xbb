@@ -111,4 +111,4 @@ class FatJetMassJER(object):
         cup     = 1. + r*math.sqrt(max(self.Rup**2-1,0))
         cdown   = 1. + r*math.sqrt(max(self.Rdown**2-1,0))
 
-        return [cup, cdown]
+        return [cdown, cup]
