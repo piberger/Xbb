@@ -23,7 +23,7 @@ class LeptonWeights(object):
                 self.branchBuffers[branchName] = array.array('f', [0.0, 0.0])
                 self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':2}, 'length': 2})
         if channel == 'Wlv' or channel == 'Zvv' or len(channel)<1:
-            for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu', 'eVeto']:
+            for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu']:
                 self.branchBuffers[branchName] = array.array('f', [1.0, 0.0, 0.0])
                 self.branches.append({'name': branchName, 'formula': self.getVectorBranch, 'arguments': {'branch': branchName, 'length':3}, 'length': 3})
         self.leptonSF = {}
@@ -418,7 +418,7 @@ class LeptonWeights(object):
                     print "MET:",tree.MET_pt,tree.MET_Pt
                     raise Exception("VtypeMismatch")
 
-                for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu', 'eVeto']:
+                for branchName in ['weight_SF_TightID', 'weight_SF_TightISO', 'weight_SF_TightIDnISO', 'weight_SF_TRK', 'weight_SF_Lepton', 'eTrigSFWeight_singleEle80', 'muTrigSFWeight_singlemu']:
                     self.branchBuffers[branchName][0] = 1.0
                     self.branchBuffers[branchName][1] = 0.0
                     self.branchBuffers[branchName][2] = 0.0
@@ -462,8 +462,6 @@ class LeptonWeights(object):
                         wdir+'/python/json/V25/ScaleFactor_etracker_80x.json' : ['ScaleFactor_tracker_80x', 'eta_pt_ratio'],
                         #Trigg
                         wdir+'/python/json/V25/Tight27AfterIDISO_out.json' : ['Tight27AfterIDISO', 'eta_pt_ratio'],
-                        #electron veto
-                        wdir+'/python/json/V25/failingVeto_out.json' : ['failingVeto_WH', 'eta_pt_ratio']
                         }
 
                     for j, name in jsons.iteritems():
@@ -478,28 +476,27 @@ class LeptonWeights(object):
                         #2-D binned SF
                         #print 'vtype is', tree.Vtype
                         #print 'j is',j 
-                        if not j.find('trk_SF_Run') != -1 and j.find('failingVeto_out') == -1:
+                        if not j.find('trk_SF_Run') != -1:
                             if 'abseta' in  name[1]:
                                 self.weight.append(lepCorr.get_2D(vLeptons[0].pt, abs(vLeptons[0].eta)))
                             else:
                                 self.weight.append(lepCorr.get_2D(vLeptons[0].pt, vLeptons[0].eta))
-                        # SF are not applied on "main" electron but on the veto electron
-                        elif j.find('failingVeto_out') != -1 and tree.Vtype == 3:
-                            #print 'yeaaaaaaaaaaaaaaaaaaaaaah3'
-                            # in case no electron has been vetoed, set SF to 1
-                            if tree.nElectron < 2:
-                                w = [1., 0]
-                                self.weight.append(w)
-                                #self.weight[0][0] = 1.
-                                #self.weight[0][1] = 0.
-                            else:
-                                for i in range(tree.nElectron):
-                                    if i == tree.VElectronIdx: continue #not additional lepton but main lepton
-                                    self.weight.append(lepCorr.get_2D(tree.Electron_pt[i],tree.Electron_eta[i]))
-                                    break
-                            #print 'nElectron', tree.nElectron
-                            #print 'weight is', self.weight[0][0]
-                        #1-D binned SF
+                        ## SF are not applied on "main" electron but on the veto electron
+                        #elif j.find('failingVeto_out') != -1 and tree.Vtype == 3:
+                        #    # in case no electron has been vetoed, set SF to 1
+                        #    if tree.nElectron < 2:
+                        #        w = [1., 0]
+                        #        self.weight.append(w)
+                        #        #self.weight[0][0] = 1.
+                        #        #self.weight[0][1] = 0.
+                        #    else:
+                        #        for i in range(tree.nElectron):
+                        #            if i == tree.VElectronIdx: continue #not additional lepton but main lepton
+                        #            self.weight.append(lepCorr.get_2D(tree.Electron_pt[i],tree.Electron_eta[i]))
+                        #            break
+                        #    #print 'nElectron', tree.nElectron
+                        #    #print 'weight is', self.weight[0][0]
+                        ##1-D binned SF
                         elif j.find('trk_SF_Run') != -1:
                             self.weight.append(lepCorr.get_1D(vLeptons[0].eta))
 
@@ -535,9 +532,9 @@ class LeptonWeights(object):
                             #TRIG
                             elif j.find('Tight27AfterIDISO_out') != -1:
                                 self.computeSF_SingleLep(self.branchBuffers['eTrigSFWeight_singleEle80'])
-                            #VETO
-                            elif j.find('failingVeto_out') != -1:
-                                self.computeSF_SingleLep(self.branchBuffers['eVeto'])
+                            ##VETO
+                            #elif j.find('failingVeto_out') != -1:
+                            #    self.computeSF_SingleLep(self.branchBuffers['eVeto'])
 
                     #Fill muon triggers
                     if tree.Vtype == 2:
