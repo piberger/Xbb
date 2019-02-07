@@ -1335,6 +1335,14 @@ return puw[i];
 
 }
 
+int argmax8(double p1, double p2, double p3, double p4, double p5, double p6, double p7, double p8) {
+        std::vector<double> p = {p1,p2,p3,p4,p5,p6,p7,p8};
+            return std::distance(p.begin(), std::max_element(p.begin(), p.end()));
+}
+double max8(double p1, double p2, double p3, double p4, double p5, double p6, double p7, double p8) {
+        std::vector<double> p = {p1,p2,p3,p4,p5,p6,p7,p8};
+        return *std::max_element(p.begin(), p.end());
+}
 
 }
 

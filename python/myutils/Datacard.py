@@ -767,7 +767,10 @@ class Datacard(object):
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
                 else:
                     if self.debug:
-                        print('\x1b[31mDEBUG: using full sample!',systematics['var'].lower() ,"\x1b[0m")
+                        if sample.type == 'DATA':
+                            print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
+                        else:
+                            print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')

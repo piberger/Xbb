@@ -8,7 +8,7 @@ import sys
 sys.path.append("..")
 sys.path.append("../tfZllDNN/")
 # tfZllDNN repository has to be cloned inside the python folder
-from tfZllDNN.tfDNNclassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_new
+from tfVHbbDNN.tfDNNclassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_new
 from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_old
 TensorflowDNNClassifier = TensorflowDNNClassifier_old
 
@@ -184,7 +184,8 @@ class tensorflowEvaluator(AddCollectionsModule):
                     self.dnnCollectionsMulti['signal']._b()[j] = min(sum([probabilities[j, i] for i in self.signalClassIds]), 0.9999)
 
                     # default linearization method
-                    self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(np.power(sortedValues[-1] - sortedValues[-2], 0.25), 0.9999)
+                    #self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(np.power(sortedValues[-1] - sortedValues[-2], 0.25), 0.9999)
+                    self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(sortedValues[-1], 0.9999) 
 
         return True
 

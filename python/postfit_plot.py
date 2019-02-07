@@ -21,7 +21,7 @@ class PostfitPlotter(object):
         self.directory = directory
         self.shapesFile = None
         self.plotPath = config.get('Directories', 'plotpath')
-        self.title = "CMS #scale[0.8]{work in progress}"
+        self.title = None # "CMS #scale[0.8]{work in progress}"
         self.blindBins = []
         self.plotText = [""]
         if self.config.has_option('Fit', 'plotText'):
@@ -151,6 +151,7 @@ if __name__ == "__main__":
     else:
         regions = opts.regions.split(',')
     for region in regions:
+        print("INFO: region:", region)
         plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType)
         plotter.prepare()
         plotter.run()

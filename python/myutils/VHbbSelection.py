@@ -169,8 +169,12 @@ class VHbbSelection(AddCollectionsModule):
             triggerPassed = {k: any([getattr(tree, x) for x in v if hasattr(tree,x)])  for k,v in self.HltPaths.items()}
             if debugEvent:
                 print "triggers:", triggerPassed
-            #if not ((tree.Vtype in [4] and triggerPassed['Znn'] and "Znn" in self.channels) or (tree.Vtype in [2,3] and triggerPassed['Wln'] and ("Wln" in self.channels or "Znn" in self.channels)) or (tree.Vtype in [0,1] and triggerPassed['Zll'] and  "Zll" in self.channels)):
-            if not ((triggerPassed['Znn'] and tree.Vtype == 4 and "Znn" in self.channels) or (triggerPassed['Wln'] and (tree.Vtype == 2 or tree.Vtype == 3) and ("Wln" in self.channels or "Znn" in self.channels)) or (triggerPassed['Zll'] and (tree.Vtype == 0 or tree.Vtype == 1) and  "Zll" in self.channels)):
+
+            isZnn = tree.Vtype == 4 and triggerPassed['Znn']
+            isWln = tree.Vtype in [2,3] and triggerPassed['Wln']
+            isZll = tree.Vtype in [0,1] and triggerPassed['Zll']
+
+            if not any([isZll, isWln, isZnn]):
                 return False
             self.cutFlow[1] += 1
             

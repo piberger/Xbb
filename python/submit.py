@@ -838,17 +838,23 @@ if opts.task.startswith('cachetraining'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
+    allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions], []))) if config.has_option(trainingRegion, 'data') else []
+
     print "backgrounds:"
     for sampleName in sorted(allBackgrounds):
         print " >", sampleName
     print "signals:"
     for sampleName in sorted(allSignals):
         print " >", sampleName
+    if len(allData) > 0:
+        print "data:"
+        for sampleName in sorted(allData):
+            print " >", sampleName
     
     # get samples info
     samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
-    samples = info.get_samples(allBackgrounds + allSignals)
+    samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(list(set([sample.identifier for sample in samples])), samplesList)
