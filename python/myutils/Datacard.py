@@ -522,9 +522,9 @@ class Datacard(object):
                 if self.debug:
                     print ('treevar was', treevar)
                     print ('.nominal by', '.%s_%s'%(syst, Q))
-                treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
+                treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q)).replace('.nominal','.%s_%s'%(syst, Q))
             else:
-                treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
+                treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD', Q))).replace('.nominal','.%s'%(syst.replace('UD', Q)))
                 if self.debug:
                     print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType.lower() == 'mjj':

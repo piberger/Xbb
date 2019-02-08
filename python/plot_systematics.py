@@ -28,7 +28,10 @@ masses = ['125']
 
 #Test and test complementary
 #channels = ['ZeeBDT_lowpt', 'ZuuBDT_highpt']
-channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt']
+#channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt']
+#channels = ['Wlm_SR_HighPt']
+channels = ['Wle_SR_HighPt']
+#channels = ['Znn_13TeV_Signal']
 
 #All
 #channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee_CRZlight_highpt','Zuu_CRZb_highpt','Zuu_CRZb_lowpt','Zee_CRZb_highpt','Zee_CRZb_lowpt','Zee_CRttbar_highpt','Zee_CRttbar_lowpt','Zuu_CRttbar_highpt','Zuu_CRttbar_lowpt','ZeeBDT_lowpt','ZeeBDT_highpt','ZuuBDT_lowpt','ZuuBDT_highpt']
@@ -78,7 +81,13 @@ channels = ['Zuu_CRZlight_lowpt','Zuu_CRZlight_highpt','Zee_CRZlight_lowpt','Zee
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc-v1/Limits'
 #path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_CMVA_Zll2016Nano_V4/rundc_jesTotal-v2/Limits'
 
-path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v7_all_newKinFit_firstDCfix/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/vlohanes/CMSSW_10_1_0/src/Xbb/python/logs_Zll2017/rundc-v7_all_newKinFit_firstDCfix/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Wlv2016_rundc_evalv3_Limits/remove1'
+#path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Wlv2016_rundc_eval_v4_Limits'
+#path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Zvv2016Nano_V4/rundc_v21/Limits'
+#path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit/Nano2016/logs_Zvv2016Nano_V4_rundc_v21_Limits'
+path_= '/mnt/t3nfs01/data01/shome/gaperrin/VHbb2018/CMSSW_10_1_0/src/Xbb/python/logs_Wlv2016_v2/rundc_BDT0p5Cut_v20/Limits'
+       
 
 #------------------------------------------------------
 #---------- Mjj ---------------------------------------
@@ -157,15 +166,15 @@ for mass in masses:
             print 'open', path+'/vhbb_TH_Mjj_'+Abin+'_M'+mass+'_'+channel+'.root'
 
         print 'input:', input
-        print 'The MCs are'
+        print 'The MCs are', MCs
         for MC in MCs:
             #if not 'Top' in MC: continue
             print MC
             print 'The systs are'
             print systs
             for syst in systs:
-                if '_m_' in syst and  'Zee' in input_: continue
-                if '_e_' in syst and  'Zuu' in input_: continue
+                if '_m_' in syst and  ('Zee' in input_ or 'Wle' in input_): continue
+                if '_e_' in syst and  ('Zuu' in input_ or 'Wlm' in input_): continue
                 #if not 'EWK' in syst: continue
                 #if not '_m_' in syst and not '_e_' in syst: continue
                 #print syst
@@ -239,9 +248,9 @@ for mass in masses:
                 l.SetTextSize(0.035)
 
 
-                l.AddEntry(Ntotal,'nominal','PL')
-                l.AddEntry(Utotal,'up','PL')
-                l.AddEntry(Dtotal,'down','PL')
+                #l.AddEntry(Ntotal,'nominal','PL')
+                #l.AddEntry(Utotal,'up','PL')
+                #l.AddEntry(Dtotal,'down','PL')
                 l.AddEntry(Ntotal,'nominal(%s)'%round(Ntotal.Integral(),3),'PL')
                 l.AddEntry(Utotal,'up(%s)'%round(Utotal.Integral(),3),'PL')
                 l.AddEntry(Dtotal,'down(%s)'%round(Dtotal.Integral(),3),'PL')
@@ -255,10 +264,12 @@ for mass in masses:
                 Utotal.SetLineColor(4)
                 Utotal.SetLineStyle(4)
                 Utotal.SetLineWidth(2)
+                Utotal.SetFillColor(0)
                 Utotal.Draw("same hist")
                 Dtotal.SetLineColor(2)
                 Dtotal.SetLineStyle(3)
                 Dtotal.SetLineWidth(2)
+                Dtotal.SetFillColor(0)
                 Dtotal.Draw("same hist")
                 l.SetFillColor(0)
                 l.SetBorderSize(0)
@@ -296,16 +307,18 @@ for mass in masses:
                     ratioD.GetYaxis().SetNdivisions(502,0)
                     ratioD.GetYaxis().SetLabelSize(0.05)
                     ratioD.SetLineColor(2)
+                    ratioD.SetMarkerStyle(0)
                     ratioD.SetLineStyle(3)
                     ratioD.SetLineWidth(2)
                     ratioU.SetLineColor(4)
+                    ratioU.SetMarkerStyle(0)
                     ratioU.SetLineStyle(4)
                     ratioU.SetLineWidth(2)
 
                     fitRatioU = ratioU.Fit("pol2","S")
                     ratioU.GetFunction("pol2").SetLineColor(4)
                     fitRatioD = ratioD.Fit("pol2","S")
-                    ratioU.Draw("APSAME")
+                    ratioU.Draw("SAME")
                     ratioD.GetXaxis().SetTitle('BDT Output')
                     ratioD.GetYaxis().SetTitle('Ratio')
                     ratioD.GetYaxis().SetTitleSize(0.1)

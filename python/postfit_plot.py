@@ -42,6 +42,7 @@ class PostfitPlotter(object):
         # dump S/B
         shapeS = self.getShape("total_signal")
         shapeB = self.getShape("total_background")
+        print("name:", shapeB.GetName())
         print("file:", self.shapesFile)
         print("shape:", shapeS, shapeB)
         print(self.region,"-"*40)
