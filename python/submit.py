@@ -1746,6 +1746,18 @@ if opts.task.startswith('make_skims'):
     if nRegionsMatched < 1:
         print "WARNING: no plot regions found - nothing to do."
 
+# -----------------------------------------------------------------------------
+# config: print single, fully parsed config setting 
+# -----------------------------------------------------------------------------
+if opts.task == 'config':
+    section = opts.vars.split('.')[0]
+    value   = opts.vars.split('.')[1] 
+    if config.has_option(section, value):
+        print "RESULT: {section}.{value} = {result}".format(section=section, value=value, result=config.get(section, value))
+    else:
+        print "\x1b[31mERROR: not found: {section}.{value}\x1b[0m".format(section=section, value=value)
+
+
 # if there are still jobs in the local queue, submit them to the batch queue
 batchSystem.submitQueue()
 
