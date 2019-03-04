@@ -12,7 +12,7 @@ import math
 
 class PostfitPlotter(object):
 
-    def __init__(self, config, region, vars=None, directory="shapes_fit_s", title=None):
+    def __init__(self, config, region, vars=None, directory="shapes_fit_s", title=None, blind=True):
         self.config = config
         self.region = region
         self.fitRegions = eval(self.config.get('Fit', 'regions'))
@@ -23,6 +23,7 @@ class PostfitPlotter(object):
         self.plotPath = config.get('Directories', 'plotpath')
         self.title = None # "CMS #scale[0.8]{work in progress}"
         self.blindBins = []
+        self.blind = blind
         self.plotText = [""]
         if self.config.has_option('Fit', 'plotText'):
             self.plotText = eval(self.config.get('Fit', 'plotText'))
@@ -36,6 +37,11 @@ class PostfitPlotter(object):
                 self.plotText += eval(self.config.get('Fit:'+self.region,'plotText'))
 
     def prepare(self):
+        self.dcDict = eval(self.config.get('LimitGeneral','Dict'))
+        self.reverseDcDict = {v:k for k,v in self.dcDict.iteritems()}
+        self.setup = eval(self.config.get('LimitGeneral','setup'))
+        self.setupSignals = eval(self.config.get('LimitGeneral','setupSignals')) if self.config.has_option('LimitGeneral','setupSignals') else []
+
         shapesFileName = self.config.get('Fit', 'FitDiagnosticsDump')
         self.shapesFile = ROOT.TFile.Open(shapesFileName, "READ")
 
@@ -66,17 +72,22 @@ class PostfitPlotter(object):
 
 
     def getShape(self, process):
-        histogramName = self.directory + '/' + self.dcRegion + '/' + process
+        # process is datacard name convention, convert it back to Xbb process convention if necessary
+        processName = self.reverseDcDict[process] if process in self.reverseDcDict else process
+        
+        # use pre-fit signal strength for plotting if blind
+        if self.blind and processName in self.setupSignals:
+            print("INFO: \x1b[31mBLIND: prefit shapes are plotted for signal!\x1b[0m")
+            histogramName = 'shapes_prefit/' + self.dcRegion + '/' + process
+        else:
+            histogramName = self.directory + '/' + self.dcRegion + '/' + process
         print("DEBUG: get shape ", histogramName)
         histogram = self.shapesFile.Get(histogramName)
         print("DEBUG: -->", histogram)
         return histogram
 
     def run(self):
-        self.dcDict = eval(self.config.get('LimitGeneral','Dict'))
-        self.reverseDcDict = {v:k for k,v in self.dcDict.iteritems()}
-        self.setup = eval(self.config.get('LimitGeneral','setup'))
-        
+
         self.stack = StackMaker(self.config, self.var, self.region, True, self.setup, '_', title=self.title)
         self.stack.setPlotText(self.plotText)
 

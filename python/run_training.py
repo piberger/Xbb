@@ -275,7 +275,7 @@ class MvaTrainingHelper(object):
             sSum += hSIG.GetBinContent(1+i)
             bSum += hBKG.GetBinContent(1+i)
             ssb = hSIG.GetBinContent(1+i)/math.sqrt(hSIG.GetBinContent(1+i) + hBKG.GetBinContent(1+i)) if (hSIG.GetBinContent(1+i) + hBKG.GetBinContent(1+i)) > 0 else 0
-            print(sbTableFormat.format(bin=i, signal=round(hSIG.GetBinContent(1+i),1), background=round(hBKG.GetBinContent(1+i),1), ssb=round(ssb,3)))
+            print(sbTableFormat.format(bin=i, signal=round(hSIG.GetBinContent(1+i),2), background=round(hBKG.GetBinContent(1+i),2), ssb=round(ssb,3)))
         expectedSignificance = math.sqrt(ssbSum)
         print(sbTableFormat.format(bin="SUM", signal=round(sSum,1), background=round(bSum,1), ssb="\x1b[34mZ=%1.3f\x1b[0m"%expectedSignificance))
         print("-"*40)
@@ -292,6 +292,9 @@ class MvaTrainingHelper(object):
         # run a few tests with different binnings and rescaling of BDT score
         self.getExpectedSignificance(testTree, 15, -0.8, 1.0)
         self.getExpectedSignificance(testTree, 15, -0.8, 0.9)
+        self.getExpectedSignificance(testTree, 15, -0.8, 0.8)
+        self.getExpectedSignificance(testTree, 15, -0.8, 0.75)
+        self.getExpectedSignificance(testTree, 15, -0.8, 0.7)
         self.getExpectedSignificance(testTree, 15, -0.8, 0.8, power=0.5)
         self.getExpectedSignificance(testTree, 15, -0.8, 0.8, power=0.33)
         self.getExpectedSignificance(testTree, 15, -0.8, 0.8, power=1.5)
