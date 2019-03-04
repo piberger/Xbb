@@ -7,10 +7,16 @@ from BranchTools import AddCollectionsModule
 import sys
 sys.path.append("..")
 sys.path.append("../tfZllDNN/")
+sys.path.append("../tfVHbbDNN/")
+
 # tfZllDNN repository has to be cloned inside the python folder
 from tfVHbbDNN.tfDNNclassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_new
-from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_old
-TensorflowDNNClassifier = TensorflowDNNClassifier_old
+try:
+    from tfZllDNN.TensorflowDNNClassifier import TensorflowDNNClassifier as TensorflowDNNClassifier_old
+    TensorflowDNNClassifier = TensorflowDNNClassifier_old
+except:
+    print "WARNING: only NEW(version==2) DNN training code found, legacy files can't be read!"
+    TensorflowDNNClassifier = TensorflowDNNClassifier_new
 
 from MyStandardScaler import StandardScaler
 import numpy as np
