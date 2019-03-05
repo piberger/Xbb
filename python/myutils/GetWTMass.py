@@ -60,8 +60,6 @@ class GetWTMass(object):
             self.lastEntry = currentEntry
 
 
-            e1Idx = getattr(tree,self.eIdx)[0]
-            mu1Idx = getattr(tree,self.muIdx)[0]
             treeMETpt = getattr(tree,self.METpt) 
             treeMETphi = getattr(tree,self.METphi) 
 
@@ -74,8 +72,10 @@ class GetWTMass(object):
             else:
                 MET.SetPtEtaPhiM(treeMETpt, 0, treeMETphi, 0)
                 if tree.Vtype == 2 :
+                    mu1Idx = getattr(tree,self.muIdx)[0]
                     Lep.SetPtEtaPhiM(tree.Muon_pt[mu1Idx], tree.Muon_eta[mu1Idx], tree.Muon_phi[mu1Idx], tree.Muon_mass[mu1Idx])
                 if tree.Vtype == 3:
+                    e1Idx = getattr(tree,self.eIdx)[0]
                     Lep.SetPtEtaPhiM(tree.Electron_pt[e1Idx], tree.Electron_eta[e1Idx], tree.Electron_phi[e1Idx], tree.Electron_mass[e1Idx])
 
 
