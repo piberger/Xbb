@@ -13,7 +13,15 @@ ROOT.gROOT.SetBatch()
 #nominal
 #VarList_in = 'SYS_UD: H_mass_SYS_UD H_pt_SYS_UD abs(TVector2::Phi_mpi_pi(H_phi-V_phi)) MET_pt_SYSUD (Jet_eta[hJidxCMVA[0]]-Jet_eta[hJidxCMVA[1]]) Jet_btagCMVA[hJidxCMVA[0]] Jet_btagCMVA[hJidxCMVA[1]] SA5 TVector2::Phi_mpi_pi(Jet_phi[hJidxCMVA[0]]-Jet_phi[hJidxCMVA[1]]) max(Jet_pt_SYSUD[hJidxCMVA[0]],Jet_pt_SYSUD[hJidxCMVA[1]]) min(Jet_pt_SYSUD[hJidxCMVA[0]],Jet_pt_SYSUD[hJidxCMVA[1]]) MaxIf$(Jet_btagCMVA,Jet_pt_SYSUD>30&&Jet_puId>=4&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MaxIf$(Jet_pt_SYSUD,Jet_pt_SYSUD>30&&Jet_puId>=4&&Jet_lepFilter&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MinIf$(abs(TVector2::Phi_mpi_pi(Jet_phi-V_phi))-3.1415,Jet_pt_SYSUD>30&&Jet_puId>=4)'
 
-VarList_in = 'SYS_UD: H_mass_noFSR_SYS_UD H_pt_noFSR_SYS_UD abs(TVector2::Phi_mpi_pi(H_phi_noFSR_SYS_UD-V_phi)) V_pt (Jet_eta[hJidxCMVA[0]]-Jet_eta[hJidxCMVA[1]]) Jet_btagCMVA[hJidxCMVA[0]] Jet_btagCMVA[hJidxCMVA[1]] SA5 TVector2::Phi_mpi_pi(Jet_phi[hJidxCMVA[0]]-Jet_phi[hJidxCMVA[1]]) max(Jet_PtReg[hJidxCMVA[0]]*Jet_pt_SYSUD[hJidxCMVA[0]]/Jet_Pt[hJidx[0]],Jet_PtReg[hJidxCMVA[1]]*Jet_pt_SYSUD[hJidxCMVA[1]]/Jet_Pt[hJidx[1]]) min(Jet_PtReg[hJidxCMVA[0]]*Jet_pt_SYSUD[hJidxCMVA[0]]/Jet_Pt[hJidx[0]],Jet_PtReg[hJidxCMVA[1]]*Jet_pt_SYSUD[hJidxCMVA[1]]/Jet_Pt[hJidx[1]]) MaxIf$(Jet_btagCMVA,Jet_pt_SYSUD>30&&Jet_puId>=4&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MaxIf$(Jet_Pt,Jet_pt_SYSUD>30&&Jet_puId>=4&&Jet_lepFilter&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MinIf$(abs(TVector2::Phi_mpi_pi(Jet_phi-V_phi))-3.1415,Jet_Pt>30&&Jet_puId>=4)'
+#VarList_in = 'SYS_UD: H_mass_noFSR_SYS_UD H_pt_noFSR_SYS_UD abs(TVector2::Phi_mpi_pi(H_phi_noFSR_SYS_UD-V_phi)) V_pt (Jet_eta[hJidxCMVA[0]]-Jet_eta[hJidxCMVA[1]]) Jet_btagCMVA[hJidxCMVA[0]] Jet_btagCMVA[hJidxCMVA[1]] SA5 TVector2::Phi_mpi_pi(Jet_phi[hJidxCMVA[0]]-Jet_phi[hJidxCMVA[1]]) max(Jet_PtReg[hJidxCMVA[0]]*Jet_pt_SYSUD[hJidxCMVA[0]]/Jet_Pt[hJidx[0]],Jet_PtReg[hJidxCMVA[1]]*Jet_pt_SYSUD[hJidxCMVA[1]]/Jet_Pt[hJidx[1]]) min(Jet_PtReg[hJidxCMVA[0]]*Jet_pt_SYSUD[hJidxCMVA[0]]/Jet_Pt[hJidx[0]],Jet_PtReg[hJidxCMVA[1]]*Jet_pt_SYSUD[hJidxCMVA[1]]/Jet_Pt[hJidx[1]]) MaxIf$(Jet_btagCMVA,Jet_pt_SYSUD>30&&Jet_puId>=4&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MaxIf$(Jet_Pt,Jet_pt_SYSUD>30&&Jet_puId>=4&&Jet_lepFilter&&Iteration$!=hJidxCMVA[0]&&Iteration$!=hJidxCMVA[1]) MinIf$(abs(TVector2::Phi_mpi_pi(Jet_phi-V_phi))-3.1415,Jet_Pt>30&&Jet_puId>=4)'
+
+#For Wlv BOOST
+#inital
+#VarList_in ': FatJet_msoftdrop[Hbb_fjidx] FatJet_pt[Hbb_fjidx] V_pt abs(TVector2::Phi_mpi_pi(FatJet_phi[Hbb_fjidx]-V_phi)) MET_Pt abs(VHbb::deltaPhi(MET_phi,Alt$((Vtype==2)*Muon_phi[VMuonIdx[0]],0)+Alt$((Vtype==3)*Electron_phi[VElectronIdx[0]],0))) V_mt Sum$(Jet_Pt>25&&abs(Jet_eta)<2.9&&Jet_puId>0&&Jet_lepFilter) SA5'
+
+VarList_in = 'SYS_UD: FatJet_msoftdrop_sys_SYS_UD FatJet_pt_sys_SYS_UD V_pt abs(TVector2::Phi_mpi_pi(FatJet_phi[Hbb_fjidx]-V_phi)) MET_pt_SYSUD abs(VHbb::deltaPhi(MET_phi_SYSUD,Alt$((Vtype==2)*Muon_phi[VMuonIdx[0]],0)+Alt$((Vtype==3)*Electron_phi[VElectronIdx[0]],0))) V_mt Sum$(Jet_pt_SYSUD>25&&abs(Jet_eta)<2.9&&Jet_puId>0&&Jet_lepFilter) SA5'
+
+
 
 #List of the systematics
 JECsys = [
@@ -45,7 +53,12 @@ JECsys = [
         'jesPileUpPtEC2',
         'jesPileUpPtHF',
         'jesPileUpMuZero',
-        'jesPileUpEnvelope'
+        'jesPileUpEnvelope',
+        'minmax',
+        #for Boost
+        'jms',
+        'jmr',
+
     ]
 
 #JECsys = [
