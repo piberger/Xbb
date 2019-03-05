@@ -2,6 +2,7 @@
 import ROOT
 import array
 import os
+import math
 from Jet import Jet
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
@@ -20,13 +21,17 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.addBoostSystematics = addBoostSystematics
 
         self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        #self.jetSystematics = ['jerReg','jesAbsoluteStat']
 
         # corrected dijet (Higgs candidate) properties
         self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass','pt_noFSR','eta_noFSR','phi_noFSR','mass_noFSR']]
 
         # included JEC and JER systematic for msoftdrop
         if self.addBoostSystematics: 
-            self.higgsProperties +=['FatJet_msoftdrop_sys']
+            self.higgsProperties +=['FatJet_msoftdrop_sys', 'FatJet_pt_sys']
+            #self.higgsProperties +=['FatJet_msoftdrop_sys']
+            # adding mass scale and resolution systematics
+            self.rnd = ROOT.TRandom3(12345)
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -40,6 +45,47 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         if self.addBoostSystematics:
             self.boosttagidx = 'Hbb_fjidx'
             self.msoftdrop = 'FatJet_msoftdrop'
+            if self.sample.type != 'DATA':
+                self.FatJet_pt= 'FatJet_pt_nom'
+            else: 
+                self.FatJet_pt= 'FatJet_pt'
+            # get all the info for scale and smearing
+            self.Snom   = eval(self.config.get('Sys', 'Snom'))
+            self.Sdown  = eval(self.config.get('Sys', 'Sdown'))
+            self.Sup    = eval(self.config.get('Sys', 'Sup'))
+            self.Rnom   = eval(self.config.get('Sys', 'Rnom'))
+            self.Rdown  = eval(self.config.get('Sys', 'Rdown'))
+            self.Rup    = eval(self.config.get('Sys', 'Rup'))
+
+            #Load .root file with resolution.
+            self.jetSystematics+= ['jms']
+            self.jetSystematics+= ['jmr']
+            self.config = initVars['config']
+            wdir = self.config.get('Directories', 'vhbbpath')
+            filejmr = ROOT.TFile.Open(wdir+"/python/data/softdrop/puppiSoftdropResol.root","READ")
+            self.puppisd_resolution_cen = filejmr.Get("massResolution_0eta1v3")
+            self.puppisd_resolution_for = filejmr.Get("massResolution_1v3eta2v5")
+
+            ## adding dummy MET branches with jer and jes
+            self.addBranch('MET_pt_minmaxUp')
+            self.addBranch('MET_pt_minmaxDown')
+            self.addBranch('MET_phi_minmaxUp')
+            self.addBranch('MET_phi_minmaxDown')
+
+
+            ## adding jms and jmr to FatJet pt
+
+            for syst in ['jmr','jms']:
+                for Q in ['Up', 'Down']:
+                    self.addBranch('MET_pt_{s}{d}'.format(s=syst, d=Q))
+                    self.addBranch('MET_phi_{s}{d}'.format(s=syst, d=Q))
+
+            for syst in ['_jmr','_jms']:
+                for p in ['Jet_pt', 'Jet_mass']:
+                    for q in ['Up', 'Down']:
+                        print 'name is',p+syst+q
+                        self.branchBuffers[p+syst+q] = array.array('f', [0.0]*self.nJetMax)
+                        self.branches.append({'name': p+syst+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+syst+q}, 'length': self.nJetMax, 'leaflist': p+syst+q+'[nJet]/F'})
 
 
         self.tagidx = self.config.get('General', 'hJidx')
@@ -56,6 +102,10 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             for syst in systList:
                 for Q in ['Up', 'Down']:
                     higgsPropertySyst = "{p}_{s}_{q}".format(p=higgsProperty, s=syst, q=Q)
+                    #if higgsProperty != 'FatJet_pt':
+                    #    higgsPropertySyst = "{p}_{s}_{q}".format(p=higgsProperty, s=syst, q=Q)
+                    #else:
+                    #    higgsPropertySyst = "{p}_{s}{q}".format(p=higgsProperty, s=syst, q=Q)
                     self.addBranch(higgsPropertySyst)
 
         self.addBranch('hJets_0_pt_noFSR')
@@ -86,8 +136,14 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             if self.addBoostSystematics:
                 boosttagidx = getattr(tree, self.boosttagidx)
                 if boosttagidx > -1:
+                    FatJet_pt = getattr(tree, self.FatJet_pt)[boosttagidx]
                     msoftdrop   = getattr(tree, self.msoftdrop)[boosttagidx]
                     self.branchBuffers['FatJet_msoftdrop_sys'][0] = msoftdrop
+                    self.branchBuffers['FatJet_pt_sys'][0] = FatJet_pt
+                    #print FatJet_pt
+                    #print msoftdrop
+                    #import sys
+                    #sys.exit()
 
             # idx passed as an argument
             if self.tagidx:
@@ -174,16 +230,26 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                         if self.sample.type != 'DATA':
                             # included JEC and JER systematic for msoftdrop
                             if self.addBoostSystematics  and boosttagidx > -1: 
-                                msoftdrop_sys = msoftdrop*getattr(tree, 'FatJet_pt_{s}{d}'.format(s=syst, d=Q))[boosttagidx]/getattr(tree, 'FatJet_pt_nom')[boosttagidx]
+                                if syst == 'jmr' or syst == 'jms':
+                                    pass
+                                else:
+                                    msoftdrop_sys = msoftdrop*getattr(tree, 'FatJet_pt_{s}{d}'.format(s=syst, d=Q))[boosttagidx]/getattr(tree, 'FatJet_pt_nom')[boosttagidx]
+                                    FatJet_pt_sys = getattr(tree, 'FatJet_pt_{s}{d}'.format(s=syst, d=Q))[boosttagidx]
+                            if tree.Hbb_fjidx > -1:
+                                if syst == 'jmr':
+                                    self.jmr_sys = self.get_msoftdrop_smear(tree.FatJet_pt[tree.Hbb_fjidx], tree.FatJet_eta[tree.Hbb_fjidx])
+                                elif syst == 'jms':
+                                    pass
                             # nothing to compute if no resolved jet
                             if not (hJidx0 > -1 and hJidx1 > -1):
                                 pass
                             else:
                                 hJ0 = ROOT.TLorentzVector()
                                 hJ1 = ROOT.TLorentzVector()
-
-
-                                if syst == 'jerReg':
+                                
+                                if syst == 'jmr' or syst == 'jms':
+                                    pass
+                                elif syst == 'jerReg':
                                     # vary the regression for the regression systematic
                                     #  pt_reg_var   = pt_reg_var 
                                     #  mass_reg_var = mass_nom * pt_reg_var / pt_nom
@@ -206,14 +272,18 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                                 #  the same jets are recovered as for nominal, but with variation applied
                                 for i in fsrIndices0:
                                     FSR = ROOT.TLorentzVector()
-                                    if syst == 'jerReg':
+                                    if syst == 'jmr' or syst == 'jms':
+                                        pass
+                                    elif syst == 'jerReg':
                                         FSR.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree,'Jet_PtReg'+Q)[i]/treeJet_Pt[i])
                                     else:
                                         FSR.SetPtEtaPhiM(treeJet_PtReg[i] * getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[i]/treeJet_Pt[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[i] * treeJet_PtReg[i]/treeJet_Pt[i])
                                     hJ0 = hJ0 + FSR
                                 for i in fsrIndices1:
                                     FSR = ROOT.TLorentzVector()
-                                    if syst == 'jerReg':
+                                    if syst == 'jmr' or syst == 'jms':
+                                        pass
+                                    elif syst == 'jerReg':
                                         FSR.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree,'Jet_PtReg'+Q)[i]/treeJet_Pt[i])
                                     else:
                                         FSR.SetPtEtaPhiM(treeJet_PtReg[i] * getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[i]/treeJet_Pt[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[i] * treeJet_PtReg[i]/treeJet_Pt[i])
@@ -225,8 +295,50 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                             dijet = dijet_Nominal
 
                         if self.addBoostSystematics  and boosttagidx > -1: 
-                            self.branchBuffers['FatJet_msoftdrop_sys_{s}_{d}'.format(s=syst, d=Q)][0] = msoftdrop_sys
-                            valueList['FatJet_msoftdrop_sys'].append(msoftdrop_sys)
+                            #print FatJet_pt
+                            #import sys
+                            #sys.exit()
+                            if syst == 'jmr':
+                                if Q == 'Up':
+                                    self.branchBuffers['FatJet_msoftdrop_sys_jmr_Down'][0]   = msoftdrop*self.jmr_sys[0]
+                                    valueList['FatJet_msoftdrop_sys'].append(msoftdrop*self.jmr_sys[0])
+
+                                    # no sys variation on pT (put nominal value)
+                                    self.branchBuffers['FatJet_pt_sys_jmr_Down'][0]   = FatJet_pt
+                                    valueList['FatJet_pt_sys'].append(FatJet_pt)
+                                elif Q == 'Down':
+                                    self.branchBuffers['FatJet_msoftdrop_sys_jmr_Up'][0]     = msoftdrop*self.jmr_sys[1]
+                                    valueList['FatJet_msoftdrop_sys'].append(msoftdrop*self.jmr_sys[1])
+
+                                    # no sys variation on pT (put nominal value)
+                                    self.branchBuffers['FatJet_pt_sys_jmr_Up'][0]     = FatJet_pt
+                                    valueList['FatJet_pt_sys'].append(FatJet_pt)
+                            elif syst == 'jms':
+                                if Q == 'Up':
+                                    self.branchBuffers['FatJet_msoftdrop_sys_jms_Up'][0]     = msoftdrop*self.Sup
+                                    valueList['FatJet_msoftdrop_sys'].append(msoftdrop*self.Sup)
+
+                                    # no sys variation on pT (put nominal value)
+                                    self.branchBuffers['FatJet_pt_sys_jms_Up'][0]     = FatJet_pt
+                                    valueList['FatJet_pt_sys'].append(FatJet_pt)
+                                elif Q == 'Down':
+                                    self.branchBuffers['FatJet_msoftdrop_sys_jms_Down'][0]   = msoftdrop*self.Sdown
+                                    valueList['FatJet_msoftdrop_sys'].append(msoftdrop*self.Sdown)
+
+                                    # no sys variation on pT (put nominal value)
+                                    self.branchBuffers['FatJet_pt_sys_jms_Down'][0]   = FatJet_pt
+                                    valueList['FatJet_pt_sys'].append(FatJet_pt)
+                            else:
+                                self.branchBuffers['FatJet_msoftdrop_sys_{s}_{d}'.format(s=syst, d=Q)][0] = msoftdrop_sys
+                                valueList['FatJet_msoftdrop_sys'].append(msoftdrop_sys)
+
+                                ##valueList['FatJet_pt_sys'].append(getattr(tree,'FatJet_pt_{s}{d}'.format(s=syst, d=Q))[boosttagidx])
+                                #print 'FatJet_pt_sys', FatJet_pt_sys
+                                #import sys
+                                #sys.exit()
+                                self.branchBuffers['FatJet_pt_sys_{s}_{d}'.format(s=syst, d=Q)][0] = FatJet_pt_sys
+                                valueList['FatJet_pt_sys'].append(FatJet_pt_sys)
+
 
                         if not (hJidx0 > -1 and hJidx1 > -1):
                             pass
@@ -257,7 +369,14 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             for syst in ['minmax']:
                 for Q in ['Up', 'Down']:
                     for p in self.higgsProperties:
-                        self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
+                        #if p == 'FatJet_msoftdrop_sys':
+                            #print valueList['FatJet_msoftdrop_sys'] 
+                            self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
+                        #if not p == 'FatJet_pt':
+                        #    self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
+                        #else:
+                        #    print valueList[p]
+                        #    self.branchBuffers['{p}_{s}{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
 
             # min/max variations for Jet pt/mass
             self.nJet = tree.nJet
@@ -270,6 +389,12 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                         if syst == 'jerReg':
                             treeJet_mass_sys[syst+Q] = treeJet_mass 
                             treeJet_pt_sys[syst+Q] = treeJet_Pt
+                        elif syst == 'jmr' or syst == 'jms':
+                            # nominal values (as jmr and jms are not defined on jet)
+                            treeJet_pt_sys[syst+Q] = treeJet_Pt
+                            treeJet_mass_sys[syst+Q] = treeJet_mass_nom
+                            # self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_pt_sys[syst+Q]
+                            # self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_mass_sys[syst+Q]
                         else:
                             treeJet_mass_sys[syst+Q] = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))
                             treeJet_pt_sys[syst+Q] = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q)) 
@@ -287,6 +412,12 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                             else:
                                 ptList.append(treeJet_pt_sys[syst+Q][i])
                                 massList.append(treeJet_mass_sys[syst+Q][i])
+                            if syst == 'jmr' or syst == 'jms':
+                                #print 'test'
+                                #print treeJet_pt_sys[syst+Q][i]
+                                #print 'test2'
+                                self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_pt_sys[syst+Q][i]
+                                self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_mass_sys[syst+Q][i]
 
                 # compute maximum/minimum
                 self.branchBuffers['Jet_pt_minmaxUp'][i] = max(ptList)
@@ -294,7 +425,61 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                 self.branchBuffers['Jet_mass_minmaxUp'][i] = max(massList)
                 self.branchBuffers['Jet_mass_minmaxDown'][i] = min(massList)
 
+            # min/max variations for MET
+            MET_pt_sys = {}
+            MET_phi_sys = {}
+            if self.addSystematics and self.sample.type != 'DATA':
+                # read all the arrays once to avoid getattr in the loop over the jets
+                for syst in self.jetSystematics:
+                    for Q in ['Up', 'Down']:
+                        if syst == 'jmr' or syst == 'jms' or syst == 'jerReg': # nominal values (as jmr and jms are not defined on MET)
+                            MET_pt_sys[syst+Q] = getattr(tree, 'MET_Pt')
+                            MET_phi_sys[syst+Q] = getattr(tree, 'MET_Phi') 
+                            self.branchBuffers['MET_pt_{s}{d}'.format(s=syst, d=Q)][0] = MET_pt_sys[syst+Q]
+                            self.branchBuffers['MET_phi_{s}{d}'.format(s=syst, d=Q)][0] = MET_phi_sys[syst+Q]
+
+                        else:
+                            MET_pt_sys[syst+Q] = getattr(tree, 'MET_pt_{s}{d}'.format(s=syst, d=Q))
+                            MET_phi_sys[syst+Q] = getattr(tree, 'MET_phi_{s}{d}'.format(s=syst, d=Q)) 
+
+            # compute min/max for MET
+            #for i in range(min(self.nJet, self.nJetMax)):
+                #ptList = [treeJet_Pt[i]]
+                #massList = [treeJet_mass[i]]
+            METptList = [getattr(tree, 'MET_Pt')]
+            METphiList = [getattr(tree, 'MET_phi')]
+            if self.addSystematics and self.sample.type != 'DATA':
+                for syst in self.jetSystematics:
+                    for Q in ['Up', 'Down']:
+                        METptList.append(MET_pt_sys[syst+Q])
+                        METphiList.append(MET_phi_sys[syst+Q])
+
+
+            self.branchBuffers['MET_pt_minmaxUp'][0]       = max(METptList)
+            self.branchBuffers['MET_pt_minmaxDown'][0]     = min(METptList)
+            self.branchBuffers['MET_phi_minmaxUp'][0]      = max(METphiList)
+            self.branchBuffers['MET_phi_minmaxDown'][0]    = min(METphiList)
+
         return True
+
+    def get_msoftdrop_smear(self, pt, eta):
+
+        #get mass resolution
+        massResolution = 0
+        if eta <= 1.3:
+            massResolution = self.puppisd_resolution_cen.Eval(pt)
+        else: 
+            massResolution = self.puppisd_resolution_for.Eval(pt)
+
+        ###
+        cup     = 1.
+        cdown   = 1.
+        r       = self.rnd.Gaus(0, massResolution - 1) 
+
+        cup     = 1. + r*math.sqrt(max(self.Rup**2-1,0))
+        cdown   = 1. + r*math.sqrt(max(self.Rdown**2-1,0))
+
+        return [cdown, cup]
 
 
 
