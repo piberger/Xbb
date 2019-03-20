@@ -23,7 +23,14 @@ class NewStackMaker:
         self.saveShapes = True
         self.var = var
         self.region = region
-        self.configSection = 'Plot:%s'%region
+        if self.config.has_section('Plot:%s'%region):
+            self.configSection = 'Plot:%s'%region
+        elif self.config.has_section('Fit:%s'%region):
+            self.configSection = 'Fit:%s'%region
+        else:
+            print("ERROR: no section '%s'"%('Plot:%s'%region))
+            raise Exception("ConfigError")
+
         self.dataGroupName = 'DATA'
         self.anaTag = self.config.get("Analysis", "tag")
         self.subcut = subcut

@@ -69,7 +69,7 @@ class Datacard(object):
         self.treevar = config.get('dc:%s'%self.region, 'var')
         if self.verbose:
             print ('treevar is', self.treevar)
-        self.name = config.get('dc:%s'%self.region, 'wsVarName')
+        self.name = config.get('dc:%s'%self.region, 'wsVarName') if config.has_option('dc:%s'%self.region, 'wsVarName') else self.region
         if self.optimisation_training:
             self.treevar = self.optimisation + '.Nominal'
             self.name += '_' + self.optimisation
@@ -89,14 +89,14 @@ class Datacard(object):
         self.variableBins = None
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
-        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName')
+        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName') if config.has_option('dc:%s'%self.region, 'dcName') else self.region
         if self.optimisation_training:
            self.ROOToutname += self.optimisation
            if self.UseTrainSample:
                self.ROOToutname += '_Train'
-        self.RCut = config.get('dc:%s'%self.region, 'cut')
+        self.RCut = config.get('dc:%s'%self.region, 'cut') if config.has_option('dc:%s'%self.region, 'cut') else self.region
         self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
-        self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
+        self.Datacardbin = config.get('dc:%s'%self.region, 'dcBin') if config.has_option('dc:%s'%self.region, 'dcBin') else self.region
         self.anType = config.get('dc:%s'%self.region, 'type')
         self.EvalCut = config.get('Cuts', 'EvalCut')
 
