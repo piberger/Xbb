@@ -31,7 +31,7 @@ class PostfitPlotter(object):
         if self.config.has_section('Fit:'+self.region):
             if self.config.has_option('Fit:'+self.region, 'var'):
                 self.var = self.config.get('Fit:'+self.region, 'var')
-            if self.config.has_option('Fit:'+self.region, 'blindBins'):
+            if self.blind and self.config.has_option('Fit:'+self.region, 'blindBins'):
                 self.blindBins = eval(self.config.get('Fit:'+self.region, 'blindBins'))
             if self.config.has_option('Fit:'+self.region, 'plotText'):
                 self.plotText += eval(self.config.get('Fit:'+self.region,'plotText'))
@@ -141,6 +141,8 @@ if __name__ == "__main__":
                           help="cut region identifiers, separated by comma")
     parser.add_option("-t","--type", dest="fitType", default='',
                           help="shapes_prefit, shapes_fit_b, shapes_fit_s")
+    parser.add_option("-u", "--unblind", action="store_true", dest="unblind", default=False,
+                              help="Unblind")
 
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
@@ -164,7 +166,7 @@ if __name__ == "__main__":
         regions = opts.regions.split(',')
     for region in regions:
         print("INFO: region:", region)
-        plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType)
+        plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType, blind=not opts.unblind)
         plotter.prepare()
         plotter.run()
 
