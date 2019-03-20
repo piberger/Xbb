@@ -131,7 +131,7 @@ except:
 
 configurationNeeded = True #not opts.task.startswith('checklogs')
 if opts.ftag == '':
-    opts.ftag = opts.task
+    opts.ftag = opts.task.replace(':','').replace('.','')
 
 if debugPrintOUts:
     print 'configs', configs
@@ -1190,12 +1190,9 @@ if opts.task.startswith('cachedc'):
                 print 'INFO: files do not exist yet!'
 
         # number of files to process per job
-        chunkSize = getCachingChunkSize(sample, config)
-
         # each entry in the array is for a subsample
         # use same size for all subsamples for now
-        sampleSizesList = [chunkSize for sample in samples if sample.identifier == sampleIdentifier]
-        splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
+        splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
                 'folder': sampleFolder
@@ -1255,6 +1252,14 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
+                
+                # check if shape files exist already and skip
+                if opts.skipExisting:
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    if all([os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]):
+                        print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
+                        print "INFO: > all files exist! => skip"
+                        continue
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
@@ -1262,6 +1267,7 @@ if opts.task.startswith('rundc'):
                     datacard = Datacard(config=config, region=region, verbose=False)
                     nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
                     nJobs = datacard.getNumberOfChunks(sampleIdentifier)
+
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
@@ -1364,8 +1370,8 @@ if opts.task == 'sys' or opts.task == 'syseval':
 # -----------------------------------------------------------------------------
 if opts.task == 'eval' or opts.task.startswith('eval_'):
     #repDict['queue'] = 'long.q'
-    path = config.get("Directories", "MVAin")
-    pathOUT = config.get("Directories", "MVAout")
+    path = opts.input if opts.input else "MVAin"
+    pathOUT  = opts.output if opts.output else "MVAout"
     samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
@@ -1394,6 +1400,8 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
                     'arguments':{
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
+                        'inputDir': path, 
+                        'outputDir': pathOUT, 
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
                 })
