@@ -27,7 +27,7 @@ import pickle
 # needs: tensorflow >=1.4
 class tensorflowEvaluator(AddCollectionsModule):
 
-    def __init__(self, mvaName, nano=False, version=1):
+    def __init__(self, mvaName, nano=False, version=2):
         self.mvaName = mvaName
         self.nano = nano
         self.debug = False

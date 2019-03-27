@@ -45,35 +45,12 @@ class PostfitPlotter(object):
         shapesFileName = self.config.get('Fit', 'FitDiagnosticsDump')
         self.shapesFile = ROOT.TFile.Open(shapesFileName, "READ")
 
-        # dump S/B
-        shapeS = self.getShape("total_signal")
-        shapeB = self.getShape("total_background")
-        print("name:", shapeB.GetName())
-        print("file:", self.shapesFile)
-        print("shape:", shapeS, shapeB)
-        print(self.region,"-"*40)
-        print( ("bin").ljust(5), ("S").ljust(8), ("B").ljust(8))
-        sum_s_over_sqrtb = 0.0
-        sum_s = 0.0
-        sum_b = 0.0
-        sum_med_z_a = 0.0
-        for i in range(shapeS.GetXaxis().GetNbins()):
-            s = shapeS.GetBinContent(1+i)
-            b = shapeB.GetBinContent(1+i)
-            print( ("%d"%i).ljust(5), ("%1.2f"%s).ljust(8), ("%1.2f"%b).ljust(8))
-
-            sum_s_over_sqrtb += s*s/b if b>0 else 0
-            sum_s += s
-            sum_b += b
-            sum_med_z_a += 2.0* ( (s+b) * math.log(1.0 + s/b) - s) if s > 0 else 0.0
-        sum_s_over_sqrtb = math.sqrt(sum_s_over_sqrtb)
-        sum_med_z_a = math.sqrt(sum_med_z_a)
-        print("TOTAL: s/sqrt(b):", "%1.3f"%sum_s_over_sqrtb, " s:",sum_s, " b:",sum_b, " med[Z]=sqrt(q_A)=", sum_med_z_a)
-
+    # process is datacard name convention, convert it back to Xbb process convention if necessary
+    def getNameFromDcname(self, process):
+        return self.reverseDcDict[process] if process in self.reverseDcDict else process
 
     def getShape(self, process):
-        # process is datacard name convention, convert it back to Xbb process convention if necessary
-        processName = self.reverseDcDict[process] if process in self.reverseDcDict else process
+        processName = self.getNameFromDcname(process) 
         
         # use pre-fit signal strength for plotting if blind
         if self.blind and processName in self.setupSignals:
@@ -103,6 +80,33 @@ class PostfitPlotter(object):
                     })
             else:
                 print("\x1b[31mINFO: empty: ",process,"\x1b[0m")
+        
+        # dump S/B
+        #shapeS = self.getShape("total_signal")
+        #shapeB = self.getShape("total_background")
+        shapeS = StackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.stack.histograms if histogram['group'] in self.setupSignals], outputName='totalSignal') 
+        shapeB = StackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.stack.histograms if histogram['group'] not in self.setupSignals], outputName='totalBackground') 
+        print("name:", shapeB.GetName(), " / ", self.directory)
+        print("file:", self.shapesFile)
+        print("shape:", shapeS, shapeB)
+        print(self.region,"-"*40)
+        print( ("bin").ljust(5), ("S").ljust(8), ("B").ljust(8))
+        sum_s_over_sqrtb = 0.0
+        sum_s = 0.0
+        sum_b = 0.0
+        sum_med_z_a = 0.0
+        for i in range(shapeS.GetXaxis().GetNbins()):
+            s = shapeS.GetBinContent(1+i)
+            b = shapeB.GetBinContent(1+i)
+            print( ("%d"%i).ljust(5), ("%1.2f"%s).ljust(8), ("%1.2f"%b).ljust(8))
+
+            sum_s_over_sqrtb += s*s/b if b>0 else 0
+            sum_s += s
+            sum_b += b
+            sum_med_z_a += 2.0* ( (s+b) * math.log(1.0 + s/b) - s) if s > 0 else 0.0
+        sum_s_over_sqrtb = math.sqrt(sum_s_over_sqrtb)
+        sum_med_z_a = math.sqrt(sum_med_z_a)
+        print("TOTAL: s/sqrt(b):", "%1.3f"%sum_s_over_sqrtb, " s:",sum_s, " b:",sum_b, " med[Z]=sqrt(q_A)=", sum_med_z_a)
         
         # add DATA
         dataHistogram = self.getShape("data") 
