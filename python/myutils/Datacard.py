@@ -191,6 +191,7 @@ class Datacard(object):
             self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
             if len(self.ptRegion) != 1:
                 print("WARNING: invalid pt region:", self.ptRegion, ", use default.")
+                self.ptRegion = None
             else:
                 self.ptRegion = self.ptRegion[0]
         else:

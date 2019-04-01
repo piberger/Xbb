@@ -49,13 +49,15 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.branchName = self.config.get(self.mvaName, 'branchName')
         self.signalIndex = 0
         if self.config.has_option(self.mvaName, 'signalIndex'):
-            self.signalIndex = int(self.config.get(self.mvaName, 'signalIndex'))
+            self.signalIndex = eval(self.config.get(self.mvaName, 'signalIndex'))
         try:
-            self.nClasses = int(self.config.get(self.mvaName, 'nClasses'))
+            self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
         except Exception as e:
             print "exception:",e
             self.nClasses = 1
         self.classes = eval(self.config.get(self.mvaName, 'classes')) if self.config.has_option(self.mvaName, 'classes') else None
+        if self.classes:
+            self.nClasses = len(self.classes)
         self.nFeatures = len(self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" "))
         self.signalClassIds = [self.signalIndex]
         if self.classes:
