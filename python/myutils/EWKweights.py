@@ -49,6 +49,9 @@ class EWKweights(object):
     def getBranches(self):
         return self.branches
 
+    # WARNING!!!
+    # this should not be used!
+    # -> instead use the LO to NLO weight in etabb / njets bins!
     def getNLOw(self, tree):
         NLOw = 1.0
 #defines the idx for the first and second jet
