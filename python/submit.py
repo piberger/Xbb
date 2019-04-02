@@ -711,6 +711,9 @@ if opts.task == 'count':
         chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
+    print "add the section below to your config before running the 'hadd' step!"
+    print "---"
+    print "[Hadd]"
     for sampleIdentifier, chunkSize in chunkSizes:
         print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"

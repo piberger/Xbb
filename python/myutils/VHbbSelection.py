@@ -40,22 +40,39 @@ class VHbbSelection(AddCollectionsModule):
 
         self.taggerName = "Jet_btagDeepB"
         self.btagWPs = {
-                'Jet_btagDeepB': {
-                    'loose':  0.1522,
-                    'medium': 0.4941,
-                    'tight':  0.8001,
-                    'none': -1.0,
-                    }
+                        "2017": {
+                        'Jet_btagDeepB': {
+                            'loose':  0.1522,
+                            'medium': 0.4941,
+                            'tight':  0.8001,
+                            'none': -1.0,
+                            },
+                        },
+                        "2016": {
+                        'Jet_btagDeepB': {
+                            'loose':  0.2217,
+                            'medium': 0.6321,
+                            'tight':  0.8953,
+                            'none': -1.0,
+                            },
+                        },
+
                 }
-        self.btagWP = self.btagWPs[self.taggerName]
-        if self.year == "2016": 
-            pass
+        self.btagWP = self.btagWPs[self.year][self.taggerName]
             
-        self.HltPaths = {
-                    'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
-                    'Wln': ['HLT_Ele32_WPTight_Gsf_L1DoubleEG','HLT_IsoMu27'],
-                    'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
-                    }
+        if self.year == "2017": 
+            self.HltPaths = {
+                        'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
+                        'Wln': ['HLT_Ele32_WPTight_Gsf_L1DoubleEG','HLT_IsoMu27'],
+                        'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
+                        }
+        elif self.year == "2016":
+            self.HltPaths = {
+                        'Znn': [],
+                        'Wln': [],
+                        'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL','HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL','HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ','HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ','HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ'],
+                        }
+
         self.leptonFlav = {
                 'DoubleMuon': 0,
                 'DoubleEG': 1,
