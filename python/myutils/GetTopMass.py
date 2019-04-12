@@ -84,13 +84,9 @@ class GetTopMass(object):
             if self.dataset == '2016':
                 self.jetSystematics.remove('jerReg')
 
-#            self.jetSystematics = ['jerReg'] 
             if self.addBoostSystematics:
                 self.jetSystematics+= ['jms']
                 self.jetSystematics+= ['jmr']
-
-
-
 
 
             if self.sample.type != 'DATA': systList = self.jetSystematics + ['minmax']
