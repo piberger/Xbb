@@ -3,6 +3,7 @@ import ROOT
 import numpy as np
 import array
 from pdgId import pdgId
+import sys
 
 class EWKweights(object):
 
@@ -48,6 +49,9 @@ class EWKweights(object):
     def getBranches(self):
         return self.branches
 
+    # WARNING!!!
+    # this should not be used!
+    # -> instead use the LO to NLO weight in etabb / njets bins!
     def getNLOw(self, tree):
         NLOw = 1.0
 #defines the idx for the first and second jet
@@ -58,8 +62,9 @@ class EWKweights(object):
         else:
             print "Missing bTag index. Check general.ini"
             raise Exception("bTagIndexNotSpecified")
+
         
-        if self.applyNLO:
+        if self.applyNLO and (idx0 > -1 and idx1 > -1):
 #            if self.nano:
 #                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
 #            else:

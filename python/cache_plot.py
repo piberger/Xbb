@@ -68,6 +68,7 @@ class CachePlot(object):
                 if section.startswith('plotDef:') and self.config.has_option(section, 'relPath'):
                     keepBranchesPlot.append(self.config.get(section, 'relPath'))
         except Exception as e:
+            print("\x1b[31mERROR: config file contains an error! automatic selection of branches to keep will not work!\x1b[0m")
             print(e)
         try:
             keepBranchesPlot.append(self.config.get('Weights', 'weightF'))
@@ -77,6 +78,8 @@ class CachePlot(object):
         for region,regionInfo in self.regionsDict.iteritems():
             keepBranchesPlot.append(regionInfo['cut'])
         keepBranchesPlotFinal = BranchList(keepBranchesPlot).getListOfBranches()
+        print("KEEP:", keepBranchesPlotFinal)
+
 
         # ----------------------------------------------------------------------------------------------------------------------
         # cache samples

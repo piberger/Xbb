@@ -11,7 +11,6 @@ class LOtoNLOweight(AddCollectionsModule):
     def __init__(self, branchName='weightLOtoNLO', paperStyle=True):
         super(LOtoNLOweight, self).__init__()
         self.branchName = branchName
-        self.paperStyle = paperStyle
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -42,10 +41,9 @@ class LOtoNLOweight(AddCollectionsModule):
         if sampleCat in [4000,4100,4200,4300,4400,4500,4600,4700,5000,5100,5300,5400,11000,11100,11200,11300,11400,11500,11600,11700,15000,15100,15200,15300,15400,15500,15600]:
             isVJets = True
         
-        # Z+jets b-enriched (correction and uncertainty was not applied)
-        if not self.paperStyle:
-            if sampleCat in [12100,12200,14100,14200,16000,16100,16200,16300]:
-                isVJets = True
+        # Z+jets b-enriched
+        if sampleCat in [14000,12000,12100,12200,14100,14200,16000,16100,16200,16300]:
+            isVJets = True
 
         return isVJets
 

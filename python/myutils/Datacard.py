@@ -69,7 +69,7 @@ class Datacard(object):
         self.treevar = config.get('dc:%s'%self.region, 'var')
         if self.verbose:
             print ('treevar is', self.treevar)
-        self.name = config.get('dc:%s'%self.region, 'wsVarName')
+        self.name = config.get('dc:%s'%self.region, 'wsVarName') if config.has_option('dc:%s'%self.region, 'wsVarName') else self.region
         if self.optimisation_training:
             self.treevar = self.optimisation + '.Nominal'
             self.name += '_' + self.optimisation
@@ -89,14 +89,14 @@ class Datacard(object):
         self.variableBins = None
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
-        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName')
+        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName') if config.has_option('dc:%s'%self.region, 'dcName') else self.region
         if self.optimisation_training:
            self.ROOToutname += self.optimisation
            if self.UseTrainSample:
                self.ROOToutname += '_Train'
-        self.RCut = config.get('dc:%s'%self.region, 'cut')
+        self.RCut = config.get('dc:%s'%self.region, 'cut') if config.has_option('dc:%s'%self.region, 'cut') else self.region
         self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
-        self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
+        self.Datacardbin = config.get('dc:%s'%self.region, 'dcBin') if config.has_option('dc:%s'%self.region, 'dcBin') else self.region
         self.anType = config.get('dc:%s'%self.region, 'type')
         self.EvalCut = config.get('Cuts', 'EvalCut')
 
@@ -134,7 +134,8 @@ class Datacard(object):
         # define the options read directly from the config
         sysOptionNames = ['sys_cut_suffix', 'sys_weight_corr', 'decorrelate_sys_weight', 'sys_cut_include', 'sys_factor', 'sys_affecting', 'sys_lhe_affecting', 'rescaleSqrtN', 'toy', 'blind', 
                 'addBlindingCut', 'change_shapes', 'Group', 'Dict', 'binstat', 'binstat_cr', 'rebin_active', 'ignore_stats', 'signal_inject', 'add_signal_as_bkg', 'systematicsnaming', 'weightF_sys',
-                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final'
+                'sample_sys_info', 'addSample_sys', 'removeWeightSystematics', 'ptRegionsDict', 'setup', 'setupSignals', 'reshapeBins', 'sys_cut_dict', 'sys_cut_dict_per_syst', 'useMinmaxCuts', 'sys_cut_replacement_final',
+                'normalizeShapes'
                 ]
         for sysOptionName in sysOptionNames:
             self.sysOptions[sysOptionName] = eval(config.get('LimitGeneral', sysOptionName)) if config.has_option('LimitGeneral', sysOptionName) else None
@@ -190,6 +191,7 @@ class Datacard(object):
             self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
             if len(self.ptRegion) != 1:
                 print("WARNING: invalid pt region:", self.ptRegion, ", use default.")
+                self.ptRegion = None
             else:
                 self.ptRegion = self.ptRegion[0]
         else:
@@ -521,9 +523,9 @@ class Datacard(object):
                 if self.debug:
                     print ('treevar was', treevar)
                     print ('.nominal by', '.%s_%s'%(syst, Q))
-                treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q))
+                treevar = treevar.replace('.Nominal','.%s_%s'%(syst, Q)).replace('.nominal','.%s_%s'%(syst, Q))
             else:
-                treevar = treevar.replace('.nominal','.%s'%(syst.replace('UD', Q)))
+                treevar = treevar.replace('.Nominal','.%s'%(syst.replace('UD', Q))).replace('.nominal','.%s'%(syst.replace('UD', Q)))
                 if self.debug:
                     print ('.nominal by', '.%s'%(syst.replace('UD', Q)))
         elif self.anType.lower() == 'mjj':
@@ -766,7 +768,10 @@ class Datacard(object):
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
                 else:
                     if self.debug:
-                        print('\x1b[31mDEBUG: using full sample!',systematics['var'].lower() ,"\x1b[0m")
+                        if sample.type == 'DATA':
+                            print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
+                        else:
+                            print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
@@ -861,6 +866,23 @@ class Datacard(object):
             binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
             print(binList)
             print(binContentList)
+
+            # normalize up/down variations
+            for systematics in systematicsList:
+                if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
+                    print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
+                    normNominal = nominalHist.Integral()
+                    normVariation = self.histograms[sample.name][systematics['systematicsName']].Integral()
+                    if normVariation > 0:
+                        self.histograms[sample.name][systematics['systematicsName']].Scale(normNominal/normVariation)
+                        print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
+
+            # force positive shapes
+            for systematics in systematicsList:
+                if self.histograms[sample.name][systematics['systematicsName']].Integral() < 0:
+                    self.histograms[sample.name][systematics['systematicsName']].Scale(-0.00001)
+                    print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
+
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
@@ -1018,6 +1040,7 @@ class Datacard(object):
                     else:
                         systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
         
+        # DEPRECATED! now done by combine harvester!!
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
             binsBelowThreshold = {}

@@ -12,7 +12,7 @@ import math
 
 class PostfitPlotter(object):
 
-    def __init__(self, config, region, vars=None, directory="shapes_fit_s", title=None):
+    def __init__(self, config, region, vars=None, directory="shapes_fit_s", title=None, blind=True):
         self.config = config
         self.region = region
         self.fitRegions = eval(self.config.get('Fit', 'regions'))
@@ -21,8 +21,9 @@ class PostfitPlotter(object):
         self.directory = directory
         self.shapesFile = None
         self.plotPath = config.get('Directories', 'plotpath')
-        self.title = "CMS #scale[0.8]{work in progress}"
+        self.title = None # "CMS #scale[0.8]{work in progress}"
         self.blindBins = []
+        self.blind = blind
         self.plotText = [""]
         if self.config.has_option('Fit', 'plotText'):
             self.plotText = eval(self.config.get('Fit', 'plotText'))
@@ -30,18 +31,62 @@ class PostfitPlotter(object):
         if self.config.has_section('Fit:'+self.region):
             if self.config.has_option('Fit:'+self.region, 'var'):
                 self.var = self.config.get('Fit:'+self.region, 'var')
-            if self.config.has_option('Fit:'+self.region, 'blindBins'):
+            if self.blind and self.config.has_option('Fit:'+self.region, 'blindBins'):
                 self.blindBins = eval(self.config.get('Fit:'+self.region, 'blindBins'))
             if self.config.has_option('Fit:'+self.region, 'plotText'):
                 self.plotText += eval(self.config.get('Fit:'+self.region,'plotText'))
 
     def prepare(self):
+        self.dcDict = eval(self.config.get('LimitGeneral','Dict'))
+        self.reverseDcDict = {v:k for k,v in self.dcDict.iteritems()}
+        self.setup = eval(self.config.get('LimitGeneral','setup'))
+        self.setupSignals = eval(self.config.get('LimitGeneral','setupSignals')) if self.config.has_option('LimitGeneral','setupSignals') else []
+
         shapesFileName = self.config.get('Fit', 'FitDiagnosticsDump')
         self.shapesFile = ROOT.TFile.Open(shapesFileName, "READ")
 
+    # process is datacard name convention, convert it back to Xbb process convention if necessary
+    def getNameFromDcname(self, process):
+        return self.reverseDcDict[process] if process in self.reverseDcDict else process
+
+    def getShape(self, process):
+        processName = self.getNameFromDcname(process) 
+        
+        # use pre-fit signal strength for plotting if blind
+        if self.blind and processName in self.setupSignals:
+            print("INFO: \x1b[31mBLIND: prefit shapes are plotted for signal!\x1b[0m")
+            histogramName = 'shapes_prefit/' + self.dcRegion + '/' + process
+        else:
+            histogramName = self.directory + '/' + self.dcRegion + '/' + process
+        print("DEBUG: get shape ", histogramName)
+        histogram = self.shapesFile.Get(histogramName)
+        print("DEBUG: -->", histogram)
+        return histogram
+
+    def run(self):
+
+        self.stack = StackMaker(self.config, self.var, self.region, True, self.setup, '_', title=self.title)
+        self.stack.setPlotText(self.plotText)
+
+        # add MC
+        print("INFO: setup = \x1b[31m", self.setup, "\x1b[0m")
+        for process in self.setup:
+            histogram = self.getShape(self.dcDict[process])
+            if histogram:
+                self.stack.histograms.append({
+                        'name': process, 
+                        'histogram': histogram, 
+                        'group': process
+                    })
+            else:
+                print("\x1b[31mINFO: empty: ",process,"\x1b[0m")
+        
         # dump S/B
-        shapeS = self.getShape("total_signal")
-        shapeB = self.getShape("total_background")
+        #shapeS = self.getShape("total_signal")
+        #shapeB = self.getShape("total_background")
+        shapeS = StackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.stack.histograms if histogram['group'] in self.setupSignals], outputName='totalSignal') 
+        shapeB = StackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.stack.histograms if histogram['group'] not in self.setupSignals], outputName='totalBackground') 
+        print("name:", shapeB.GetName(), " / ", self.directory)
         print("file:", self.shapesFile)
         print("shape:", shapeS, shapeB)
         print(self.region,"-"*40)
@@ -62,35 +107,6 @@ class PostfitPlotter(object):
         sum_s_over_sqrtb = math.sqrt(sum_s_over_sqrtb)
         sum_med_z_a = math.sqrt(sum_med_z_a)
         print("TOTAL: s/sqrt(b):", "%1.3f"%sum_s_over_sqrtb, " s:",sum_s, " b:",sum_b, " med[Z]=sqrt(q_A)=", sum_med_z_a)
-
-
-    def getShape(self, process):
-        histogramName = self.directory + '/' + self.dcRegion + '/' + process
-        print("DEBUG: get shape ", histogramName)
-        histogram = self.shapesFile.Get(histogramName)
-        print("DEBUG: -->", histogram)
-        return histogram
-
-    def run(self):
-        self.dcDict = eval(self.config.get('LimitGeneral','Dict'))
-        self.reverseDcDict = {v:k for k,v in self.dcDict.iteritems()}
-        self.setup = eval(self.config.get('LimitGeneral','setup'))
-        
-        self.stack = StackMaker(self.config, self.var, self.region, True, self.setup, '_', title=self.title)
-        self.stack.setPlotText(self.plotText)
-
-        # add MC
-        print("INFO: setup = \x1b[31m", self.setup, "\x1b[0m")
-        for process in self.setup:
-            histogram = self.getShape(self.dcDict[process])
-            if histogram:
-                self.stack.histograms.append({
-                        'name': process, 
-                        'histogram': histogram, 
-                        'group': process
-                    })
-            else:
-                print("\x1b[31mINFO: empty: ",process,"\x1b[0m")
         
         # add DATA
         dataHistogram = self.getShape("data") 
@@ -127,8 +143,10 @@ if __name__ == "__main__":
                           help="configuration file")
     parser.add_option("-r","--regions", dest="regions", default='',
                           help="cut region identifiers, separated by comma")
-    parser.add_option("-t","--type", dest="fitType", default='shapes_prefit',
+    parser.add_option("-t","--type", dest="fitType", default='',
                           help="shapes_prefit, shapes_fit_b, shapes_fit_s")
+    parser.add_option("-u", "--unblind", action="store_true", dest="unblind", default=False,
+                              help="Unblind")
 
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
@@ -139,13 +157,20 @@ if __name__ == "__main__":
     config = BetterConfigParser()
     config.read(opts.config)
 
+    if len(opts.fitType) < 1:
+        if config.has_option('Fit','FitType'):
+            opts.fitType = config.get('Fit','FitType')
+        else:
+            opts.fitType = "shapes_prefit"
+
     # run plotter
     if len(opts.regions) < 1:
         regions = eval(config.get('Fit', 'regions')).keys()
     else:
         regions = opts.regions.split(',')
     for region in regions:
-        plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType)
+        print("INFO: region:", region)
+        plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType, blind=not opts.unblind)
         plotter.prepare()
         plotter.run()
 

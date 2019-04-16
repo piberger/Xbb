@@ -23,14 +23,21 @@ class NewStackMaker:
         self.saveShapes = True
         self.var = var
         self.region = region
-        self.configSection = 'Plot:%s'%region
+        if self.config.has_section('Plot:%s'%region):
+            self.configSection = 'Plot:%s'%region
+        elif self.config.has_section('Fit:%s'%region):
+            self.configSection = 'Fit:%s'%region
+        else:
+            print("ERROR: no section '%s'"%('Plot:%s'%region))
+            raise Exception("ConfigError")
+
         self.dataGroupName = 'DATA'
         self.anaTag = self.config.get("Analysis", "tag")
         self.subcut = subcut
         self.forceLog = None
         self.normalize = eval(self.config.get(self.configSection, 'Normalize'))
         self.log = eval(self.config.get(self.configSection, 'log'))
-        self.AddErrors = False
+        self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
         if self.config.has_option('plotDef:%s'%var, 'log'):
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
         self.blind = eval(self.config.get(self.configSection,'blind'))
@@ -57,6 +64,12 @@ class NewStackMaker:
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
             self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
+            if self.config.has_option(self.configSection, 'additionalText'):
+                aText = eval(self.config.get(self.configSection, 'additionalText'))
+                if type(aText) == list:
+                    self.additionalTextLines += aText
+                else:
+                    self.additionalTextLines.append(aText)
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -170,13 +183,13 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # create histogram out of a tree
     # ------------------------------------------------------------------------------
-    def addSampleTree(self, sample, sampleTree, groupName):
+    def addSampleTree(self, sample, sampleTree, groupName, cut='1'):
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
 
         histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
-        sampleHistogram = histoMaker.getHistogram()
+        sampleHistogram = histoMaker.getHistogram(cut)
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
@@ -308,11 +321,20 @@ class NewStackMaker:
 
             if isSimpleCut:
                 if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
-                    blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+
+                    # get list of bin boundaries of ratio histogram, those might be different from the ones from the main histogram and are provided by the external ratio.C code.
+                    bin_list = array.array('d', [0.0]*(self.ratioPlot.GetXaxis().GetNbins() + 1))
+                    for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                        bin_list[i] = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                    bin_list[self.ratioPlot.GetXaxis().GetNbins()] = self.ratioPlot.GetXaxis().GetXmax()
+
+                    # make histogram to visualize blind cut with same bins as the ratio plot
+                    blindedRegion = ROOT.TH1D("blind", "blind", self.ratioPlot.GetXaxis().GetNbins(), bin_list)
                     for i in range(self.ratioPlot.GetXaxis().GetNbins()):
                         binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
                         value = 1.1
                         if binLowEdgeValue >= blindingCutThreshold:
+                            # shaded area
                             error = 0.6
                         else:
                             error = 0.0
@@ -323,16 +345,12 @@ class NewStackMaker:
                     blindedRegion.SetMarkerSize(0)
                     blindedRegion.Draw("SAME E2")
                     self.addObject(blindedRegion)
-                    print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
         self.m_one_line.Draw("Same")
 
-        if not self.AddErrors:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat.)","f")
-        else:
-            self.legends['ratio'].AddEntry(self.ratioError,"MC uncert. (stat. + syst.)","f")
+        self.legends['ratio'].AddEntry(self.ratioError, self.mcUncertaintyLegend,"f")
         self.legends['ratio'].Draw() 
         if not self.blind:
             self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
@@ -376,10 +394,7 @@ class NewStackMaker:
             elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
         if theErrorGraph: 
-            if not self.AddErrors:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.)", "fl")
-            else:
-                self.legends['right'].AddEntry(theErrorGraph, "MC uncert. (stat.+ syst.)", "fl")
+            self.legends['right'].AddEntry(theErrorGraph, self.mcUncertaintyLegend, "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
         self.legends['left'].SetFillColor(0)
@@ -429,7 +444,7 @@ class NewStackMaker:
             addFlag = 'W(#mu#nu)H(b#bar{b})'
         elif 'Wen' in dataNames:
             addFlag = 'W(e#nu)H(b#bar{b})'
-        self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
+        #self.addObject(self.myText(addFlag, self.plotTextMarginLeft+(0.03 if self.is2D else 0), 0.78))
 
         try:
             for labelName, label in self.plotLabels.iteritems():
@@ -622,6 +637,7 @@ class NewStackMaker:
 
         # draw ratio plot
         theErrorGraph = None
+        mcHistogram   = None
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
@@ -649,13 +665,15 @@ class NewStackMaker:
             outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
             c.SaveAs(outputFileName)
             if os.path.isfile(outputFileName):
-                print ("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
+                print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
-                print ("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+                print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
         # save shapes
         if not normalize and self.saveShapes:
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+            print("MC:", mcHistogram)
             try:
                 outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")

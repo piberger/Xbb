@@ -22,8 +22,9 @@ import datetime
 
 class SampleTreesToNumpyConverter(object):
 
-    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True, testRun=False):
+    def __init__(self, config, mvaName, useSyst=True, useWeightSyst=True, testRun=False, includeData=False):
         self.mvaName = mvaName
+        self.includeData = includeData
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
         self.dataFormatVersion = 3
@@ -68,14 +69,35 @@ class SampleTreesToNumpyConverter(object):
 
         # default: signal vs. background
         self.sampleNames = {
-                    'SIG_ALL': eval(self.config.get('Plot_general', 'allSIG')),
-                    'BKG_ALL': eval(self.config.get('Plot_general', 'allBKG')),
+                    'SIG_ALL': eval(self.config.get(mvaName, 'signals')) if self.config.has_option(mvaName, 'signals') else eval(self.config.get('Plot_general', 'allSIG')),
+                    'BKG_ALL': eval(self.config.get(mvaName, 'backgrounds')) if self.config.has_option(mvaName, 'backgrounds') else  eval(self.config.get('Plot_general', 'allBKG')),
                 }
         # for multi-output classifiers load dictionary from config
+        self.categories = None
         if self.config.has_option(mvaName, 'classDict'):
             self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
+            self.categories = self.samples.keys()
             print("classes dict:", self.sampleNames)
+        elif self.config.has_option(mvaName, 'classes'):
+            self.sampleNames = dict(eval(self.config.get(mvaName, 'classes')))
+            self.categories = [x[0] for x in eval(self.config.get(mvaName, 'classes'))]
         self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()}
+        if not self.categories:
+            self.categories = self.samples.keys()
+
+        # DATA
+        self.dataSamples = []
+        if self.includeData:
+            if not self.config.has_option(mvaName, 'data'):
+                print("\x1b[31mERROR: in training.ini, the option 'data' has to be specified for the MVA\x1b[0m")
+                raise Exception("ConfigError")
+            self.dataSampleNames =  eval(self.config.get(mvaName, 'data')) if self.config.has_option(mvaName, 'data') else eval(self.config.get('Plot_general', 'Data')) 
+            print("INFO: sample names for DATA are:", self.dataSampleNames)
+            self.dataSamples = self.samplesInfo.get_samples(self.dataSampleNames)
+            print("\x1b[32mINFO: added DATA:", [x.identifier for x in self.dataSamples],"\x1b[0m")
+        else:
+            print("INFO: DATA not added, use --include-data to add it to the h5 file")
+
         if self.testRun:
             print("\x1b[31mDEBUG: TEST-RUN, using only small subset of samples!\x1b[0m")
 
@@ -84,7 +106,11 @@ class SampleTreesToNumpyConverter(object):
         # ----------------------------------------------------------------------------------------------------------------------
         # add sig/bkg x training/testing trees
         # ----------------------------------------------------------------------------------------------------------------------
-        categories = self.samples.keys()
+        categories = self.categories 
+        if categories:
+            print("categories:")
+            for i,category in enumerate(categories):
+                print(" ",i,":", category)
         datasetParts = {'train': self.trainCut, 'test': self.evalCut}
 
         systematics = self.systematics
@@ -100,11 +126,11 @@ class SampleTreesToNumpyConverter(object):
 
         weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
-        for category in categories:
+        for i,category in enumerate(categories):
             if self.testRun:
                 self.samples[category] = self.samples[category][0:1]
-            for sample in self.samples[category]:
-                print ('*'*80,'\n%s\n'%sample,'*'*80)
+            for j,sample in enumerate(self.samples[category]):
+                print ('*'*80,'\n%s (category %d/%d sample %d/%d)\n'%(sample, i+1, len(categories), j+1, len(self.samples[category])),'*'*80)
                 for datasetName, additionalCut in datasetParts.iteritems():
                     # cuts
                     sampleCuts = [sample.subcut]
@@ -191,6 +217,46 @@ class SampleTreesToNumpyConverter(object):
                         print ("\x1b[31mERROR: TREE NOT FOUND:", sample.name, " -> not cached??\x1b[0m")
                         raise Exception("CachedTreeMissing")
 
+        if self.includeData:
+            arrayListsData = []
+            # all DATA 
+            print("INFO: DATA=", self.dataSamples)
+            for sample in self.dataSamples:
+                print("INFO: add DATA sample:", sample.identifier)
+
+                # cuts
+                sampleCuts = [sample.subcut]
+                # cut from the mva region
+                if self.treeCut:
+                    sampleCuts.append(self.treeCut)
+
+                # get ROOT tree for selected sample & region cut
+                tc = TreeCache.TreeCache(
+                        sample=sample,
+                        cutList=sampleCuts,
+                        inputFolder=self.samplesPath,
+                        config=self.config,
+                        debug=True
+                    )
+                sampleTree = tc.getTree()
+                if sampleTree:
+                    # initialize numpy array
+                    nSamples = sampleTree.GetEntries()
+                    features = self.MVA_Vars['Nominal']
+                    nFeatures = len(features) 
+                    inputData = np.zeros((nSamples, nFeatures), dtype=np.float32)
+
+                    # initialize formulas for ROOT tree
+                    for feature in features:
+                        sampleTree.addFormula(feature)
+
+                    # fill numpy array from ROOT tree
+                    for i, event in enumerate(sampleTree):
+                        for j, feature in enumerate(features):
+                            inputData[i, j] = sampleTree.evaluate(feature)
+
+                    arrayListsData.append(inputData)
+
         ##systematics for training
         #puresystematics = deepcopy(systematics)
         #if 'Nominal' in puresystematics:
@@ -226,6 +292,10 @@ class SampleTreesToNumpyConverter(object):
                     'systematics': puresystematics,
                     }
                 }
+
+        if self.includeData:
+            self.data['data'] = {'X': np.concatenate(arrayListsData, axis=0)}
+
         ## add systematics variations
         #for sys in systematics:
         #    self.data['train']['X_'+sys] = np.concatenate(arrayLists_sys[sys]['train'], axis=0)
@@ -239,16 +309,26 @@ class SampleTreesToNumpyConverter(object):
         hdf5OutputFileName = baseName + '.h5'
         print("INFO: saving output...")
         
+        success = False
         try:
-            self.saveAsPickledNumpy(numpyOutputFileName)
+            if self.config.has_option(self.mvaName, 'writeNumpy') and eval(self.config.get(self.mvaName, 'writeNumpy')):
+                self.saveAsPickledNumpy(numpyOutputFileName)
+                success = True
         except Exception as e:
-            print(e)
+            print("ERROR: writing numpy array failed.", e)
 
         try:
             self.saveAsHDF5(hdf5OutputFileName)
+            success = True
         except Exception as e:
-            print(e)
-        print("INFO: done.")
+            print("ERROR: writing HDF5 file failed.", e)
+
+        if success:
+            print("INFO: done.")
+            return True
+        else:
+            print("ERROR: no output file written")
+            return False
 
     def saveAsPickledNumpy(self, outputFileName):
         with gzip.open(outputFileName, 'wb') as outputFile:
@@ -259,9 +339,10 @@ class SampleTreesToNumpyConverter(object):
         f = h5py.File(outputFileName, 'w')
         for k in ['meta', 'category_labels']:
             f.attrs[k] = json.dumps(self.data[k].items())
-        for k in ['train', 'test']:
-            for k2 in self.data[k].keys():
-                f.create_dataset(k + '/' + k2, data=self.data[k][k2], compression="gzip", compression_opts=9)
+        for k in ['train', 'test', 'data']:
+            if k in self.data:
+                for k2 in self.data[k].keys():
+                    f.create_dataset(k + '/' + k2, data=self.data[k][k2], compression="gzip", compression_opts=9)
         f.close()
         print("written to:\x1b[34m", outputFileName, " \x1b[0m")
 
@@ -278,6 +359,7 @@ parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
 parser.add_option("-S","--systematics", dest="systematics", default=2,
                       help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
 parser.add_option("-x", "--test", dest="test", action="store_true", help="for debugging only!!!", default=False)
+parser.add_option("-d", "--include-data", dest="include_data", action="store_true", help="include data in output file as additional dataset", default=False)
 (opts, args) = parser.parse_args(argv)
 if opts.config =="":
         opts.config = ["config"]
@@ -301,5 +383,7 @@ if int(opts.systematics) > 0:
 # load config
 config = BetterConfigParser()
 config.read(opts.config)
-converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys, testRun=opts.test)
-converter.run()
+converter = SampleTreesToNumpyConverter(config, opts.trainingRegions, useSyst=sys, useWeightSyst=btagSys, testRun=opts.test, includeData=opts.include_data)
+success = converter.run()
+if not success:
+    raise Exception("WriteTrainingDataFailed")

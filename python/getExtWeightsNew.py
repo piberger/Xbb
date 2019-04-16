@@ -22,11 +22,15 @@ args = parser.parse_args()
 # 1) ./getExtWeights.py configname
 # 2) ./getExtWeight.py configname verify
 
-def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None):
+def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None, sample=None):
     if not sampleTree:
-        sampleTree = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
-    h1 = ROOT.TH1D("h1","h1",1,0,2)
-    nEvents = sampleTree.tree.Draw("1>>h1", "(" + cut + ")*genWeight")
+        sampleTree = SampleTree({
+                'name': sampleIdentifier, 
+                'folder': config.get('Directories',args.fromFolder).strip()
+            }, config=config)
+    h1 = ROOT.TH1D("h1", "h1", 1, 0, 2)
+    scaleToXs = sampleTree.getScale(sample)
+    nEvents = sampleTree.tree.Draw("1>>h1", "(" + cut + ")*genWeight*%1.6f"%scaleToXs)
     nEventsWeighted = h1.GetBinContent(1)
     h1.Delete()
     return nEventsWeighted
@@ -49,6 +53,12 @@ sampleGroups = []
 for x in args.samples.split(','):
     sampleGroups.append(x.split('+'))
 
+# input/output paths
+samplesPath = config.get('Directories', 'plottingSamples')
+samplesDefinitions = config.get('Directories', 'samplesinfo')
+samplesInfo = ParseInfo(samplesDefinitions, samplesPath)
+mcSamples = samplesInfo.get_samples(eval(config.get('Plot_general', 'samples')))
+
 sampleCuts = args.cuts.strip().split(',')
 if args.fc != '':
     cutGroups = [x.strip(',').split(',') for x in args.fc.strip(';').split(';')]
@@ -60,18 +70,21 @@ if args.fc != '':
 countDict = {}
 for sampleGroup in sampleGroups:
     count = 0
-    for sample in sampleGroup:
-        countDict[sample] = {}
+    for sampleIdentifier in sampleGroup:
+        countDict[sampleIdentifier] = {}
 
-        sampleTree = SampleTree({'name': sample, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
+        samples_matching = [x for x in mcSamples if x.identifier == sampleIdentifier]
+        sample = samples_matching[0]
+
+        sampleTree = SampleTree({'sample': sample, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
         print "CUT=",sampleCuts,":"
         for sampleCut in sampleCuts:
-            sampleCount = getEventCount(config, sample, sampleCut, sampleTree=sampleTree)
-            print sample,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
-            if sampleCut in countDict[sample]:
-                print "duplicate!!", sample, sampleCut, countDict[sample][sampleCut]
+            sampleCount = getEventCount(config, sampleIdentifier, sampleCut, sampleTree=sampleTree, sample=sample)
+            print sampleIdentifier,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
+            if sampleCut in countDict[sampleIdentifier]:
+                print "duplicate!!", sampleIdentifier, sampleCut, countDict[sampleIdentifier][sampleCut]
                 raise Exception("duplicate")
-            countDict[sample][sampleCut] = sampleCount
+            countDict[sampleIdentifier][sampleCut] = sampleCount
 
 # pruning
 for sampleIdentifier,counts in countDict.iteritems():

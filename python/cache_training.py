@@ -26,7 +26,9 @@ class CacheTraining(object):
 
         self.backgroundSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'backgrounds')) for trainingRegion in self.trainingRegions], [])))
         self.signalSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'signals')) for trainingRegion in self.trainingRegions], [])))
-        self.samples = self.samplesInfo.get_samples(list(set(self.backgroundSampleNames + self.signalSampleNames)))
+        # can include DATA in the .h5 files for training
+        self.dataSampleNames = eval(self.config.get(trainingRegion, 'data')) if self.config.has_option(trainingRegion, 'data') else []
+        self.samples = self.samplesInfo.get_samples(list(set(self.backgroundSampleNames + self.signalSampleNames + self.dataSampleNames)))
 
         self.trainingRegionsDict = {}
         for trainingRegion in self.trainingRegions:
@@ -96,7 +98,8 @@ class CacheTraining(object):
                 for trainingRegion,trainingRegionInfo in self.trainingRegionsDict.iteritems():
 
                     # add cuts for training and evaluation
-                    for additionalCut in [self.TrainCut, self.EvalCut]:
+                    additionalCuts = [None] if sample.isData() else [self.TrainCut, self.EvalCut]
+                    for additionalCut in additionalCuts:
 
                         # cuts
                         sampleCuts = [sample.subcut]

@@ -61,6 +61,7 @@ parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine 
 parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
+parser.add_option("--set", dest="setOptions", help="set config option. --set='Section.option:value'")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
@@ -122,14 +123,15 @@ pathconfig = BetterConfigParser()
 pathconfig.read('%sconfig/paths.ini'%(opts.tag))
 try:
     _configs = pathconfig.get('Configuration', 'List').split(" ")
+    _configs.remove('volatile.ini')
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
 except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
-configurationNeeded = not opts.ftag == '' and not opts.ftag.startswith('status') and not opts.ftag.startswith('checklogs')
+configurationNeeded = True #not opts.task.startswith('checklogs')
 if opts.ftag == '':
-    opts.ftag = opts.task
+    opts.ftag = opts.task.replace(':','').replace('.','')
 
 if debugPrintOUts:
     print 'configs', configs
@@ -168,11 +170,45 @@ if configurationNeeded:
 
     # new behavior: write special .ini file, which is not under version control and is always recreated again
     with open("{tag}config/volatile.ini".format(tag=opts.tag), "w") as outputFile:
+        vConfig = BetterConfigParser()
+        vConfig.add_section('Directories')
+        vConfig.set('Directories', 'plotpath', DirStruct['plotpath'])
+        vConfig.set('Directories', 'logpath', DirStruct['logpath'])
+        vConfig.set('Directories', 'limits', DirStruct['limitpath'])
+
+        # replace arbitrary options with --set command line argument:
+        # e.g. --set='Plot_general.var:=<!Plot_general|vars_reduced!>'
+        # this will set var in [Plot_general] to: <!Plot_general|vars_reduced!>
+        # to set multiple options, use ; to separate, e.g. --set='Plot_general.var:=Hmass;Plot_general.saveDataHistograms:=True'
+        if opts.setOptions:
+            # escaping of semicolon
+            opts.setOptions = opts.setOptions.replace('\;', '##SEMICOLON##')
+            for optValue in opts.setOptions.split(";"):
+                optValue = optValue.replace('##SEMICOLON##', ';').strip()
+                syntaxOk = True
+                try:
+                    if ':=' in optValue:
+                        opt = optValue.split(':=')[0]
+                        value = optValue.split(':=')[1]
+                    elif optValue:
+                        opt = optValue.split(':')[0]
+                        value = optValue.split(':')[1]
+                except Exception as e:
+                    print "ERROR:",e
+                    print "ERROR: syntax error in:", optValue
+                    print "ERROR: use ; to separate options and use \; to escape semicolons in case they are inside the value. Use := for assignment."
+                    syntaxOk = False
+                    raise
+
+                if syntaxOk:
+                    if not vConfig.has_section(opt.split('.')[0]):
+                        vConfig.add_section(opt.split('.')[0])
+                    vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
+                    print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
-        outputFile.write('[Directories]\n')
-        outputFile.write('plotpath: %s\n'%DirStruct['plotpath'])
-        outputFile.write('logpath: %s\n'%DirStruct['logpath'])
-        outputFile.write('limits: %s\n'%DirStruct['limitpath'])
+        vConfig.write(outputFile)
+
     config.read("{tag}config/volatile.ini".format(tag=opts.tag))
 
     # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!)
@@ -206,6 +242,8 @@ if configurationNeeded:
     with open(combinedConfigFileName, 'w') as combinedConfigFile:
         config.write(combinedConfigFile)
         print 'wrote config to:', combinedConfigFileName
+    config = BetterConfigParser()
+    config.read(combinedConfigFileName)
 
 
 # ------------------------------------------------------------------------------
@@ -214,7 +252,7 @@ if configurationNeeded:
 # ------------------------------------------------------------------------------
 counter = 0
 logPath = config.get('Directories', 'logpath')
-samplesinfo = config.get('Directories', 'samplesinfo')
+#samplesinfo = config.get('Directories', 'samplesinfo')
 whereToLaunch = config.get('Configuration', 'whereToLaunch')
 run_locally = str(config.get('Configuration', 'run_locally'))
 
@@ -475,6 +513,7 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 
     pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, pathOUT)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -550,6 +589,7 @@ if opts.task == 'hadd':
     outputPath = config.get("Directories", outputDir) 
 
     samplefiles = config.get('Directories', 'samplefiles')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, inputPath)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -635,6 +675,7 @@ if opts.task == 'count':
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
     pathIN = config.get("Directories", opts.input if opts.input else "SYSin")
     samplefiles = config.get('Directories','samplefiles')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, pathIN)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -670,6 +711,9 @@ if opts.task == 'count':
         chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
+    print "add the section below to your config before running the 'hadd' step!"
+    print "---"
+    print "[Hadd]"
     for sampleIdentifier, chunkSize in chunkSizes:
         print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"
@@ -690,6 +734,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
     path              = config.get("Directories", inputDir) 
     pathOUT           = config.get("Directories", outputDir)
     samplefiles       = config.get('Directories','samplefiles')
+    samplesinfo       = config.get('Directories', 'samplesinfo')
     info              = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -796,16 +841,23 @@ if opts.task.startswith('cachetraining'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
+    allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions], []))) if config.has_option(trainingRegion, 'data') else []
+
     print "backgrounds:"
     for sampleName in sorted(allBackgrounds):
         print " >", sampleName
     print "signals:"
     for sampleName in sorted(allSignals):
         print " >", sampleName
+    if len(allData) > 0:
+        print "data:"
+        for sampleName in sorted(allData):
+            print " >", sampleName
     
     # get samples info
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
-    samples = info.get_samples(allBackgrounds + allSignals)
+    samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(list(set([sample.identifier for sample in samples])), samplesList)
@@ -880,11 +932,13 @@ if opts.task.startswith('runtraining'):
         jobDict = repDict.copy()
         jobDict.update({
             'arguments': {'trainingRegions': trainingRegion}, 
-            #'queue': submitQueueDict['runtraining']
             })
         jobName = 'training_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
         submit(jobName, jobDict)
 
+# -----------------------------------------------------------------------------
+# DNN: DNN training 
+# -----------------------------------------------------------------------------
 if opts.task.startswith('dnn'):
     # training regions
     trainingRegions = [x.strip() for x in (config.get('MVALists', 'List_for_submitscript')).split(',')]
@@ -896,7 +950,6 @@ if opts.task.startswith('dnn'):
             jobDict = repDict.copy()
             jobDict.update({
                 'arguments': {'trainingRegions': h5file}, 
-                #'queue': submitQueueDict['runtraining']
                 })
             jobName = 'dnn_run_{trainingRegions}'.format(trainingRegions=trainingRegion)
             submit(jobName, jobDict)
@@ -914,6 +967,7 @@ if opts.task.startswith('cacheplot'):
     dataSampleNames = eval(config.get('Plot_general', 'Data'))
 
     # get samples info
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
     samples = info.get_samples(sampleNames + dataSampleNames)
 
@@ -973,6 +1027,18 @@ if opts.task.startswith('cacheplot'):
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
+    # if only a subset of samples is plotted
+    if len(opts.samples.strip()) > 0:
+        # get samples info
+        samplesinfo = config.get('Directories', 'samplesinfo')
+        info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+        sampleNames = eval(config.get('Plot_general', 'samples'))
+        dataSampleNames = eval(config.get('Plot_general', 'Data'))
+        samples = info.get_samples(sampleNames + dataSampleNames)
+        sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
+    else:
+        sampleIdentifiers = None
+
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
     if len(opts.vars.strip()) > 0:
         plotVars = opts.vars.strip().split(',')
@@ -986,11 +1052,13 @@ if opts.task.startswith('runplot'):
         plotVarChunks = [plotVars]
 
     # submit all the plot regions as separate jobs
+    nRegionsMatched = 0
     for region in regions:
 
         # if --regions is given, only plot those regions
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
+            nRegionsMatched += 1
             for j, plotVarList in enumerate(plotVarChunks):
                 jobDict = repDict.copy()
                 jobDict.update({
@@ -1000,10 +1068,15 @@ if opts.task.startswith('runplot'):
                             'vars': ','.join(plotVarList),
                         }
                     })
+                if sampleIdentifiers:
+                    jobDict['arguments']['sampleIdentifier'] = ','.join(sampleIdentifiers)
                 jobName = 'plot_run_{region}_{chunk}'.format(region=region, chunk=j)
                 submit(jobName, jobDict)
+    if nRegionsMatched < 1:
+        print "WARNING: no plot regions found - nothing to do."
 
 # -----------------------------------------------------------------------------
+# DCYIELDS: print yields table for data in datacar regions, without caching
 # -----------------------------------------------------------------------------
 if opts.task.startswith('dcyields'):
     # get list of all sample names used in DC step
@@ -1016,6 +1089,7 @@ if opts.task.startswith('dcyields'):
     
     # get samples info
     sampleFolder = config.get('Directories', 'dcSamples')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, sampleFolder)
     samples = info.get_samples(sampleNames)
 
@@ -1055,8 +1129,6 @@ if opts.task.startswith('dcyields'):
                     eventsPassed[region] += 1
         print "events passed:", eventsPassed
 
-
-
 # -----------------------------------------------------------------------------
 # CACHEDC: prepare skimmed trees for DC, which have looser cuts to include 
 # variations of systematics. 
@@ -1074,6 +1146,7 @@ if opts.task.startswith('cachedc'):
 
     # get samples info
     sampleFolder = config.get('Directories', 'dcSamples')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, sampleFolder)
     samples = info.get_samples(sampleNames)
 
@@ -1120,12 +1193,9 @@ if opts.task.startswith('cachedc'):
                 print 'INFO: files do not exist yet!'
 
         # number of files to process per job
-        chunkSize = getCachingChunkSize(sample, config)
-
         # each entry in the array is for a subsample
         # use same size for all subsamples for now
-        sampleSizesList = [chunkSize for sample in samples if sample.identifier == sampleIdentifier]
-        splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
+        splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
                 'folder': sampleFolder
@@ -1185,6 +1255,14 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
+                
+                # check if shape files exist already and skip
+                if opts.skipExisting:
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    if all([os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]):
+                        print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
+                        print "INFO: > all files exist! => skip"
+                        continue
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
@@ -1192,6 +1270,7 @@ if opts.task.startswith('rundc'):
                     datacard = Datacard(config=config, region=region, verbose=False)
                     nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
                     nJobs = datacard.getNumberOfChunks(sampleIdentifier)
+
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
@@ -1266,6 +1345,7 @@ if opts.task == 'trainReg':
 if opts.task == 'sys' or opts.task == 'syseval':
     path = config.get("Directories", "SYSin")
     samplefiles = config.get('Directories','samplefiles')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
@@ -1293,8 +1373,9 @@ if opts.task == 'sys' or opts.task == 'syseval':
 # -----------------------------------------------------------------------------
 if opts.task == 'eval' or opts.task.startswith('eval_'):
     #repDict['queue'] = 'long.q'
-    path = config.get("Directories", "MVAin")
-    pathOUT = config.get("Directories", "MVAout")
+    path = opts.input if opts.input else "MVAin"
+    pathOUT  = opts.output if opts.output else "MVAout"
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
@@ -1322,6 +1403,8 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
                     'arguments':{
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
+                        'inputDir': path, 
+                        'outputDir': pathOUT, 
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
                 })
@@ -1397,8 +1480,6 @@ if opts.task == 'summary':
             if sample.identifier == sampleIdentifier:
                 print " >>> ", sample.name
 
-
-
     print "-"*80
     print " CR and SR definitions:"
     print "-"*80
@@ -1424,6 +1505,7 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
@@ -1511,6 +1593,7 @@ if opts.task == 'sample':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
+    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     print ">", info.getSampleIdentifiers()
     print "filter by:", samplesList
@@ -1549,6 +1632,11 @@ if opts.task == 'sample':
             else:
                 print "----",sampleIdentifier,"----"
                 print skimTemplate
+                if opts.output:
+                    with open(opts.output, "w") as outFile:
+                        outFile.write(skimTemplate)
+                    print "----",sampleIdentifier,"----"
+                    print "written to:", opts.output
 
 if opts.task.startswith('checklogs'):
     
@@ -1640,6 +1728,46 @@ if opts.task.startswith('postfitplot'):
     jobDict = repDict.copy()
     jobName = 'postfitplot'
     submit(jobName, jobDict)
+
+# -----------------------------------------------------------------------------
+# make_skims 
+# -----------------------------------------------------------------------------
+if opts.task.startswith('make_skims'):
+    sampleIdentifiers = None
+
+    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+
+    # submit all the plot regions as separate jobs
+    nRegionsMatched = 0
+    for region in regions:
+
+        # if --regions is given, only plot those regions
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            nRegionsMatched += 1
+            jobDict = repDict.copy()
+            jobDict.update({
+                'arguments':
+                    {
+                        'regions': region,
+                    }
+                })
+            jobName = 'makeskims_{region}'.format(region=region)
+            submit(jobName, jobDict)
+    if nRegionsMatched < 1:
+        print "WARNING: no plot regions found - nothing to do."
+
+# -----------------------------------------------------------------------------
+# config: print single, fully parsed config setting 
+# -----------------------------------------------------------------------------
+if opts.task == 'config':
+    section = opts.vars.split('.')[0]
+    value   = opts.vars.split('.')[1] 
+    if config.has_option(section, value):
+        print "RESULT: {section}.{value} = {result}".format(section=section, value=value, result=config.get(section, value))
+    else:
+        print "\x1b[31mERROR: not found: {section}.{value}\x1b[0m".format(section=section, value=value)
+
 
 # if there are still jobs in the local queue, submit them to the batch queue
 batchSystem.submitQueue()
