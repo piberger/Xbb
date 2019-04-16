@@ -8,7 +8,7 @@ import os
 # do jet/lepton selection and skimming 
 class VHbbSelection(AddCollectionsModule):
 
-    def __init__(self, debug=False, year="2017", channels=["Wln","Zll","Znn"]):
+    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"]):
         self.debug = debug or 'XBBDEBUG' in os.environ
         self.year = year
         self.channels = channels
@@ -23,23 +23,33 @@ class VHbbSelection(AddCollectionsModule):
         # settings
         self.electronID = {
                     1: {
-                                "2017": "Electron_mvaFall17Iso_WP80",
+                                "2018": "Electron_mvaFall17V2Iso_WP80",
+			        "2017": "Electron_mvaFall17Iso_WP80",
                                 "2016": "Electron_mvaSpring16GP_WP80",
                             },
                     2: {
-                                "2017": "Electron_mvaFall17Iso_WP90",
+                                "2018": "Electron_mvaFall17V2Iso_WP90",
+			        "2017": "Electron_mvaFall17Iso_WP90",
                                 "2016": "Electron_mvaSpring16GP_WP90",
                             }
                     }
         if self.year == "2016":
             self.metFilters = ["Flag_goodVertices", "Flag_globalTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter"]
-        elif self.year == "2017":
+        elif self.year in ["2017","2018"]:
             self.metFilters = ["Flag_goodVertices", "Flag_globalTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter", "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibFilter"]
         if self.isData:
             self.metFilters.append("Flag_eeBadScFilter")
 
         self.taggerName = "Jet_btagDeepB"
         self.btagWPs = {
+                       "2018": {
+                       'Jet_btagDeepB': {
+                            'loose':  0.1241,
+                            'medium': 0.4184,
+                            'tight':  0.7527,
+                            'none': -1.0,
+                            },
+                        },
                         "2017": {
                         'Jet_btagDeepB': {
                             'loose':  0.1522,
@@ -57,9 +67,18 @@ class VHbbSelection(AddCollectionsModule):
                             },
                         },
 
-                }
+                    }
         self.btagWP = self.btagWPs[self.year][self.taggerName]
-            
+
+
+
+        if self.year == "2018": 
+            self.HltPaths = {
+                        'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
+                        'Wln': ['HLT_Ele32_WPTight_Gsf','HLT_IsoMu24'],
+                        'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
+
+
         if self.year == "2017": 
             self.HltPaths = {
                         'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
@@ -184,6 +203,18 @@ class VHbbSelection(AddCollectionsModule):
 
             # TRIGGER
             triggerPassed = {k: any([getattr(tree, x) for x in v if hasattr(tree,x)])  for k,v in self.HltPaths.items()}
+            #print("------------------------------------")
+            #for k,v in self.HltPaths.items():
+            #    print(k,v)
+            #    for x in v:
+            #        print(x, hasattr(tree,x))
+            #        if hasattr(tree,x):
+            #            print(getattr(tree,x))
+                        
+            #print(triggerPassed, "triggerPassed")
+            #print(self.channels, "self.channels")
+            #if not ((triggerPassed['0-lep'] and "Znn" in self.channels) or (triggerPassed['1-lep'] and "Wln" in self.channels) or (triggerPassed['2-lep'] and  "Zll" in self.channels)):
+
             if debugEvent:
                 print "triggers:", triggerPassed
 
@@ -194,6 +225,7 @@ class VHbbSelection(AddCollectionsModule):
             if not any([isZll, isWln, isZnn]):
                 return False
             self.cutFlow[1] += 1
+            print(self.cutFlow[1], ': cutFlow[1]')
             
             # LEPTONS
             if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == tree.Vtype:
