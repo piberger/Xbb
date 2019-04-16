@@ -728,6 +728,12 @@ class NewStackMaker:
             for key in keys:
                 #print('groupName is', key)
                 print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
+
+	    sum = 0
+            for key in keys:
+                sum = self.groupCounts['weighted'][key] + sum
+
+            print('total weighted events are:', sum)
         except Exception as e:
             print("ERROR: could not obtain counts (not implemented for TGraphAsymErrors yet)", e)
 

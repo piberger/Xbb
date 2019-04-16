@@ -73,7 +73,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             treeJet_PtReg = tree.Jet_PtReg 
             treeJet_pt = tree.Jet_pt
             treeJet_Pt = tree.Jet_Pt
-            treeJet_bReg = tree.Jet_bReg
+            #treeJet_bReg = tree.Jet_bReg
 
             treeJet_phi = tree.Jet_phi
             treeJet_eta = tree.Jet_eta
