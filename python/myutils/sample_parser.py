@@ -167,15 +167,23 @@ class ParseInfo:
                           thenames.append(sample.name)
         #else check the name
         else:
+            if not isinstance(samplenames, (list, tuple)): 
+                samplenames = samplenames.split(',')
+            
+            for samplename in samplenames:
+                found = False
                 for sample in self._samplelist:
-                  if not isinstance(samplenames, (list, tuple)): samplenames = samplenames.split(',')
-                  for samplename in samplenames:
-                        # print "get_samples sample is", sample ,'samplename',samplename
-                        if sample.name == samplename:
-                                # print 'matched sample.name',sample.name
-                                #if (sample.subsample): continue #avoid multiple submissions from subsamples
-                                samples.append(sample)
-                                thenames.append(sample.name)
+                    # print "get_samples sample is", sample ,'samplename',samplename
+                    if sample.name == samplename:
+                        found = True
+                        # print 'matched sample.name',sample.name
+                        #if (sample.subsample): continue #avoid multiple submissions from subsamples
+                        samples.append(sample)
+                        thenames.append(sample.name)
+                if not found:
+                    print "\x1b[31mERROR: sample not found:", samplename, "\x1b[0m"
+                    raise Exception("SampleMissing")
+                
         return samples
 
     # return list of all identifiers
