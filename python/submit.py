@@ -841,7 +841,7 @@ if opts.task.startswith('cachetraining'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
-    allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions], []))) if config.has_option(trainingRegion, 'data') else []
+    allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions if config.has_option(trainingRegion, 'data')], [])))
 
     print "backgrounds:"
     for sampleName in sorted(allBackgrounds):
