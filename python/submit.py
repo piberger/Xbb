@@ -88,8 +88,8 @@ if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
 
-if opts.task == "run":
-    opts.task = "sysnew"
+#if opts.task == "run":
+#    opts.task = "sysnew"
 
 
 batchSystem = None
@@ -297,6 +297,7 @@ submitQueueDict = {
         'hadd': 'short.q',
         'prep': 'all.q',
         'sysnew': 'all.q',
+        'run': 'all.q',
         'trainReg': 'all.q',
         'cacheplot': 'short.q',
         'runplot': 'short.q', 
@@ -725,7 +726,7 @@ if opts.task == 'count':
 # -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
-if opts.task == 'sysnew' or opts.task == 'checksysnew':
+if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
     prepOUT           = config.get("Directories", "PREPout")
@@ -812,7 +813,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 if opts.join:
                     jobDict['arguments']['join'] = ''
                 filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
-                jobName = 'sysnew_{sample}_part{part}{files}'.format(sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
+                jobName = '{task}_{sample}_part{part}{files}'.format(task=opts.task, sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
             else:
                 if allInputFilesMissing:

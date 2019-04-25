@@ -207,7 +207,7 @@ if [ $task = "prep" ]; then
     runCommand="python ./prepare_environment_with_config.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     
-elif [ $task = "sysnew" ]; then
+elif [ $task = "sysnew" ] || [ $task = "run" ]; then
     runCommand="python ./sys_new.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     if [ "$addCollections" ]; then runCommand="${runCommand} --addCollections ${addCollections}"; fi
