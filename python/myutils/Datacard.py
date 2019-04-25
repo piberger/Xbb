@@ -174,11 +174,14 @@ class Datacard(object):
 
         if self.sysOptions['blind'] and self.verbose:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
-            
-        if self.anType.lower() != 'bdt':
-            if self.sysOptions['rebin_active']:
-                print ('@WARNING: Changing rebin_active to false since you are running for control region.')
-            self.sysOptions['rebin_active'] = False
+        
+        # new behavior: rebin_method can be set to 'legacy' per region to restore HIG16044 style rebinning
+        # old behavior: global option rebin_active was set to True/False in config, and for CR's changed to False here
+        #if self.anType.lower() != 'bdt':
+        #    if self.sysOptions['rebin_active']:
+        #        print ('@WARNING: Changing rebin_active to false since you are running for control region.')
+        #    self.sysOptions['rebin_active'] = False
+
         if self.sysOptions['add_signal_as_bkg']:
             self.sysOptions['setup'].append(self.sysOptions['add_signal_as_bkg'])
 
@@ -393,7 +396,7 @@ class Datacard(object):
 
         if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
-        else:
+        elif self.binning['rebin_method'] == 'legacy':
             # below is the old method, that was used for 2016 Heppy analysis
             temporaryBins = 1000
             targetBins = self.binning['nBinsX'] 
@@ -671,10 +674,9 @@ class Datacard(object):
         return histogramName
 
     def run(self, useSampleIdentifiers=None, chunkNumber=-1):
-        # compute variable bin sizes to have minimum number of significance in highest BDT bin
-        # rescaling of BDT score is not done anymore.
-        if self.sysOptions['rebin_active']:
-            self.calcBinning()
+        
+        # compute bin boundaries/read the mfrom config if given
+        self.calcBinning()
 
         # select samples to use
         allSamples = self.getAllSamples()
@@ -738,6 +740,7 @@ class Datacard(object):
             #    self.histograms[sample.name][systematics['systematicsName']] = histoMaker.getHistogram(systematics['cut'])
 
             # add all the cuts/weights for the different systematics 
+            evalcutInfoShown = False
             for systematics in systematicsList:
                 
                 # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
@@ -766,6 +769,9 @@ class Datacard(object):
                     systematics['addCut'] = self.EvalCut
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+                    if self.debug and not evalcutInfoShown:
+                        print('\x1b[31mDEBUG: using 50% of sample not used in training:', self.EvalCut, '\x1b[0m')
+                        evalcutInfoShown = True
                 else:
                     if self.debug:
                         if sample.type == 'DATA':
