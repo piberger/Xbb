@@ -190,6 +190,9 @@ if configurationNeeded:
                     if ':=' in optValue:
                         opt = optValue.split(':=')[0]
                         value = optValue.split(':=')[1]
+                    elif '=' in optValue:
+                        opt = optValue.split('=')[0]
+                        value = optValue.split('=')[1]
                     elif optValue:
                         opt = optValue.split(':')[0]
                         value = optValue.split(':')[1]
