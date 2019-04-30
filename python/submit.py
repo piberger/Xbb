@@ -191,8 +191,11 @@ if configurationNeeded:
                         opt = optValue.split(':=')[0]
                         value = optValue.split(':=')[1]
                     elif '=' in optValue:
+                        splitParts = optValue.split('=')
+                        if len(splitParts) > 2:
+                            print "\x1b[31mWARNING: more than one equal sign found in expression, split at the first one! use ':=' to force split at another position!\x1b[0m"
                         opt = optValue.split('=')[0]
-                        value = optValue.split('=')[1]
+                        value = '='.join(optValue.split('=')[1:])
                     elif optValue:
                         opt = optValue.split(':')[0]
                         value = optValue.split(':')[1]
