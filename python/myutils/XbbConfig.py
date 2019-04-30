@@ -35,3 +35,21 @@ class XbbConfigReader(object):
             print('DEBUG: \x1b[35m read', len(config.sections()), 'sections\x1b[0m')
 
         return config
+
+class XbbConfigTools(object):
+
+    def __init__(self, config):
+        self.config = config
+
+    # list of DATA sample names
+    def getData(self):
+        return eval(self.config.get('Plot_general', 'Data'))
+
+    # list of MC sample names
+    def getMC(self):
+        return eval(self.config.get('Plot_general', 'samples'))
+    
+    # list of all sample names (data + mc)
+    def getUsedSamples(self):
+        return self.getMC() + self.getData()
+ 

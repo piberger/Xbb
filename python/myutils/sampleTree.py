@@ -8,6 +8,7 @@ import glob
 import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
+from samplesclass import Sample
 import array
 import resource
 import gc
@@ -21,7 +22,8 @@ import gc
 #
 # create: (A)  sampleTree = SampleTree('path/to/indexfile.txt')
 # create: (B)  sampleTree = SampleTree(['path/to/file1.root', 'path/to/file2.root'])
-# create: (C)  sampleTree = SampleTree({'name': 'DY50to100', 'folder': ...})
+# create: (C)  sampleTree = SampleTree({'name': 'DY50to100', 'folder': ...}, config=config)
+# create: (D)  sampleTree = SampleTree({'sample': <object of Sample class>, 'folder': ...}, config=config)
 #
 # add formula: sampleTree.addFormula('ptCut','pt>100')
 #
@@ -51,8 +53,9 @@ class SampleTree(object):
         self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         self.sampleIdentifier = None
         self.numParts = -1
+        self.subcut = None
 
-        # friends
+        # friend trees (TODO: not fully implemented/tested)
         # {'name': 'DNN_reeval_v2', 'tree': tree, 'treeName': 'Events'}
         self.friends = []
         self.friendTreeIndex = ['run', 'event']
@@ -338,7 +341,7 @@ class SampleTree(object):
         if not samples:
             samples = self.samples
 
-        # given argument is list -> this is already the list of root files
+        # given argument is list -> this is already the list of root file names
         if type(samples) == list:
             sampleFileNames = samples
         # given argument is name and folder -> glob
@@ -348,6 +351,9 @@ class SampleTree(object):
             else:
                 sampleName = samples['name']
             self.sampleIdentifier = sampleName
+            if samples['sample'].subsample:
+                self.subcut = samples['sample'].subcut
+
             sampleFolder = samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             redirector = self.fileLocator.getRedirector(sampleFolder)
