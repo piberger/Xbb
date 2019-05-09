@@ -348,11 +348,11 @@ class SampleTree(object):
         elif type(samples) == dict:
             if 'sample' in samples:
                 sampleName = samples['sample'].identifier
+                if samples['sample'].subsample:
+                    self.subcut = samples['sample'].subcut
             else:
                 sampleName = samples['name']
             self.sampleIdentifier = sampleName
-            if samples['sample'].subsample:
-                self.subcut = samples['sample'].subcut
 
             sampleFolder = samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
