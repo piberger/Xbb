@@ -172,8 +172,11 @@ class ParseInfo:
         #else check the name
         else:
             if not isinstance(samplenames, (list, tuple)): 
-                samplenames = samplenames.split(',')
-            
+                samplenames = [x.strip() for x in samplenames.split(',')]
+
+            # filter empty sample names
+            samplenames = [x for x in samplenames if len(x.strip()) > 0]
+
             for samplename in samplenames:
                 found = False
                 for sample in self._samplelist:
