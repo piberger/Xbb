@@ -675,7 +675,8 @@ class NewStackMaker:
                 print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         if self.outputTeX:
             outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext='tex')
-            ROOT.gPad.Print(outputFileName)
+            #ROOT.gPad.Print(outputFileName)
+            c.SaveAs(outputFileName)
             print("INFO: saved as \x1b[32mTeX \x1b[34m", outputFileName, "\x1b[0m")
 
         self.histoCounts = {'unweighted':{}, 'weighted': {}}

@@ -66,8 +66,11 @@ class PlotHelper(object):
         self.total_lumi = eval(self.config.get('General', 'lumi'))
         self.signalRegion = False
         if self.config.has_option(self.configSection, 'Signal'):
-            self.mc.append(self.config.get(self.configSection, 'Signal'))
-            self.signalRegion = True
+            if len(self.config.get(self.configSection, 'Signal').strip()) > 0:
+                self.mc += eval(self.config.get(self.configSection, 'Signal'))
+                self.mc = list(set(self.mc))
+                self.signalRegion = True
+
         self.dataSamples = self.samplesInfo.get_samples(self.data)
         self.mcSamples = self.samplesInfo.get_samples(self.mc)
 
