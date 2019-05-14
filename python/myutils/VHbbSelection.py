@@ -24,12 +24,12 @@ class VHbbSelection(AddCollectionsModule):
         self.electronID = {
                     1: {
                                 "2018": "Electron_mvaFall17V2Iso_WP80",
-			        "2017": "Electron_mvaFall17Iso_WP80",
+                                "2017": "Electron_mvaFall17Iso_WP80",
                                 "2016": "Electron_mvaSpring16GP_WP80",
                             },
                     2: {
                                 "2018": "Electron_mvaFall17V2Iso_WP90",
-			        "2017": "Electron_mvaFall17Iso_WP90",
+                                "2017": "Electron_mvaFall17Iso_WP90",
                                 "2016": "Electron_mvaSpring16GP_WP90",
                             }
                     }
@@ -77,9 +77,8 @@ class VHbbSelection(AddCollectionsModule):
                         'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
                         'Wln': ['HLT_Ele32_WPTight_Gsf','HLT_IsoMu24'],
                         'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
-
-
-        if self.year == "2017": 
+                        }
+        elif self.year == "2017": 
             self.HltPaths = {
                         'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
                         'Wln': ['HLT_Ele32_WPTight_Gsf_L1DoubleEG','HLT_IsoMu27'],
@@ -225,8 +224,8 @@ class VHbbSelection(AddCollectionsModule):
             if not any([isZll, isWln, isZnn]):
                 return False
             self.cutFlow[1] += 1
-            print(self.cutFlow[1], ': cutFlow[1]')
-            
+            #print(self.cutFlow[1], ': cutFlow[1]')
+
             # LEPTONS
             if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == tree.Vtype:
                 if tree.Vtype == 0:
@@ -370,10 +369,13 @@ class VHbbSelection(AddCollectionsModule):
             self._b("V_phi")[0] = V.Phi()
             self._b("V_mass")[0] = V.M()
 
-            if self._b("V_pt")[0] < 50.0:
+            if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 50.0:
                 return False
-            elif not (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 150.0:
+            elif self._b("isZnn")[0] and self._b("V_pt")[0] < 150.0:
                 return False
+            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 150.0 and MET.Pt() < 170.0):
+                return False
+
             self.cutFlow[6] += 1
 
             # yield in the end
