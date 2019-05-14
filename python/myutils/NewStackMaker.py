@@ -88,6 +88,7 @@ class NewStackMaker:
                     'xAxis': 'xAxis',
                     'yAxis': 'yAxis',
                     'drawOption': 'drawOption',
+                    'drawOptionData': 'drawOptionData',
                     'draw': 'draw',
                     'binList': 'binList',
                     'plotEqualSize': 'plotEqualSize',
@@ -622,7 +623,7 @@ class NewStackMaker:
 
         # draw DATA
         if dataGroupName in groupedHistograms and not self.is2D:
-            drawOption = 'PE'
+            drawOption = self.histogramOptions['drawOptionData'] if 'drawOptionData' in self.histogramOptions else 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
             if normalize and groupedHistograms[dataGroupName].Integral() > 0:
