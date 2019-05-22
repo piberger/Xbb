@@ -215,7 +215,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                                     else:
                                         FSR_pt_reg_factor = treeJet_PtReg[i]/treeJet_Pt[i] 
                                         FSR_pt_reg_sys    = FSR_pt_reg_factor * treeJet_pt_sys[i]
-                                        FSR_mass_reg_sys  = treeJet_mass[i]/treeJet_mass_nom[i] * treeJet_mass_sys[i] * FSR_pt_reg_factor
+                                        FSR_mass_reg_sys  = (treeJet_mass[i]/treeJet_mass_nom[i] if treeJet_mass_nom[i] > 0 else 1.0) * treeJet_mass_sys[i] * FSR_pt_reg_factor
                                         FSR.SetPtEtaPhiM(FSR_pt_reg_sys, treeJet_eta[i], treeJet_phi[i], FSR_mass_reg_sys)
                                     hJ0 = hJ0 + FSR
                                 for i in fsrIndices1:
@@ -225,7 +225,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                                     else:
                                         FSR_pt_reg_factor = treeJet_PtReg[i]/treeJet_Pt[i]
                                         FSR_pt_reg_sys    = FSR_pt_reg_factor * treeJet_pt_sys[i]
-                                        FSR_mass_reg_sys  = treeJet_mass[i]/treeJet_mass_nom[i] * treeJet_mass_sys[i] * FSR_pt_reg_factor
+                                        FSR_mass_reg_sys  = (treeJet_mass[i]/treeJet_mass_nom[i] if treeJet_mass_nom[i] > 0 else 1.0) * treeJet_mass_sys[i] * FSR_pt_reg_factor
                                         FSR.SetPtEtaPhiM(FSR_pt_reg_sys, treeJet_eta[i], treeJet_phi[i], FSR_mass_reg_sys)
                                     hJ1 = hJ1 + FSR
                                 
