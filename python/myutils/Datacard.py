@@ -822,33 +822,34 @@ class Datacard(object):
             specialweight = 1.0
             sampleTree.Print()
 
+            # obsolete:
             # per region/var blinding cut
-            self.regionVarBlindCut = None
-            if self.blindCut and sample.type == 'DATA':
-                print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
-                if systematicsList[0]['var'] in self.blindCut:
-                    self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
-                    sampleTree.addFormula(self.regionVarBlindCut)
-                    print("self.regionVarBlindCut = ", self.regionVarBlindCut)
+            #self.regionVarBlindCut = None
+            #if self.blindCut and sample.type == 'DATA':
+            #    print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
+            #    if systematicsList[0]['var'] in self.blindCut:
+            #        self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
+            #        sampleTree.addFormula(self.regionVarBlindCut)
+            #        print("self.regionVarBlindCut = ", self.regionVarBlindCut)
 
             for event in sampleTree:
 
                 # check blinding cut
-                cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
+                #cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
 
-                if cutPassed:
-                    # evaluate all systematics for this event
-                    for systematics in systematicsList:
-                        cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
+                # evaluate all systematics for this event
+                for systematics in systematicsList:
+                    cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
+                    if cutPassed:
+                        if 'addCut' in systematics:
+                            cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
                         if cutPassed:
-                            if 'addCut' in systematics:
-                                cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
-                            if cutPassed:
-                                weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
-                                treeVar = sampleTree.evaluate(systematics['var'])
-                                specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                                self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
-                        #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+                            weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                            treeVar = sampleTree.evaluate(systematics['var'])
+                            specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                    #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+
 
             # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
             for systematics in systematicsList:
@@ -872,6 +873,8 @@ class Datacard(object):
             binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
             print(binList)
             print(binContentList)
+
+
 
             # normalize up/down variations
             for systematics in systematicsList:
