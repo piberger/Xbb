@@ -209,8 +209,12 @@ if configurationNeeded:
                 if syntaxOk:
                     if not vConfig.has_section(opt.split('.')[0]):
                         vConfig.add_section(opt.split('.')[0])
+                    if config.has_section(opt.split('.')[0]) and config.has_option(opt.split('.')[0], opt.split('.')[1]):
+                        print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+                    else:
+                        print "\x1b[31mCONFIG: ADD", opt, "=", value, "\x1b[0m"
                     vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
-                    print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+
 
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
         vConfig.write(outputFile)
