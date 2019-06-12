@@ -19,18 +19,22 @@ class Jet:
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="Jet_btagDeepB", includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="", decorrelatePtEta=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
         self.calibName = calibName
-        self.includeFixPtEtaBins = includeFixPtEtaBins
+        self.decorrelatePtEta = decorrelatePtEta
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
         self.absoluteEta = True
         self.includeLeptons = includeLeptons 
         self.ptCut = ptCut
         self.etaCut = etaCut
+
+        if jetBtagBranchName == "":
+            print("\x1b[31mERROR: tagger name has to be specified with jetBtagBranchName argument!\x1b[0m")
+            raise Exception("TaggerNameEmpty")
 
         if self.includeLeptons:
             print "INFO: Jet_lepFilter will not be applied!"
@@ -89,7 +93,7 @@ class BTagWeights(AddCollectionsModule):
         if not self.isData:
             self.systBranches = [""] #nominal
             self.systBranches += [syst + sdir for syst in self.systList for sdir in self.systVars]
-            if self.includeFixPtEtaBins:
+            if self.decorrelatePtEta:
                 self.systBranches += [syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir for syst in self.systList for sdir in self.systVars for ipt in range(0,5) for ieta in range(1,4)]
 
             self.btagCollection = Collection(self.branchBaseName, self.systBranches, leaves=False)
@@ -166,7 +170,7 @@ class BTagWeights(AddCollectionsModule):
                 for sdir in self.systVars:
                     self.btagCollection[syst + sdir][0] = self.get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
 
-                    if self.includeFixPtEtaBins:
+                    if self.decorrelatePtEta:
                         for ipt in range(0,5):
 
                             ptmin = 20.

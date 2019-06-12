@@ -8,11 +8,12 @@ import os
 # do jet/lepton selection and skimming 
 class VHbbSelection(AddCollectionsModule):
 
-    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"]):
+    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"], fixStupidRenamingDoneInV11=False):
         self.debug = debug or 'XBBDEBUG' in os.environ
         self.year = year
         self.channels = channels
         self.debugEvents = []
+        self.fixStupidRenamingDoneInV11 = fixStupidRenamingDoneInV11
         super(VHbbSelection, self).__init__()
 
     def customInit(self, initVars):
@@ -33,6 +34,10 @@ class VHbbSelection(AddCollectionsModule):
                                 "2016": "Electron_mvaSpring16GP_WP90",
                             }
                     }
+        if self.fixStupidRenamingDoneInV11:
+            self.electronID[1]["2017"] = "Electron_mvaFall17V1Iso_WP80"
+            self.electronID[2]["2017"] = "Electron_mvaFall17V1Iso_WP90"
+
         if self.year == "2016":
             self.metFilters = ["Flag_goodVertices", "Flag_globalTightHalo2016Filter", "Flag_HBHENoiseFilter", "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter"]
         elif self.year in ["2017","2018"]:

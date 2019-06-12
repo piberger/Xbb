@@ -15,9 +15,9 @@ class PostfitPlotter(object):
 
     def __init__(self, config, region, vars=None, directory="shapes_fit_s", title=None, blind=True):
         self.config = config
-        self.region = region
+        self.region = region if type(region) == list else [region]
         self.fitRegions = eval(self.config.get('Fit', 'regions'))
-        self.dcRegion = self.fitRegions[self.region]
+        self.dcRegion = [self.fitRegions[x] for x in self.region] 
         self.var = "postfitDNN"
         self.directory = directory
         self.shapesFile = None
@@ -29,22 +29,25 @@ class PostfitPlotter(object):
         if self.config.has_option('Fit', 'plotText'):
             self.plotText = eval(self.config.get('Fit', 'plotText'))
 
-        if self.config.has_section('Fit:'+self.region):
-            if self.config.has_option('Fit:'+self.region, 'var'):
-                self.var = self.config.get('Fit:'+self.region, 'var')
-            if self.blind and self.config.has_option('Fit:'+self.region, 'blindBins'):
-                self.blindBins = eval(self.config.get('Fit:'+self.region, 'blindBins'))
-            if self.config.has_option('Fit:'+self.region, 'plotText'):
-                self.plotText += eval(self.config.get('Fit:'+self.region,'plotText'))
+        if self.config.has_section('Fit:'+self.region[0]):
+            if self.config.has_option('Fit:'+self.region[0], 'var'):
+                self.var = self.config.get('Fit:'+self.region[0], 'var')
+            if self.blind and self.config.has_option('Fit:'+self.region[0], 'blindBins'):
+                self.blindBins = eval(self.config.get('Fit:'+self.region[0], 'blindBins'))
+            if self.config.has_option('Fit:'+self.region[0], 'plotText'):
+                self.plotText += eval(self.config.get('Fit:'+self.region[0],'plotText'))
 
     def prepare(self):
         self.dcDict = eval(self.config.get('LimitGeneral','Dict'))
-        self.reverseDcDict = {v:k for k,v in self.dcDict.iteritems()}
+        self.reverseDcDict = {v:k for k,v in self.dcDict.items()}
+        self.regionDict = eval(self.config.get('Fit', 'regions'))
+        self.reverseRegionDict = {v:k for k,v in self.regionDict.items()}
         self.setup = eval(self.config.get('LimitGeneral','setup'))
         self.setupSignals = eval(self.config.get('LimitGeneral','setupSignals')) if self.config.has_option('LimitGeneral','setupSignals') else []
 
         shapesFileName = self.config.get('Fit', 'FitDiagnosticsDump')
         self.shapesFile = ROOT.TFile.Open(shapesFileName, "READ")
+        print("REV:", self.reverseDcDict)
 
     # process is datacard name convention, convert it back to Xbb process convention if necessary
     def getNameFromDcname(self, process):
@@ -56,23 +59,74 @@ class PostfitPlotter(object):
     def getProcesses(self):
         return self.setup
 
-    def getShape(self, process):
+    def getHistogramName(self, process):
         processName = self.getNameFromDcname(process) 
         
         # use pre-fit signal strength for plotting if blind
         if self.blind and processName in self.setupSignals:
             print("INFO: \x1b[31mBLIND: prefit shapes are plotted for signal!\x1b[0m")
-            histogramName = 'shapes_prefit/' + self.dcRegion + '/' + process
+            histogramName = 'shapes_prefit/{dcRegion}/' + process
         else:
-            histogramName = self.directory + '/' + self.dcRegion + '/' + process
+            histogramName = self.directory + '/{dcRegion}/' + process
+
         print("DEBUG: get shape ", histogramName)
-        histogram = self.shapesFile.Get(histogramName)
+        return histogramName
+
+    def getShape(self, process):
+
+        histogramNameTemplate = self.getHistogramName(process)
+        histograms = []
+        histogramBins = []
+        for x in self.dcRegion:
+            histograms.append(self.shapesFile.Get(histogramNameTemplate.format(dcRegion=x)))
+            r = self.reverseRegionDict[x] 
+            if self.config.has_section('Fit:'+r) and self.config.has_option('Fit:'+r, 'nBins'):
+                nBins = eval(self.config.get('Fit:'+r, 'nBins'))
+            else:
+                nBins = histograms[-1].GetXaxis().GetNbins()
+            print("NBINS:", nBins, x, r)
+            histogramBins.append(nBins)
+        #histograms = [self.shapesFile.Get(histogramNameTemplate.format(dcRegion=x)) for x in self.dcRegion]
+
+        if len(histograms) == 1:
+            histogram = histograms[0]
+        else:
+            nBinsTotal = sum(histogramBins)
+            histogram = ROOT.TH1D("h1", "", nBinsTotal, 0, nBinsTotal)
+            histogram.SetDirectory(0)
+
+            iBin = 1
+            if isinstance(histograms[0], ROOT.TGraphAsymmErrors):
+                histogram = ROOT.TGraphAsymmErrors()
+                tlist = ROOT.TList()
+                for i,h in enumerate(histograms):
+                    h.Set(histogramBins[i])
+                    tlist.Add(h)
+                histogram.Merge(tlist)
+                offset = 0
+                for i in range(histogram.GetN()):
+                    p_x = array.array('d', [0.0])
+                    p_y = array.array('d', [0.0])
+                    histogram.GetPoint(i, p_x, p_y)
+                    if i == 0:
+                        offset = p_x[0]
+                    print("P:",i,p_x[0],p_y[0],"-->", i, p_y[0])
+                    histogram.SetPoint(i, i + offset, p_y[0])
+            else:
+                for i,h in enumerate(histograms):
+                    if h:
+                        for n in range(histogramBins[i]):
+                            histogram.SetBinContent(iBin, h.GetBinContent(1+n))
+                            histogram.SetBinError(iBin, h.GetBinError(1+n))
+                            iBin += 1
+
+        #histogram = self.shapesFile.Get(histogramName)
         #print("DEBUG: -->", histogram, histogram.Integral())
         return histogram
 
     def run(self):
 
-        self.stack = StackMaker(self.config, self.var, self.region, True, self.setup, '_', title=self.title)
+        self.stack = StackMaker(self.config, self.var, self.region[0], True, self.setup, '_', title=self.title)
         self.stack.setPlotText(self.plotText)
 
         # add MC
@@ -141,7 +195,7 @@ class PostfitPlotter(object):
             })
 
         # draw
-        self.stack.Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=self.directory))
+        self.stack.Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region[0], var=self.directory))
 
 
 if __name__ == "__main__":
@@ -175,10 +229,14 @@ if __name__ == "__main__":
             opts.fitType = "shapes_prefit"
 
     # run plotter
-    if len(opts.regions) < 1:
+    if len(opts.regions) < 1 or opts.regions.strip() == 'None':
         regions = eval(config.get('Fit', 'regions')).keys()
     else:
-        regions = opts.regions.split(',')
+        regions = opts.regions.strip().split(',')
+        for i in range(len(regions)):
+            if '+' in regions[i]:
+                regions[i] = regions[i].split('+')
+        print("REGIONS:", regions)
     
     scaleFactorTable = []
     plotCommands = []

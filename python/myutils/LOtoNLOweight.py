@@ -37,6 +37,8 @@ class LOtoNLOweight(AddCollectionsModule):
         isVJets = False
         sampleCat = int(tree.sampleIndex - (tree.sampleIndex % 10))
 
+        # sync with AT: DYJetsToLL_M-4to50 not reweighted
+
         # Z+jets normal, W+jets normal, W+jets b-enriched
         if sampleCat in [4000,4100,4200,4300,4400,4500,4600,4700,5000,5100,5300,5400,11000,11100,11200,11300,11400,11500,11600,11700,15000,15100,15200,15300,15400,15500,15600]:
             isVJets = True

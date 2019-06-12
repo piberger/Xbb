@@ -1737,6 +1737,7 @@ if opts.task.startswith('checklogs'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('postfitplot'):
     jobDict = repDict.copy()
+    jobDict.update({'arguments': {'regions': opts.regions}})
     jobName = 'postfitplot'
     submit(jobName, jobDict)
 

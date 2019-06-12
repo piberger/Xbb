@@ -35,12 +35,12 @@ class NewStackMaker:
         self.anaTag = self.config.get("Analysis", "tag")
         self.subcut = subcut
         self.forceLog = None
-        self.normalize = eval(self.config.get(self.configSection, 'Normalize'))
-        self.log = eval(self.config.get(self.configSection, 'log'))
+        self.normalize = eval(self.config.get(self.configSection, 'Normalize')) if self.config.has_option(self.configSection, 'Normalize') else False
+        self.log = eval(self.config.get(self.configSection, 'log')) if self.config.has_option(self.configSection, 'log') else False
         self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
         if self.config.has_option('plotDef:%s'%var, 'log'):
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
-        self.blind = eval(self.config.get(self.configSection,'blind'))
+        self.blind = eval(self.config.get(self.configSection,'blind')) if self.config.has_option(self.configSection,'blind') else False
         self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
         self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
         self.is2D = True if self.yAxis else False
