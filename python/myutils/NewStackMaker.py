@@ -640,6 +640,8 @@ class NewStackMaker:
             mcHistogram0.SetStats(0)
             mcHistogram0.Draw("SAME TEXT0")
             print("drawn total entry histogram!!!")
+            binContents = ["%1.4f"%mcHistogram0.GetBinContent(1+j) for j in range(mcHistogram0.GetXaxis().GetNbins())]
+            print("bin contents:", ", ".join(binContents))
 
         # draw ratio plot
         theErrorGraph = None
