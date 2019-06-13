@@ -44,21 +44,28 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
         self.tensorflowConfig = self.config.get(self.mvaName, 'tensorflowConfig')
-        self.scalerDump = self.config.get(self.mvaName, 'scalerDump')
-        self.checkpoint = self.config.get(self.mvaName, 'checkpoint')
+        self.scalerDump = self.config.get(self.mvaName, 'scalerDump') if self.config.has_option(self.mvaName, 'scalerDump') else '/'.join(self.tensorflowConfig.split('/')[:-1]) + '/scaler.dmp'
+        self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else '/'.join(self.tensorflowConfig.split('/')[:-1]) + '/checkpoints/model.ckpt'
         self.branchName = self.config.get(self.mvaName, 'branchName')
-        self.signalIndex = 0
-        if self.config.has_option(self.mvaName, 'signalIndex'):
-            self.signalIndex = eval(self.config.get(self.mvaName, 'signalIndex'))
-        try:
-            self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
-        except Exception as e:
-            print "exception:",e
-            self.nClasses = 1
+
+        # CLASSES
         self.classes = eval(self.config.get(self.mvaName, 'classes')) if self.config.has_option(self.mvaName, 'classes') else None
         if self.classes:
             self.nClasses = len(self.classes)
+        else:
+            try:
+                self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
+            except Exception as e:
+                #print "exception:",e
+                self.nClasses = 1
+        
+        # FEATURES
         self.nFeatures = len(self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" "))
+
+        # SIGNAL definition
+        self.signalIndex = 0
+        if self.config.has_option(self.mvaName, 'signalIndex'):
+            self.signalIndex = eval(self.config.get(self.mvaName, 'signalIndex'))
         self.signalClassIds = [self.signalIndex]
         if self.classes:
             self.signalClassIds = [x for x,y in enumerate(self.classes) if y[0].startswith('SIG')]
@@ -70,11 +77,9 @@ class tensorflowEvaluator(AddCollectionsModule):
         # Jet systematics
         self.systematics = self.config.get('systematics', 'systematics').split(' ')
         
+        # create output branches
         self.dnnCollections = []
-        # additional pre-computed values for multi-classifiers
-
         for i in range(self.nClasses):
-            # create output branches
             collectionName = self.branchName if self.nClasses==1 else self.branchName + "_%d"%i
             self.dnnCollection = Collection(collectionName, self.systematics, leaves=True) 
             self.addCollection(self.dnnCollection)
@@ -87,6 +92,7 @@ class tensorflowEvaluator(AddCollectionsModule):
             for var in self.inputVariables[syst]:
                 self.sampleTree.addFormula(var)
         
+        # additional pre-computed values for multi-classifiers
         if self.nClasses > 1:
             self.dnnCollectionsMulti = {
                         'argmax' : Collection(self.branchName + "_argmax", self.systematics, leaves=True),

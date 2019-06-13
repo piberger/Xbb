@@ -8,6 +8,7 @@ import glob
 import BetterConfigParser
 from BranchList import BranchList
 from FileLocator import FileLocator
+from samplesclass import Sample
 import array
 import resource
 import gc
@@ -26,7 +27,8 @@ from sample_parser import ParseInfo
 #
 # create: (A)  sampleTree = SampleTree('path/to/indexfile.txt')
 # create: (B)  sampleTree = SampleTree(['path/to/file1.root', 'path/to/file2.root'])
-# create: (C)  sampleTree = SampleTree({'name': 'DY50to100', 'folder': ...})
+# create: (C)  sampleTree = SampleTree({'name': 'DY50to100', 'folder': ...}, config=config)
+# create: (D)  sampleTree = SampleTree({'sample': <object of Sample class>, 'folder': ...}, config=config)
 #
 # add formula: sampleTree.addFormula('ptCut','pt>100')
 #
@@ -58,8 +60,9 @@ class SampleTree(object):
         #print('here_again')
         self.sampleIdentifier = None
         self.numParts = -1
+        self.subcut = None
 
-        # friends
+        # friend trees (TODO: not fully implemented/tested)
         # {'name': 'DNN_reeval_v2', 'tree': tree, 'treeName': 'Events'}
         self.friends = []
         self.friendTreeIndex = ['run', 'event']
@@ -378,7 +381,7 @@ class SampleTree(object):
         #samples {'sample': <samplesclass.Sample instance at 0x7f9aa43f4bd8>, 'folder': 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may'}
         #type(samples) <type 'dict'>
 
-        # given argument is list -> this is already the list of root files
+        # given argument is list -> this is already the list of root file names
         if type(samples) == list:
             sampleFileNames = samples
         # given argument is name and folder -> glob
@@ -386,9 +389,12 @@ class SampleTree(object):
             if 'sample' in samples:
                 sampleName = samples['sample'].identifier
                 #print('sampleName', sampleName) #ZZ_TuneCP5_13TeV-pythia8           
+                if samples['sample'].subsample:
+                    self.subcut = samples['sample'].subcut
             else:
                 sampleName = samples['name']
             self.sampleIdentifier = sampleName
+
             sampleFolder = samples['folder']
             samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
             #print('samplesMask', samplesMask) #/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/*.root

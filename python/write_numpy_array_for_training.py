@@ -179,6 +179,8 @@ class SampleTreesToNumpyConverter(object):
                         if useSpecialWeight:
                             sampleTree.addFormula(sample.specialweight)
 
+                        sumOfWeights = 0.0
+                        nMCevents = 0
                         # fill numpy array from ROOT tree
                         for i, event in enumerate(sampleTree):
                             for j, feature in enumerate(features):
@@ -189,6 +191,8 @@ class SampleTreesToNumpyConverter(object):
                             totalWeight = treeScale * eventWeight * specialWeight 
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
+                            sumOfWeights += totalWeight
+                            nMCevents    += 1
                             
                             # add weights varied by (btag) systematics
                             #for syst in self.weightSYS:
@@ -208,7 +212,7 @@ class SampleTreesToNumpyConverter(object):
                             #for k, feature_s in features_sys.iteritems():
                             #    for j, feature in enumerate(feature_s):
                             #        inputData_sys[k][i,j] = sampleTree.evaluate(feature)
-
+                        print("\x1b[43mINFO:", sample, ":", nMCevents, "MC events ->", sumOfWeights, "\x1b[0m")
                         arrayLists[datasetName].append(inputData)
                         #for sys in systematics:
                         #    arrayLists_sys[sys][datasetName].append(inputData_sys[sys])

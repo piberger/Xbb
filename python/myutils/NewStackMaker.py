@@ -88,6 +88,7 @@ class NewStackMaker:
                     'xAxis': 'xAxis',
                     'yAxis': 'yAxis',
                     'drawOption': 'drawOption',
+                    'drawOptionData': 'drawOptionData',
                     'draw': 'draw',
                     'binList': 'binList',
                     'plotEqualSize': 'plotEqualSize',
@@ -147,12 +148,17 @@ class NewStackMaker:
         self.ratioPlot = None
         if SignalRegion:
             self.maxRatioUncert = 1000.
+        self.outputTeX = False
         self.outputFileTemplate = "{outputFolder}/{prefix}.{ext}"
         try:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
         
+        if 'tex' in self.outputFileFormats:
+            self.outputFileFormats = [x for x in self.outputFileFormats if x != 'tex']
+            self.outputTeX = True
+
         self.plotTextMarginLeft = 0.16
 
         if self.debug:
@@ -617,7 +623,7 @@ class NewStackMaker:
 
         # draw DATA
         if dataGroupName in groupedHistograms and not self.is2D:
-            drawOption = 'PE'
+            drawOption = self.histogramOptions['drawOptionData'] if 'drawOptionData' in self.histogramOptions else 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
             if normalize and groupedHistograms[dataGroupName].Integral() > 0:
@@ -668,6 +674,12 @@ class NewStackMaker:
                 print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
                 print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+        if self.outputTeX:
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext='tex')
+            #ROOT.gPad.Print(outputFileName)
+            c.SaveAs(outputFileName)
+            print("INFO: saved as \x1b[32mTeX \x1b[34m", outputFileName, "\x1b[0m")
+
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
         # save shapes

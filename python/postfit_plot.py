@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from optparse import OptionParser
+from collections import defaultdict
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
@@ -49,6 +50,12 @@ class PostfitPlotter(object):
     def getNameFromDcname(self, process):
         return self.reverseDcDict[process] if process in self.reverseDcDict else process
 
+    def getDcnameFromName(self, processName):
+        return self.dcDict[processName]
+
+    def getProcesses(self):
+        return self.setup
+
     def getShape(self, process):
         processName = self.getNameFromDcname(process) 
         
@@ -60,7 +67,7 @@ class PostfitPlotter(object):
             histogramName = self.directory + '/' + self.dcRegion + '/' + process
         print("DEBUG: get shape ", histogramName)
         histogram = self.shapesFile.Get(histogramName)
-        print("DEBUG: -->", histogram)
+        #print("DEBUG: -->", histogram, histogram.Integral())
         return histogram
 
     def run(self):
@@ -114,10 +121,14 @@ class PostfitPlotter(object):
         pointY = array.array('d', [0.0, 0.0])
 
         # blind last few bins
+        dataIntegral = 0
         for i in range(dataHistogram.GetN()):
             dataHistogram.GetPoint(i, pointX, pointY)
+            dataIntegral += pointY[0]
             if int(pointX[0]+1) in self.blindBins:
                 dataHistogram.SetPoint(i, -100, -100)
+
+        print("DATA:", dataIntegral, "MC:", sum_s+sum_b)
 
         # style data
         dataHistogram.SetMarkerColor(ROOT.kBlack)
@@ -168,9 +179,59 @@ if __name__ == "__main__":
         regions = eval(config.get('Fit', 'regions')).keys()
     else:
         regions = opts.regions.split(',')
+    
+    scaleFactorTable = []
+    plotCommands = []
     for region in regions:
         print("INFO: region:", region)
         plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType, blind=not opts.unblind)
         plotter.prepare()
         plotter.run()
+
+
+        # COMPUTE effective scale factors
+        if opts.fitType == 'shapes_fit_s':
+            plotter_prefit = PostfitPlotter(config=config, region=region, directory="shapes_prefit", blind=not opts.unblind)
+            plotter_prefit.prepare()
+        
+            regionSF = defaultdict(lambda: 1.0)
+            #regionSF = {'TT': 1.0, 'ZJets_0b': 1.0, 'ZJets_1b': 1.0, 'ZJets_2b': 1.0,'WJets_0b': 1.0, 'WJets_1b': 1.0, 'WJets_2b': 1.0}
+
+            for process in plotter.getProcesses():
+                try:
+                    histogram_postfit = plotter.getShape(plotter.getDcnameFromName(process))
+                    histogram_prefit  = plotter_prefit.getShape(plotter.getDcnameFromName(process))
+
+                    nBins_prefit = histogram_prefit.GetXaxis().GetNbins()
+                    nBins_postfit = histogram_postfit.GetXaxis().GetNbins()
+                    assert nBins_prefit == nBins_postfit
+                    histogram_postfit.Rebin(nBins_postfit)
+                    histogram_prefit.Rebin(nBins_prefit)
+                    
+                    histogram_postfit.Divide(histogram_prefit)
+
+                    scaleFactorTable.append("{region} {process} prefit/postfit = {scale} +/- {error}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
+                    regionSF[process] = histogram_postfit.GetBinContent(1)
+                except Exception as e:
+                    print("WARNING:", e)
+
+            # VHbb specific plot commands for simplifity
+            try:
+                plotCommand = "./submit.py -J runplot --parallel=8 --regions '{region}' --set='General.SF_TT={SF[TT]};General.SF_ZJets=[{SF[ZJets_0b]},{SF[ZJets_1b]},{SF[ZJets_2b]}];General.SF_WJets=[{SF[WJets_0b]},{SF[WJets_1b]},{SF[WJets_2b]}]'".format(region=region, SF=regionSF)
+                plotCommands.append(plotCommand)
+            except Exception as e:
+                print("WARNING:", e)
+
+    # PRINT effective scale factors
+    if opts.fitType == 'shapes_fit_s':
+        print("INFO: --------------------------------------------------------------------------------")
+        print("INFO: effective scale factors (including combined effects of all uncertainties)")
+        print("INFO: --------------------------------------------------------------------------------")
+
+        for line in scaleFactorTable:
+            print("INFO:", line)
+        print("INFO: --------------------------------------------------------------------------------")
+        for line in plotCommands:
+            print("", line)
+        print("INFO: --------------------------------------------------------------------------------")
 

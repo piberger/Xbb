@@ -22,3 +22,4 @@ condor_*.sub
 .DS_Store
 !myutils/*
 last-submission-*
+logs_*/

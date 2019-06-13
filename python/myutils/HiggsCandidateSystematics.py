@@ -182,23 +182,27 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                                 hJ0 = ROOT.TLorentzVector()
                                 hJ1 = ROOT.TLorentzVector()
 
-
                                 if syst == 'jerReg':
+                                    treeJet_PtRegSys = getattr(tree,'Jet_PtReg'+Q)
                                     # vary the regression for the regression systematic
                                     #  pt_reg_var   = pt_reg_var 
                                     #  mass_reg_var = mass_nom * pt_reg_var / pt_nom
-                                    hJ0.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], treeJet_mass[hJidx0]*getattr(tree,'Jet_PtReg'+Q)[hJidx0]/treeJet_Pt[hJidx0])
-                                    hJ1.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], treeJet_mass[hJidx1]*getattr(tree,'Jet_PtReg'+Q)[hJidx1]/treeJet_Pt[hJidx1])
+                                    hJ0.SetPtEtaPhiM(treeJet_PtRegSys[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], treeJet_mass[hJidx0]*treeJet_PtRegSys[hJidx0]/treeJet_Pt[hJidx0])
+                                    hJ1.SetPtEtaPhiM(treeJet_PtRegSys[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], treeJet_mass[hJidx1]*treeJet_PtRegSys[hJidx1]/treeJet_Pt[hJidx1])
                                 else:
+                                    treeJet_mass_sys = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))
+                                    treeJet_pt_sys   = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))
+
                                     # vary unregressed pt
                                     #  pt_reg_var   = pt_reg * pt_var / pt_nom
                                     #  mass_reg_var = mass_var * pt_reg / pt_nom
                                     # SYNC with AT: added * treeJet_mass[hJidx0]/treeJet_mass_nom[hJidx0] to have nominal value at Jet_mass instead of Jet_mass_nom
-                                    hJ0mass = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0] * (treeJet_mass[hJidx0]/treeJet_mass_nom[hJidx0] if treeJet_mass_nom[hJidx0] > 0 else 1)
-                                    hJ1mass = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1] * (treeJet_mass[hJidx1]/treeJet_mass_nom[hJidx1] if treeJet_mass_nom[hJidx1] > 0 else 1)
-                                    hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx0]/treeJet_Pt[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], hJ0mass) 
-                                    hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[hJidx1]/treeJet_Pt[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], hJ1mass)
-                                    
+
+                                    hJ0mass = treeJet_mass_sys[hJidx0] * treeJet_PtReg[hJidx0]/treeJet_Pt[hJidx0] * (treeJet_mass[hJidx0]/treeJet_mass_nom[hJidx0] if treeJet_mass_nom[hJidx0] > 0 else 1)
+                                    hJ1mass = treeJet_mass_sys[hJidx1] * treeJet_PtReg[hJidx1]/treeJet_Pt[hJidx1] * (treeJet_mass[hJidx1]/treeJet_mass_nom[hJidx1] if treeJet_mass_nom[hJidx1] > 0 else 1)
+
+                                    hJ0.SetPtEtaPhiM(treeJet_PtReg[hJidx0]*treeJet_pt_sys[hJidx0]/treeJet_Pt[hJidx0], treeJet_eta[hJidx0], treeJet_phi[hJidx0], hJ0mass) 
+                                    hJ1.SetPtEtaPhiM(treeJet_PtReg[hJidx1]*treeJet_pt_sys[hJidx1]/treeJet_Pt[hJidx1], treeJet_eta[hJidx1], treeJet_phi[hJidx1], hJ1mass)
 
                                 dijet_noFSR = hJ0 + hJ1
 
@@ -207,16 +211,22 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                                 for i in fsrIndices0:
                                     FSR = ROOT.TLorentzVector()
                                     if syst == 'jerReg':
-                                        FSR.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree,'Jet_PtReg'+Q)[i]/treeJet_Pt[i])
+                                        FSR.SetPtEtaPhiM(treeJet_PtRegSys[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * treeJet_PtRegSys[i]/treeJet_Pt[i])
                                     else:
-                                        FSR.SetPtEtaPhiM(treeJet_PtReg[i] * getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[i]/treeJet_Pt[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[i] * treeJet_PtReg[i]/treeJet_Pt[i])
+                                        FSR_pt_reg_factor = treeJet_PtReg[i]/treeJet_Pt[i] 
+                                        FSR_pt_reg_sys    = FSR_pt_reg_factor * treeJet_pt_sys[i]
+                                        FSR_mass_reg_sys  = (treeJet_mass[i]/treeJet_mass_nom[i] if treeJet_mass_nom[i] > 0 else 1.0) * treeJet_mass_sys[i] * FSR_pt_reg_factor
+                                        FSR.SetPtEtaPhiM(FSR_pt_reg_sys, treeJet_eta[i], treeJet_phi[i], FSR_mass_reg_sys)
                                     hJ0 = hJ0 + FSR
                                 for i in fsrIndices1:
                                     FSR = ROOT.TLorentzVector()
                                     if syst == 'jerReg':
-                                        FSR.SetPtEtaPhiM(getattr(tree,'Jet_PtReg'+Q)[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree,'Jet_PtReg'+Q)[i]/treeJet_Pt[i])
+                                        FSR.SetPtEtaPhiM(treeJet_PtRegSys[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * treeJet_PtRegSys[i]/treeJet_Pt[i])
                                     else:
-                                        FSR.SetPtEtaPhiM(treeJet_PtReg[i] * getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q))[i]/treeJet_Pt[i], treeJet_eta[i], treeJet_phi[i], treeJet_mass[i] * getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))[i] * treeJet_PtReg[i]/treeJet_Pt[i])
+                                        FSR_pt_reg_factor = treeJet_PtReg[i]/treeJet_Pt[i]
+                                        FSR_pt_reg_sys    = FSR_pt_reg_factor * treeJet_pt_sys[i]
+                                        FSR_mass_reg_sys  = (treeJet_mass[i]/treeJet_mass_nom[i] if treeJet_mass_nom[i] > 0 else 1.0) * treeJet_mass_sys[i] * FSR_pt_reg_factor
+                                        FSR.SetPtEtaPhiM(FSR_pt_reg_sys, treeJet_eta[i], treeJet_phi[i], FSR_mass_reg_sys)
                                     hJ1 = hJ1 + FSR
                                 
                                 dijet = hJ0 + hJ1
