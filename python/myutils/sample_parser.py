@@ -12,10 +12,11 @@ class ParseInfo:
         Methode filling a list of Sample "self._samplelist = []" contained in the class. 
         "sample_path" contains the path where the samples are stored (PREPin). 
         "samples_config" is the "samples_nosplit.cfg" file. Depending of the variable "run_on_files" defined in "samples_nosplit.cfg", 
-        the sample list are generated from the input folder (PREPin) or the list in "samples_nosplit.cfg" '''
-
+        the sample list are generated from the input folder (PREPin) or the list in "samples_nosplit.cfg"
+        '''
         self.debug = 'XBBDEBUG' in os.environ
         if not config:
+            #print 'samples_config is', samples_config
             if self.debug:
                 print "Start getting infos on all the samples (ParseInfo)"
                 print "==================================================\n"
@@ -28,12 +29,15 @@ class ParseInfo:
             # if no config object given, read full config again
             # this should be avoided by passing config object to ParseInfo class
             pathConfig = '/'.join(samples_config.split('/')[:-1]) + '/paths.ini'
+            #print 'pathConfig', pathConfig
+            #print 'samples_config.split', samples_config.split('/')[:-1]
             if os.path.isfile(pathConfig):
                 config = BetterConfigParser()
                 config.read(pathConfig)
                 configList = config.get('Configuration', 'List').split(' ')
                 for configFileName in configList:
                     configFileName = '/'.join(samples_config.split('/')[:-1]) + '/' + configFileName
+                    #print configFileName
                     if os.path.isfile(configFileName):
                         config.read(configFileName)
                 if self.debug:
@@ -44,6 +48,7 @@ class ParseInfo:
                 config.read(samples_config)
         elif self.debug:
             print "DEBUG: config object passed to sample parser."
+            
 
         lumi = float(config.get('General','lumi'))
 
@@ -51,6 +56,8 @@ class ParseInfo:
         self.__fileslist = []
 
         configSamples = [x for x in config.sections() if config.has_option(x, 'sampleName')]
+        #configSamplesk = [x for x in config.sections()]
+        #print(config.sections())
         if self.debug:
             print "DEBUG:", len(configSamples), " samples found."
             
@@ -80,9 +87,15 @@ class ParseInfo:
 
             newsample.index = eval(config.get(sample, 'sampleIndex')) if config.has_option(sample, 'sampleIndex') else -999999
 
+            #print 'sample', sample
+
             # add and fill all the subsamples
             if config.has_option(sample,'subsamples') and eval(config.get(sample,'subsamples')):
                 subgroups = eval((config.get(sample,'sampleGroup')))
+                #print('sampleGroup: ', subgroups)
+                #print('subsample: ', config.get(sample,'subsamples'))
+                #print('subsample: ', eval(config.get(sample,'subsamples')))
+                #print('subnames: ', eval((config.get(sample, 'subnames'))))
                 try:
                     subnames = eval((config.get(sample, 'subnames')))
                 except:
@@ -94,6 +107,7 @@ class ParseInfo:
                         shortname = sampleName
                     subnames = [shortname + '_' + x for x in subgroups]
                 subcuts = eval((config.get(sample, 'subcuts')))
+                #print('subcuts: ', subcuts)
 
                 if sampleType != 'DATA':
                     subxsecs = eval((config.get(sample, 'xSec')))
@@ -130,8 +144,10 @@ class ParseInfo:
 
                     newsamples.append(newsubsample)
 
+                #print('newsamples: ',newsamples)
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
+                #print('self._samplelist: ',self._samplelist)
             else:
                 if sampleType != 'DATA':
                     newsample.xsec = eval((config.get(sample,'xSec')))    
@@ -157,7 +173,9 @@ class ParseInfo:
         thenames = []
         #for splitted samples use the identifier. There is always only one. if list, they are all true
         if (len(samplenames)>0 and self.checkSplittedSampleName(samplenames[0])):
-          print "The samples is splitted"
+          #print(samplenames)
+          #print(self.checkSplittedSampleName(samplenames[0]))
+          #print "The samples is splitted"
           for sample in self._samplelist:
                   if (sample.subsample): continue #avoid multiple submissions from subsamples
                   print '@DEBUG: samplenames ' + samplenames[0]
@@ -166,12 +184,14 @@ class ParseInfo:
                           samples.append(sample)
                           thenames.append(sample.name)
         #else check the name
-        else:
+        else:   
+                #print(samplenames)
                 for sample in self._samplelist:
                   if not isinstance(samplenames, (list, tuple)): samplenames = samplenames.split(',')
                   for samplename in samplenames:
                         # print "get_samples sample is", sample ,'samplename',samplename
                         if sample.name == samplename:
+                                #print sample.name
                                 # print 'matched sample.name',sample.name
                                 #if (sample.subsample): continue #avoid multiple submissions from subsamples
                                 samples.append(sample)
@@ -180,6 +200,9 @@ class ParseInfo:
 
     # return list of all identifiers
     def getSampleIdentifiers(self):
+        #print('self', list(set([x.identifier for x in self._samplelist])))
+        #print('set', list(set([x.identifier for x in self])))
+        #print('x.identifier', list([x.identifier for x in self]))
         return list(set([x.identifier for x in self]))
     
     # return list of all samples with matching identifier
@@ -212,4 +235,27 @@ class ParseInfo:
                             return False
             else:
                     return False
+
+    def getFullSample(self, sampleIdentifier):
+            fullSamples = [x for x in self if x.identifier == sampleIdentifier and x.subsample == False]
+            #print(fullSamples[0])
+            if len(fullSamples) != 1:
+                    print("ERROR: sample not found/ not unique! :", fullSamples)
+                    raise Exception("SampleMissing")
+            return fullSamples[0]
+                                                        
+    def getSubsamples(self, sampleIdentifier):
+            return [x for x in self if x.identifier == sampleIdentifier and x.subsample == True]
+
+if __name__ == "__main__":
+    samples_config = 'Zvv2017config/samples_nosplit.ini' 
+    samples_path = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/berger_p2/VHbb/VHbbPostNano2017/V5/Zvv/rerun/v4j/eval/'
     
+    info = ParseInfo(samples_config, samples_path)
+
+
+                      
+       
+
+                     
+  

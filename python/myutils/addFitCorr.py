@@ -54,6 +54,8 @@ class addFitCorr(object):
                     CorrFactor =  [1.064 - 0.000380*V_pt, 1.064 - 0.000469*V_pt, 1.064 - 0.000291*V_pt]
                 elif self.dataset== '2017':
                     CorrFactor =  [1.103 - 0.00061*V_pt, 1.103 - 0.00069*V_pt, 1.103 - 0.00053*V_pt]
+                elif self.dataset== '2018':
+                    CorrFactor =  [1.103 - 0.00061*V_pt, 1.103 - 0.00069*V_pt, 1.103 - 0.00053*V_pt]
                     #print "Data set is 2017"
                 else:
                     print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
@@ -83,6 +85,8 @@ class addFitCorr(object):
                         CorrFactor = [1.097 - 0.000575*V_pt, 1.097 - 0.000621*V_pt, 1.097 - 0.000529*V_pt]
                     elif self.dataset == '2017':
                         CorrFactor = [1.115 - 0.00064*V_pt, 1.115 - 0.00068*V_pt, 1.115 - 0.00060*V_pt]
+                    elif self.dataset == '2018':
+                        CorrFactor = [1.115 - 0.00064*V_pt, 1.115 - 0.00068*V_pt, 1.115 - 0.00060*V_pt]
                         #print "Data set is 2017"
                     else:
                         print("\x1b[31mERROR: unknown dataset:",dataset,"\x1b[0m")
@@ -95,6 +99,8 @@ class addFitCorr(object):
                 if self.dataset == '2016':
                      CorrFactor = [1.259 - 0.00167*V_pt, 1.259 - 0.00180*V_pt, 1.259 - 0.00154*V_pt]
                 elif self.dataset == '2017':
+                     CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0017*V_pt, 1.337 - 0.0015*V_pt]
+                elif self.dataset == '2018':
                      CorrFactor = [1.337 - 0.0016*V_pt, 1.337 - 0.0017*V_pt, 1.337 - 0.0015*V_pt]
                      #print "Data set is 2017"
                 else:
