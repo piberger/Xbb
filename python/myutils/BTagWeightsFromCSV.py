@@ -19,7 +19,7 @@ class Jet:
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName="", decorrelatePtEta=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
@@ -32,7 +32,7 @@ class BTagWeights(AddCollectionsModule):
         self.ptCut = ptCut
         self.etaCut = etaCut
 
-        if jetBtagBranchName == "":
+        if jetBtagBranchName is None:
             print("\x1b[31mERROR: tagger name has to be specified with jetBtagBranchName argument!\x1b[0m")
             raise Exception("TaggerNameEmpty")
 

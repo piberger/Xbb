@@ -48,7 +48,7 @@ class VHbbSelection(AddCollectionsModule):
         self.taggerName = "Jet_btagDeepB"
         self.btagWPs = {
                        "2018": {
-                       'Jet_btagDeepB': {
+                      'Jet_btagDeepB': {
                             'loose':  0.1241,
                             'medium': 0.4184,
                             'tight':  0.7527,
@@ -71,8 +71,22 @@ class VHbbSelection(AddCollectionsModule):
                             'none': -1.0,
                             },
                         },
+                   }
 
-                    }
+
+        #self.taggerName = "Jet_btagDeepFlavB"
+
+        #self.btagWPs = {
+        #               "2018": {
+        #              'Jet_btagDeepFlavB': {
+        #                    'loose':  0.0494,
+        #                    'medium': 0.2770,
+        #                    'tight':  0.7264,
+        #                    'none': -1.0,
+        #                    },
+        #                },
+        #            }
+
         self.btagWP = self.btagWPs[self.year][self.taggerName]
 
 
@@ -95,6 +109,8 @@ class VHbbSelection(AddCollectionsModule):
                         'Wln': [],
                         'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL','HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL','HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ','HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ','HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ'],
                         }
+        else: 
+            raise Execption("unknown year")
 
         self.leptonFlav = {
                 'DoubleMuon': 0,
@@ -156,15 +172,24 @@ class VHbbSelection(AddCollectionsModule):
 
     def HighestTaggerValueBJets(self, tree, j1ptCut, j2ptCut, taggerName):
         indices = []
-
+        #print('----------------------event start')
+        #print('len(tree.nJet)', tree.nJet)
         for i in range(tree.nJet):
+            #print('Jet No.', i)
+            #print('Jet_lepFilter', tree.Jet_lepFilter[i])
+            #print('Jet_puId', tree.Jet_puId[i])
+            #print('Jet_PtReg', tree.Jet_PtReg[i])
+            #print('Jet_eta', abs(tree.Jet_eta[i]))  
+            #print('------------------------')
             if tree.Jet_lepFilter[i] and tree.Jet_puId[i] > 0 and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
                 if len(indices) < 1:
                     indices.append(i)
+                    #print('indices',indices)
                 else:
                     if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[0]]:
                         indices[0] = i
-
+        #print('indices[0] for event is', indices)
+        #print('-----------------event over')
         if len(indices) > 0:
             for i in range(tree.nJet):
                 if i == indices[0]:
@@ -179,7 +204,7 @@ class VHbbSelection(AddCollectionsModule):
         if len(indices) > 1:
             if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
                 indices = [indices[1], indices[0]]
-
+       
         return indices
 
     def processEvent(self, tree):
@@ -230,6 +255,7 @@ class VHbbSelection(AddCollectionsModule):
                 return False
             self.cutFlow[1] += 1
             #print(self.cutFlow[1], ': cutFlow[1]')
+            
 
             # LEPTONS
             if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == tree.Vtype:
