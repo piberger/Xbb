@@ -16,6 +16,8 @@
 cd ${CMSSW_BASE}/src/Xbb/python/
 echo "cd ${CMSSW_BASE}/src/Xbb/python/"
 STARTTIME=$(date +%s.%N)
+ulimit -c 0
+ulimit -S -c 0
 
 # Fix Python escape sequence bug.
 export TERM=""
