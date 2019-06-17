@@ -19,7 +19,7 @@ class Jet:
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, includeFixPtEtaBins=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, decorrelatePtEta=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
