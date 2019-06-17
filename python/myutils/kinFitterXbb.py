@@ -110,11 +110,7 @@ class kinFitterXbb(AddCollectionsModule):
                 self.bDict[syst][n] = branchNameFull
                 self.addIntegerBranch(branchNameFull)
 
-        #self.jme_res_obj = ROOT.JME.JetResolution('data/Fall17_V3_DATA_PtResolution_AK4PFchs.txt')
-
     def cart_cov(self, v, rho):
-        #jme_par = ROOT.JME.JetParameters().setRho(rho).setJetPt(v.Pt()).setJetEta(v.Eta())
-        #jme_res = self.jme_res_obj.getResolution(jme_par) * v.Pt()
         jme_res = self.JMEres.eval(v.Eta(), rho, v.Pt())
         cos_phi = np.cos(v.Phi())
         sin_phi = np.sin(v.Phi())
