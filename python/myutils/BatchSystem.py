@@ -105,7 +105,7 @@ class BatchSystem(object):
         repDict['job'] = job
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
 
-    def run(self, command, runScript='', repDict={}):
+    def run(self, command, runScript='', repDict={}, getJobIdFn=None):
         # -----------------------------------------------------------------------------
         # RUN command
         # -----------------------------------------------------------------------------
@@ -139,7 +139,20 @@ class BatchSystem(object):
                 print("the command is ", command)
                 self.nJobsSubmitted += 1
 
-            subprocess.call([command], shell=True)
+            if getJobIdFn and not (self.interactive or self.runLocally):
+                try:
+                    stdOutput = subprocess.check_output([command], shell=True)
+                except Exception as e:
+                    print("\x1b[31mERROR: SUBMISSION FAILED!", e,"\x1b[0m")
+                    stdOutput = ""
+
+                try:
+                    jobId = getJobIdFn(stdOutput)
+                    batchJob.setProperty('id', jobId)
+                except:
+                    pass
+            else:
+                subprocess.call([command], shell=True)
 
             self.submittedJobs.append(batchJob)
             return batchJob
@@ -199,6 +212,18 @@ class BatchSystemSGE(BatchSystem):
         jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list') if job.find('state').text.strip() == 'r']
         return jobNames
 
+    def getJobIDfromOutput(self, stdOutput):
+        jobId = -1
+        for line in stdOutput.split("\n"):
+            #Your job 123 ("name") has been submitted
+            lineParts = line.strip().split(" ")
+            if len(lineParts) > 5 and lineParts[-3] == 'has' and lineParts[-2] == 'been' and lineParts[-1] == 'submitted' and lineParts[0] == 'Your' and lineParts[1] == 'job':
+                try:
+                    jobId = int(lineParts[2])
+                except:
+                    pass
+        return jobId
+
     def submit(self, job, repDict):
         self.nJobsProcessed += 1
         self.submitPreprocess(job, repDict)
@@ -215,7 +240,7 @@ class BatchSystemSGE(BatchSystem):
         #if not os.path.isfile(logPaths['config']):
         #    dump_config(configs, logPaths['config'])
 
-        return self.run(command, runScript, repDict)
+        return self.run(command, runScript, repDict, getJobIdFn=self.getJobIDfromOutput)
 
 
 class BatchSystemHTCondor(BatchSystem):

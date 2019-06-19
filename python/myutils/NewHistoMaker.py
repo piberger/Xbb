@@ -142,6 +142,7 @@ class NewHistoMaker:
 
         if 'plotEqualSize' in self.histogramOptions:
             self.histogramOptionsEqualBins = self.histogramOptions.copy()
+            self.histogramOptionsEqualBins['nBinsX'] = len(self.histogramOptionsEqualBins['binList']) - 1
             del self.histogramOptionsEqualBins['binList']
             
             equalHistogram = self.create1Dhistogram(self.histogramName+'_eqBins', self.histogramOptionsEqualBins)

@@ -16,6 +16,8 @@
 cd ${CMSSW_BASE}/src/Xbb/python/
 echo "cd ${CMSSW_BASE}/src/Xbb/python/"
 STARTTIME=$(date +%s.%N)
+ulimit -c 0
+ulimit -S -c 0
 
 # Fix Python escape sequence bug.
 export TERM=""
@@ -207,7 +209,7 @@ if [ $task = "prep" ]; then
     runCommand="python ./prepare_environment_with_config.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     
-elif [ $task = "sysnew" ]; then
+elif [ $task = "sysnew" ] || [ $task = "run" ]; then
     runCommand="python ./sys_new.py"
     if [ "$limit" ]; then runCommand="${runCommand} --limit ${limit}"; fi
     if [ "$addCollections" ]; then runCommand="${runCommand} --addCollections ${addCollections}"; fi
@@ -296,7 +298,11 @@ elif [ $task = "runplot" ]; then
         runCommand="python ./run_plot.py --regions ${regions} --vars ${vars}";
     fi
 elif [ $task = "postfitplot" ]; then
-    runCommand="python ./postfit_plot.py"
+    if [ -z "$regions" ]; then
+        runCommand="python ./postfit_plot.py"
+    else
+        runCommand="python ./postfit_plot.py --regions ${regions}"
+    fi
 
 elif [ $task = "cachedc" ]; then
     runCommand="python ./cache_dc.py --regions ${regions} --splitFilesChunkSize ${splitFilesChunkSize} --splitFilesChunks ${splitFilesChunks} --chunkNumber ${chunkNumber}"

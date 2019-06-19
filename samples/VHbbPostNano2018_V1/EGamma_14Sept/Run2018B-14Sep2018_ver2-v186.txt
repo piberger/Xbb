@@ -1,0 +1,4 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V9/EGamma/Run2018B-14Sep2018_ver2-v186/190307_141607/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V9/EGamma/Run2018B-14Sep2018_ver2-v186/190307_141607/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V9/EGamma/Run2018B-14Sep2018_ver2-v186/190307_141607/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V9/EGamma/Run2018B-14Sep2018_ver2-v186/190307_141607/0000/tree_4.root

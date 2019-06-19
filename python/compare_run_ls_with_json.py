@@ -1,13 +1,21 @@
 #!/usr/bin/env python
 import json
 
-#runLsList = 'existing_lumis_pp_DoubleMuon.txt'
-#runLsList2 = 'existing_lumis_pp_DoubleEG.txt'
-#jsonFile = '2017_json.txt'
+jsonFile = 'Cert_294927-306462_13TeV_PromptReco_Collisions17_JSON.txt'
+runLsLists = [
+        ['existing_lumis_pp_V11_DoubleMuon.txt', 43, '0'],
+        ['existing_lumis_pp_V11_DoubleEG.txt', 44, '1'],
+        ['existing_lumis_pp_V11_SingleMuon.txt', 45, '2'],
+        ['existing_lumis_pp_V11_SingleElectron.txt', 46, '3'],
+        ['existing_lumis_pp_V11_MET.txt', 47, '4'],
+        ]
+ntupleVersion = "2017 Nano post-proc V11"
 
-runLsList = 'existing_lumis_nano_DoubleMuon_300122to300237.txt'
-runLsList2 = 'existing_lumis_nano_DoubleEG_300122to300237.txt'
-jsonFile = '2017_json_300122to300237.txt'
+print "-"*80
+print "run/ls checker for data"
+print "JSON is:", jsonFile
+print "NTuples:", ntupleVersion
+print "-"*80
 
 def runLsListToDict(existingData):
     existingDataDict = {}
@@ -17,20 +25,31 @@ def runLsListToDict(existingData):
         existingDataDict[i[0]][i[1]] = True
     return existingDataDict
 
-with open(jsonFile,'r') as f:
+with open(jsonFile,'rb') as f:
     jsonData = json.load(f)
-with open(runLsList,'r') as f:
-    existingData = runLsListToDict(json.load(f))
-with open(runLsList2,'r') as f:
-    existingData2 = runLsListToDict(json.load(f))
+
+existingData = []
+for runLsList in runLsLists:
+    with open(runLsList[0],'r') as f:
+        existingData.append(runLsListToDict(json.load(f)))
 
 runs = sorted(jsonData.keys())
 counts = {
-        'both': 0,
-        'only1': 0,
-        'only2': 0,
-        'missing': 0,
+        'ok': 0,
+        'empty': 0,
+        'mixed': 0,
         }
+for runLsList in runLsLists:
+    counts[runLsList[0]] = 0
+print "-"*80
+print " legend:"
+print "  \x1b[42m \x1b[0m OK: all datasets have events in this lumisection"
+print "  - EMPTY: no dataset has events in this lumisection"
+print "  \x1b[41m?\x1b[0m SOME: some datasets have events in this lumisection, more than 1 has not"
+for runLsList in runLsLists:
+    print "  " + '\x1b[%dm%s\x1b[0m'%(runLsList[1], runLsList[2]) + " missing only in " + runLsList[0] 
+print "-"*80
+
 for run in runs:
     lsList = jsonData[run]
     for lsRange in lsList:
@@ -38,20 +57,23 @@ for run in runs:
         lsCount = 0
         for ls in range(lsRange[0],lsRange[1]+1):
             iRun = int(run)
-            inData = iRun in existingData and ls in existingData[iRun]
-            inData2 = iRun in existingData2 and ls in existingData2[iRun]
-            if inData and inData2:
-                printout += '\x1b[42m \x1b[0m'
-                counts['both'] += 1
-            elif inData: 
-                printout += '\x1b[45m \x1b[0m'
-                counts['only1'] += 1
-            elif inData2:
-                printout += '\x1b[44m \x1b[0m'
-                counts['only2'] += 1
+            lsExisting = [iRun in x and ls in x[iRun] for x in existingData] 
+            datasets_empty = [i for i,x in enumerate(lsExisting) if not x]
+
+            if len(datasets_empty) == 0:
+                counts['ok'] += 1
+                box = '\x1b[42m \x1b[0m'
+            elif len(datasets_empty) == len(existingData):
+                counts['empty'] += 1
+                box = '-'
+            elif len(datasets_empty) == 1:
+                counts[runLsLists[datasets_empty[0]][0]] += 1
+                box = '\x1b[%dm%s\x1b[0m'%(runLsLists[datasets_empty[0]][1], runLsLists[datasets_empty[0]][2])
             else:
-                printout += '\x1b[41m \x1b[0m'
-                counts['missing'] += 1
+                counts['mixed'] += 1
+                box = '\x1b[41m?\x1b[0m'
+            printout += box
+
             lsCount += 1
             if lsCount > 300:
                 printout += "\n" + "".ljust(24)

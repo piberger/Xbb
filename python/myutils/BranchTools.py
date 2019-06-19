@@ -230,6 +230,9 @@ class AddCollectionsModule(object):
     def addBranch(self, branchName, default=0.0):
         self.branchBuffers[branchName] = array.array('d', [default])
         self.branches.append({'name': branchName, 'formula': self.getBranch, 'arguments': branchName})
+        #print 'self.getBranch', self.getBranch
+        #print 'self.branchBuffers[branchName]', self.branchBuffers[branchName]
+        #print 'self.branches', self.branches
 
     def addIntegerBranch(self, branchName, default=0):
         self.branchBuffers[branchName] = array.array('i', [default])

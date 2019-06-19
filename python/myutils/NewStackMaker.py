@@ -23,17 +23,24 @@ class NewStackMaker:
         self.saveShapes = True
         self.var = var
         self.region = region
-        self.configSection = 'Plot:%s'%region
+        if self.config.has_section('Plot:%s'%region):
+            self.configSection = 'Plot:%s'%region
+        elif self.config.has_section('Fit:%s'%region):
+            self.configSection = 'Fit:%s'%region
+        else:
+            print("ERROR: no section '%s'"%('Plot:%s'%region))
+            raise Exception("ConfigError")
+
         self.dataGroupName = 'DATA'
         self.anaTag = self.config.get("Analysis", "tag")
         self.subcut = subcut
         self.forceLog = None
-        self.normalize = eval(self.config.get(self.configSection, 'Normalize'))
-        self.log = eval(self.config.get(self.configSection, 'log'))
+        self.normalize = eval(self.config.get(self.configSection, 'Normalize')) if self.config.has_option(self.configSection, 'Normalize') else False
+        self.log = eval(self.config.get(self.configSection, 'log')) if self.config.has_option(self.configSection, 'log') else False
         self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
         if self.config.has_option('plotDef:%s'%var, 'log'):
             self.log = eval(self.config.get('plotDef:%s'%var,'log'))
-        self.blind = eval(self.config.get(self.configSection,'blind'))
+        self.blind = eval(self.config.get(self.configSection,'blind')) if self.config.has_option(self.configSection,'blind') else False
         self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
         self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
         self.is2D = True if self.yAxis else False
@@ -81,6 +88,7 @@ class NewStackMaker:
                     'xAxis': 'xAxis',
                     'yAxis': 'yAxis',
                     'drawOption': 'drawOption',
+                    'drawOptionData': 'drawOptionData',
                     'draw': 'draw',
                     'binList': 'binList',
                     'plotEqualSize': 'plotEqualSize',
@@ -140,12 +148,17 @@ class NewStackMaker:
         self.ratioPlot = None
         if SignalRegion:
             self.maxRatioUncert = 1000.
+        self.outputTeX = False
         self.outputFileTemplate = "{outputFolder}/{prefix}.{ext}"
         try:
             self.outputFileFormats = [x.strip() for x in config.get('Plot_general','outputFormats').split(',') if len(x.strip())>0] 
         except:
             self.outputFileFormats = ["png"]
         
+        if 'tex' in self.outputFileFormats:
+            self.outputFileFormats = [x for x in self.outputFileFormats if x != 'tex']
+            self.outputTeX = True
+
         self.plotTextMarginLeft = 0.16
 
         if self.debug:
@@ -314,11 +327,20 @@ class NewStackMaker:
 
             if isSimpleCut:
                 if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
-                    blindedRegion = ROOT.TH1D("blind","blind",self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
+
+                    # get list of bin boundaries of ratio histogram, those might be different from the ones from the main histogram and are provided by the external ratio.C code.
+                    bin_list = array.array('d', [0.0]*(self.ratioPlot.GetXaxis().GetNbins() + 1))
+                    for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                        bin_list[i] = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
+                    bin_list[self.ratioPlot.GetXaxis().GetNbins()] = self.ratioPlot.GetXaxis().GetXmax()
+
+                    # make histogram to visualize blind cut with same bins as the ratio plot
+                    blindedRegion = ROOT.TH1D("blind", "blind", self.ratioPlot.GetXaxis().GetNbins(), bin_list)
                     for i in range(self.ratioPlot.GetXaxis().GetNbins()):
                         binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i)
                         value = 1.1
                         if binLowEdgeValue >= blindingCutThreshold:
+                            # shaded area
                             error = 0.6
                         else:
                             error = 0.0
@@ -329,7 +351,6 @@ class NewStackMaker:
                     blindedRegion.SetMarkerSize(0)
                     blindedRegion.Draw("SAME E2")
                     self.addObject(blindedRegion)
-                    print("DEBUG:", blindedRegion, self.ratioPlot.GetXaxis().GetNbins(),self.ratioPlot.GetXaxis().GetXmin(),self.ratioPlot.GetXaxis().GetXmax())
 
         self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
         self.m_one_line.SetLineStyle(ROOT.kSolid)
@@ -602,7 +623,7 @@ class NewStackMaker:
 
         # draw DATA
         if dataGroupName in groupedHistograms and not self.is2D:
-            drawOption = 'PE'
+            drawOption = self.histogramOptions['drawOptionData'] if 'drawOptionData' in self.histogramOptions else 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
             if normalize and groupedHistograms[dataGroupName].Integral() > 0:
@@ -619,6 +640,8 @@ class NewStackMaker:
             mcHistogram0.SetStats(0)
             mcHistogram0.Draw("SAME TEXT0")
             print("drawn total entry histogram!!!")
+            binContents = ["%1.4f"%mcHistogram0.GetBinContent(1+j) for j in range(mcHistogram0.GetXaxis().GetNbins())]
+            print("bin contents:", ", ".join(binContents))
 
         # draw ratio plot
         theErrorGraph = None
@@ -653,6 +676,12 @@ class NewStackMaker:
                 print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
                 print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
+        if self.outputTeX:
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext='tex')
+            #ROOT.gPad.Print(outputFileName)
+            c.SaveAs(outputFileName)
+            print("INFO: saved as \x1b[32mTeX \x1b[34m", outputFileName, "\x1b[0m")
+
         self.histoCounts = {'unweighted':{}, 'weighted': {}}
 
         # save shapes
@@ -731,6 +760,12 @@ class NewStackMaker:
             for key in keys:
                 #print('groupName is', key)
                 print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
+
+	    sum = 0
+            for key in keys:
+                sum = self.groupCounts['weighted'][key] + sum
+
+            print('total weighted events are:', sum)
         except Exception as e:
             print("ERROR: could not obtain counts (not implemented for TGraphAsymErrors yet)", e)
 

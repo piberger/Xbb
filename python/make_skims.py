@@ -86,12 +86,17 @@ class SkimsHelper(object):
                 sampleCuts.append(self.addBlindingCut)
             
             # get sample tree from cache
-            self.fileNames += TreeCache.TreeCache(
+            tc = TreeCache.TreeCache(
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.samplesPath,
                     config=config
-                ).findCachedFileNames()
+                )
+            if tc.isCached():
+                self.fileNames += tc.findCachedFileNames()
+            else:
+                print("ERROR: not cached, run cacheplot again")
+                raise Exception("NotCached")
         if len(self.fileNames) < 1:
             print("\x1b[31mERROR: no files found, run cacheplot!\x1b[0m")
         return self

@@ -27,6 +27,8 @@ parser.add_option("-f", "--fileList", dest="fileList", default="",
                               help="list of files you want to run on")
 parser.add_option("-o","--force", action="store_true", dest="force", default=False,
                       help="force overwriting of already cached files")
+parser.add_option("-I", "--inputDir", dest="inputDir", default="MVAin", help="name of input folder in config, e.g. MVAin")
+parser.add_option("-O", "--outputDir", dest="outputDir", default="MVAout", help="name of output folder in config, e.g. MVAout")
 (opts, args) = parser.parse_args(argv)
 
 if opts.config == "":
@@ -63,8 +65,8 @@ samplesinfo = config.get('Directories', 'samplesinfo')
 #read shape systematics
 systematics = config.get('systematics', 'systematics')
 
-INpath = config.get('Directories', 'MVAin')
-OUTpath = config.get('Directories', 'MVAout')
+INpath = config.get('Directories', opts.inputDir)
+OUTpath = config.get('Directories', opts.outputDir)
 tmpDir = config.get('Directories', 'scratch')
 
 info = ParseInfo(samplesinfo,INpath)
