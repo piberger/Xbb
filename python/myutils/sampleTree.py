@@ -330,37 +330,52 @@ class SampleTree(object):
         except e:
             print("EXCEPTION:", e)
 
-    def addFriend(self, samples, treeName='Events_f', index=None, name='<friend>'):
+    def getFriendTreeFileNames(self, directory):
+        # get list of files in this chain and make list of friend file names
+        sampleFileNames = self.sampleFileNamesToProcess
+
+        sampleFileNamesFriend = []
+        for fullFileName in sampleFileNames:
+
+            fileNameParts = fullFileName.split('/')
+            fileName = fileNameParts[-1]
+            parentDirectory = fileNameParts[-2] if len(fileNameParts) > 1 else './'
+
+            friendFileName = directory
+            if '{fileName}' in friendFileName:
+                friendFileName = friendFileName.replace('{fileName}', fileName)
+            if '{sampleIdentifier}' in friendFileName:
+                friendFileName = friendFileName.replace('{sampleIdentifier}', self.sampleIdentifier)
+            if '{parentDirectory}'  in friendFileName:
+                friendFileName = friendFileName.replace('{parentDirectory}', parentDirectory)
+
+            sampleFileNamesFriend.append(friendFileName)
+        return sampleFileNamesFriend
+
+    def addFriend(self, directory, treeName='Events_f', index=None, name='<friend>', alias=None):
         if not index:
             index = ['run', 'event']
-        
+
         friend = {
                 'tree': ROOT.TChain(treeName),
                 'treeName': treeName,
                 'name': name
                 }
-        
-        sampleFileNamesParts = self.getSampleFileNameChunks(samples)
-        sampleFileNames = []
-        if self.chunkNumber > 0 and self.chunkNumber <= self.numParts:
-            if len(sampleFileNamesParts) == self.numParts:
-                chunkIndex = self.chunkNumber - 1
-                sampleFileNames = sampleFileNamesParts[chunkIndex]
-            else:
-                raise Exception("addFriend__nFiles_mismatch")
+
+        sampleFileNamesFriend = self.getFriendTreeFileNames(directory)
+        for fileName in sampleFileNamesFriend:
+            friend['tree'].Add(fileName + '/' + treeName)
+
+        #friend['tree'].BuildIndex()
+        if alias is not None:
+            self.tree.AddFriend(friend['tree'], alias)
         else:
-            raise Exception("addFriend__chunkNumber_mismatch")
+            self.tree.AddFriend(friend['tree'])
 
-        for sampleFileName in sampleFileNames:
-            friend['tree'].Add(sampleFileName + '/' + treeName)
-            if self.debug:
-                print("DEBUG: add to friend chain:", sampleFileName)
-
+        self.friends.append(friend)
         if self.debug:
-            print("DEBUG: building index for friend tree...")
-
-        friend['tree'].BuildIndex
-
+            print("INFO: added friend tree", treeName)
+            print("DEBUG: \x1b[42m-> ", sampleFileNamesFriend, "\x1b[0m")
 
     # ------------------------------------------------------------------------------
     # check if all files have been chained

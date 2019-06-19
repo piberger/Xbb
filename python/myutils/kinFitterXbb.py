@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import ROOT
 import numpy as np
 from Jet import Jet
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 
-from JMEres2017 import JMEres
+from JMEres import JMEres
 
 # resolution functions from HH4b analysis
 # https://github.com/cvernier/HH4b2016/blob/master/HbbHbb_Component_KinFit.cc
@@ -57,12 +58,15 @@ def fit_lepton(v, ptErr):
 # https://github.com/capalmer85/AnalysisTools/blob/master/python/kinfitter.py
 class kinFitterXbb(AddCollectionsModule):
 
-    def __init__(self):
+    def __init__(self, year):
         self.debug = False
+        self.enabled = True
+        self.year = year
         self.HH4B_RES_SCALE = 0.62
         self.LLVV_PXY_VAR = 8.0**2 
         self.Z_MASS = 91.1876
         self.Z_WIDTH = 1.7*3
+        self.systematics = None
         super(kinFitterXbb, self).__init__()
         
         ROOT.gSystem.Load("../HelperClasses/KinFitter/TAbsFitConstraint_cc.so")
@@ -86,16 +90,17 @@ class kinFitterXbb(AddCollectionsModule):
         ROOT.gSystem.Load("../HelperClasses/KinFitter/TKinFitter_cc.so")
         ROOT.gSystem.Load("../HelperClasses/KinFitter/TSLToyGen_cc.so")
 
-        self.JMEres = JMEres()
+        self.jetResolution = JMEres(year=self.year)
 
     def customInit(self, initVars):
         self.branchName = "kinFit"
         self.sample = initVars['sample']
         self.config = initVars['config']
-        if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','systematics') and not self.sample.isData():
-            self.systematics = [(x if x != 'Nominal' else '') for x in self.config.get('KinematicFit','systematics').strip().split(' ')]
-        else:
-            self.systematics = ['']
+        if self.systematics is None:
+            if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','systematics') and not self.sample.isData():
+                self.systematics = [(x if x != 'Nominal' else '') for x in self.config.get('KinematicFit','systematics').strip().split(' ')]
+            else:
+                self.systematics = ['']
         print("INFO: computing the fit for", len(self.systematics), " variations.")
 
         self.bDict = {}
@@ -109,9 +114,15 @@ class kinFitterXbb(AddCollectionsModule):
                 branchNameFull = self.branchName + "_" + n + ('_' + syst if len(syst) > 0 else '')
                 self.bDict[syst][n] = branchNameFull
                 self.addIntegerBranch(branchNameFull)
+    
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
 
     def cart_cov(self, v, rho):
-        jme_res = self.JMEres.eval(v.Eta(), rho, v.Pt())
+        jme_res = self.jetResolution.eval(v.Eta(), rho, v.Pt())
         cos_phi = np.cos(v.Phi())
         sin_phi = np.sin(v.Phi())
         cov = ROOT.TMatrixD(4, 4)
@@ -123,7 +134,7 @@ class kinFitterXbb(AddCollectionsModule):
         return cov
 
     def processEvent(self, tree):
-        if not self.hasBeenProcessed(tree):
+        if not self.hasBeenProcessed(tree) and self.enabled:
             self.markProcessed(tree)
 
             phi = tree.Jet_phi
@@ -231,7 +242,7 @@ class kinFitterXbb(AddCollectionsModule):
                 fitter.setMaxNbIter(30)
                 fitter.setMaxDeltaS(1e-2)
                 fitter.setMaxF(1e-1)
-                fitter.setVerbosity(3)
+                fitter.setVerbosity(0)
 
                 # run the fit
                 kinfit_fit = fitter.fit() + 1  # 0: not run; 1: fit converged; 2: fit didn't converge
@@ -239,7 +250,7 @@ class kinFitterXbb(AddCollectionsModule):
                 kinfit_getS = fitter.getS()
                 kinfit_getF = fitter.getF()
                 #print("-"*10, kinfit_fit, kinfit_getNDF, kinfit_getS, kinfit_getF)
-
+                
                 # higgs jet output vectors
                 fit_result_j1 = fitter.get4Vec(0)
                 fit_result_j2 = fitter.get4Vec(1)
