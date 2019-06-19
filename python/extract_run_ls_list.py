@@ -1,27 +1,33 @@
 #!/usr/bin/env python
 import ROOT
+import sys
+import os
 from myutils.sampleTree import SampleTree
 
-#pp
-#sampleTree = SampleTree('VHbbPostNano2017_V2_DoubleEG.txt', 'Events', xrootdRedirector='root://t3dcachedb03.psi.ch:1094/')
-#sampleTree = SampleTree('VHbbPostNano2017_V2_DoubleMuon.txt', 'Events', xrootdRedirector='root://t3dcachedb03.psi.ch:1094/')
-#outputFileName = 'existing_lumis_pp_DoubleMuon.txt'
+# input: file with one tree filename per line, e.g.
+# /path/to/tree_1.root
+# /path/to/tree_2.root
 
-#nano
-sampleTree = SampleTree('DoubleEG_RunII2017ReReco17Nov17-94X-Nano01_300122to300237.txt', 'Events', xrootdRedirector='root://xrootd-cms.infn.it/')
-outputFileName = 'existing_lumis_nano_realDoubleEG_300122to300237.txt'
+# output: txt file with json compatible list of [run, ls]
+# [[304292, 29], [304663, 510], [302163, 561], ... ]
+
+print "usage: %s outputfile.txt inputfile.txt [redirector]"
+
+if os.path.isfile(sys.argv[2]):
+    outputFileName = sys.argv[1]
+    sampleTree = SampleTree(sys.argv[2], 'Events', xrootdRedirector=sys.argv[3] if len(sys.argv) > 3 else '') 
+else:
+    raise Exception("Input file not found!", sys.argv[2])
 
 sampleTree.tree.SetBranchStatus("*", 0)
 sampleTree.tree.SetBranchStatus("run", 1)
 sampleTree.tree.SetBranchStatus("luminosityBlock", 1)
-runLumi = []
-for i in sampleTree:
-    #if [i.run, i.luminosityBlock] not in runLumi and i.run>=302030 and i.run <= 303434:
-    #    runLumi.append([i.run, i.luminosityBlock])
-    if [i.run, i.luminosityBlock] not in runLumi:
-        runLumi.append([i.run, i.luminosityBlock])
-print runLumi
-with open(outputFileName, 'w') as f:
-    f.write("%r"%runLumi)
 
+runLumi = {}
+for i in sampleTree:
+    if (i.run, i.luminosityBlock) not in runLumi:
+        runLumi[(i.run, i.luminosityBlock)] = True
+
+with open(outputFileName, 'w') as f:
+    f.write("%r"%[list(x) for x in runLumi.keys()])
 

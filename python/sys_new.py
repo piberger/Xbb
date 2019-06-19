@@ -162,7 +162,14 @@ class XbbRun:
                     if '.' in collection:
                         section = collection.split('.')[0]
                         key = collection.split('.')[1]
-                        pyCode = self.config.get(section, key)
+                        if self.config.has_section(section) and self.config.has_option(section, key):
+                            pyCode = self.config.get(section, key)
+                        elif '(' in collection and collection.endswith(')'):
+                            print "WARNING: config option", collection, " not found, interpreting it as Python code!"
+                            pyCode = collection 
+                        else:
+                            print "\x1b[31mERROR: config option not found:", collection, ". To specify Python code directly, pass a complete constructor, e.g. --addCollections 'Module.Class()'. Module has to be placed in python/myutils/ folder.\x1b[0m"
+                            raise Exception("ConfigError")
 
                         # import module from myutils
                         moduleName = pyCode.split('(')[0].split('.')[0].strip()

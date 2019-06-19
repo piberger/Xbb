@@ -69,7 +69,7 @@ class Datacard(object):
         self.treevar = config.get('dc:%s'%self.region, 'var')
         if self.verbose:
             print ('treevar is', self.treevar)
-        self.name = config.get('dc:%s'%self.region, 'wsVarName')
+        self.name = config.get('dc:%s'%self.region, 'wsVarName') if config.has_option('dc:%s'%self.region, 'wsVarName') else self.region
         if self.optimisation_training:
             self.treevar = self.optimisation + '.Nominal'
             self.name += '_' + self.optimisation
@@ -89,14 +89,14 @@ class Datacard(object):
         self.variableBins = None
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
-        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName')
+        self.ROOToutname = config.get('dc:%s'%self.region, 'dcName') if config.has_option('dc:%s'%self.region, 'dcName') else self.region
         if self.optimisation_training:
            self.ROOToutname += self.optimisation
            if self.UseTrainSample:
                self.ROOToutname += '_Train'
-        self.RCut = config.get('dc:%s'%self.region, 'cut')
+        self.RCut = config.get('dc:%s'%self.region, 'cut') if config.has_option('dc:%s'%self.region, 'cut') else self.region
         self.signals = eval('['+config.get('dc:%s'%self.region, 'signal')+']') #TODO
-        self.Datacardbin=config.get('dc:%s'%self.region, 'dcBin')
+        self.Datacardbin = config.get('dc:%s'%self.region, 'dcBin') if config.has_option('dc:%s'%self.region, 'dcBin') else self.region
         self.anType = config.get('dc:%s'%self.region, 'type')
         self.EvalCut = config.get('Cuts', 'EvalCut')
 
@@ -174,11 +174,14 @@ class Datacard(object):
 
         if self.sysOptions['blind'] and self.verbose:
             print('\x1b[31mI AM BLINDED!\x1b[0m')
-            
-        if self.anType.lower() != 'bdt':
-            if self.sysOptions['rebin_active']:
-                print ('@WARNING: Changing rebin_active to false since you are running for control region.')
-            self.sysOptions['rebin_active'] = False
+        
+        # new behavior: rebin_method can be set to 'legacy' per region to restore HIG16044 style rebinning
+        # old behavior: global option rebin_active was set to True/False in config, and for CR's changed to False here
+        #if self.anType.lower() != 'bdt':
+        #    if self.sysOptions['rebin_active']:
+        #        print ('@WARNING: Changing rebin_active to false since you are running for control region.')
+        #    self.sysOptions['rebin_active'] = False
+
         if self.sysOptions['add_signal_as_bkg']:
             self.sysOptions['setup'].append(self.sysOptions['add_signal_as_bkg'])
 
@@ -191,6 +194,7 @@ class Datacard(object):
             self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
             if len(self.ptRegion) != 1:
                 print("WARNING: invalid pt region:", self.ptRegion, ", use default.")
+                self.ptRegion = None
             else:
                 self.ptRegion = self.ptRegion[0]
         else:
@@ -392,7 +396,7 @@ class Datacard(object):
 
         if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
-        else:
+        elif self.binning['rebin_method'] == 'legacy':
             # below is the old method, that was used for 2016 Heppy analysis
             temporaryBins = 1000
             targetBins = self.binning['nBinsX'] 
@@ -670,10 +674,9 @@ class Datacard(object):
         return histogramName
 
     def run(self, useSampleIdentifiers=None, chunkNumber=-1):
-        # compute variable bin sizes to have minimum number of significance in highest BDT bin
-        # rescaling of BDT score is not done anymore.
-        if self.sysOptions['rebin_active']:
-            self.calcBinning()
+        
+        # compute bin boundaries/read the mfrom config if given
+        self.calcBinning()
 
         # select samples to use
         allSamples = self.getAllSamples()
@@ -737,6 +740,7 @@ class Datacard(object):
             #    self.histograms[sample.name][systematics['systematicsName']] = histoMaker.getHistogram(systematics['cut'])
 
             # add all the cuts/weights for the different systematics 
+            evalcutInfoShown = False
             for systematics in systematicsList:
                 
                 # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
@@ -765,9 +769,15 @@ class Datacard(object):
                     systematics['addCut'] = self.EvalCut
                     systematics['mcRescale'] = 2.0
                     sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+                    if self.debug and not evalcutInfoShown:
+                        print('\x1b[31mDEBUG: using 50% of sample not used in training:', self.EvalCut, '\x1b[0m')
+                        evalcutInfoShown = True
                 else:
                     if self.debug:
-                        print('\x1b[31mDEBUG: using full sample!',systematics['var'].lower() ,"\x1b[0m")
+                        if sample.type == 'DATA':
+                            print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
+                        else:
+                            print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
 
                 # add TTreeFormulas
                 systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
@@ -812,33 +822,34 @@ class Datacard(object):
             specialweight = 1.0
             sampleTree.Print()
 
+            # obsolete:
             # per region/var blinding cut
-            self.regionVarBlindCut = None
-            if self.blindCut and sample.type == 'DATA':
-                print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
-                if systematicsList[0]['var'] in self.blindCut:
-                    self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
-                    sampleTree.addFormula(self.regionVarBlindCut)
-                    print("self.regionVarBlindCut = ", self.regionVarBlindCut)
+            #self.regionVarBlindCut = None
+            #if self.blindCut and sample.type == 'DATA':
+            #    print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
+            #    if systematicsList[0]['var'] in self.blindCut:
+            #        self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
+            #        sampleTree.addFormula(self.regionVarBlindCut)
+            #        print("self.regionVarBlindCut = ", self.regionVarBlindCut)
 
             for event in sampleTree:
 
                 # check blinding cut
-                cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
+                #cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
 
-                if cutPassed:
-                    # evaluate all systematics for this event
-                    for systematics in systematicsList:
-                        cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
+                # evaluate all systematics for this event
+                for systematics in systematicsList:
+                    cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
+                    if cutPassed:
+                        if 'addCut' in systematics:
+                            cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
                         if cutPassed:
-                            if 'addCut' in systematics:
-                                cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
-                            if cutPassed:
-                                weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
-                                treeVar = sampleTree.evaluate(systematics['var'])
-                                specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                                self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
-                        #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+                            weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                            treeVar = sampleTree.evaluate(systematics['var'])
+                            specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
+                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                    #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+
 
             # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
             for systematics in systematicsList:
@@ -862,6 +873,8 @@ class Datacard(object):
             binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
             print(binList)
             print(binContentList)
+
+
 
             # normalize up/down variations
             for systematics in systematicsList:

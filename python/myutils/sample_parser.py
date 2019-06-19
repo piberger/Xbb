@@ -7,7 +7,7 @@ import fnmatch
 
 class ParseInfo:
     '''Class containing a list of Sample. Is filled during the prep stage.'''
-    def __init__(self,samples_config,samples_path,config=None):
+    def __init__(self,samples_config=None,samples_path=None,config=None):
         '''
         Methode filling a list of Sample "self._samplelist = []" contained in the class. 
         "sample_path" contains the path where the samples are stored (PREPin). 
@@ -15,7 +15,11 @@ class ParseInfo:
         the sample list are generated from the input folder (PREPin) or the list in "samples_nosplit.cfg" '''
 
         self.debug = 'XBBDEBUG' in os.environ
+
+        # legacy behavior below (RECOMMENDED: pass config object)
         if not config:
+            if not samples_config:
+                raise Exception("SamplesConfigMissing")
             if self.debug:
                 print "Start getting infos on all the samples (ParseInfo)"
                 print "==================================================\n"
@@ -167,21 +171,43 @@ class ParseInfo:
                           thenames.append(sample.name)
         #else check the name
         else:
+            if not isinstance(samplenames, (list, tuple)): 
+                samplenames = [x.strip() for x in samplenames.split(',')]
+
+            # filter empty sample names
+            samplenames = [x for x in samplenames if len(x.strip()) > 0]
+
+            for samplename in samplenames:
+                found = False
                 for sample in self._samplelist:
-                  if not isinstance(samplenames, (list, tuple)): samplenames = samplenames.split(',')
-                  for samplename in samplenames:
-                        # print "get_samples sample is", sample ,'samplename',samplename
-                        if sample.name == samplename:
-                                # print 'matched sample.name',sample.name
-                                #if (sample.subsample): continue #avoid multiple submissions from subsamples
-                                samples.append(sample)
-                                thenames.append(sample.name)
+                    # print "get_samples sample is", sample ,'samplename',samplename
+                    if sample.name == samplename:
+                        found = True
+                        # print 'matched sample.name',sample.name
+                        #if (sample.subsample): continue #avoid multiple submissions from subsamples
+                        samples.append(sample)
+                        thenames.append(sample.name)
+                if not found:
+                    print "\x1b[31mERROR: sample not found:", samplename, "\x1b[0m"
+                    raise Exception("SampleMissing")
+                
         return samples
 
     # return list of all identifiers
     def getSampleIdentifiers(self):
         return list(set([x.identifier for x in self]))
+
+    #
+    def getFullSample(self, sampleIdentifier):
+        fullSamples = [x for x in self if x.identifier == sampleIdentifier and x.subsample == False]
+        if len(fullSamples) != 1:
+            print("ERROR: sample not found/ not unique! :", fullSamples)
+            raise Exception("SampleMissing")
+        return fullSamples[0]
     
+    def getSubsamples(self, sampleIdentifier):
+        return [x for x in self if x.identifier == sampleIdentifier and x.subsample == True]
+
     # return list of all samples with matching identifier
     def find(self, identifier, subsamples=False):
         return [x for x in self if (
@@ -189,6 +215,11 @@ class ParseInfo:
                     ('*' not in identifier and x.identifier==identifier)
                 ) and (not x.subsample or subsamples)
             ]
+
+    @staticmethod
+    def filterIdentifiers(sampleIdentifiers, samples):
+        usedIdentifiers = [x.identifier for x in samples]
+        return [x for x in sampleIdentifiers if x in usedIdentifiers]
 
     # DEPRECATED
     #it checks whether filename is a splitted sample or is a pure samples and returns the file name without the _#

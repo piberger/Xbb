@@ -4,98 +4,55 @@ import numpy as np
 import array
 from pdgId import pdgId
 import sys
+from BranchTools import Collection
+from BranchTools import AddCollectionsModule
 
-class EWKweights(object):
+class EWKweights(AddCollectionsModule):
 
-    def __init__(self, sample=None, nano=False, boost= False):
+    def __init__(self, sample=None, nano=True, boost=False, branchNameSuffix=''):
         self.lastEntry = -1
         self.nano = nano
-        self.branchBuffers = {}
-        self.branches = []
         self.boost = boost
         self.stats = {'nW':0, 'nZ':0, 'nSIG': 0}
+        self.suffix = '' if len(branchNameSuffix.strip()) < 1 else '_' + branchNameSuffix
 
-        #NLOw is not defined in booseted topologie
-        if self.boost == False:
-            self.branches.append({'name': 'NLOw', 'formula': self.getNLOw})
-            self.branches.append({'name': 'DYw', 'formula': self.getDYw})
-        for wName in ['EWKw', 'EWKwSIG', 'EWKwVJets']:
-            self.branchBuffers[wName] = np.zeros(3, dtype=np.float32)
-            self.branches.append({'name': wName, 'formula': self.getVectorBranch, 'arguments': {'branch': wName, 'length':3}, 'length': 3})
+        super(EWKweights, self).__init__()
         if sample:
             self.customInit(sample=sample)
 
     def customInit(self, initVars):
-        sample = initVars['sample']
+        self.sample = initVars['sample']
         self.config = initVars['config']
+        self.isData = self.sample.isData()
 
-        self.tagidx = self.config.get('General', 'hJidx')
-        print "INFO: bTag index: {}".format(self.tagidx)
-        self.applyEWK = ('DY' in sample.identifier and not '10to50' in sample.identifier) or ('WJet' in sample.identifier or 'WBJet' in sample.identifier)
-        self.applyNLO = self.applyEWK and ('amc' not in sample.identifier) 
-        self.sys_sample = None
-        if 'ZH_HToBB_ZToLL' in sample.identifier and not 'ggZH_HToBB_ZToLL' in sample.identifier:
-            self.sys_sample = 'Zll'
-        elif 'WminusH' in sample.identifier:
-            self.sys_sample = 'Wlvm'
-        elif 'WplusH' in sample.identifier:
-            self.sys_sample = 'Wlvp'
-        elif 'ZH_HToBB_ZToNuNu' in sample.identifier and not 'ggZH_HToBB_ZToNuNu' in sample.identifier:
-            self.sys_sample = 'Zvv'
-        self.isData = sample.type == 'DATA'
-        if self.isData:
-            self.branches = []
+        if not self.isData:
+            self.applyEWK = any([x in self.sample.identifier for x in ['DY', 'WJet', 'WBJet', 'ZJet', 'ZBJet']])
+            self.sys_sample = None
 
-    def getBranches(self):
-        return self.branches
+            if 'ZH_HToBB_ZToLL' in self.sample.identifier and not 'ggZH_HToBB_ZToLL' in self.sample.identifier:
+                self.sys_sample = 'Zll'
+            elif 'WminusH' in self.sample.identifier:
+                self.sys_sample = 'Wlvm'
+            elif 'WplusH' in self.sample.identifier:
+                self.sys_sample = 'Wlvp'
+            elif 'ZH_HToBB_ZToNuNu' in self.sample.identifier and not 'ggZH_HToBB_ZToNuNu' in self.sample.identifier:
+                self.sys_sample = 'Zvv'
+            
+            self.addVectorBranch('EWKw' + self.suffix, length=3)
+            self.addVectorBranch('EWKwVJets' + self.suffix, length=3)
+            self.addVectorBranch('EWKwSIG' + self.suffix, length=3)
 
-    def getNLOw(self, tree):
-        NLOw = 1.0
-#defines the idx for the first and second jet
-        if self.tagidx:
-            #print "Using the {idx}".format(idx=self.tagidx)
-            idx0=getattr(tree,self.tagidx)[0]
-            idx1=getattr(tree,self.tagidx)[1]
-        else:
-            print "Missing bTag index. Check general.ini"
-            raise Exception("bTagIndexNotSpecified")
-
-        
-        if self.applyNLO and (idx0 > -1 and idx1 > -1):
-#            if self.nano:
-#                etabb = abs(tree.Jet_eta[tree.hJidx[0]] - tree.Jet_eta[tree.hJidx[1]])
-#            else:
-#                etabb = abs(tree.Jet_eta[tree.hJCidx[0]] - tree.Jet_eta[tree.hJCidx[1]])
-            if self.nano:
-                etabb = abs(tree.Jet_eta[idx0] - tree.Jet_eta[idx1])
-            else:
-                etabb = abs(tree.Jet_eta[idx0] - tree.Jet_eta[idx1]) 
-            if etabb < 5:
-                NLOw = 1.153*(0.940679 + 0.0306119*etabb -0.0134403*etabb*etabb + 0.0132179*etabb*etabb*etabb -0.00143832*etabb*etabb*etabb*etabb)
-        return NLOw
-
-    def getDYw(self, tree):
-        self.processEvent(tree)
-        DYw = self.getNLOw(tree) * self.branchBuffers['EWKw'][0]
-        return DYw
-
-    # read from buffers which have been filled in processEvent()    
-    def getVectorBranch(self, event, arguments=None, destinationArray=None):
-        self.processEvent(event)
-        for i in range(arguments['length']):
-            destinationArray[i] =  self.branchBuffers[arguments['branch']][i]
+            # was not used in 2017 analysis
+            self.addVectorBranch('QCDw' + self.suffix, length=3)
 
     # compute all the EWK weights
     def processEvent(self, tree):
-        isGoodEvent = True
-        currentEntry = tree.GetReadEntry()
-        # if current entry has not been processed yet
-        if currentEntry != self.lastEntry and not self.isData:
-            self.lastEntry = currentEntry
+        if not self.sample.isData() and not self.hasBeenProcessed(tree):
+            self.markProcessed(tree)
 
-            self.branchBuffers['EWKwVJets'][0] = 1.0
-            self.branchBuffers['EWKwVJets'][1] = 1.0
-            self.branchBuffers['EWKwVJets'][2] = 1.0
+            self._b('EWKwVJets' + self.suffix)[:] = array.array('d', [1.0, 1.0, 1.0])
+            self._b('EWKwSIG' + self.suffix)[:]   = array.array('d', [1.0, 1.0, 1.0])
+            self._b('QCDw' + self.suffix)[:]      = array.array('d', [1.0, 1.0, 1.0])
 
             if self.nano:
 
@@ -105,53 +62,44 @@ class EWKweights(object):
                 wBosonPts.sort(reverse=True)
 
                 if self.applyEWK:
+                    sf = 1.0
                     if len(zBosonPts) > 0 and len(wBosonPts) == 0:
-                        self.branchBuffers['EWKwVJets'][0] = -0.1808051+6.04146*(pow((zBosonPts[0]+759.098),-0.242556))
-                        self.branchBuffers['EWKwVJets'][1] = self.branchBuffers['EWKwVJets'][0]
-                        self.branchBuffers['EWKwVJets'][2] = self.branchBuffers['EWKwVJets'][0]
+                        sf = -0.1808051+6.04146*(pow((zBosonPts[0]+759.098),-0.242556))
                         self.stats['nZ'] += 1
                     elif len(zBosonPts) == 0 and len(wBosonPts) > 0:
-                        self.branchBuffers['EWKwVJets'][0] = -0.830041+7.93714*(pow((wBosonPts[0]+877.978),-0.213831))
-                        self.branchBuffers['EWKwVJets'][1] = self.branchBuffers['EWKwVJets'][0]
-                        self.branchBuffers['EWKwVJets'][2] = self.branchBuffers['EWKwVJets'][0]
+                        sf = -0.830041+7.93714*(pow((wBosonPts[0]+877.978),-0.213831))
                         self.stats['nW'] += 1
+                    self._b('EWKwVJets' + self.suffix)[:] = array.array('d', [sf]*3)
 
                 if len(zBosonPts) > 0 and self.sys_sample:
-                    self.branchBuffers['EWKwSIG'][0] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'nom')
-                    self.branchBuffers['EWKwSIG'][1] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'down')
-                    self.branchBuffers['EWKwSIG'][2] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'up')
+                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'nom')
+                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'down')
+                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'up')
                     self.stats['nSIG'] += 1
                 elif len(wBosonPts) > 0 and self.sys_sample:
-                    self.branchBuffers['EWKwSIG'][0] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'nom')
-                    self.branchBuffers['EWKwSIG'][1] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'down')
-                    self.branchBuffers['EWKwSIG'][2] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'up')
+                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'nom')
+                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'down')
+                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'up')
                     self.stats['nSIG'] += 1
-                else:
-                    self.branchBuffers['EWKwSIG'][0] = 1.0
-                    self.branchBuffers['EWKwSIG'][1] = 1.0
-                    self.branchBuffers['EWKwSIG'][2] = 1.0
+
             else:
                 if self.applyEWK and len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                    self.branchBuffers['EWKwVJets'][0] = -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
-                    self.branchBuffers['EWKwVJets'][1] = self.branchBuffers['EWKwVJets'][0]
-                    self.branchBuffers['EWKwVJets'][2] = self.branchBuffers['EWKwVJets'][0]
+                    self._b('EWKwVJets' + self.suffix)[0] = -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
+                    self._b('EWKwVJets' + self.suffix)[1] = self._b('EWKwVJets' + self.suffix)[0]
+                    self._b('EWKwVJets' + self.suffix)[2] = self._b('EWKwVJets' + self.suffix)[0]
                     self.stats['nZ'] += 1
 
                 if tree.nGenVbosons > 0 and self.sys_sample:
-                    self.branchBuffers['EWKwSIG'][0] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'nom')
-                    self.branchBuffers['EWKwSIG'][1] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'down')
-                    self.branchBuffers['EWKwSIG'][2] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'up')
+                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'nom')
+                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'down')
+                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'up')
                     self.stats['nSIG'] += 1
-                else:
-                    self.branchBuffers['EWKwSIG'][0] = 1.0
-                    self.branchBuffers['EWKwSIG'][1] = 1.0
-                    self.branchBuffers['EWKwSIG'][2] = 1.0
 
-            self.branchBuffers['EWKw'][0] = self.branchBuffers['EWKwSIG'][0] * self.branchBuffers['EWKwVJets'][0]    
-            self.branchBuffers['EWKw'][1] = self.branchBuffers['EWKwSIG'][1] * self.branchBuffers['EWKwVJets'][1]    
-            self.branchBuffers['EWKw'][2] = self.branchBuffers['EWKwSIG'][2] * self.branchBuffers['EWKwVJets'][2]    
-            #print isGoodEvent,  self.branchBuffers['EWKw'][0], self.branchBuffers['EWKw'][1], self.branchBuffers['EWKw'][2]
-        return isGoodEvent
+            self._b('EWKw' + self.suffix)[0] = self._b('EWKwSIG' + self.suffix)[0] * self._b('EWKwVJets' + self.suffix)[0]
+            self._b('EWKw' + self.suffix)[1] = self._b('EWKwSIG' + self.suffix)[1] * self._b('EWKwVJets' + self.suffix)[1]
+            self._b('EWKw' + self.suffix)[2] = self._b('EWKwSIG' + self.suffix)[2] * self._b('EWKwVJets' + self.suffix)[2]
+
+        return True 
 
     def signal_ewk(self, GenVbosons_pt, sample, variation):
         SF = 1.

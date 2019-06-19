@@ -88,8 +88,8 @@ if opts.task == "":
     print "Please provide a task.\n-J prep:\tpreparation of Trees\n-J sys:\t\twrite regression and systematics\n-J eval:\tcreate MVA output\n-J plot:\tproduce Plots\n-J dc:\t\twrite workspaces and datacards"
     sys.exit(123)
 
-if opts.task == "run":
-    opts.task = "sysnew"
+#if opts.task == "run":
+#    opts.task = "sysnew"
 
 
 batchSystem = None
@@ -129,9 +129,9 @@ except:
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
-configurationNeeded = not opts.task.startswith('status') and not opts.task.startswith('checklogs')
+configurationNeeded = True #not opts.task.startswith('checklogs')
 if opts.ftag == '':
-    opts.ftag = opts.task
+    opts.ftag = opts.task.replace(':','').replace('.','')
 
 if debugPrintOUts:
     print 'configs', configs
@@ -190,6 +190,12 @@ if configurationNeeded:
                     if ':=' in optValue:
                         opt = optValue.split(':=')[0]
                         value = optValue.split(':=')[1]
+                    elif '=' in optValue:
+                        splitParts = optValue.split('=')
+                        if len(splitParts) > 2:
+                            print "\x1b[31mWARNING: more than one equal sign found in expression, split at the first one! use ':=' to force split at another position!\x1b[0m"
+                        opt = optValue.split('=')[0]
+                        value = '='.join(optValue.split('=')[1:])
                     elif optValue:
                         opt = optValue.split(':')[0]
                         value = optValue.split(':')[1]
@@ -203,8 +209,12 @@ if configurationNeeded:
                 if syntaxOk:
                     if not vConfig.has_section(opt.split('.')[0]):
                         vConfig.add_section(opt.split('.')[0])
+                    if config.has_section(opt.split('.')[0]) and config.has_option(opt.split('.')[0], opt.split('.')[1]):
+                        print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+                    else:
+                        print "\x1b[31mCONFIG: ADD", opt, "=", value, "\x1b[0m"
                     vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
-                    print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+
 
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
         vConfig.write(outputFile)
@@ -297,6 +307,7 @@ submitQueueDict = {
         'hadd': 'short.q',
         'prep': 'all.q',
         'sysnew': 'all.q',
+        'run': 'all.q',
         'trainReg': 'all.q',
         'cacheplot': 'short.q',
         'runplot': 'short.q', 
@@ -711,6 +722,9 @@ if opts.task == 'count':
         chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
         chunkSizes.append([sampleIdentifier, chunkSize])
     print "---"
+    print "add the section below to your config before running the 'hadd' step!"
+    print "---"
+    print "[Hadd]"
     for sampleIdentifier, chunkSize in chunkSizes:
         print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"
@@ -722,7 +736,7 @@ if opts.task == 'count':
 # -----------------------------------------------------------------------------
 # SYSNEW: add additional branches and branches for sys variations
 # -----------------------------------------------------------------------------
-if opts.task == 'sysnew' or opts.task == 'checksysnew':
+if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
     prepOUT           = config.get("Directories", "PREPout")
@@ -809,7 +823,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew':
                 if opts.join:
                     jobDict['arguments']['join'] = ''
                 filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
-                jobName = 'sysnew_{sample}_part{part}{files}'.format(sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
+                jobName = '{task}_{sample}_part{part}{files}'.format(task=opts.task, sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
             else:
                 if allInputFilesMissing:
@@ -838,17 +852,23 @@ if opts.task.startswith('cachetraining'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
+    allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions if config.has_option(trainingRegion, 'data')], [])))
+
     print "backgrounds:"
     for sampleName in sorted(allBackgrounds):
         print " >", sampleName
     print "signals:"
     for sampleName in sorted(allSignals):
         print " >", sampleName
+    if len(allData) > 0:
+        print "data:"
+        for sampleName in sorted(allData):
+            print " >", sampleName
     
     # get samples info
     samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
-    samples = info.get_samples(allBackgrounds + allSignals)
+    samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(list(set([sample.identifier for sample in samples])), samplesList)
@@ -1184,12 +1204,9 @@ if opts.task.startswith('cachedc'):
                 print 'INFO: files do not exist yet!'
 
         # number of files to process per job
-        chunkSize = getCachingChunkSize(sample, config)
-
         # each entry in the array is for a subsample
         # use same size for all subsamples for now
-        sampleSizesList = [chunkSize for sample in samples if sample.identifier == sampleIdentifier]
-        splitFilesChunkSize = min(sampleSizesList) if len(sampleSizesList) > 0 else 3
+        splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
                 'name': sampleIdentifier, 
                 'folder': sampleFolder
@@ -1249,6 +1266,14 @@ if opts.task.startswith('rundc'):
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
+                
+                # check if shape files exist already and skip
+                if opts.skipExisting:
+                    datacard = Datacard(config=config, region=region, verbose=False)
+                    if all([os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]):
+                        print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
+                        print "INFO: > all files exist! => skip"
+                        continue
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
@@ -1256,6 +1281,7 @@ if opts.task.startswith('rundc'):
                     datacard = Datacard(config=config, region=region, verbose=False)
                     nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
                     nJobs = datacard.getNumberOfChunks(sampleIdentifier)
+
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
@@ -1358,8 +1384,8 @@ if opts.task == 'sys' or opts.task == 'syseval':
 # -----------------------------------------------------------------------------
 if opts.task == 'eval' or opts.task.startswith('eval_'):
     #repDict['queue'] = 'long.q'
-    path = config.get("Directories", "MVAin")
-    pathOUT = config.get("Directories", "MVAout")
+    path = opts.input if opts.input else "MVAin"
+    pathOUT  = opts.output if opts.output else "MVAout"
     samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samplesinfo, path)
     samplefiles = config.get('Directories', 'samplefiles')
@@ -1388,6 +1414,8 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
                     'arguments':{
                         'sampleIdentifier': sampleIdentifier,
                         'fileList': FileList.compress(splitFilesChunk),
+                        'inputDir': path, 
+                        'outputDir': pathOUT, 
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
                 })
@@ -1615,6 +1643,11 @@ if opts.task == 'sample':
             else:
                 print "----",sampleIdentifier,"----"
                 print skimTemplate
+                if opts.output:
+                    with open(opts.output, "w") as outFile:
+                        outFile.write(skimTemplate)
+                    print "----",sampleIdentifier,"----"
+                    print "written to:", opts.output
 
 if opts.task.startswith('checklogs'):
     
@@ -1704,6 +1737,7 @@ if opts.task.startswith('checklogs'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('postfitplot'):
     jobDict = repDict.copy()
+    jobDict.update({'arguments': {'regions': opts.regions}})
     jobName = 'postfitplot'
     submit(jobName, jobDict)
 
@@ -1734,6 +1768,18 @@ if opts.task.startswith('make_skims'):
             submit(jobName, jobDict)
     if nRegionsMatched < 1:
         print "WARNING: no plot regions found - nothing to do."
+
+# -----------------------------------------------------------------------------
+# config: print single, fully parsed config setting 
+# -----------------------------------------------------------------------------
+if opts.task == 'config':
+    section = opts.vars.split('.')[0]
+    value   = opts.vars.split('.')[1] 
+    if config.has_option(section, value):
+        print "RESULT: {section}.{value} = {result}".format(section=section, value=value, result=config.get(section, value))
+    else:
+        print "\x1b[31mERROR: not found: {section}.{value}\x1b[0m".format(section=section, value=value)
+
 
 # if there are still jobs in the local queue, submit them to the batch queue
 batchSystem.submitQueue()

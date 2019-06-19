@@ -15,8 +15,10 @@ class FileLocator(object):
         self.timeBetweenAttempts = 1
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
+            #print('self.xrootdRedirectors', self.xrootdRedirectors) #['root://t3dcachedb03.psi.ch:1094/']
             if len(self.xrootdRedirectors) < 1:
                 print("WARNING: empty list of xrootd redirectors given!")
+                
         except Exception as e:
             if config:
                 print (e)
@@ -26,6 +28,7 @@ class FileLocator(object):
         # needed for cases there are /store/ path accessible locally but with additional prefix path
         try:
             self.pnfsStoragePath = self.config.get('Configuration', 'pnfsStoragePath').strip()
+            #print('self.pnfsStoragePath', self.pnfsStoragePath) #.
         except:
             if config:
                 print("WARNING: no pnfs storage path given!")
@@ -33,10 +36,12 @@ class FileLocator(object):
 
         # if redirector is given as argument, use it as the main redirector
         if xrootdRedirector:
+            #print('xrootdRedirector')
             if self.xrootdRedirectors:
                 self.xrootdRedirectors = [xrootdRedirector]+self.xrootdRedirectors
             else:
                 self.xrootdRedirectors = [xrootdRedirector]
+        #print('self.xrootdRedirectors', self.xrootdRedirectors) #['root://t3dcachedb03.psi.ch:1094/']
 
         # use python bindings for xrootd (can be disabled setting the 'usePythonXrootD' option to False
         self.usePythonXrootD = eval(self.config.get('Configuration', 'usePythonXrootD')) if self.config and self.config.has_option('Configuration', 'usePythonXrootD') else True
@@ -61,6 +66,7 @@ class FileLocator(object):
         self.remotePrefixes = [self.storagePathPrefix, self.pnfsPrefix]
         if self.config and self.config.has_option('Configuration', 'remotePrefixes'):
             self.remotePrefixes = self.config.get('Configuration', 'remotePrefixes').split(',')
+        #print('self.remotePrefixes', self.remotePrefixes)  #self.remotePrefixes ['/store/', '/pnfs/']
 
         # TODO: use XrootD python bindings
         self.remoteStatDirectory = 'xrdfs {server} stat -q IsDir {path}'

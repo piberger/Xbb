@@ -77,6 +77,8 @@ class PUweight(object):
             for k,v in histogramData.iteritems():
                 if v:
                     self.branches.append({'name': self.puWeightName + (('_'+k) if k != 'Nominal' else ''), 'formula': self.getPUweight, 'arguments': {'sys': k}})
+            print('dictionary_pu',self.puWeightLUT)
+
 
     def getBranches(self):
         return self.branches
@@ -90,5 +92,6 @@ class PUweight(object):
             PUweight = self.puWeightLUT[arguments['sys']][self.puWeightLUTmax]
         else:
             PUweight = self.puWeightLUT[arguments['sys']][int(pu)]
+        print('new_weight', PUweight)
         return PUweight
 
