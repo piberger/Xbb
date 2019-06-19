@@ -15,8 +15,7 @@ import gc
 from XbbConfig import XbbConfigReader, XbbConfigTools
 import BetterConfigParser
 from sample_parser import ParseInfo
-#from sampleTree import SampleTree
-
+import hashlib
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -66,6 +65,8 @@ class SampleTree(object):
         # {'name': 'DNN_reeval_v2', 'tree': tree, 'treeName': 'Events'}
         self.friends = []
         self.friendTreeIndex = ['run', 'event']
+        # keep list of all temporary files to be deleted when processing finishes
+        self.temporaryFiles = []
 
         # process only partial sample root file list
         self.splitFilesChunkSize = splitFilesChunkSize
@@ -352,7 +353,7 @@ class SampleTree(object):
             sampleFileNamesFriend.append(friendFileName)
         return sampleFileNamesFriend
 
-    def addFriend(self, directory, treeName='Events_f', index=None, name='<friend>', alias=None):
+    def addFriend(self, directory, treeName='Events_f', index=None, name='<friend>', alias=None, copy=False):
         if not index:
             index = ['run', 'event']
 
@@ -364,7 +365,24 @@ class SampleTree(object):
 
         sampleFileNamesFriend = self.getFriendTreeFileNames(directory)
         for fileName in sampleFileNamesFriend:
-            friend['tree'].Add(fileName + '/' + treeName)
+            # set copy=True is useful in case the number of concurrent connections to storage is a bottleneck
+            if copy:
+                scratchDir = self.config.get('Directories','scratch') + '/friendTreeCache/'
+                try:
+                    os.makedirs(scratchDir)
+                except:
+                    pass
+                fileNameHash = hashlib.sha224(fileName).hexdigest()
+                tempFileName = scratchDir + '/' + fileNameHash + '_as_' + (alias if alias is not None else 'friendTree') + '.root' 
+                if os.path.isfile(tempFileName):
+                    self.fileLocator.rm(tempFileName)
+                self.fileLocator.cp(fileName, tempFileName, force=True)
+                friend['tree'].Add(tempFileName + '/' + treeName)
+                self.temporaryFiles.append(tempFileName)
+                if self.debug:
+                    print("DEBUG: copied to temporary file:", tempFileName)
+            else:
+                friend['tree'].Add(fileName + '/' + treeName)
 
         #friend['tree'].BuildIndex()
         if alias is not None:
@@ -1025,6 +1043,17 @@ class SampleTree(object):
             passedSelectionFraction = 100.0*outputTree['passed']/self.eventsRead if self.eventsRead>0 else '?'
             print (' > \x1b[34m{name}\x1b[0m {passed} ({fraction}%) => {outputFile}'.format(name=outputTree['name'], passed=outputTree['passed'], fraction=passedSelectionFraction, outputFile=outputTree['fileName']))
         sys.stdout.flush()
+
+        # delete temporary files
+        for tempFileName in self.temporaryFiles:
+            try:
+                if os.path.isfile(tempFileName):
+                    self.fileLocator.rm(tempFileName)
+                    if self.debug:
+                        print("DEBUG: delete ", tempFileName)
+            except:
+                pass
+
 
     @staticmethod
     def countSampleFiles(samples):

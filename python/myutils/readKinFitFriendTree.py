@@ -21,7 +21,8 @@ class readKinFitFriendTree(AddCollectionsModule):
         self.sampleTree = initVars['sampleTree']
 
         # each tree needs a unique alias
-        self.sampleTree.addFriend(self.directory, alias="Events_" + self.hash)
+        # copy files to scratch first to keep number of concurrent connections to storage element as low as possible
+        self.sampleTree.addFriend(self.directory, alias="Events_" + self.hash, copy=True)
 
         # unfortunately friend trees are not copied by CloneTree and getattr() also doesn't work in pyROOT :-(
         # pretty ugly hack
