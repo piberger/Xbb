@@ -125,6 +125,7 @@ class SampleTreesToNumpyConverter(object):
         weightF = self.config.get('Weights','weightF')
 
         weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
+        eventNumberStat = []
 
         for i,category in enumerate(categories):
             if self.testRun:
@@ -213,6 +214,7 @@ class SampleTreesToNumpyConverter(object):
                             #    for j, feature in enumerate(feature_s):
                             #        inputData_sys[k][i,j] = sampleTree.evaluate(feature)
                         print("\x1b[43mINFO:", sample, ":", nMCevents, "MC events ->", sumOfWeights, "\x1b[0m")
+                        eventNumberStat.append([sample, nMCevents, sumOfWeights])
                         arrayLists[datasetName].append(inputData)
                         #for sys in systematics:
                         #    arrayLists_sys[sys][datasetName].append(inputData_sys[sys])
@@ -326,13 +328,15 @@ class SampleTreesToNumpyConverter(object):
             success = True
         except Exception as e:
             print("ERROR: writing HDF5 file failed.", e)
+        
+        eventNumberStat.sort(key = lambda x: x[0].identifier)
+        print("MC stats:")
+        for es in eventNumberStat:
+            print(es[0].identifier.ljust(50), ("%d"%es[1]).ljust(10), ("%1.4f"%es[2]).ljust(10))
+        print("*"*80)
 
-        if success:
-            print("INFO: done.")
-            return True
-        else:
-            print("ERROR: no output file written")
-            return False
+        print("INFO: done." if success else "ERROR: no output file written")
+        return success
 
     def saveAsPickledNumpy(self, outputFileName):
         with gzip.open(outputFileName, 'wb') as outputFile:
