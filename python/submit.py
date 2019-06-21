@@ -845,6 +845,46 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
             else:
                 print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files wrt the current prepOUT path for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
 
+
+# -----------------------------------------------------------------------------
+# EFFICIENCY: compare event counts between two sets of trees 
+# -----------------------------------------------------------------------------
+if opts.task == 'efficiency':
+
+    # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
+    pathIN            = config.get("Directories", opts.input if opts.input else "SYSin") 
+    pathOUT           = config.get("Directories", opts.output if opts.output else "SYSout")
+    samplefiles       = config.get('Directories','samplefiles')
+    samplesinfo       = config.get('Directories', 'samplesinfo')
+    info              = ParseInfo(samplesinfo, pathIN)
+    sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
+
+    print "INPUT:", pathIN
+    print "OUTPUT:", pathOUT
+
+    for sampleIdentifier in sampleIdentifiers:
+         sampleFileList = filelist(samplefiles, sampleIdentifier)
+         print '---', sampleIdentifier, '---'
+         for fileName in sampleFileList:
+            fileNameIn  = "{path}/{subfolder}/{filename}".format(path=pathIN,  subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))
+            fileNameOut = "{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))
+
+            f1 = ROOT.TFile.Open(fileNameIn)
+            f2 = ROOT.TFile.Open(fileNameOut)
+
+            n1 = f1.Get('Events').GetEntries()
+            n2 = f2.Get('Events').GetEntries()
+
+            if n1==n2:
+                status = '\x1b[42m100%\x1b[0m'
+            else:
+                status = '\x1b[41m%d > %d = %1.3f\x1b[0m'%(n1, n2, 100.0 * n2/n1)
+            print fileNameIn, fileNameOut
+            print fileName, n1, n2, status
+
+            f1.Close()
+            f2.Close()
+
 # -----------------------------------------------------------------------------
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 
 # -----------------------------------------------------------------------------

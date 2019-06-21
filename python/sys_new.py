@@ -195,6 +195,9 @@ class XbbRun:
                         # add callbacks if the objects provides any
                         if hasattr(wObject, "processEvent") and callable(getattr(wObject, "processEvent")):
                             sampleTree.addCallback('event', wObject.processEvent)
+                        for cb in ["finish", "prepareOutput"]:
+                            if hasattr(wObject, cb) and callable(getattr(wObject, cb)):
+                                sampleTree.addCallback(cb, getattr(wObject, cb))
 
                         # add branches
                         if hasattr(wObject, "getBranches") and callable(getattr(wObject, "getBranches")):

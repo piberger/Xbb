@@ -201,6 +201,7 @@ class SampleTree(object):
                         # add file to chain
                         if rootFileName in self.sampleFileNamesToProcess:
                             chainTree = '%s/%s'%(remoteRootFileName.strip(), self.treeName.strip())
+
                             if self.debug:
                                 print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
                             statusCode = self.tree.Add(chainTree)   
@@ -667,16 +668,12 @@ class SampleTree(object):
     
     # set callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def setCallback(self, category, fcn):
-        if category not in ['event']:
-            raise Exception("CallbackEventDoesNotExist")
         if category in self.callbacks:
             print("WARNING: callback function for ", category, " is overwritten!")
         self.callbacks[category] = [fcn]
 
     # add callback function, which MUST return a boolean. To continue processing this event, the function must return True. False means skip this event!
     def addCallback(self, category, fcn):
-        if category not in ['event']:
-            raise Exception("CallbackEventDoesNotExist")
         if category not in self.callbacks:
              self.callbacks[category] = []
         self.callbacks[category].append(fcn)
@@ -747,6 +744,21 @@ class SampleTree(object):
         print("INFO: reduced number of enabled branches from", len(listOfExistingBranches), " to", len(enabledBranches), " (branches with wildcards may not be correctly counted)")
         if self.verbose:
             print ("INFO: branches:", BranchList(enabledBranches).getShortRepresentation())
+
+    # ------------------------------------------------------------------------------
+    # run callbacks registered for output trees 
+    # ------------------------------------------------------------------------------
+    def _runCallbacks(self, name):
+        if name in self.callbacks:
+            for fcn in self.callbacks[name]:
+                fcn()
+
+        for outputTree in self.outputTrees:
+            if outputTree['callbacks'] and name in outputTree['callbacks']:
+                try:
+                    outputTree['callbacks'][name]()
+                except Exception as e:
+                    print("\x1b[31mWARNING: exception during '", name, "' callback:", e, "\x1b[0m")
 
     # ------------------------------------------------------------------------------
     # if self.sequentialProcessing is enabled, the input tree is traversed
@@ -828,6 +840,9 @@ class SampleTree(object):
         # now disable all branches, which will be e.g. recomputed
         for branchName in self.removeBranches:
             self.SetBranchStatus(branchName, 0)
+        
+        # callbacks before loop
+        self._runCallbacks('prepareOutput')
 
         # initialize the output trees, this has to be called after the calls to SetBranchStatus
         for outputTree in self.outputTrees:
@@ -850,6 +865,7 @@ class SampleTree(object):
                 outputTree['friend']['addr_event'] = array.array('l', [-1])
                 outputTree['tree'].Branch('run', outputTree['friend']['addr_run'], 'run/i')
                 outputTree['tree'].Branch('event', outputTree['friend']['addr_event'], 'event/l')
+                print("INFO: create friend tree!")
             else:
                 outputTree['tree'] = self.tree.CloneTree(0)
             # can be used to reduce memory consumption
@@ -908,9 +924,7 @@ class SampleTree(object):
                 ))
 
         # callbacks before loop
-        for outputTree in self.outputTrees:
-            if outputTree['callbacks'] and 'beforeLoop' in outputTree['callbacks']:
-                outputTree['callbacks']['beforeLoop']()
+        self._runCallbacks('beforeLoop')
 
         print ("------------------")
         print (" start processing ")
@@ -1002,6 +1016,9 @@ class SampleTree(object):
         perfStats = 'INPUT: {erps:1.4f}/s, OUTPUT: {ewps:1.4f}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
         print('INFO: throughput:', perfStats)
         sys.stdout.flush()
+        
+        # callbacks after loop 
+        self._runCallbacks('finish')
 
         # build indices for friend trees
         for outputTree in self.outputTrees:
@@ -1012,6 +1029,9 @@ class SampleTree(object):
                 if indexStatus < 0:
                     print("\x1b[31mERROR: building the index of friend tree failed with status ", indexStatus, "\x1b[0m")
                     raise Exception("sampleTree__process_do__build_index_failed")
+        
+        # callbacks before write
+        self._runCallbacks('beforeWrite')
 
         # write files
         for outputTree in self.outputTrees:
@@ -1029,12 +1049,7 @@ class SampleTree(object):
             print('INFO: trees in memory destroyed!')
 
         # callbacks after having written file
-        for outputTree in self.outputTrees:
-            if outputTree['callbacks'] and 'afterWrite' in outputTree['callbacks']:
-                try:
-                    outputTree['callbacks']['afterWrite']()
-                except Exception as e:
-                    print("\x1b[31mWARNING: exception during callback:", e, "\x1b[0m")
+        self._runCallbacks('afterWrite')
 
         print('INFO: done. time ', time.ctime(), ' events read:', self.eventsRead)
         sys.stdout.flush()

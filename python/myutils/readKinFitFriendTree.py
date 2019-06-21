@@ -11,14 +11,24 @@ class readKinFitFriendTree(AddCollectionsModule):
     def __init__(self, directory, name='Events_f', systematics='Nominal'):
         self.directory = directory
         self.systematics = [(x if x != 'Nominal' else '') for x in systematics.strip().split(' ')]
+        self.systematicsData = ['Nominal']
         self.name = name
         super(readKinFitFriendTree, self).__init__()
         self.first = True
+        self.enabled = True
         self.hash = '%d'%hash(','.join(self.systematics)) 
 
     def customInit(self, initVars):
         self.tree = initVars['tree']
         self.sampleTree = initVars['sampleTree']
+        self.sample = initVars['sample']
+
+        if self.sample.isData():
+            self.systematics = [x for x in self.systematics if x in self.systematicsData]
+
+        if len(self.systematics) < 1:
+            self.enabled = False
+            return
 
         # each tree needs a unique alias
         # copy files to scratch first to keep number of concurrent connections to storage element as low as possible
@@ -37,7 +47,7 @@ class readKinFitFriendTree(AddCollectionsModule):
 
 
     def processEvent(self, tree):
-        if not self.hasBeenProcessed(tree):
+        if not self.hasBeenProcessed(tree) and self.enabled:
             self.markProcessed(tree)
 
             if self.first:
@@ -51,4 +61,9 @@ class readKinFitFriendTree(AddCollectionsModule):
             for k in self.branchBuffers.keys():
                 self._b(k)[0] = int(self.sampleTree.evaluate(k)) if type(self._b(k)[0]) == int else self.sampleTree.evaluate(k)
 
+    def finish(self):
+        for t in self.sampleTree.outputTrees:
+            fl = t['tree'].GetListOfFriends()
+            if fl:
+                fl.Delete()
 
