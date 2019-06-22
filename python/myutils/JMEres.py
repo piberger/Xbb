@@ -190,6 +190,8 @@ class JMEres(object):
                 [3.2,4.7,36.49,42.52,6,15,3000,6.235,0.1408,0.0001266,-0.08163]
                 ]
             self.formula =  ROOT.TFormula("f", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])")
+            self.rhoMin = 0.0
+            self.rhoMax = 42.52
         elif self.year == 2018:
             #from https://github.com/cms-jet/JRDatabase/blob/master/textFiles/Autumn18_V4_DATA/Autumn18_V4_DATA_PtResolution_AK4PFchs.txt 
             self.table = [
@@ -377,6 +379,8 @@ class JMEres(object):
                 [3.2,4.7,36.49,42.52,6,15,3000,6.235,0.1408,0.0001266,-0.08163],
                     ]
             self.formula =  ROOT.TFormula("f", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])")
+            self.rhoMin = 0.0
+            self.rhoMax = 42.52
         elif self.year == 2016:
             # from https://github.com/cms-jet/JRDatabase/blob/master/textFiles/Summer16_25nsV1_DATA/Summer16_25nsV1_DATA_PtResolution_AK4PFchs.txt
             self.table = [
@@ -564,6 +568,8 @@ class JMEres(object):
                 [3.2,4.7,35.19,40.9,6,15,3000,5.753,0.2337,0.0002982,-0.3108],
                 ]
             self.formula =  ROOT.TFormula("f", "sqrt([0]*abs([0])/(x*x)+[1]*[1]*pow(x,[3])+[2]*[2])")
+            self.rhoMin = 0.0
+            self.rhoMax = 40.9
         else:
             print("ERROR: year=", self.year, "is unknown.")
             raise Exception("JMEResError")
@@ -571,7 +577,7 @@ class JMEres(object):
 
     def eval(self, eta, rho, pt):
         eta = max(min(eta, 4.7), -4.7)
-        rho = max(min(rho, 42.52), 0.0)
+        rho = max(min(rho, self.rhoMax), self.rhoMin)
 
         for line in self.table:
             if eta >= line[0] and eta <= line[1] and rho >= line[2] and rho <= line[3]:
@@ -592,5 +598,6 @@ if __name__ == "__main__":
         print("res",year,"is", jmeRes.eval(0.8, 30.0, 123.0))
         print("res",year,"is", jmeRes.eval(0.8, 30.0, 1230.0))
         print("res",year,"is", jmeRes.eval(0.8, 30.0, 12300.0))
+        print("res",year,"is", jmeRes.eval(4.8, 50.0, 50.0))
 
 

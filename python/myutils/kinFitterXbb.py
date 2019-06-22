@@ -58,13 +58,15 @@ def fit_lepton(v, ptErr):
 # https://github.com/capalmer85/AnalysisTools/blob/master/python/kinfitter.py
 class kinFitterXbb(AddCollectionsModule):
 
-    def __init__(self, year):
+    def __init__(self, year, branchName="kinFit", useMZconstraint=True):
+        self.branchName = branchName
+        self.useMZconstraint = useMZconstraint
         self.debug = False
         self.enabled = True
         self.year = year
         self.HH4B_RES_SCALE = 0.62
         self.LLVV_PXY_VAR = 8.0**2 
-        self.Z_MASS = 91.1876
+        self.Z_MASS = 91.0
         self.Z_WIDTH = 1.7*3
         self.systematics = None
         super(kinFitterXbb, self).__init__()
@@ -93,7 +95,6 @@ class kinFitterXbb(AddCollectionsModule):
         self.jetResolution = JMEres(year=self.year)
 
     def customInit(self, initVars):
-        self.branchName = "kinFit"
         self.sample = initVars['sample']
         self.config = initVars['config']
         if self.systematics is None:
@@ -106,7 +107,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.bDict = {}
         for syst in self.systematics:
             self.bDict[syst] = {}
-            for n in ['H_mass_fit', 'H_eta_fit', 'H_phi_fit', 'H_pt_fit', 'HVdPhi_fit', 'jjVPtRatio_fit', 'hJets_pt_0_fit', 'hJets_pt_1_fit', 'V_pt_fit', 'V_eta_fit', 'V_phi_fit', 'V_mass_fit', 'H_mass_sigma_fit']:
+            for n in ['H_mass_fit', 'H_eta_fit', 'H_phi_fit', 'H_pt_fit', 'HVdPhi_fit', 'jjVPtRatio_fit', 'hJets_pt_0_fit', 'hJets_pt_1_fit', 'V_pt_fit', 'V_eta_fit', 'V_phi_fit', 'V_mass_fit', 'H_mass_sigma_fit','H_pt_sigma_fit', 'hJets_pt_0_sigma_fit', 'hJets_pt_1_sigma_fit', 'H_pt_corr_fit']:
                 branchNameFull = self.branchName + "_" + n + ('_' + syst if len(syst) > 0 else '')
                 self.bDict[syst][n] = branchNameFull
                 self.addBranch(branchNameFull)
@@ -235,7 +236,8 @@ class kinFitterXbb(AddCollectionsModule):
                 # setup fitter
                 fitter = ROOT.TKinFitter()
                 fitter.addMeasParticles(fit_j1, fit_j2, fit_l1, fit_l2, fit_recoil)
-                fitter.addConstraint(cons_MZ)
+                if self.useMZconstraint:
+                    fitter.addConstraint(cons_MZ)
                 fitter.addConstraint(cons_x)
                 fitter.addConstraint(cons_y)
 
@@ -260,28 +262,59 @@ class kinFitterXbb(AddCollectionsModule):
                 fit_result_l2 = fitter.get4Vec(3)
                 fit_result_V = fit_result_l1 + fit_result_l2
 
-                self._b(self.bDict[syst]['H_pt_fit'])[0] = fit_result_H.Pt() if kinfit_fit == 1 else tree.H_pt
-                self._b(self.bDict[syst]['H_eta_fit'])[0] = fit_result_H.Eta() if kinfit_fit == 1 else tree.H_eta
-                self._b(self.bDict[syst]['H_phi_fit'])[0] = fit_result_H.Phi() if kinfit_fit == 1 else tree.H_phi
-                self._b(self.bDict[syst]['H_mass_fit'])[0] = fit_result_H.M() if kinfit_fit == 1 else tree.H_mass
-                self._b(self.bDict[syst]['V_pt_fit'])[0] = fit_result_V.Pt() if kinfit_fit == 1 else tree.V_pt
-                self._b(self.bDict[syst]['V_eta_fit'])[0] = fit_result_V.Eta() if kinfit_fit == 1 else tree.V_eta
-                self._b(self.bDict[syst]['V_phi_fit'])[0] = fit_result_V.Phi() if kinfit_fit == 1 else tree.V_phi
-                self._b(self.bDict[syst]['V_mass_fit'])[0] = fit_result_V.M() if kinfit_fit == 1 else tree.V_mass
-
-                self._b(self.bDict[syst]['HVdPhi_fit'])[0] = abs(fit_result_H.Phi() - fit_result_V.Phi()) if kinfit_fit == 1 else abs(tree.H_phi - tree.V_phi)
-                self._b(self.bDict[syst]['jjVPtRatio_fit'])[0] = fit_result_H.Pt()/fit_result_V.Pt() if kinfit_fit == 1 else tree.H_pt/tree.V_pt
-                self._b(self.bDict[syst]['hJets_pt_0_fit'])[0] = fit_result_j1.Pt()
-                self._b(self.bDict[syst]['hJets_pt_1_fit'])[0] = fit_result_j2.Pt()
-
                 self._b(self.bDict[syst]['status'])[0] = kinfit_fit
-                self._b(self.bDict[syst]['n_recoil_jets_fit'])[0] = len(recoil_jets)
 
-                # higgs mass uncertainty
-                cov_fit = fitter.getCovMatrixFit()
-                dmH_by_dpt1 = ( (fit_result_H.X())*np.cos(fit_result_j1.Phi()) + (fit_result_H.Y())*np.sin(fit_result_j1.Phi()) )/fit_result_H.M()
-                dmH_by_dpt2 = ( (fit_result_H.X())*np.cos(fit_result_j2.Phi()) + (fit_result_H.Y())*np.sin(fit_result_j2.Phi()) )/fit_result_H.M()
-                self._b(self.bDict[syst]['H_mass_sigma_fit'])[0] = ( dmH_by_dpt1**2          * cov_fit(0,0)
-                                        + dmH_by_dpt2**2          * cov_fit(3,3)
-                                        + dmH_by_dpt1*dmH_by_dpt2 * cov_fit(0,3) )**.5 if kinfit_fit == 1 else -1.0
+                if kinfit_fit == 1 and fit_result_H.M() > 0:
+                    self._b(self.bDict[syst]['H_pt_fit'])[0]          = fit_result_H.Pt()
+                    self._b(self.bDict[syst]['H_eta_fit'])[0]         = fit_result_H.Eta()
+                    self._b(self.bDict[syst]['H_phi_fit'])[0]         = fit_result_H.Phi()
+                    self._b(self.bDict[syst]['H_mass_fit'])[0]        = fit_result_H.M()
+                    self._b(self.bDict[syst]['V_pt_fit'])[0]          = fit_result_V.Pt()
+                    self._b(self.bDict[syst]['V_eta_fit'])[0]         = fit_result_V.Eta()
+                    self._b(self.bDict[syst]['V_phi_fit'])[0]         = fit_result_V.Phi()
+                    self._b(self.bDict[syst]['V_mass_fit'])[0]        = fit_result_V.M()
+
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(fit_result_H.Phi() - fit_result_V.Phi())
+                    self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = fit_result_H.Pt()/fit_result_V.Pt()
+                    self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = fit_result_j1.Pt()
+                    self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = fit_result_j2.Pt()
+
+                    self._b(self.bDict[syst]['n_recoil_jets_fit'])[0] = len(recoil_jets)
+                    
+                    # higgs mass uncertainty
+                    cov_fit = fitter.getCovMatrixFit()
+                    dmH_by_dpt1 = ( (fit_result_H.X())*np.cos(fit_result_j1.Phi()) + (fit_result_H.Y())*np.sin(fit_result_j1.Phi()) )/fit_result_H.M()
+                    dmH_by_dpt2 = ( (fit_result_H.X())*np.cos(fit_result_j2.Phi()) + (fit_result_H.Y())*np.sin(fit_result_j2.Phi()) )/fit_result_H.M()
+                    self._b(self.bDict[syst]['H_mass_sigma_fit'])[0] = ( dmH_by_dpt1**2          * cov_fit(0,0)
+                                            + dmH_by_dpt2**2          * cov_fit(3,3)
+                                            + dmH_by_dpt1*dmH_by_dpt2 * cov_fit(0,3) )**.5
+
+                    # Higgs pT uncertainty
+                    self._b(self.bDict[syst]['hJets_pt_0_sigma_fit'])[0] = cov_fit(0,0)**0.5
+                    self._b(self.bDict[syst]['hJets_pt_1_sigma_fit'])[0] = cov_fit(3,3)**0.5
+                    self._b(self.bDict[syst]['H_pt_corr_fit'])[0]        = cov_fit(0,3) / ( (cov_fit(0,0)*cov_fit(3,3))**0.5 )
+                    self._b(self.bDict[syst]['H_pt_sigma_fit'])[0]       = (cov_fit(0,0) + cov_fit(3,3) + 2.0*cov_fit(0,3) )**0.5
+                else:
+                    # fallback
+                    self._b(self.bDict[syst]['H_pt_fit'])[0]          = tree.H_pt
+                    self._b(self.bDict[syst]['H_eta_fit'])[0]         = tree.H_eta
+                    self._b(self.bDict[syst]['H_phi_fit'])[0]         = tree.H_phi
+                    self._b(self.bDict[syst]['H_mass_fit'])[0]        = tree.H_mass
+                    self._b(self.bDict[syst]['V_pt_fit'])[0]          = tree.V_pt
+                    self._b(self.bDict[syst]['V_eta_fit'])[0]         = tree.V_eta
+                    self._b(self.bDict[syst]['V_phi_fit'])[0]         = tree.V_phi
+                    self._b(self.bDict[syst]['V_mass_fit'])[0]        = tree.V_mass
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(tree.H_phi - tree.V_phi)
+                    self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = tree.H_pt/tree.V_pt
+                    self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = pt_reg[hJidx[0]] 
+                    self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = pt_reg[hJidx[1]]
+
+                    self._b(self.bDict[syst]['n_recoil_jets_fit'])[0] = -1 
+                    self._b(self.bDict[syst]['H_mass_sigma_fit'])[0]  = -1
+
+                    self._b(self.bDict[syst]['hJets_pt_0_sigma_fit'])[0] = -1
+                    self._b(self.bDict[syst]['hJets_pt_1_sigma_fit'])[0] = -1
+                    self._b(self.bDict[syst]['H_pt_corr_fit'])[0]        = -1
+                    self._b(self.bDict[syst]['H_pt_sigma_fit'])[0]       = -1
+
 

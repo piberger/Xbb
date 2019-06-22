@@ -24,7 +24,7 @@ class readKinFitFriendTree(AddCollectionsModule):
         self.sample = initVars['sample']
 
         if self.sample.isData():
-            self.systematics = [x for x in self.systematics if x in self.systematicsData]
+            self.systematics = [x for x in self.systematics if x in self.systematicsData or x == '']
 
         if len(self.systematics) < 1:
             self.enabled = False
