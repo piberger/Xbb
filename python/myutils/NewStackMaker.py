@@ -737,6 +737,7 @@ class NewStackMaker:
 
             # print n events and weights for each sample
             keys = list(set(sorted([histogram['name'] for histogram in self.histograms])))
+            keys.sort()
             for key in keys:
                 print(key.ljust(50),("%d"%self.histoCounts['unweighted'][key]).ljust(10), ("%f"%self.histoCounts['weighted'][key]).ljust(10))
 
@@ -757,15 +758,22 @@ class NewStackMaker:
 
             #print('self.groupCounts[weighted] is',self.groupCounts['weighted'])
             keys = list(set(sorted([histogram['group'] for histogram in self.histograms])))
+            keys.sort()
             for key in keys:
-                #print('groupName is', key)
                 print(key.ljust(50),("%d"%self.groupCounts['unweighted'][key]).ljust(10), ("%f"%self.groupCounts['weighted'][key]).ljust(10))
 
-	    sum = 0
-            for key in keys:
-                sum = self.groupCounts['weighted'][key] + sum
+            wSumMC = sum([self.groupCounts['weighted'][key] for key in keys if key!=dataGroupName], 0)
+            wSumData = sum([self.groupCounts['weighted'][key] for key in keys if key==dataGroupName], 0)
 
-            print('total weighted events are:', sum)
+            print('--------------------')
+            # makes no sense but keep this line for compatibility reason 
+            wSum = wSumMC + wSumData
+            print('total weighted events are:', wSum)
+
+            print('total weighted MC events are:', wSumMC)
+            print('total data yield is:', wSumData)
+            print('data/MC ratio:', '%1.4f'%(wSumData/wSumMC))
+
         except Exception as e:
             print("ERROR: could not obtain counts (not implemented for TGraphAsymErrors yet)", e)
 
