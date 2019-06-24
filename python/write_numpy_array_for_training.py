@@ -311,6 +311,10 @@ class SampleTreesToNumpyConverter(object):
         if not os.path.exists("./dumps"):
             os.makedirs("dumps")
         baseName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '_' + datetime.datetime.now().strftime("%y%m%d")
+
+        if config.has_option('MVAGeneral','ntupleVersion'):
+            baseName += '_' + config.get('MVAGeneral','ntupleVersion')
+
         numpyOutputFileName = baseName + '.dmpz'
         hdf5OutputFileName = baseName + '.h5'
         print("INFO: saving output...")
@@ -332,7 +336,7 @@ class SampleTreesToNumpyConverter(object):
         eventNumberStat.sort(key = lambda x: x[0].identifier)
         print("MC stats:")
         for es in eventNumberStat:
-            print(es[0].identifier.ljust(50), ("%d"%es[1]).ljust(10), ("%1.4f"%es[2]).ljust(10))
+            print(es[0].identifier.ljust(50), es[0].name.ljust(20), ("%d"%es[1]).ljust(10), ("%1.4f"%es[2]).ljust(10))
         print("*"*80)
 
         print("INFO: done." if success else "ERROR: no output file written")
