@@ -27,7 +27,7 @@ class CacheTraining(object):
         self.backgroundSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'backgrounds')) for trainingRegion in self.trainingRegions], [])))
         self.signalSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'signals')) for trainingRegion in self.trainingRegions], [])))
         # can include DATA in the .h5 files for training
-        self.dataSampleNames = eval(self.config.get(trainingRegion, 'data')) if self.config.has_option(trainingRegion, 'data') else []
+        self.dataSampleNames = list(set(sum([eval(self.config.get(trainingRegion, 'data')) if self.config.has_option(trainingRegion, 'data') else []  for trainingRegion in self.trainingRegions], [])))
         self.samples = self.samplesInfo.get_samples(list(set(self.backgroundSampleNames + self.signalSampleNames + self.dataSampleNames)))
 
         self.trainingRegionsDict = {}
