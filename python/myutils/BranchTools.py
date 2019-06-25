@@ -52,6 +52,26 @@ class TreeFormulas(object):
     def getBranches(self):
         return sum([x.getBranches() for x in self.formulas],[])
 
+class newCutBranches(object):
+    def __init__(self, formulaDict):
+        self.formulas = []
+        self.formulaDict = formulaDict
+
+    def customInit(self, initVars):
+        self.config = initVars['config']
+        for k,v in self.formulaDict.iteritems():
+            print 'k,v', k,v
+            if v == 'dc':
+                self.formulas.append(TreeFormula(k, self.config.get('Cuts',self.config.get(v+':'+k, 'cut'))))
+            #print 'v is', v
+            else:
+                self.formulas.append(TreeFormula(k, self.config.get(v, k)))
+        for x in self.formulas:
+            x.customInit(initVars)
+    
+    def getBranches(self):
+        return sum([x.getBranches() for x in self.formulas],[])
+
 
 class Copy(object):
 
