@@ -759,6 +759,7 @@ class SampleTree(object):
                     outputTree['callbacks'][name]()
                 except Exception as e:
                     print("\x1b[31mWARNING: exception during '", name, "' callback:", e, "\x1b[0m")
+                    raise
 
     # ------------------------------------------------------------------------------
     # if self.sequentialProcessing is enabled, the input tree is traversed
