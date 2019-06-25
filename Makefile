@@ -10,8 +10,7 @@ interface/Rochester2016_h.so: interface/Rochester2016.h
 	cd interface && root -b -l -q ../init_rochester.cc && cd ..
 
 interface/TKinFitter_cc.so:
-	export ROOT_INCLUDE_PATH=$$CMSSW_BASE/src/Xbb/:$$ROOT_INCLUDE_PATH
-	cd interface && root -b -l -q ../init_kinfitter.cc && cd ..
+	cd interface && ROOT_INCLUDE_PATH=$$CMSSW_BASE/src/Xbb/:$$ROOT_INCLUDE_PATH root -b -l -q ../init_kinfitter.cc && cd ..
 
 clean:
 	 rm interface/VHbbNameSpace_h.so
