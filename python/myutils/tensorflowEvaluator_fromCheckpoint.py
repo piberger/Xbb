@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import ROOT
 import numpy as np
 from Jet import Jet
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 import sys
+import os
+import json
 sys.path.append("..")
-sys.path.append("../tfZllDNN/")
 sys.path.append("../tfVHbbDNN/")
 
 # tfZllDNN repository has to be cloned inside the python folder
@@ -27,10 +29,32 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.config = initVars['config']
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
-        self.tensorflowConfig = self.config.get(self.mvaName, 'tensorflowConfig') if self.config.has_option(self.mvaName, 'tensorflowConfig') else None
-        self.scalerDump = self.config.get(self.mvaName, 'scalerDump') if self.config.has_option(self.mvaName, 'scalerDump') else '/'.join(self.tensorflowConfig.split('/')[:-1]) + '/scaler.dmp'
-        self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else '/'.join(self.tensorflowConfig.split('/')[:-1]) + '/checkpoints/model.ckpt'
+
+        self.scalerDump = self.config.get(self.mvaName, 'scalerDump') if self.config.has_option(self.mvaName, 'scalerDump') else None
+        self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else None
         self.branchName = self.config.get(self.mvaName, 'branchName')
+
+        if self.checkpoint is None:
+            print("\x1b[31mERROR: 'checkpoint' option missing for MVA config section [%s]! .../model.ckpt has to be specified to be able to restore classifier.\x1b[0m"%self.mvaName)
+            raise Exception("CheckpointError")
+
+        if self.scalerDump is not None and not os.path.isfile(self.scalerDump):
+            self.scalerDump = None
+
+        if os.path.isdir(self.checkpoint):
+            self.checkpoint += '/model.ckpt' 
+
+        if not os.path.isfile(self.checkpoint + '.meta'):
+            print("\x1b[31mERROR: can't restore from graph! .meta file not found in checkpoint:", self.checkpoint, "\x1b[0m")
+            raise Exception("CheckpointError")
+
+        # INFO file (with training parameters)
+        if os.path.isfile(self.checkpoint + '.info'):
+            with open(self.checkpoint + '.info', 'r') as infoFile:
+                self.info = json.load(infoFile)
+        else:
+            print("WARNING: (optional) .info file not found in checkpoint!")
+            self.info = {}
 
         # CLASSES
         self.classes = eval(self.config.get(self.mvaName, 'classes')) if self.config.has_option(self.mvaName, 'classes') else None
@@ -43,7 +67,25 @@ class tensorflowEvaluator(AddCollectionsModule):
                 self.nClasses = 1
         
         # FEATURES
-        self.nFeatures = len(self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" "))
+        self.features  = self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" ")
+        self.nFeatures = len(self.features)
+        if 'variables' in self.info:
+            if len(self.info['variables']) != self.nFeatures:
+                print("\x1b[31mERROR: number of input features does not match!")
+                print(" > classifier expects:", len(self.info['variables']))
+                print(" > configuration has:", self.nFeatures, "\x1b[0m")
+                raise Exception("CheckpointError")
+            print("INFO: list of input features:")
+            print("INFO:", "config".ljust(40), "---->", "checkpoint")
+            match = True
+            for i in range(self.nFeatures):
+                if self.features[i] != self.info['variables'][i]: 
+                    print("\x1b[41mINFO:", self.features[i].ljust(40), "---->", self.info['variables'][i].ljust(40), " => MISMATCH!\x1b[0m")
+                    match = False
+                else:
+                    print("INFO:", self.features[i].ljust(40), "---->", self.info['variables'][i])
+            if match:
+                print("INFO: => all input variables match!")
 
         # SIGNAL definition
         self.signalIndex = 0
@@ -52,9 +94,9 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.signalClassIds = [self.signalIndex]
         if self.classes:
             self.signalClassIds = [x for x,y in enumerate(self.classes) if y[0].startswith('SIG')]
-            print "INFO: signals:", self.signalClassIds
+            print("INFO: signals:", self.signalClassIds)
 
-        print "\x1b[31mnum categories:", self.nClasses, "\x1b[0m"
+        print("\x1b[31mnum categories:", self.nClasses, "\x1b[0m")
 
         # systematics
         self.systematics = self.config.get('systematics', 'systematics').split(' ')

@@ -107,7 +107,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.bDict = {}
         for syst in self.systematics:
             self.bDict[syst] = {}
-            for n in ['H_mass_fit', 'H_eta_fit', 'H_phi_fit', 'H_pt_fit', 'HVdPhi_fit', 'jjVPtRatio_fit', 'hJets_pt_0_fit', 'hJets_pt_1_fit', 'V_pt_fit', 'V_eta_fit', 'V_phi_fit', 'V_mass_fit', 'H_mass_sigma_fit','H_pt_sigma_fit', 'hJets_pt_0_sigma_fit', 'hJets_pt_1_sigma_fit', 'H_pt_corr_fit']:
+            for n in ['H_mass_fit', 'H_eta_fit', 'H_phi_fit', 'H_pt_fit', 'HVdPhi_fit', 'jjVPtRatio_fit', 'hJets_pt_0_fit', 'hJets_pt_1_fit', 'V_pt_fit', 'V_eta_fit', 'V_phi_fit', 'V_mass_fit', 'H_mass_sigma_fit','H_pt_sigma_fit', 'hJets_pt_0_sigma_fit', 'hJets_pt_1_sigma_fit', 'H_pt_corr_fit', 'llbb_pt_fit', 'llbb_eta_fit', 'llbb_phi_fit', 'llbb_mass_fit', 'llbbr_pt_fit', 'llbbr_eta_fit', 'llbbr_phi_fit', 'llbbr_mass_fit']:
                 branchNameFull = self.branchName + "_" + n + ('_' + syst if len(syst) > 0 else '')
                 self.bDict[syst][n] = branchNameFull
                 self.addBranch(branchNameFull)
@@ -179,7 +179,7 @@ class kinFitterXbb(AddCollectionsModule):
 
                 # FSR jets
                 for i in range(tree.nJet):
-                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 0 and pt[i] > 20 and abs(eta[i]) < 3.0:
+                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 6 and pt[i] > 20 and abs(eta[i]) < 3.0:
 
                         j_fsr = fourvector(pt[i], eta[i], phi[i], mass[i])
 
@@ -199,7 +199,7 @@ class kinFitterXbb(AddCollectionsModule):
                 # recoil jets
                 recoil_jets = []
                 for i in range(tree.nJet):
-                    if i not in hJidx and i not in fsrJidx and tree.Jet_puId[i] > 1 and tree.Jet_jetId[i] > 1 and tree.Jet_lepFilter[i] > 0 and pt[i] > 20:
+                    if i not in hJidx and i not in fsrJidx and tree.Jet_puId[i] > 6 and tree.Jet_jetId[i] > 1 and tree.Jet_lepFilter[i] > 0 and pt[i] > 20:
                         recoil_jets.append(fourvector(pt[i], eta[i], phi[i], mass[i]))
                 recoil_sum = sum(recoil_jets, ROOT.TLorentzVector())
 
@@ -262,6 +262,10 @@ class kinFitterXbb(AddCollectionsModule):
                 fit_result_l2 = fitter.get4Vec(3)
                 fit_result_V = fit_result_l1 + fit_result_l2
 
+                # H + V (+ recoil)
+                llbb  = fit_result_H + fit_result_V
+                llbbr = llbb + fitter.get4Vec(4)
+
                 self._b(self.bDict[syst]['status'])[0] = kinfit_fit
 
                 if kinfit_fit == 1 and fit_result_H.M() > 0:
@@ -294,6 +298,15 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['hJets_pt_1_sigma_fit'])[0] = cov_fit(3,3)**0.5
                     self._b(self.bDict[syst]['H_pt_corr_fit'])[0]        = cov_fit(0,3) / ( (cov_fit(0,0)*cov_fit(3,3))**0.5 )
                     self._b(self.bDict[syst]['H_pt_sigma_fit'])[0]       = (cov_fit(0,0) + cov_fit(3,3) + 2.0*cov_fit(0,3) )**0.5
+
+                    self._b(self.bDict[syst]['llbb_pt_fit'])[0]          = llbb.Pt()
+                    self._b(self.bDict[syst]['llbb_phi_fit'])[0]         = llbb.Phi()
+                    self._b(self.bDict[syst]['llbb_eta_fit'])[0]         = llbb.Eta()
+                    self._b(self.bDict[syst]['llbb_mass_fit'])[0]        = llbb.M()
+                    self._b(self.bDict[syst]['llbbr_pt_fit'])[0]          = llbbr.Pt()
+                    self._b(self.bDict[syst]['llbbr_phi_fit'])[0]         = llbbr.Phi()
+                    self._b(self.bDict[syst]['llbbr_eta_fit'])[0]         = llbbr.Eta()
+                    self._b(self.bDict[syst]['llbbr_mass_fit'])[0]        = llbbr.M()
                 else:
                     # fallback
                     self._b(self.bDict[syst]['H_pt_fit'])[0]          = tree.H_pt
@@ -317,4 +330,12 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['H_pt_corr_fit'])[0]        = -1
                     self._b(self.bDict[syst]['H_pt_sigma_fit'])[0]       = -1
 
+                    self._b(self.bDict[syst]['llbb_pt_fit'])[0]          = -99
+                    self._b(self.bDict[syst]['llbb_phi_fit'])[0]         = -99
+                    self._b(self.bDict[syst]['llbb_eta_fit'])[0]         = -99
+                    self._b(self.bDict[syst]['llbb_mass_fit'])[0]        = -99
+                    self._b(self.bDict[syst]['llbbr_pt_fit'])[0]          = -99
+                    self._b(self.bDict[syst]['llbbr_phi_fit'])[0]         = -99
+                    self._b(self.bDict[syst]['llbbr_eta_fit'])[0]         = -99 
+                    self._b(self.bDict[syst]['llbbr_mass_fit'])[0]        = -99
 
