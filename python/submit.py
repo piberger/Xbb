@@ -964,6 +964,10 @@ if opts.task.startswith('cachetraining'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    if opts.regions:
+        enabledTrainingRegions = opts.regions.strip().split(',')
+        if len(enabledTrainingRegions) > 0:
+            trainingRegions = [x for x in trainingRegions if x in enabledTrainingRegions]
     for region in trainingRegions:
         jobDict = repDict.copy()
         jobDict.update({
