@@ -241,7 +241,7 @@ MVA_Vars['Nominal']=config.get(treeVarSet,'Nominal')
 MVA_Vars['Nominal']=MVA_Vars['Nominal'].split(' ')    
 
 #Infofile
-info = ParseInfo(samplesinfo,path)
+info = ParseInfo(samples_path=path, config=config)
 
 #Workdir
 workdir=ROOT.gDirectory.GetPath()

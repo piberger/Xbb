@@ -52,7 +52,7 @@ class BranchList(object):
                 if len(leaf.strip()) > 0 and not self.isfloat(leaf) and not leaf.endswith('$') and '::' not in leaf:
                     branches.append(leaf)
         branchesUnique = list(set(branches))
-        print(branchesUnique)
+        #print(branchesUnique)
         return branchesUnique
 
     # return an abbreviated list for print-out purpose

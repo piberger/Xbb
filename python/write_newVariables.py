@@ -65,7 +65,7 @@ print 'OUTput samples:\t%s'%pathOUT
 namelist=opts.names.split(',')
 
 #load info
-info = ParseInfo(samplesinfo,pathIN)
+info = ParseInfo(samples_path=pathIN, config=config)
 
 def isInside(map_,eta,phi):
     bin_ = map_.FindBin(phi,eta)

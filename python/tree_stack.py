@@ -116,7 +116,7 @@ path = config.get('Directories','plottingSamples')# from which samples to plot
 
 section='Plot:%s'%region
 
-info = ParseInfo(samplesinfo,path) #creates a list of Samples by reading the info in samples_nosplit.cfg and the conentent of the path.
+info = ParseInfo(samples_path=path, config=config)
 
 import os
 if os.path.exists("../interface/DrawFunctions_C.so"):

@@ -689,7 +689,11 @@ class NewStackMaker:
             mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
             print("MC:", mcHistogram)
             try:
-                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext="shapes.root")
+                shapesName = "shapes.root"
+                if self.config.has_option('Plot_general', 'suffix'):
+                    shapesName = "shapes_" + self.config.get('Plot_general', 'suffix') + '.root'
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext=shapesName)
+                print("INFO: \x1b[33mshapes\x1b[0m saved to:", outputFileName)
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
                 if dataGroupName and dataGroupName in groupedHistograms:
                     groupedHistograms[dataGroupName].SetDirectory(shapesFile)

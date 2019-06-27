@@ -49,7 +49,7 @@ class XbbRun:
         self.fileLocator = FileLocator(config=self.config)
 
         # check if given sample identifier uniquely matches a samples from config
-        matchingSamples = ParseInfo(samplesinfo, self.pathIN).find(identifier=opts.sampleIdentifier)
+        matchingSamples = ParseInfo(samples_path=self.pathIN, config=self.config).find(identifier=opts.sampleIdentifier)
         if len(matchingSamples) != 1:
             print "ERROR: need exactly 1 sample identifier as input with -S !!"
             print matchingSamples

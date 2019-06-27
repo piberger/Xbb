@@ -32,7 +32,7 @@ sampleconf.read(samplesinfo)
 
 prefix=sampleconf.get('General','prefix')
 
-info = ParseInfo(samplesinfo,pathIN)
+info = ParseInfo(samples_path=pathIN, config=config)
 print "samplesinfo:",samplesinfo
 cross_sections={}
 samples = []

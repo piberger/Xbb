@@ -21,8 +21,7 @@ class CachePlot(object):
 
         self.sampleTree = None
         self.samplesPath = self.config.get('Directories', 'plottingSamples')
-        self.samplesDefinitions = self.config.get('Directories','samplesinfo') 
-        self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
+        self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config) 
         self.sampleFilesFolder = self.config.get('Directories', 'samplefiles')
 
         self.sampleNames = eval(self.config.get('Plot_general', 'samples'))

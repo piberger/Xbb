@@ -52,7 +52,7 @@ systematics = config.get('systematics', 'systematics')
 INpath = config.get('Directories', 'MVAin')
 OUTpath = config.get('Directories', 'MVAout')
 tmpDir = config.get('Directories', 'scratch')
-info = ParseInfo(samplesinfo,INpath)
+info = ParseInfo(samples_path=INpath, config=config)
 
 #load the namespace
 VHbbNameSpace = config.get('VHbbNameSpace','library')

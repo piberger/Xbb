@@ -30,8 +30,7 @@ class PlotHelper(object):
 
         # input/output paths
         self.samplesPath = config.get('Directories', 'plottingSamples')
-        self.samplesDefinitions = config.get('Directories','samplesinfo') 
-        self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
+        self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config)
         self.sampleFilesFolder = config.get('Directories', 'samplefiles')
         self.plotPath = config.get('Directories', 'plotpath')
 
@@ -129,7 +128,6 @@ class PlotHelper(object):
             self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
             if self.config.has_option('Plot_general', 'drawNormalizedPlots') and eval(self.config.get('Plot_general', 'drawNormalizedPlots')):
                 self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
-
         return self
 
     def getHistogramStack(self, var):

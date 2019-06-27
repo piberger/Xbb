@@ -4,6 +4,7 @@ from optparse import OptionParser
 from BetterConfigParser import BetterConfigParser
 from samplesclass import Sample
 import fnmatch
+import traceback
 
 class ParseInfo:
     '''Class containing a list of Sample. Is filled during the prep stage.'''
@@ -16,36 +17,11 @@ class ParseInfo:
 
         self.debug = 'XBBDEBUG' in os.environ
 
-        # legacy behavior below (RECOMMENDED: pass config object)
+        # legacy behavior not supported anymore (INSTEAD: pass config object)
         if not config:
-            if not samples_config:
-                raise Exception("SamplesConfigMissing")
-            if self.debug:
-                print "Start getting infos on all the samples (ParseInfo)"
-                print "==================================================\n"
-                print 'samples_config is', samples_config
-            try:
-                os.stat(samples_config)
-            except:
-                raise Exception('config file is wrong/missing')
-
-            # if no config object given, read full config again
-            # this should be avoided by passing config object to ParseInfo class
-            pathConfig = '/'.join(samples_config.split('/')[:-1]) + '/paths.ini'
-            if os.path.isfile(pathConfig):
-                config = BetterConfigParser()
-                config.read(pathConfig)
-                configList = config.get('Configuration', 'List').split(' ')
-                for configFileName in configList:
-                    configFileName = '/'.join(samples_config.split('/')[:-1]) + '/' + configFileName
-                    if os.path.isfile(configFileName):
-                        config.read(configFileName)
-                if self.debug:
-                    print "WARNING (performance): whole config read again, pass the config obect to ParseInfo class to avoid this."
-            else:
-                # old behavior: read only one file, config might be inconsistent
-                config = BetterConfigParser()
-                config.read(samples_config)
+            print("\x1b[41m\x1b[37mERROR: ParseInfo() is now required to have config= argument passed\x1b[0m")
+            traceback.print_exc(file=sys.stdout)
+            raise Exception("Error")
         elif self.debug:
             print "DEBUG: config object passed to sample parser."
 

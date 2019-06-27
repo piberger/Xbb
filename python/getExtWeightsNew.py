@@ -55,8 +55,7 @@ for x in args.samples.split(','):
 
 # input/output paths
 samplesPath = config.get('Directories', 'plottingSamples')
-samplesDefinitions = config.get('Directories', 'samplesinfo')
-samplesInfo = ParseInfo(samplesDefinitions, samplesPath)
+samplesInfo = ParseInfo(samples_path=samplesPath, config=config)
 mcSamples = samplesInfo.get_samples(eval(config.get('Plot_general', 'samples')))
 
 sampleCuts = args.cuts.strip().split(',')

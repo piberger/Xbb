@@ -249,6 +249,13 @@ if configurationNeeded:
         shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
     # combined config
     combinedConfigFileName = '%s/submission_%s.ini'%(DirStruct['confpath'], submitTimestamp)
+    if os.path.isfile(combinedConfigFileName):
+        counter = 2
+        combinedConfigFileName = '%s/submission_%s_%d.ini'%(DirStruct['confpath'], submitTimestamp, counter)
+        while (os.path.isfile(combinedConfigFileName)):
+            counter += 1
+            if counter > 1000:
+                raise Exception("UnknownError")
     with open(combinedConfigFileName, 'w') as combinedConfigFile:
         config.write(combinedConfigFile)
         print 'wrote config to:', combinedConfigFileName
@@ -524,8 +531,7 @@ if opts.task == 'prep' or opts.task == 'checkprep':
 
     pathOUT = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories', 'samplefiles')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, pathOUT)
+    info = ParseInfo(samples_path=pathOUT, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
@@ -600,8 +606,7 @@ if opts.task == 'hadd':
     outputPath = config.get("Directories", outputDir) 
 
     samplefiles = config.get('Directories', 'samplefiles')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, inputPath)
+    info = ParseInfo(samples_path=inputPath, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     samplefilesMerged = samplefiles + '/merged_' + opts.tag + '/'
@@ -686,8 +691,7 @@ if opts.task == 'count':
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
     pathIN = config.get("Directories", opts.input if opts.input else "SYSin")
     samplefiles = config.get('Directories','samplefiles')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, pathIN)
+    info = ParseInfo(samples_path=pathIN, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     haddTargetNumEvents = int(config.get('Configuration', 'haddTargetNumEvents')) if config.has_option('Configuration', 'haddTargetNumEvents') else 30000
@@ -745,8 +749,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     path              = config.get("Directories", inputDir) 
     pathOUT           = config.get("Directories", outputDir)
     samplefiles       = config.get('Directories','samplefiles')
-    samplesinfo       = config.get('Directories', 'samplesinfo')
-    info              = ParseInfo(samplesinfo, path)
+    info              = ParseInfo(samples_path=path, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     # check for empty list of collections to add
@@ -855,8 +858,7 @@ if opts.task == 'efficiency':
     pathIN            = config.get("Directories", opts.input if opts.input else "SYSin") 
     pathOUT           = config.get("Directories", opts.output if opts.output else "SYSout")
     samplefiles       = config.get('Directories','samplefiles')
-    samplesinfo       = config.get('Directories', 'samplesinfo')
-    info              = ParseInfo(samplesinfo, pathIN)
+    info              = ParseInfo(samples_path=pathIN, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     print "INPUT:", pathIN
@@ -907,7 +909,7 @@ if opts.task.startswith('cachetraining'):
     
     # get samples info
     samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, config.get('Directories', 'MVAin'))
+    info = ParseInfo(samples_path=config.get('Directories', 'MVAin'), config=config)
     samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -1018,8 +1020,7 @@ if opts.task.startswith('cacheplot'):
     dataSampleNames = eval(config.get('Plot_general', 'Data'))
 
     # get samples info
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+    info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
     samples = info.get_samples(sampleNames + dataSampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -1081,8 +1082,7 @@ if opts.task.startswith('runplot'):
     # if only a subset of samples is plotted
     if len(opts.samples.strip()) > 0:
         # get samples info
-        samplesinfo = config.get('Directories', 'samplesinfo')
-        info = ParseInfo(samplesinfo, config.get('Directories', 'plottingSamples'))
+        info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
         sampleNames = eval(config.get('Plot_general', 'samples'))
         dataSampleNames = eval(config.get('Plot_general', 'Data'))
         samples = info.get_samples(sampleNames + dataSampleNames)
@@ -1140,8 +1140,7 @@ if opts.task.startswith('dcyields'):
     
     # get samples info
     sampleFolder = config.get('Directories', 'dcSamples')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, sampleFolder)
+    info = ParseInfo(samples_path=sampleFolder, config=config)
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -1197,8 +1196,7 @@ if opts.task.startswith('cachedc'):
 
     # get samples info
     sampleFolder = config.get('Directories', 'dcSamples')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, sampleFolder)
+    info = ParseInfo(samples_path=sampleFolder, config=config)
     samples = info.get_samples(sampleNames)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -1396,8 +1394,7 @@ if opts.task == 'trainReg':
 if opts.task == 'sys' or opts.task == 'syseval':
     path = config.get("Directories", "SYSin")
     samplefiles = config.get('Directories','samplefiles')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samples_path=path, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
 
@@ -1426,8 +1423,7 @@ if opts.task == 'eval' or opts.task.startswith('eval_'):
     #repDict['queue'] = 'long.q'
     path = opts.input if opts.input else "MVAin"
     pathOUT  = opts.output if opts.output else "MVAout"
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samples_path=path, config=config)
     samplefiles = config.get('Directories', 'samplefiles')
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
     chunkSize = 10 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
@@ -1472,7 +1468,7 @@ if opts.task == 'summary':
     print "-"*80
     print " paths"
     print "-"*80
-    for path in ['PREPout', 'SYSin', 'SYSout', 'MVAin', 'MVAout', 'tmpSamples', 'samplesinfo']:
+    for path in ['PREPout', 'SYSin', 'SYSout', 'MVAin', 'MVAout', 'tmpSamples']:
         try:
             print "%s:"%path, "\x1b[34m", config.get('Directories', path) ,"\x1b[0m"
         except:
@@ -1505,8 +1501,7 @@ if opts.task == 'summary':
 
 
     cutDict = {}
-    samplesinfo=config.get('Directories','samplesinfo')
-    info = ParseInfo(samplesinfo, '')
+    info = ParseInfo(config=config)
     # don't look at subsamples, because they have the same pre-selection cut
     samples = [x for x in info if not x.subsample]
     for sample in samples:
@@ -1556,8 +1551,7 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "PREPout")
     samplefiles = config.get('Directories','samplefiles') if len(opts.samplesInfo) < 1 else opts.samplesInfo
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samples_path=path, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
     foldersToCheck = ["SYSout"] if len(opts.folders.strip()) < 1 else opts.folders.split(',')
@@ -1644,8 +1638,7 @@ if opts.task == 'sample':
     fileLocator = FileLocator(config=config)
     path = config.get("Directories", "SYSout")
     samplefiles = config.get('Directories','samplefiles')
-    samplesinfo = config.get('Directories', 'samplesinfo')
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samples_path=path, config=config)
     print ">", info.getSampleIdentifiers()
     print "filter by:", samplesList
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)

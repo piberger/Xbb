@@ -458,7 +458,7 @@ UD = ['Up','Down']
 print 'Parse the sample information'
 print '============================\n'
 #Parse samples configuration
-info = ParseInfo(samplesinfo,path)
+info = ParseInfo(samples_path=path, config=config)
 # get all the treeCut sets
 # create different sample Lists
 

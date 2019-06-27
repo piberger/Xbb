@@ -7,6 +7,112 @@
 
 namespace VHbb {
 
+    double LUT5(int n, float n0, float n1, float n2, float n3, float n4, float n5) {
+        if (n < 1)
+            return n0;
+        else if (n == 1)
+            return n1;
+        else if (n == 2)
+            return n2;
+        else if (n == 3)
+            return n3;
+        else if (n == 4)
+            return n4;
+        else if (n > 4)
+            return n5;
+    }
+
+    double LUT8(int n, float n0, float n1, float n2, float n3, float n4, float n5, float n6, float n7) {
+        if (n < 1)
+            return n0;
+        else if (n == 1)
+            return n1;
+        else if (n == 2)
+            return n2;
+        else if (n == 3)
+            return n3;
+        else if (n == 4)
+            return n4;
+        else if (n == 5)
+            return n5;
+        else if (n == 6)
+            return n6;
+        else if (n > 6)
+            return n7;
+    }
+
+double DYBW_F100(int nGenJet) {
+    //{3, 0.99}, {4, 1.08}, {5, 1.21}, {6, 1.24}, {7, 1.17}, {8, 1.09}
+    if (nGenJet > 7) nGenJet = 8;
+    if (nGenJet < 3) nGenJet = 3;
+    if (nGenJet == 3)
+        return 0.99;
+    else if (nGenJet == 4)
+        return 1.08;
+    else if (nGenJet == 5)
+        return 1.21;
+    else if (nGenJet == 6)
+        return 1.24;
+    else if (nGenJet == 7)
+        return 1.17;
+    else
+        return 1.08;
+}
+
+double DYBW_F200(int nGenJet) {
+    //{3, 1.27}, {4, 1.31}, {5, 1.28}, {6, 1.34}, {7, 1.24}, {8, 1.15}
+    if (nGenJet > 7) nGenJet = 8;
+    if (nGenJet < 3) nGenJet = 3;
+    if (nGenJet == 3)
+        return 1.27;
+    else if (nGenJet == 4)
+        return 1.31;
+    else if (nGenJet == 5)
+        return 1.28;
+    else if (nGenJet == 6)
+        return 1.34;
+    else if (nGenJet == 7)
+        return 1.24;
+    else
+        return 1.15;
+}
+
+double DYBW_B100(int nGenJet) {
+    //{3, 1.23}, {4, 1.33}, {5, 1.41}, {6, 1.37}, {7, 1.24}, {8, 1.10}
+    if (nGenJet > 7) nGenJet = 8;
+    if (nGenJet < 3) nGenJet = 3;
+    if (nGenJet == 3)
+        return 1.23;
+    else if (nGenJet == 4)
+        return 1.33;
+    else if (nGenJet == 5)
+        return 1.41;
+    else if (nGenJet == 6)
+        return 1.37;
+    else if (nGenJet == 7)
+        return 1.24;
+    else
+        return 1.10;
+}
+
+double DYBW_B200(int nGenJet) {
+    //{3, 1.46}, {4, 1.51}, {5, 1.61}, {6, 1.47}, {7, 1.41}, {8, 1.25}
+    if (nGenJet > 7) nGenJet = 8;
+    if (nGenJet < 3) nGenJet = 3;
+    if (nGenJet == 3)
+        return 1.46;
+    else if (nGenJet == 4)
+        return 1.51;
+    else if (nGenJet == 5)
+        return 1.61;
+    else if (nGenJet == 6)
+        return 1.47;
+    else if (nGenJet == 7)
+        return 1.41;
+    else
+        return 1.25;
+}
+
 double SoverSBWeight(double BDT, int channel) {
 
     //Check to which bin the BDT belongs to

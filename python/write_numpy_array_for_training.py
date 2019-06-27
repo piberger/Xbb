@@ -32,8 +32,7 @@ class SampleTreesToNumpyConverter(object):
         self.config = config
         self.testRun = testRun
         self.samplesPath = config.get('Directories', 'MVAin')
-        self.samplesDefinitions = config.get('Directories','samplesinfo')
-        self.samplesInfo = ParseInfo(self.samplesDefinitions, self.samplesPath)
+        self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config) 
 
         # region
         self.treeCutName = config.get(mvaName, 'treeCut')

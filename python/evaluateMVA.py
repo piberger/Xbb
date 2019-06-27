@@ -69,8 +69,7 @@ INpath = config.get('Directories', opts.inputDir)
 OUTpath = config.get('Directories', opts.outputDir)
 tmpDir = config.get('Directories', 'scratch')
 
-info = ParseInfo(samplesinfo,INpath)
-
+info = ParseInfo(samples_path=INpath, config=config)
 arglist = ''
 
 if not evaluate_optimisation:
