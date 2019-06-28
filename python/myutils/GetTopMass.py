@@ -15,7 +15,7 @@ import sys
 
 class GetTopMass(object):
 
-    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass'):
+    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass', addBoostSystematics=False):
         self.nano = nano
         self.lastEntry = -1
         self.branchName = branchName
@@ -36,7 +36,7 @@ class GetTopMass(object):
         self.branches.append({'name': 'closestHJidx', 'formula': self.getBranch, 'arguments': 'closestHJidx'})
         self.branchBuffers['closestHJidx'] = array.array('f', [0]) 
 
-
+        self.addBoostSystematics = addBoostSystematics
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -60,8 +60,8 @@ class GetTopMass(object):
         self.dataset = self.config.get('General','dataset')
 
         if self.dataset == '2016':
-           self.METpt = 'MET_pt' 
-           self.METphi = 'MET_phi' 
+           self.METpt = 'MET_Pt' 
+           self.METphi = 'MET_Phi' 
         elif self.dataset == '2017':
            self.METpt = 'MET_Pt' 
            self.METphi = 'MET_Phi' 
@@ -81,10 +81,12 @@ class GetTopMass(object):
         if self.propagateJES and self.nano:
             self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal'] 
 
-#            self.jetSystematics = ['jerReg'] 
+            if self.dataset == '2016':
+                self.jetSystematics.remove('jerReg')
 
-
-
+            if self.addBoostSystematics:
+                self.jetSystematics+= ['jms']
+                self.jetSystematics+= ['jmr']
 
 
             if self.sample.type != 'DATA': systList = self.jetSystematics + ['minmax']
@@ -123,8 +125,6 @@ class GetTopMass(object):
             self.hJidx0 = getattr(tree,self.tagidx)[0] 
             self.hJidx1 = getattr(tree,self.tagidx)[1]
 
-            e1Idx = getattr(tree,self.eIdx)[0]
-            mu1Idx = getattr(tree,self.muIdx)[0]
 
             treeMETpt = getattr(tree,self.METpt) 
             treeMETphi = getattr(tree,self.METphi) 
@@ -135,17 +135,15 @@ class GetTopMass(object):
 
 
 
-
-
-
-
             if not self.nano:
                 lep.SetPtEtaPhiM(tree.vLeptons_new_pt[0], tree.vLeptons_new_eta[0], tree.vLeptons_new_phi[0], tree.vLeptons_new_mass[0])
                 met.SetPtEtaPhiM(tree.met_pt, tree.met_eta, tree.met_phi, tree.met_mass)
             else: 
                 if tree.Vtype == 2:
+                    mu1Idx = getattr(tree,self.muIdx)[0]
                     lep.SetPtEtaPhiM(tree.Muon_pt[mu1Idx], tree.Muon_eta[mu1Idx], tree.Muon_phi[mu1Idx], tree.Muon_mass[mu1Idx])
                 if tree.Vtype == 3:
+                    e1Idx = getattr(tree,self.eIdx)[0]
                     lep.SetPtEtaPhiM(tree.Electron_pt[e1Idx], tree.Electron_eta[e1Idx], tree.Electron_phi[e1Idx], tree.Electron_mass[e1Idx])
                 met.SetPtEtaPhiM(treeMETpt, 0, treeMETphi, 0)
 
