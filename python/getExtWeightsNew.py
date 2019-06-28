@@ -9,11 +9,12 @@ from myutils.sampleTree import SampleTree as SampleTree
 import argparse
 import itertools
 from myutils.BranchList import BranchList
+from myutils.XbbConfig import XbbConfigReader, XbbConfigTools
 
 parser = argparse.ArgumentParser(description='getExtWeightsNew: compute stitching coefficients for samples with overlap')
 parser.add_argument('--samples', dest='samples', help='list of sample identifiers')
 parser.add_argument('--cuts', dest='cuts', help='cuts', default='')
-parser.add_argument('--from', dest='fromFolder', help='folder name to use, e.g. PREPout', default='PREPout')
+parser.add_argument('--from', dest='fromFolder', help='folder name to use, e.g. PREPout', default='SYSout')
 parser.add_argument('--fc', dest='fc', help='fc', default='')
 parser.add_argument('--prune', dest='prune', help='remove contributions with fraction lower than this', default='0.0')
 parser.add_argument('-T', dest='tag', help='config tag')
@@ -32,31 +33,21 @@ def getEventCount(config, sampleIdentifier, cut="1", sampleTree=None, sample=Non
     scaleToXs = sampleTree.getScale(sample)
     nEvents = sampleTree.tree.Draw("1>>h1", "(" + cut + ")*genWeight*%1.6f"%scaleToXs)
     nEventsWeighted = h1.GetBinContent(1)
+    print("DEBUG:", sampleIdentifier, cut, " MC events:", nEvents, " (weighted:", nEventsWeighted, ")")
     h1.Delete()
-    return nEventsWeighted
+    return nEvents
 
 
 # load config
-config = BetterConfigParser()
-configFolder = args.tag + 'config/'
-print "config folder:", configFolder
-config.read(configFolder + '/paths.ini')
-configFiles = [x for x in config.get('Configuration','List').strip().split(' ') if len(x.strip()) > 0]
-config = BetterConfigParser()
-for configFile in configFiles:
-    config.read(configFolder + configFile)
-    print "read config ", configFile
+config = XbbConfigReader.read(args.tag)
+sampleInfo = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
+mcSamples = sampleInfo.get_samples(XbbConfigTools(config).getMC())
 
 pruneThreshold = float(args.prune)
 
 sampleGroups = []
 for x in args.samples.split(','):
     sampleGroups.append(x.split('+'))
-
-# input/output paths
-samplesPath = config.get('Directories', 'plottingSamples')
-samplesInfo = ParseInfo(samples_path=samplesPath, config=config)
-mcSamples = samplesInfo.get_samples(eval(config.get('Plot_general', 'samples')))
 
 sampleCuts = args.cuts.strip().split(',')
 if args.fc != '':
@@ -73,17 +64,18 @@ for sampleGroup in sampleGroups:
         countDict[sampleIdentifier] = {}
 
         samples_matching = [x for x in mcSamples if x.identifier == sampleIdentifier]
-        sample = samples_matching[0]
+        if len(samples_matching) > 0:
+            sample = samples_matching[0]
 
-        sampleTree = SampleTree({'sample': sample, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
-        print "CUT=",sampleCuts,":"
-        for sampleCut in sampleCuts:
-            sampleCount = getEventCount(config, sampleIdentifier, sampleCut, sampleTree=sampleTree, sample=sample)
-            print sampleIdentifier,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
-            if sampleCut in countDict[sampleIdentifier]:
-                print "duplicate!!", sampleIdentifier, sampleCut, countDict[sampleIdentifier][sampleCut]
-                raise Exception("duplicate")
-            countDict[sampleIdentifier][sampleCut] = sampleCount
+            sampleTree = SampleTree({'sample': sample, 'folder': config.get('Directories',args.fromFolder).strip()}, config=config)
+            print "CUT=",sampleCuts,":"
+            for sampleCut in sampleCuts:
+                sampleCount = getEventCount(config, sampleIdentifier, sampleCut, sampleTree=sampleTree, sample=sample)
+                print sampleIdentifier,sampleCut,"\x1b[34m=>",sampleCount,"\x1b[0m"
+                if sampleCut in countDict[sampleIdentifier]:
+                    print "duplicate!!", sampleIdentifier, sampleCut, countDict[sampleIdentifier][sampleCut]
+                    raise Exception("duplicate")
+                countDict[sampleIdentifier][sampleCut] = sampleCount
 
 # pruning
 for sampleIdentifier,counts in countDict.iteritems():
@@ -91,7 +83,8 @@ for sampleIdentifier,counts in countDict.iteritems():
     for cut,cutCount in counts.iteritems():
         totalCount = 0
         for sample,sampleCounts in countDict.iteritems():
-            totalCount += sampleCounts[cut]
+            if cut in sampleCounts:
+                totalCount += sampleCounts[cut]
 
         if cutCount>0 and totalCount>0:
             fraction = 1.0*cutCount/totalCount
@@ -108,7 +101,8 @@ for sampleIdentifier,counts in countDict.iteritems():
     for cut,cutCount in counts.iteritems():
         totalCount = 0
         for sample,sampleCounts in countDict.iteritems():
-            totalCount += sampleCounts[cut]
+            if cut in sampleCounts:
+                totalCount += sampleCounts[cut]
 
         if cutCount>0:
             if cutCount==totalCount:
