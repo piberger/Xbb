@@ -42,7 +42,6 @@ class Datacard(object):
         # Directories:
         self.Wdir = config.get('Directories', 'Wdir')
         self.vhbbpath = config.get('Directories', 'vhbbpath')
-        self.samplesInfoDirectory = config.get('Directories', 'samplesinfo')
         self.path = config.get('Directories', 'dcSamples')
         self.cachedPath = self.config.get('Directories', 'tmpSamples')
         self.tmpPath = self.config.get('Directories', 'scratch')
@@ -80,12 +79,17 @@ class Datacard(object):
 
         # set binning
         self.binning = {
-                'nBinsX': int(config.get('dc:%s'%self.region, 'range').split(',')[0]),
-                'minX': float(config.get('dc:%s'%self.region, 'range').split(',')[1]),
-                'maxX': float(config.get('dc:%s'%self.region, 'range').split(',')[2]),
+                'nBinsX': 15, 
+                'minX': 0.0,
+                'maxX': 1.0, 
                 'rebin_method': (config.get('dc:%s'%self.region,'rebin_method') if config.has_option('dc:%s'%self.region, 'rebin_method') else 'no'),
                 'rebin_list': (eval(config.get('dc:%s'%self.region,'rebin_list')) if config.has_option('dc:%s'%self.region, 'rebin_list') else []),
                 }
+        if self.config.has_option('dc:%s'%self.region, 'range'):
+            self.binning['nBinsX'] = int(self.config.get('dc:%s'%self.region, 'range').split(',')[0])
+            self.binning['minX']   = float(self.config.get('dc:%s'%self.region, 'range').split(',')[1])
+            self.binning['maxX']   = float(self.config.get('dc:%s'%self.region, 'range').split(',')[2])
+
         self.variableBins = None
         if self.verbose:
             print ("DEBUG: binning is ", self.binning)
@@ -214,7 +218,7 @@ class Datacard(object):
             print ('Parse the sample information')
             print ('============================\n')
         #Parse samples configuration
-        self.samplesInfo = ParseInfo(self.samplesInfoDirectory, self.path)
+        self.samplesInfo = ParseInfo(samples_path=self.path, config=self.config)
 
         if self.debug:
             print ('Get the sample list')
@@ -1288,8 +1292,7 @@ class Datacard(object):
 
         # get samples info
         sampleFolder = config.get('Directories', 'dcSamples')
-        samplesInfoDirectory = config.get('Directories', 'samplesinfo')
-        samplesInfo = ParseInfo(samplesInfoDirectory, sampleFolder)
+        samplesInfo = ParseInfo(samples_path=sampleFolder, config=config)
         samples = samplesInfo.get_samples(sampleNames)
 
         return samples

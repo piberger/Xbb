@@ -19,8 +19,7 @@ class SampleGroup(object):
         self.sample = initVars['sample']
         self.sampleTree = initVars['sampleTree']
         self.config = initVars['config']
-        self.samplesDefinitions = self.config.get('Directories','samplesinfo') 
-        self.samplesInfo = ParseInfo(self.config.get('Directories','samplesinfo'), self.config.get('Directories', 'dcSamples'))
+        self.samplesInfo = ParseInfo(samples_path=self.config.get('Directories', 'dcSamples'), config=self.config)
         self.subsamples = [x for x in self.samplesInfo if x.identifier == self.sample.identifier and x.subsample]
         for s in self.subsamples:
             print s.name, s.subcut

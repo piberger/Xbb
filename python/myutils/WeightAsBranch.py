@@ -82,7 +82,7 @@ if __name__ == '__main__':
     path = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/berger_p2/VHbb/VHbbPostNano2017/V5/Zvv/rerun/v4j/eval/' 
     samplefiles = '../samples/VHbbPostNano2017_V5/merged_Zvv2017/' 
     samplesinfo = 'Zvv2017config/samples_nosplit.ini' 
-    info = ParseInfo(samplesinfo, path)
+    info = ParseInfo(samples_path=path, config=config)
     
     sample = [x for x in info if x.identifier == 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
     print(sample)
