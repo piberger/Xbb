@@ -85,6 +85,9 @@ class SampleTreesToNumpyConverter(object):
             self.categories = self.samples.keys()
 
         # DATA
+        if self.config.has_option(mvaName, 'includeData'):
+            self.includeData = eval(self.config.get(mvaName, 'includeData'))
+
         self.dataSamples = []
         if self.includeData:
             if not self.config.has_option(mvaName, 'data'):
@@ -268,6 +271,15 @@ class SampleTreesToNumpyConverter(object):
         #    puresystematics.remove('Nominal')
         puresystematics = [x['name'] for x in self.systematics]
 
+        xSecs = {}
+        SFs = {}
+        for i,category in enumerate(categories):
+            for j,sample in enumerate(self.samples[category]):
+                if sample.name not in xSecs:
+                    xSecs[sample.name] = sample.xsec
+                if sample.name not in SFs:
+                    SFs[sample.name] = sample.sf
+
         # concatenate all data from different samples
         self.data = {
                 'train': {
@@ -291,6 +303,8 @@ class SampleTreesToNumpyConverter(object):
                     'trainCut': self.trainCut,
                     'testCut': self.evalCut,
                     'samples': self.sampleNames,
+                    'xSecs': xSecs,
+                    'scaleFactors': SFs,
                     'weightF': weightF,
                     'weightSYS': self.weightSYS,
                     'variables': ' '.join(self.MVA_Vars['Nominal']),
@@ -309,7 +323,7 @@ class SampleTreesToNumpyConverter(object):
 
         if not os.path.exists("./dumps"):
             os.makedirs("dumps")
-        baseName = './dumps/' +self.config.get("Directories","Dname").split("_")[1] + '_' + self.mvaName + '_' + datetime.datetime.now().strftime("%y%m%d")
+        baseName = './dumps/' + self.config.get('Configuration','channel') + self.config.get('General','dataset') + '_' + self.mvaName + '_' + datetime.datetime.now().strftime("%y%m%d")
 
         if config.has_option('MVAGeneral','ntupleVersion'):
             baseName += '_' + config.get('MVAGeneral','ntupleVersion')

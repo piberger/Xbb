@@ -122,7 +122,7 @@ if debugPrintOUts:
 pathconfig = BetterConfigParser()
 pathconfig.read('%sconfig/paths.ini'%(opts.tag))
 try:
-    _configs = pathconfig.get('Configuration', 'List').split(" ")
+    _configs = [x for x in pathconfig.get('Configuration', 'List').split(" ") if len(x.strip()) > 0]
     _configs.remove('volatile.ini')
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
 except:
@@ -327,9 +327,9 @@ submitQueueDict = {
 }
 
 # Overwrite by config
-if pathconfig.has_section('SubmitOptions'):
-    if pathconfig.has_option('SubmitOptions', 'submitQueueDict'):
-        submitQueueDict.update(eval(pathconfig.get('SubmitOptions', 'submitQueueDict')))
+if config.has_section('SubmitOptions'):
+    if config.has_option('SubmitOptions', 'submitQueueDict'):
+        submitQueueDict.update(eval(config.get('SubmitOptions', 'submitQueueDict')))
 
 # Overwrite queue when command line option is set. Otherwise use config if it is avaiable for given task. Default is 'all.q'
 if opts.queue is not None:
@@ -353,7 +353,7 @@ repDict = {
     'timestamp': timestamp,
     'additional': '',
     'job_id': 'noid',
-    'nprocesses': str(max(int(pathconfig.get('Configuration', 'nprocesses')), 1))
+    'nprocesses': str(max(int(config.get('Configuration', 'nprocesses')), 1))
 }
 
 list_submitted_singlejobs = {}
@@ -1482,7 +1482,7 @@ if opts.task == 'summary':
     print " pre-selection ('prep')"
     print "-"*80
     
-    _configs = config.get('Configuration', 'List').split(" ")
+    _configs = [x for x in config.get('Configuration', 'List').split(" ") if len(x.strip()) > 0]
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
     cumulativeConfig = BetterConfigParser()
     cumulativeConfig2 = BetterConfigParser()

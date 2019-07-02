@@ -165,6 +165,8 @@ class ParseInfo:
                         thenames.append(sample.name)
                 if not found:
                     print "\x1b[31mERROR: sample not found:", samplename, "\x1b[0m"
+                    print "requested:", samplenames
+                    print "existing:", [x.name for x in self._samplelist]
                     raise Exception("SampleMissing")
                 
         return samples
