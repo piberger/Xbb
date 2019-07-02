@@ -752,9 +752,11 @@ class Datacard(object):
                 # (this is different from the 'affecting' option, which only modifies the textfile but always creates histograms)
                 systematics['enabled'] = True
                 if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
-                    if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                    #if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                    groupName = self.getSampleGroup(sample)
+                    if groupName not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
                         if self.debug:
-                            print('\x1b[31m group', self.sysOptions['Group'][sample.name], 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
+                            print('\x1b[31m group', groupName, 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
                         systematics['enabled'] = False
                 
                 # additional BLINDING cut
@@ -924,6 +926,39 @@ class Datacard(object):
             rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier) + '.root']
         return rootFileNames
 
+    def getSampleGroup(self, sample):
+        # if Group dictionary is used, prioritize it over group from config
+        if sample.name in self.sysOptions['Group']:
+            return self.sysOptions['Group'][sample.name]
+        else:
+            return sample.group
+    
+    def getSampleGroupFromName(self, sampleName, samples):
+        matchingSamples = [x for x in samples if x.name == sampleName]
+        if len(matchingSamples) == 1:
+            return self.getSampleGroup(matchingSamples[0])
+        else:
+            print("ERROR: no or multiple samples match '" + sampleName + "'")
+            print("DEBUG:", [x.name for x in samples])
+            raise Exception("SamplesError")
+
+    # translate the sample group name (Xbb config) to name used for datacards 
+    def getProcessName(self, groupName):
+        if groupName == 'DATA':
+            processName = 'data_obs'
+        elif groupName in self.sysOptions['Dict']:
+            processName = self.sysOptions['Dict'][groupName]
+        else:
+            processName = groupName
+        return processName
+
+    def getGroupNameFromProcessName(self, processName):
+        dcProcessSampleGroup = {v: k for k,v in self.sysOptions['Dict'].iteritems()}
+        if processName in dcProcessSampleGroup:
+            return dcProcessSampleGroup[processName]
+        else:
+            return processName
+
     def load(self):
         self.histograms = {}
         allSamples = self.getAllSamples()
@@ -943,8 +978,10 @@ class Datacard(object):
 
                 # process all subsamples
                 for subsample in subsamples:
-                    sampleGroup = self.sysOptions['Group'][subsample.name]
-                    datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                    #sampleGroup = self.sysOptions['Group'][subsample.name]
+                    sampleGroup = self.getSampleGroup(subsample)
+                    #datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                    datacardProcess = self.getProcessName(sampleGroup) 
 
                     systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
                     for systematics in systematicsToEvaluate:
@@ -1021,7 +1058,8 @@ class Datacard(object):
         rootFileSubdir = outfile.mkdir(self.Datacardbin, self.Datacardbin)
 
         # sample groups for datacard, all samples of each group will be added in a single column
-        sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in samples]))
+        # sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in samples]))
+        sampleGroups = list(set([self.getSampleGroup(sample) for sample in samples]))
 
         for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
             systematics['histograms'] = {}
@@ -1031,11 +1069,12 @@ class Datacard(object):
             for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')):
                 # sum histograms of all samples in the datacard group
                 #print ("->",self.sysOptions['Dict'])
-                datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                #datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                datacardProcess = self.getProcessName(sampleGroup) 
                 datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
                 
                 # add up all the sample histograms for this process and this systematic
-                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.sysOptions['Group'][k] == sampleGroup]
+                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.getSampleGroupFromName(k, samples) == sampleGroup]
 
                 if len(histogramsInGroup) > 0:
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
@@ -1066,7 +1105,8 @@ class Datacard(object):
                     print("threshold", threshold)
                 for systematics in systematicsListBeforeBBB:
                     if 'histograms' in systematics and sampleGroup in systematics['histograms'] and systematics['systematicsName'] == 'nominal':
-                        dcProcess = self.sysOptions['Dict'][sampleGroup]
+                        #dcProcess = self.sysOptions['Dict'][sampleGroup]
+                        dcProcess = self.getProcessName(sampleGroup) 
                         hist = systematics['histograms'][sampleGroup]
                         for bin in range(1, self.binning['nBinsX'] + 1):
                             if dcProcess not in binsBelowThreshold.keys():
@@ -1142,12 +1182,11 @@ class Datacard(object):
             if len([s for s in samples if s.type != 'DATA']) < 1:
                 dcProcesses = []
             else:
-                dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
-
-            dcProcessSampleGroup = {v: k for k,v in self.sysOptions['Dict'].iteritems()}
+                #dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
+                dcProcesses = [self.getProcessName(sampleGroup) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
 
             # order datacard processes as given in config
-            dcProcesses.sort(key=lambda x: self.sysOptions['setup'].index(dcProcessSampleGroup[x]) if x in dcProcessSampleGroup and dcProcessSampleGroup[x] in self.sysOptions['setup'] else 99999)
+            dcProcesses.sort(key=lambda x: self.sysOptions['setup'].index(self.getGroupNameFromProcessName(x)) if self.getGroupNameFromProcessName(x) in self.sysOptions['setup'] else 99999)
 
             # header
             dcRows = []
@@ -1158,7 +1197,7 @@ class Datacard(object):
             dcRows.append(['process', ''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
 
             nominalHistograms = [x for x in self.systematicsList if x['sysType'] == 'nominal'][0]['histograms']
-            histogramTotals = [nominalHistograms[dcProcessSampleGroup[dcProcess]].Integral() for dcProcess in dcProcesses]
+            histogramTotals = [nominalHistograms[self.getGroupNameFromProcessName(dcProcess)].Integral() for dcProcess in dcProcesses]
 
             dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
             
@@ -1169,7 +1208,7 @@ class Datacard(object):
                 systematicDict = eval(self.config.get('Datacard', systematic))
                 dcRow = [systematic, systematicDict['type']]
                 for dcProcess in dcProcesses:
-                    dcRow.append(str(systematicDict[dcProcessSampleGroup[dcProcess]]) if dcProcessSampleGroup[dcProcess] in systematicDict else '-')
+                    dcRow.append(str(systematicDict[self.getGroupNameFromProcessName(dcProcess)]) if self.getGroupNameFromProcessName(dcProcess) in systematicDict else '-')
                 dcRows.append(dcRow)
 
             # bin by bin
@@ -1194,7 +1233,7 @@ class Datacard(object):
                         for dcProcess in dcProcesses:
                             value = '-'
                             if systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
-                                if dcProcessSampleGroup[dcProcess] in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                                if self.getGroupNameFromProcessName(dcProcess) in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
                                     value = '1.0'
                             else:
                                 value = '1.0'
@@ -1224,7 +1263,7 @@ class Datacard(object):
                         sampleSysGroups = [self.sysOptions['Group'][x] for x in sampleSysSamplesFlat] 
 
                         for dcProcess in dcProcesses:
-                            if dcProcessSampleGroup[dcProcess] in sampleSysGroups:
+                            if self.getGroupNameFromProcessName(dcProcess) in sampleSysGroups:
                                 value = '1.0'
                             else:
                                 value = '-'
