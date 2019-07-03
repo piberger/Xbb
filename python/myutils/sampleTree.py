@@ -1185,11 +1185,17 @@ class SampleTree(object):
     def Print(self):
         print("\x1b[34m\x1b[1m---- SampleTree ----")
         print("# this snippet below can be used to load this sample:")
+        if len(self.sampleFileNamesToProcess) != len(self.sampleFileNames):
+            print("# commented file names below mean only a part of sample was being processed in this job")
+            print("# normalization is always correct for the full sample only (or if all parts are added afterwards)")
         print("import ROOT")
         print("from myutils.sampleTree import SampleTree")
         print("sampleTree = SampleTree([")
         for fileName in self.sampleFileNames:
-            print("    '" + fileName + "',")
+            if fileName in self.sampleFileNamesToProcess:
+                print("    '" + fileName + "',")
+            else:
+                print("#    '" + fileName + "',")
         print("], treeName='Events', xrootdRedirector='" + self.fileLocator.getXrootdRedirector() + "')")
         print("---- end ----\x1b[0m")
 
