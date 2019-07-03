@@ -14,6 +14,7 @@ import os,sys
 class PlotHelper(object):
 
     def __init__(self, config, region, vars = None, title=None, sampleIdentifier=None):
+        self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.region = region
         self.vars = vars
@@ -77,6 +78,13 @@ class PlotHelper(object):
         self.subcutPlotName = ''
         self.histogramStacks = {}
 
+    def getSampleGroup(self, sample):
+        if sample.name in self.groupDict:
+            if self.debug and sample.group != self.groupDict[sample.name]:
+                print("\x1b[41m\x1b[33mDEBUG: overwrite group from", sample.group, " to ", self.groupDict[sample.name], "\x1b[0m")
+            return self.groupDict[sample.name]
+        else:
+            return sample.group
 
     def prepare(self):
         print ("INFO: starting plot for region \x1b[34m{region}\x1b[0m, variables:".format(region=region))
@@ -109,7 +117,7 @@ class PlotHelper(object):
             sampleTree = tc.getTree()
 
             if sampleTree:
-                groupName = self.groupDict[sample.name]  
+                groupName = self.getSampleGroup(sample) 
                 print (" > found the tree, #entries = ", sampleTree.tree.GetEntries())
                 print ("   > group =", groupName)
                 print (" > now adding the tree for vars=", self.vars)
