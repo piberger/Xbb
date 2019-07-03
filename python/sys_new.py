@@ -32,7 +32,6 @@ class XbbRun:
         self.opts = opts
         self.config = BetterConfigParser()
         self.config.read(opts.config)
-        samplesinfo = self.config.get('Directories', 'samplesinfo')
         self.channel = self.config.get('Configuration', 'channel')
 
         # load namespace, TODO
