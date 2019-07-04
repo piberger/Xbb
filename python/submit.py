@@ -908,14 +908,13 @@ if opts.task.startswith('cachetraining'):
             print " >", sampleName
     
     # get samples info
-    samplesinfo = config.get('Directories', 'samplesinfo')
     info = ParseInfo(samples_path=config.get('Directories', 'MVAin'), config=config)
     samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(list(set([sample.identifier for sample in samples])), samplesList)
     print "sample identifiers: (", len(sampleIdentifiers), ")"
-    for sampleIdentifier in sampleIdentifiers:
+    for sampleIdentifier in sorted(sampleIdentifiers):
         print " >", sampleIdentifier
     
     # per job parallelization parameter can split regions into several job
