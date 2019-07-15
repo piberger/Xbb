@@ -212,6 +212,22 @@ class BatchSystemSGE(BatchSystem):
         jobNames = [job.find('JB_name').text for job in xmlData.iter('job_list') if job.find('state').text.strip() == 'r']
         return jobNames
 
+    def getJobs(self, includeDeleted=True):
+        xmlData = xml.etree.ElementTree.fromstring(subprocess.Popen(["qstat","-xml"], stdout=subprocess.PIPE).stdout.read())
+        result = []
+        for job in xmlData.iter('job_list'):
+            jobDict = {
+                    'name': job.find('JB_name').text,
+                    'id': int(job.find('JB_job_number').text),
+                    'state': job.find('state').text.strip(),
+                    'slots': int(job.find('slots').text.strip()),
+                    'is_deleted': job.find('state').text.strip().startswith('d'),
+                    'is_running': job.find('state').text.strip().startswith('r'),
+                    'is_pending': job.find('state').text.strip().startswith('q'),
+                    }
+            result.append(jobDict)
+        return result
+
     def getJobIDfromOutput(self, stdOutput):
         jobId = -1
         for line in stdOutput.split("\n"):
