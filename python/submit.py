@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import datetime
+import glob
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
 from myutils.Datacard import Datacard
@@ -115,6 +116,7 @@ timestamp = time.strftime("%Y_%m_%d-%H_%M_%S")
 if debugPrintOUts:
     print 'samplesList', samplesList
     print 'timestamp', timestamp
+
 
 # ------------------------------------------------------------------------------
 # the LIST OF CONFIG FILES is taken from the path config
@@ -1019,8 +1021,8 @@ if opts.task.startswith('dnn'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cacheplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    sampleNames = eval(config.get('Plot_general', 'samples'))
-    dataSampleNames = eval(config.get('Plot_general', 'Data'))
+    sampleNames = list(eval(config.get('Plot_general', 'samples')))
+    dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
     # get samples info
     info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
@@ -1086,8 +1088,8 @@ if opts.task.startswith('runplot'):
     if len(opts.samples.strip()) > 0:
         # get samples info
         info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
-        sampleNames = eval(config.get('Plot_general', 'samples'))
-        dataSampleNames = eval(config.get('Plot_general', 'Data'))
+        sampleNames = list(eval(config.get('Plot_general', 'samples')))
+        dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
         samples = info.get_samples(sampleNames + dataSampleNames)
         sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     else:
@@ -1311,7 +1313,9 @@ if opts.task.startswith('rundc'):
                 # check if shape files exist already and skip
                 if opts.skipExisting:
                     datacard = Datacard(config=config, region=region, verbose=False)
-                    if all([os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]):
+                    shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
+                    # skip if all files exist or no shapes needed for this region/sample
+                    if all(shapeFileExists) or len(shapeFileExists) == 0:
                         print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
                         print "INFO: > all files exist! => skip"
                         continue
@@ -1768,6 +1772,67 @@ if opts.task.startswith('checklogs'):
                     nResubmitted += 1
     print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted, %d retries"%(len(lastSubmission), nComplete, nFailed, nResubmitted, nRetries)
 
+
+if opts.task.startswith('submissions'):
+    printWidth = 200
+    nSubmissions = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else 5
+    submissionLogs = glob.glob("submissions/*_*.json")
+    submissionLogs.sort(key=os.path.getmtime, reverse=True)
+    if len(submissionLogs) > nSubmissions:
+        submissionLogs = submissionLogs[:nSubmissions]
+
+    # check job status
+    batchSystem = BatchSystem.create(config)
+    jobs = batchSystem.getJobs()
+
+    runningJobs = {k: True for k in jobs if k['is_running']}
+    pendingJobs = {k: True for k in jobs if k['is_pending']}
+
+    for submissionLog in reversed(submissionLogs):
+        with open(submissionLog, 'r') as infile:
+             lastSubmission = json.load(infile)
+
+        jobStatus = []
+
+        for job in lastSubmission:
+            status = -1
+            if job['id'] in runningJobs:
+                status = 1
+            elif job['id'] in pendingJobs:
+                status = 2
+            elif os.path.isfile(job['log']):
+                with open(job['log'], 'r') as logfile:
+                    for i, line in enumerate(logfile.readlines(), 1):
+                        if line.startswith('exit code:'):
+                            job['exitCode'] = int(line.split('exit code:')[1].strip())
+                if 'exitCode' in job:
+                    if job['exitCode'] == 0:
+                        status = 0 
+                    else:
+                        status = 10 
+                else:
+                    status = 11
+            else:
+                status = 12
+
+            jobStatus.append(status)
+        
+        jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
+        print submissionLog, jobType
+
+        statusDict = {-1: "\x1b[41mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[35mQ\x1b[0m", 10: "\x1b[41mE\x1b[0m", 11: "\x1b[41mC\x1b[0m", 12: "\x1b[41mU\x1b[0m"}
+
+        while len(jobStatus) > 0:
+            if len(jobStatus) > printWidth:
+                printJobs = jobStatus[:printWidth]
+                jobStatus = jobStatus[printWidth:]
+            else:
+                printJobs = jobStatus
+                jobStatus = []
+            print ''.join([statusDict[x] for x in printJobs])
+        print "-"*printWidth
+
+
 # -----------------------------------------------------------------------------
 # postfitplot 
 # -----------------------------------------------------------------------------
@@ -1822,8 +1887,13 @@ batchSystem.submitQueue()
 
 # dump submitted jobs
 if batchSystem.getNJobsSubmitted() > 0 and not opts.resubmit:
-    for fileName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
-        try:
-            batchSystem.dumpSubmittedJobs(fileName)
-        except Exception as e:
-            print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e
+    fileName = 'submissions/' + opts.tag + '_' + submitTimestamp +  '.json' 
+    try:
+        batchSystem.dumpSubmittedJobs(fileName)
+        for copyName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
+            shutil.copyfile(fileName, copyName)
+    except Exception as e:
+        print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e
+
+
+    
