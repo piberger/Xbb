@@ -11,6 +11,7 @@ from sampleTree import SampleTree as SampleTree
 from NewStackMaker import NewStackMaker as StackMaker
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from BranchList import BranchList
+from XbbTools import XbbTools
 import array
 import re
 import itertools
@@ -929,9 +930,13 @@ class Datacard(object):
     def getSampleGroup(self, sample):
         # if Group dictionary is used, prioritize it over group from config
         if sample.name in self.sysOptions['Group']:
-            return self.sysOptions['Group'][sample.name]
+            sampleGroup = self.sysOptions['Group'][sample.name]
         else:
-            return sample.group
+            sampleGroup = sample.group
+        if len(sampleGroup.strip()) < 1:
+            print("\x1b[41m\x1b[37mERROR: sample group not defined for identifier=", sample.identifier, " name=", sample.name, "\x1b[0m")
+            raise Exception("ConfigError")
+        return sampleGroup
     
     def getSampleGroupFromName(self, sampleName, samples):
         matchingSamples = [x for x in samples if x.name == sampleName]
@@ -950,6 +955,9 @@ class Datacard(object):
             processName = self.sysOptions['Dict'][groupName]
         else:
             processName = groupName
+        if len(processName.strip()) < 1:
+            print("\x1b[41m\x1b[37mERROR: process empty for groupName=", groupName, "\x1b[0m")
+            raise Exception("ConfigError")
         return processName
 
     def getGroupNameFromProcessName(self, processName):
