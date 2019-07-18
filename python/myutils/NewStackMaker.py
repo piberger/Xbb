@@ -17,7 +17,20 @@ from sampleTree import SampleTree as SampleTree
 # stacked histogram
 # ------------------------------------------------------------------------------
 class NewStackMaker:
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
+
+    def readConfig(self, section, option, default=None):
+        if self.config.has_section(section) and self.config.has_option(section, option):
+            return eval(self.config.get(section, option))
+        else:
+            return default
+    
+    def readConfigStr(self, section, option, default=None):
+        if self.config.has_section(section) and self.config.has_option(section, option):
+            return self.config.get(section, option)
+        else:
+            return default
+
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title='CMS'):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.saveShapes = True
@@ -28,33 +41,39 @@ class NewStackMaker:
         elif self.config.has_section('Fit:%s'%region):
             self.configSection = 'Fit:%s'%region
         else:
-            print("ERROR: no section '%s'"%('Plot:%s'%region))
-            raise Exception("ConfigError")
+            print("\x1b[31mWARNING: no section '%s' in config, using defaults.\x1b[0m"%('Plot:%s'%region))
+            self.configSection = None
+            #raise Exception("ConfigError")
+
+        self.plotVarSection = 'plotDef:%s'%var
+        self.hasPlotVarSection = self.config.has_section(self.plotVarSection)
 
         self.dataGroupName = 'DATA'
-        self.anaTag = self.config.get("Analysis", "tag")
-        self.subcut = subcut
-        self.forceLog = None
-        self.normalize = eval(self.config.get(self.configSection, 'Normalize')) if self.config.has_option(self.configSection, 'Normalize') else False
-        self.log = eval(self.config.get(self.configSection, 'log')) if self.config.has_option(self.configSection, 'log') else False
-        self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
-        if self.config.has_option('plotDef:%s'%var, 'log'):
-            self.log = eval(self.config.get('plotDef:%s'%var,'log'))
-        self.blind = eval(self.config.get(self.configSection,'blind')) if self.config.has_option(self.configSection,'blind') else False
-        self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
-        self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
+        self.anaTag        = self.config.get("Analysis", "tag")
+        self.subcut        = subcut
+        self.forceLog      = None
+        self.normalize     = self.readConfig(self.configSection, 'Normalize', False)
+        self.log           = self.readConfig(self.configSection, 'log', False)
+        self.blind         = self.readConfig(self.configSection, 'blind', False)
+
+        self.mcUncertaintyLegend = self.readConfig('Plot_general', 'mcUncertaintyLegend', 'MC uncert. (stat.)')
+
+        self.xAxis = self.readConfigStr(self.plotVarSection, 'xAxis', '')
+        self.yAxis = self.readConfigStr(self.plotVarSection, 'yAxis', '')
+
+        if self.hasPlotVarSection: 
+            if self.config.has_option(self.plotVarSection, 'log'):
+                self.log = eval(self.config.get(self.plotVarSection, 'log'))
+
         self.is2D = True if self.yAxis else False
-        self.typLegendDict = eval(config.get('Plot_general','typLegendDict'))
+        self.typLegendDict = self.readConfig('Plot_general','typLegendDict', {})
         self.plotLabels = {}
         if setup is None:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
-        if not title:
-            if self.config.has_option('Plot_general', 'title'):
-                title = eval(self.config.get('Plot_general', 'title'))
 
-        self.plotTitle = title if title else "CMS"
+        self.plotTitle = self.readConfig('Plot_general', 'title', title) 
 
         self.rebin = 1
         self.histogramOptions = {
