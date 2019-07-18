@@ -24,8 +24,8 @@ class CachePlot(object):
         self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config) 
         self.sampleFilesFolder = self.config.get('Directories', 'samplefiles')
 
-        self.sampleNames = eval(self.config.get('Plot_general', 'samples'))
-        self.dataNames = eval(self.config.get('Plot_general', 'Data'))
+        self.sampleNames = list(eval(self.config.get('Plot_general', 'samples')))
+        self.dataNames = list(eval(self.config.get('Plot_general', 'Data')))
         self.samples = self.samplesInfo.get_samples(self.sampleNames + self.dataNames)
 
         self.regionsDict = {}
