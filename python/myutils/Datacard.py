@@ -701,204 +701,206 @@ class Datacard(object):
         print ('\n\t...fetching histos...\n')
 
         self.histograms = {}
-        # read cached sample trees, for every sample there is one SampleTree, which contains the events needed for ALL the systematics
+
+        # each sample group corresponds to a datacard process
+        sampleGroups = list(set([self.getSampleGroup(sample) for sample in allSamples]))
+        if self.debug:
+            print("DEBUG: sample group ---> datacard process")
+            for sampleGroup in sampleGroups:
+                print("DEBUG: ", sampleGroup, self.getProcessName(sampleGroup))
+
+        # loop over all processes (for each process there is 1:1 a 'sampleGroup' defined) 
+        # read cached sample trees: for every sample there is one SampleTree, which contains the events needed for ALL the systematics
         # use this sample tree with appropriate cuts for each systematics to fill the histograms
-        for i, sample in enumerate(allSamples): 
+        for i,sampleGroup in enumerate(sampleGroups):
 
-            print("SAMPLE NUMBER ", i, " OF ", len(allSamples))
-            # get cuts that were used in caching for this sample
-            sampleCuts = self.getCacheCut(sample)
+            samplesInGroup = [sample for sample in allSamples if self.getSampleGroup(sample) == sampleGroup]
 
-            # get sample tree from cache
-            tc = TreeCache.TreeCache(
-                    sample=sample,
-                    cutList=sampleCuts,
-                    inputFolder=self.path,
-                    config=self.config,
-                    debug=True
-                )
+            if self.debug: 
+                print("DEBUG: sample group", sampleGroup, " (",(i+1),"/",len(sampleGroups),")")
+                print("DEBUG: consists of samples:")
+                for x in samplesInGroup:
+                    print("DEBUG: > %s (%s)"%(x.name, x.identifier))
 
-            if not tc.isCached():
-                print("\x1b[31mERROR not cached! run cachedc step again\x1b[0m")
-                print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
-                raise Exception("NotCached")
+            sampleHistogramName = sampleGroup
+            self.histograms[sampleHistogramName] = {}
 
-            chunkSize = -1
-            if chunkNumber > 0:
-                chunkSize = int(self.config.get(sample.identifier, 'dcChunkSize'))
+            for sample in samplesInGroup:
+                # get cuts that were used in caching for this sample
+                sampleCuts = self.getCacheCut(sample)
 
-            sampleTree = tc.getTree(chunkSize, chunkNumber)
+                # get sample tree from cache
+                tc = TreeCache.TreeCache(
+                        sample=sample,
+                        cutList=sampleCuts,
+                        inputFolder=self.path,
+                        config=self.config,
+                        debug=True
+                    )
 
-            self.histograms[sample.name] = {}
-            systematicsList = self.getSystematicsList(isData=(sample.type == 'DATA'))
+                if not tc.isCached():
+                    print("\x1b[31mERROR not cached! run cachedc step again\x1b[0m")
+                    print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
+                    raise Exception("NotCached")
 
-            ## alternative (but slow) way. TODO: use histo maker in a fast way
-            #for systematics in systematicsList:
-            #    histogramOptions = {
-            #                    'rebin': 1,
-            #                    'weight': systematics['weight'],
-            #                    'treeVar': systematics['var'],
-            #                    'uniqueid': True,
-            #                }
-            #    histogramOptions.update(self.binning)
-            #    histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions)
-            #    self.histograms[sample.name][systematics['systematicsName']] = histoMaker.getHistogram(systematics['cut'])
+                chunkSize = int(self.config.get(sample.identifier, 'dcChunkSize')) if chunkNumber > 0 else -1
+                sampleTree = tc.getTree(chunkSize, chunkNumber)
 
-            # add all the cuts/weights for the different systematics 
-            evalcutInfoShown = False
-            for systematics in systematicsList:
-                
-                # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
-                # and even don't compute the histograms in this case (because e.g. branches missing)
-                # (this is different from the 'affecting' option, which only modifies the textfile but always creates histograms)
-                systematics['enabled'] = True
-                if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
-                    #if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
-                    groupName = self.getSampleGroup(sample)
-                    if groupName not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
-                        if self.debug:
-                            print('\x1b[31m group', groupName, 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
-                        systematics['enabled'] = False
-                
-                # additional BLINDING cut
-                if self.sysOptions['addBlindingCut']:
-                    systematics['cutWithBlinding'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
-                else:
-                    systematics['cutWithBlinding'] = systematics['cut']
+                systematicsList = self.getSystematicsList(isData=sample.isData())
 
-                # prepare histograms
-                histogramName = self.getUniqueHistogramName(sample.name, systematics['systematicsName'])
-                self.histograms[sample.name][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, len(self.variableBins)-1, self.variableBins) if self.variableBins else ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
-                self.histograms[sample.name][systematics['systematicsName']].Sumw2()
-
-                # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
-                if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and sample.type != 'DATA':
-                    systematics['addCut'] = self.EvalCut
-                    systematics['mcRescale'] = 2.0
-                    sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
-                    if self.debug and not evalcutInfoShown:
-                        print('\x1b[31mDEBUG: using 50% of sample not used in training:', self.EvalCut, '\x1b[0m')
-                        evalcutInfoShown = True
-                else:
-                    if self.debug:
-                        if sample.type == 'DATA':
-                            print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
-                        else:
-                            print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
-
-                # add TTreeFormulas
-                systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
-
-                if systematics['enabled']:
-                    sampleTree.addFormula(systematics['cutWithBlinding'])
-                    if sample.type != 'DATA':
-                        sampleTree.addFormula(systematics['weight'], systematics['weight'])
-                    sampleTree.addFormula(systematics['var'], systematics['var'])
-
-            # sample scale factor, to match to cross section
-            sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
-
-            # get used branches, which are either used in cut, weight or the variable itself
-            usedBranchList = BranchList()
-            for systematics in systematicsList:
-                usedBranchList.addCut(systematics['cutWithBlinding'])
-                if sample.type != 'DATA':
-                    usedBranchList.addCut(systematics['weight'])
-                usedBranchList.addCut(systematics['var'])
-                if 'addCut' in systematics:
-                    usedBranchList.addCut(systematics['addCut'])
-
-            # per sample special weight which is read from the config instead of the .root files 
-            useSpecialweight = False
-            if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
-                useSpecialweight = True
-                sampleTree.addFormula('specialweight', sample.specialweight)
-                usedBranchList.addCut(sample.specialweight)
-                print ("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
-            else:
-                print("INFO: don't use specialweight, weight:", systematicsList[0]['weight'])
-
-            # enable only used branches
-            usedBranchList.addCut(['evt','run','isData','event'])
-            listOfBranchesToKeep = usedBranchList.getListOfBranches()
-            sampleTree.enableBranches(listOfBranchesToKeep)
-            print ("DEBUG: branches enabled!")
-
-            # loop over all events in this sample
-            weight = 1.0
-            specialweight = 1.0
-            sampleTree.Print()
-
-            # obsolete:
-            # per region/var blinding cut
-            #self.regionVarBlindCut = None
-            #if self.blindCut and sample.type == 'DATA':
-            #    print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
-            #    if systematicsList[0]['var'] in self.blindCut:
-            #        self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
-            #        sampleTree.addFormula(self.regionVarBlindCut)
-            #        print("self.regionVarBlindCut = ", self.regionVarBlindCut)
-
-            for event in sampleTree:
-
-                # check blinding cut
-                #cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
-
-                # evaluate all systematics for this event
+                # add all the cuts/weights for the different systematics 
+                evalcutInfoShown = False
                 for systematics in systematicsList:
-                    cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
-                    if cutPassed:
-                        if 'addCut' in systematics:
-                            cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
+                    
+                    # 'decorrelate_sys_weight' in datacards.ini can be used to enable weight systematics for specific samples only
+                    # and even don't compute the histograms in this case (because e.g. branches missing)
+                    # (this is different from the 'affecting' option, which only modifies the textfile but always creates histograms)
+                    systematics['enabled'] = True
+                    if systematics['sysType'] == 'weight' and systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
+                        #if self.sysOptions['Group'][sample.name] not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                        groupName = self.getSampleGroup(sample)
+                        if groupName not in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                            if self.debug:
+                                print('\x1b[31m group', groupName, 'is not in', self.sysOptions['decorrelate_sys_weight'][systematics['name']], '==> disable\x1b[0m')
+                            systematics['enabled'] = False
+                    
+                    # additional BLINDING cut
+                    if self.sysOptions['addBlindingCut']:
+                        systematics['cutWithBlinding'] = '({cut})&&({blindingCut})'.format(cut=systematics['cut'], blindingCut=self.sysOptions['addBlindingCut'])
+                    else:
+                        systematics['cutWithBlinding'] = systematics['cut']
+
+                    # prepare histograms (only for the first sample in the group)
+                    if systematics['systematicsName'] not in self.histograms[sampleHistogramName]:
+                        histogramName = self.getUniqueHistogramName(sampleHistogramName, systematics['systematicsName'])
+                        self.histograms[sampleHistogramName][systematics['systematicsName']] = ROOT.TH1F(histogramName, histogramName, len(self.variableBins)-1, self.variableBins) if self.variableBins else ROOT.TH1F(histogramName, histogramName, self.binning['nBinsX'], self.binning['minX'], self.binning['maxX'])
+                        self.histograms[sampleHistogramName][systematics['systematicsName']].Sumw2()
+
+                    # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
+                    if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and sample.type != 'DATA':
+                        systematics['addCut'] = self.EvalCut
+                        systematics['mcRescale'] = 2.0
+                        sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
+                        if self.debug and not evalcutInfoShown:
+                            print('\x1b[31mDEBUG: using 50% of sample not used in training:', self.EvalCut, '\x1b[0m')
+                            evalcutInfoShown = True
+                    else:
+                        if self.debug:
+                            if sample.type == 'DATA':
+                                print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
+                            else:
+                                print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
+
+                    # add TTreeFormulas
+                    systematics['cutWithBlinding'] = systematics['cutWithBlinding'].replace(' ', '')
+
+                    if systematics['enabled']:
+                        sampleTree.addFormula(systematics['cutWithBlinding'])
+                        if sample.type != 'DATA':
+                            sampleTree.addFormula(systematics['weight'], systematics['weight'])
+                        sampleTree.addFormula(systematics['var'], systematics['var'])
+
+                # sample scale factor, to match to cross section
+                sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
+
+                # get used branches, which are either used in cut, weight or the variable itself
+                usedBranchList = BranchList()
+                for systematics in systematicsList:
+                    usedBranchList.addCut(systematics['cutWithBlinding'])
+                    if sample.type != 'DATA':
+                        usedBranchList.addCut(systematics['weight'])
+                    usedBranchList.addCut(systematics['var'])
+                    if 'addCut' in systematics:
+                        usedBranchList.addCut(systematics['addCut'])
+
+                # per sample special weight which is read from the config instead of the .root files 
+                useSpecialweight = False
+                if self.config.has_option('Weights', 'useSpecialWeight') and eval(self.config.get('Weights', 'useSpecialWeight')):
+                    useSpecialweight = True
+                    sampleTree.addFormula('specialweight', sample.specialweight)
+                    usedBranchList.addCut(sample.specialweight)
+                    print("INFO: use specialweight: {specialweight}".format(specialweight=sample.specialweight))
+                else:
+                    print("INFO: don't use specialweight, weight:", systematicsList[0]['weight'])
+
+                # enable only used branches
+                usedBranchList.addCut(['evt','run','isData','event'])
+                listOfBranchesToKeep = usedBranchList.getListOfBranches()
+                sampleTree.enableBranches(listOfBranchesToKeep)
+                print("DEBUG: branches enabled!")
+
+                # loop over all events in this sample
+                weight = 1.0
+                specialweight = 1.0
+                sampleTree.Print()
+
+                # obsolete:
+                # per region/var blinding cut
+                #self.regionVarBlindCut = None
+                #if self.blindCut and sample.type == 'DATA':
+                #    print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
+                #    if systematicsList[0]['var'] in self.blindCut:
+                #        self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
+                #        sampleTree.addFormula(self.regionVarBlindCut)
+                #        print("self.regionVarBlindCut = ", self.regionVarBlindCut)
+
+                for event in sampleTree:
+
+                    # check blinding cut
+                    #cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
+
+                    # evaluate all systematics for this event
+                    for systematics in systematicsList:
+                        cutPassed = sampleTree.evaluate(systematics['cutWithBlinding']) if systematics['enabled'] else False
                         if cutPassed:
-                            weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
-                            treeVar = sampleTree.evaluate(systematics['var'])
-                            specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                            self.histograms[sample.name][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
-                    #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+                            if 'addCut' in systematics:
+                                cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
+                            if cutPassed:
+                                weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                                treeVar = sampleTree.evaluate(systematics['var'])
+                                specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
+                                self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
+                        #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
 
 
-            # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
-            for systematics in systematicsList:
-                if self.histograms[sample.name][systematics['systematicsName']].GetEntries() < 1:
-                    if self.debug:
-                        print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
-                    self.histograms[sample.name][systematics['systematicsName']].SetEntries(1)
-                    for i in range(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetNbins()):
-                        self.histograms[sample.name][systematics['systematicsName']].SetBinContent(1+i, 0)
-                        #self.histograms[sample.name][systematics['systematicsName']].Fill(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetBinCenter(1+i), 0)
+                # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
+                for systematics in systematicsList:
+                    if self.histograms[sampleHistogramName][systematics['systematicsName']].GetEntries() < 1:
+                        if self.debug:
+                            print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
+                        self.histograms[sampleHistogramName][systematics['systematicsName']].SetEntries(1)
+                        for i in range(self.histograms[sampleHistogramName][systematics['systematicsName']].GetXaxis().GetNbins()):
+                            self.histograms[sampleHistogramName][systematics['systematicsName']].SetBinContent(1+i, 0)
+                            #self.histograms[sample.name][systematics['systematicsName']].Fill(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetBinCenter(1+i), 0)
 
-            # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
-            for systematics in systematicsList:
-                mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
-                self.histograms[sample.name][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
+                # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
+                for systematics in systematicsList:
+                    mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
+                    self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
 
-            print("nominal shape:")
-            nominalHist = self.histograms[sample.name][systematicsList[0]['systematicsName']]
-            nBins = nominalHist.GetXaxis().GetNbins()
-            binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
-            binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
-            print(binList)
-            print(binContentList)
+                print("nominal shape:")
+                nominalHist = self.histograms[sampleHistogramName][systematicsList[0]['systematicsName']]
+                nBins = nominalHist.GetXaxis().GetNbins()
+                binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
+                binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
+                print(binList)
+                print(binContentList)
 
+                # normalize up/down variations
+                for systematics in systematicsList:
+                    if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
+                        print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
+                        normNominal = nominalHist.Integral()
+                        normVariation = self.histograms[sampleHistogramName][systematics['systematicsName']].Integral()
+                        if normVariation > 0:
+                            self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(normNominal/normVariation)
+                            print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
 
-
-            # normalize up/down variations
-            for systematics in systematicsList:
-                if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
-                    print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
-                    normNominal = nominalHist.Integral()
-                    normVariation = self.histograms[sample.name][systematics['systematicsName']].Integral()
-                    if normVariation > 0:
-                        self.histograms[sample.name][systematics['systematicsName']].Scale(normNominal/normVariation)
-                        print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
-
-            # force positive shapes
-            for systematics in systematicsList:
-                if self.histograms[sample.name][systematics['systematicsName']].Integral() < 0:
-                    self.histograms[sample.name][systematics['systematicsName']].Scale(-0.00001)
-                    print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
-
+                # force positive shapes
+                for systematics in systematicsList:
+                    if self.histograms[sampleHistogramName][systematics['systematicsName']].Integral() < 0:
+                        self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(-0.00001)
+                        print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
@@ -968,47 +970,57 @@ class Datacard(object):
             return processName
 
     def load(self):
-        self.histograms = {}
-        allSamples = self.getAllSamples()
+        self.histograms   = {}
+        allSamples        = self.getAllSamples()
         sampleIdentifiers = sorted(list(set([sample.identifier for sample in allSamples])))
 
         for sampleIdentifier in sampleIdentifiers:
 
             subsamples = [sample for sample in allSamples if sample.identifier == sampleIdentifier]
 
+            if all([x.isData() for x in subsamples]):
+                isData = True
+            elif all([not x.isData() for x in subsamples]):
+                isData = False
+            else:
+                print("\x1b[31mERROR: subsamples can't be partially data!\x1b[0m")
+                raise Exception("ConfigError")
+
             # all shape .root files of that sample identifier
             rootFileNames = self.getShapeFileNames(sampleIdentifier)
             for rootFileName in rootFileNames:
+                print("\x1b[33m", rootFileName, "\x1b[0m")
                 rootFile = ROOT.TFile.Open(rootFileName, 'read')
                 if not rootFile or rootFile.IsZombie():
                     print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
                     raise Exception("FileIOError")
 
-                # process all subsamples
-                for subsample in subsamples:
-                    #sampleGroup = self.sysOptions['Group'][subsample.name]
-                    sampleGroup = self.getSampleGroup(subsample)
-                    #datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
+                # in every ROOT file samples for several groups can be resent if split
+                sampleGroups      = list(set([self.getSampleGroup(sample) for sample in allSamples if sample.identifier==sampleIdentifier]))
+
+                # loop over datacard processes 
+                for sampleGroup in sampleGroups:
+
                     datacardProcess = self.getProcessName(sampleGroup) 
 
-                    systematicsToEvaluate = self.getSystematicsList(isData=(subsample.type == 'DATA'))
+                    systematicsToEvaluate = self.getSystematicsList(isData=isData)
                     for systematics in systematicsToEvaluate:
                         datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
-                        histogramPath = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
-                        histogram = rootFile.Get(histogramPath)
+                        histogramPath                = '{folder}/{histogram}'.format(folder=self.Datacardbin, histogram=datacardProcessHistogramName)
+                        histogram                    = rootFile.Get(histogramPath)
                         if not histogram:
                             print ("IN:", rootFileName)
                             print ("FILE:", rootFile)
                             print ("LOOKING FOR:", histogramPath)
                             raise Exception("HistogramMissing")
-                        if subsample.name not in self.histograms:
-                            self.histograms[subsample.name] = {}
 
-                        if systematics['systematicsName'] in self.histograms[subsample.name]:
-                            self.histograms[subsample.name][systematics['systematicsName']].Add(histogram)
+                        if sampleGroup not in self.histograms:
+                            self.histograms[sampleGroup] = {}
+                        if systematics['systematicsName'] in self.histograms[sampleGroup]:
+                            self.histograms[sampleGroup][systematics['systematicsName']].Add(histogram)
                         else:
-                            self.histograms[subsample.name][systematics['systematicsName']] = histogram.Clone()
-                            self.histograms[subsample.name][systematics['systematicsName']].SetDirectory(0)
+                            self.histograms[sampleGroup][systematics['systematicsName']] = histogram.Clone()
+                            self.histograms[sampleGroup][systematics['systematicsName']].SetDirectory(0)
 
     def splitFilesExist(self, useSampleIdentifier=None, chunkNumber=-1):
         filesExist = True
@@ -1052,7 +1064,7 @@ class Datacard(object):
 
         # open and prepare histogram output files
         histogramFileName = self.getDatacardBaseName(dcName, ext='.root', chunkNumber=chunkNumber)
-        print("HISTOGRAM:", histogramFileName)
+        print("INFO: HISTOGRAM: \x1b[34m", histogramFileName, "\x1b[0m")
         try:
             datacardFolder = '/'.join(histogramFileName.split('/')[:-1])
             os.makedirs(datacardFolder)
@@ -1065,24 +1077,23 @@ class Datacard(object):
             raise Exception("FileIOError")
         rootFileSubdir = outfile.mkdir(self.Datacardbin, self.Datacardbin)
 
-        # sample groups for datacard, all samples of each group will be added in a single column
-        # sampleGroups = list(set([self.sysOptions['Group'][sample.name] for sample in samples]))
+        # sample groups for datacard, all samples of each group will be added in a single column (datacard process)
         sampleGroups = list(set([self.getSampleGroup(sample) for sample in samples]))
+        if self.debug:
+            print("\x1b[31mDEBUG: groups=", sampleGroups,"\x1b[0m")
 
         for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
             systematics['histograms'] = {}
 
         for sampleGroup in sampleGroups:
-            # adjust name for DC convention
             for systematics in self.getSystematicsList(isData=(sampleGroup == 'DATA')):
                 # sum histograms of all samples in the datacard group
                 #print ("->",self.sysOptions['Dict'])
-                #datacardProcess = self.sysOptions['Dict'][sampleGroup] if sampleGroup != 'DATA' else 'data_obs'
                 datacardProcess = self.getProcessName(sampleGroup) 
                 datacardProcessHistogramName = self.getHistogramName(process=datacardProcess, systematics=systematics)
-                
+
                 # add up all the sample histograms for this process and this systematic
-                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if self.getSampleGroupFromName(k, samples) == sampleGroup]
+                histogramsInGroup = [h[systematics['systematicsName']] for k, h in self.histograms.iteritems() if k == sampleGroup]
 
                 if len(histogramsInGroup) > 0:
                     systematics['histograms'][sampleGroup] = StackMaker.sumHistograms(histogramsInGroup, datacardProcessHistogramName)
@@ -1158,7 +1169,7 @@ class Datacard(object):
         # write TEXT file
         # ----------------------------------------------
         txtFileName = self.getDatacardBaseName(dcName, ext='.txt', chunkNumber=chunkNumber)
-        print("TEXTFILE:", txtFileName)
+        print("INFO: TEXTFILE:\x1b[34m", txtFileName, "\x1b[0m")
 
         numProcesses = len([x for x in sampleGroups if x != 'DATA'])
         numSignals = len(self.sysOptions['setupSignals']) if 'setupSignals' in self.sysOptions else 1
@@ -1210,7 +1221,6 @@ class Datacard(object):
             dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
             
             # write non-shape systematics
-
             nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'InUse'))
             for systematic in nonShapeSystematics:
                 systematicDict = eval(self.config.get('Datacard', systematic))
