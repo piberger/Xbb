@@ -1775,24 +1775,38 @@ if opts.task.startswith('checklogs'):
 
 if opts.task.startswith('submissions'):
     printWidth = 200
-    nSubmissions = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else 5
-    submissionLogs = glob.glob("submissions/*_*.json")
-    submissionLogs.sort(key=os.path.getmtime, reverse=True)
-    if len(submissionLogs) > nSubmissions:
-        submissionLogs = submissionLogs[:nSubmissions]
+    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m"}
+    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted"}
+    print "*"*printWidth
+    print " legend:"
+    for n in [0,1,2,-1,10,11,12,100]:
+        print "  ", statusDict[n], "  ", statusNamesDict[n]
+    print "*"*printWidth
+    
+    if opts.input:
+        # --input file.json
+        submissionLogs = [opts.input]
+    else:
+        # no --input: list last N submissions (e.g. use -N 10)
+        nSubmissions = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else 5
+        submissionLogs = glob.glob("submissions/*_*.json")
+        submissionLogs.sort(key=os.path.getmtime, reverse=True)
+
+        if len(submissionLogs) > nSubmissions:
+            submissionLogs = submissionLogs[:nSubmissions]
+        print "showing the latest", nSubmissions, "submissions, use --input to specify .json file to check an individual one"
 
     # check job status
     batchSystem = BatchSystem.create(config)
     jobs = batchSystem.getJobs()
 
-    runningJobs = {k: True for k in jobs if k['is_running']}
-    pendingJobs = {k: True for k in jobs if k['is_pending']}
+    runningJobs = {k['id']: True for k in jobs if k['is_running']}
+    pendingJobs = {k['id']: True for k in jobs if k['is_pending']}
+    nResubmitted = 0
 
     for submissionLog in reversed(submissionLogs):
         with open(submissionLog, 'r') as infile:
              lastSubmission = json.load(infile)
-
-        jobStatus = []
 
         for job in lastSubmission:
             status = -1
@@ -1815,13 +1829,19 @@ if opts.task.startswith('submissions'):
             else:
                 status = 12
 
-            jobStatus.append(status)
+            job['status'] = status
         
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
         print submissionLog, jobType
 
-        statusDict = {-1: "\x1b[41mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[35mQ\x1b[0m", 10: "\x1b[41mE\x1b[0m", 11: "\x1b[41mC\x1b[0m", 12: "\x1b[41mU\x1b[0m"}
+        if opts.resubmit:
+            for job in lastSubmission:
+                if job['status'] in [-1, 10, 11, 12]:
+                    subprocess.call([job['submitCommand']], shell=True)
+                    nResubmitted += 1
+                    job['status'] = 100
 
+        jobStatus = [job['status'] for job in lastSubmission]
         while len(jobStatus) > 0:
             if len(jobStatus) > printWidth:
                 printJobs = jobStatus[:printWidth]
@@ -1831,7 +1851,8 @@ if opts.task.startswith('submissions'):
                 jobStatus = []
             print ''.join([statusDict[x] for x in printJobs])
         print "-"*printWidth
-
+    if nResubmitted > 0:
+        print nResubmitted, "jobs resubmitted!"
 
 # -----------------------------------------------------------------------------
 # postfitplot 
