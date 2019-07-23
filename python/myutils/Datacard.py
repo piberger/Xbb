@@ -667,7 +667,7 @@ class Datacard(object):
 
     # get a little looser cut, which is the same for all systematics
     def getCacheCut(self, sample):
-        systematicsCuts = sorted(list(set([x['cachecut'] for x in self.getSystematicsList(isData=(sample.type == 'DATA'))])))
+        systematicsCuts = sorted(list(set([x['cachecut'] for x in self.getSystematicsList(isData=sample.isData())])))
         # nominal cut is still the original one, to ensure all nominal events are kept if approximations are used for systematics
         # therefore the list systematicsCuts also contains the nominal cut string
         sampleCuts = {'AND': [sample.subcut, {'OR': systematicsCuts}]}
@@ -707,7 +707,7 @@ class Datacard(object):
         if self.debug:
             print("DEBUG: sample group ---> datacard process")
             for sampleGroup in sampleGroups:
-                print("DEBUG: ", sampleGroup, self.getProcessName(sampleGroup))
+                print("DEBUG: ", sampleGroup, "--->", self.getProcessName(sampleGroup))
 
         # loop over all processes (for each process there is 1:1 a 'sampleGroup' defined) 
         # read cached sample trees: for every sample there is one SampleTree, which contains the events needed for ALL the systematics
@@ -777,7 +777,7 @@ class Datacard(object):
                         self.histograms[sampleHistogramName][systematics['systematicsName']].Sumw2()
 
                     # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
-                    if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and sample.type != 'DATA':
+                    if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and not sample.isData():
                         systematics['addCut'] = self.EvalCut
                         systematics['mcRescale'] = 2.0
                         sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
@@ -786,7 +786,7 @@ class Datacard(object):
                             evalcutInfoShown = True
                     else:
                         if self.debug:
-                            if sample.type == 'DATA':
+                            if sample.isData():
                                 print('\x1b[31mDEBUG: using full sample since it is DATA!',systematics['var'].lower(), "\x1b[0m")
                             else:
                                 print('\x1b[31mDEBUG: using full sample for sample of type', sample.type, 'for', systematics['var'].lower(), "\x1b[0m")
@@ -796,18 +796,18 @@ class Datacard(object):
 
                     if systematics['enabled']:
                         sampleTree.addFormula(systematics['cutWithBlinding'])
-                        if sample.type != 'DATA':
+                        if not sample.isData():
                             sampleTree.addFormula(systematics['weight'], systematics['weight'])
                         sampleTree.addFormula(systematics['var'], systematics['var'])
 
                 # sample scale factor, to match to cross section
-                sampleScaleFactor = sampleTree.getScale(sample) if sample.type != 'DATA' else 1.0
+                sampleScaleFactor = sampleTree.getScale(sample) if not sample.isData() else 1.0
 
                 # get used branches, which are either used in cut, weight or the variable itself
                 usedBranchList = BranchList()
                 for systematics in systematicsList:
                     usedBranchList.addCut(systematics['cutWithBlinding'])
-                    if sample.type != 'DATA':
+                    if not sample.isData():
                         usedBranchList.addCut(systematics['weight'])
                     usedBranchList.addCut(systematics['var'])
                     if 'addCut' in systematics:
@@ -834,20 +834,7 @@ class Datacard(object):
                 specialweight = 1.0
                 sampleTree.Print()
 
-                # obsolete:
-                # per region/var blinding cut
-                #self.regionVarBlindCut = None
-                #if self.blindCut and sample.type == 'DATA':
-                #    print ("0:", systematicsList[0]['var'], self.blindCut[systematicsList[0]['var']])
-                #    if systematicsList[0]['var'] in self.blindCut:
-                #        self.regionVarBlindCut = self.blindCut[systematicsList[0]['var']]
-                #        sampleTree.addFormula(self.regionVarBlindCut)
-                #        print("self.regionVarBlindCut = ", self.regionVarBlindCut)
-
                 for event in sampleTree:
-
-                    # check blinding cut
-                    #cutPassed = sampleTree.evaluate(self.regionVarBlindCut) if self.regionVarBlindCut else True
 
                     # evaluate all systematics for this event
                     for systematics in systematicsList:
@@ -856,51 +843,49 @@ class Datacard(object):
                             if 'addCut' in systematics:
                                 cutPassed = cutPassed and sampleTree.evaluate(systematics['addCut'])
                             if cutPassed:
-                                weight = sampleTree.evaluate(systematics['weight']) if sample.type != 'DATA' else 1.0
+                                weight = sampleTree.evaluate(systematics['weight']) if not sample.isData() else 1.0
                                 treeVar = sampleTree.evaluate(systematics['var'])
                                 specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                                self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight)
-                        #print("DEBUG: ", cutPassed, " fill evt", sampleTree.tree.GetReadEntry(), " with weight ", weight * specialweight)
+                                self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
 
 
-                # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
-                for systematics in systematicsList:
-                    if self.histograms[sampleHistogramName][systematics['systematicsName']].GetEntries() < 1:
-                        if self.debug:
-                            print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
-                        self.histograms[sampleHistogramName][systematics['systematicsName']].SetEntries(1)
-                        for i in range(self.histograms[sampleHistogramName][systematics['systematicsName']].GetXaxis().GetNbins()):
-                            self.histograms[sampleHistogramName][systematics['systematicsName']].SetBinContent(1+i, 0)
-                            #self.histograms[sample.name][systematics['systematicsName']].Fill(self.histograms[sample.name][systematics['systematicsName']].GetXaxis().GetBinCenter(1+i), 0)
+            # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
+            for systematics in systematicsList:
+                if self.histograms[sampleHistogramName][systematics['systematicsName']].GetEntries() < 1:
+                    if self.debug:
+                        print("INFO: ",systematics['systematicsName'], "histogram had 0 entries! => filled with 0")
+                    self.histograms[sampleHistogramName][systematics['systematicsName']].SetEntries(1)
+                    for i in range(self.histograms[sampleHistogramName][systematics['systematicsName']].GetXaxis().GetNbins()):
+                        self.histograms[sampleHistogramName][systematics['systematicsName']].SetBinContent(1+i, 0)
 
-                # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
-                for systematics in systematicsList:
-                    mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
-                    self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(sampleScaleFactor * mcRescale)
+            # rescale histograms to match cross section and to compensate for cut on MC to not use MVA training samples
+            for systematics in systematicsList:
+                mcRescale = systematics['mcRescale'] if 'mcRescale' in systematics else 1.0
+                self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(mcRescale)
 
-                print("nominal shape:")
-                nominalHist = self.histograms[sampleHistogramName][systematicsList[0]['systematicsName']]
-                nBins = nominalHist.GetXaxis().GetNbins()
-                binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
-                binContentList = '|'.join([('%1.1f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
-                print(binList)
-                print(binContentList)
+            nominalHist = self.histograms[sampleHistogramName][systematicsList[0]['systematicsName']]
+            print("nominal shape:",systematicsList[0]['systematicsName'],nominalHist,"N(MC)=",nominalHist.GetEntries(),"N(weighted)=",nominalHist.Integral())
+            nBins = nominalHist.GetXaxis().GetNbins()
+            binList = '|'.join([('%d'%(i+1)).ljust(8) for i in range(nBins)])
+            binContentList = '|'.join([('%1.2f'%nominalHist.GetBinContent(i+1)).ljust(8) for i in range(nBins)])
+            print(binList)
+            print(binContentList)
 
-                # normalize up/down variations
-                for systematics in systematicsList:
-                    if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
-                        print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
-                        normNominal = nominalHist.Integral()
-                        normVariation = self.histograms[sampleHistogramName][systematics['systematicsName']].Integral()
-                        if normVariation > 0:
-                            self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(normNominal/normVariation)
-                            print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
+            # normalize up/down variations
+            for systematics in systematicsList:
+                if systematics['systematicsName'] in self.sysOptions['normalizeShapes']:
+                    print("INFO: normalize shape variation to nominal:", systematics['systematicsName'])
+                    normNominal = nominalHist.Integral()
+                    normVariation = self.histograms[sampleHistogramName][systematics['systematicsName']].Integral()
+                    if normVariation > 0:
+                        self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(normNominal/normVariation)
+                        print("INFO: scaled by", normNominal/normVariation, "=",normNominal,"/",normVariation)
 
-                # force positive shapes
-                for systematics in systematicsList:
-                    if self.histograms[sampleHistogramName][systematics['systematicsName']].Integral() < 0:
-                        self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(-0.00001)
-                        print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
+            # force positive shapes
+            for systematics in systematicsList:
+                if self.histograms[sampleHistogramName][systematics['systematicsName']].Integral() < 0:
+                    self.histograms[sampleHistogramName][systematics['systematicsName']].Scale(-0.00001)
+                    print("INFO: shape", systematics['systematicsName'], "was negative, forced positive")
 
         self.writeDatacards(samples=allSamples, dcName=usedSamplesString, chunkSize=chunkSize, chunkNumber=chunkNumber)
 
@@ -1082,7 +1067,7 @@ class Datacard(object):
         if self.debug:
             print("\x1b[31mDEBUG: groups=", sampleGroups,"\x1b[0m")
 
-        for systematics in self.getSystematicsList(isData=(sample.type == 'DATA')):
+        for systematics in self.getSystematicsList(isData=sample.isData()):
             systematics['histograms'] = {}
 
         for sampleGroup in sampleGroups:
@@ -1187,7 +1172,7 @@ class Datacard(object):
             #else:
             #    if not split or (split and split_data):
             #        f.write('observation\t%s\n\n'%(theData.Integral()))
-            if len([s for s in samples if s.type == 'DATA']) > 0:
+            if len([s for s in samples if s.isData()]) > 0:
                 nominalDict = self.getSystematicsList(isData=True)
                 if len(nominalDict) == 1:
                     nominalValue = nominalDict[0]['histograms']['DATA'].Integral()
@@ -1198,7 +1183,7 @@ class Datacard(object):
                     raise Exception("DcDictError")
 
             # MC datacard processes
-            if len([s for s in samples if s.type != 'DATA']) < 1:
+            if len([s for s in samples if not s.isData()]) < 1:
                 dcProcesses = []
             else:
                 #dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
