@@ -240,6 +240,11 @@ class BatchSystemSGE(BatchSystem):
                     pass
         return jobId
 
+    def resubmit(self, job):
+        stdOutput = subprocess.check_output([job['submitCommand']], shell=True)
+        job['id'] = self.getJobIDfromOutput(stdOutput)
+        return job
+
     def submit(self, job, repDict):
         self.nJobsProcessed += 1
         self.submitPreprocess(job, repDict)

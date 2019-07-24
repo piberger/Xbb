@@ -1805,6 +1805,7 @@ if opts.task.startswith('submissions'):
     nResubmitted = 0
 
     for submissionLog in reversed(submissionLogs):
+        nResubmittedPerFile = 0
         with open(submissionLog, 'r') as infile:
              lastSubmission = json.load(infile)
 
@@ -1837,8 +1838,10 @@ if opts.task.startswith('submissions'):
         if opts.resubmit:
             for job in lastSubmission:
                 if job['status'] in [-1, 10, 11, 12]:
-                    subprocess.call([job['submitCommand']], shell=True)
+                    # resubmit
+                    batchSystem.resubmit(job)
                     nResubmitted += 1
+                    nResubmittedPerFile += 1
                     job['status'] = 100
 
         jobStatus = [job['status'] for job in lastSubmission]
@@ -1851,8 +1854,15 @@ if opts.task.startswith('submissions'):
                 jobStatus = []
             print ''.join([statusDict[x] for x in printJobs])
         print "-"*printWidth
+
+        if nResubmittedPerFile > 0:
+            with open(submissionLog, 'w') as outfile:
+                json.dump(lastSubmission, outfile)
+
+
     if nResubmitted > 0:
         print nResubmitted, "jobs resubmitted!"
+
 
 # -----------------------------------------------------------------------------
 # postfitplot 
