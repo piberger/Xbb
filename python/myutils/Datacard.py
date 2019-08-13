@@ -399,7 +399,7 @@ class Datacard(object):
 
     def calcBinning(self):
 
-        if self.binning['rebin_method'] == 'fixed' and len(self.binning['rebin_list']) > 0:
+        if self.binning['rebin_method'] in ['fixed', 'list'] and len(self.binning['rebin_list']) > 0:
             self.variableBins = array.array('d',self.binning['rebin_list'])
         elif self.binning['rebin_method'] == 'legacy':
             # below is the old method, that was used for 2016 Heppy analysis

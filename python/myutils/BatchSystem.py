@@ -105,6 +105,12 @@ class BatchSystem(object):
         repDict['job'] = job
         repDict['name'] = '%(job)s_%(en)s%(task)s' %repDict
 
+    def runShell(self, commands):
+        try:
+            return subprocess.check_output(commands, shell=True)
+        except:
+            return None
+
     def run(self, command, runScript='', repDict={}, getJobIdFn=None):
         # -----------------------------------------------------------------------------
         # RUN command
@@ -164,6 +170,10 @@ class BatchSystem(object):
         with open(fileName, 'w') as outfile:
             json.dump([x.toDict() for x in self.submittedJobs], outfile)
 
+    def cancelJob(self, job):
+        print("WARNING: cancel job not implemented for this batch system!")
+
+
 class BatchSystemSGE(BatchSystem):
     
     def __init__(self, config=None, interactive=False, local=False, configFile=None):
@@ -171,9 +181,10 @@ class BatchSystemSGE(BatchSystem):
         self.name = 'SGE'
         self.config = config
 
-        self.submitScriptTemplate = 'qsub {options} -o {logfile} {runscript}'
+        self.submitScriptTemplate        = 'qsub {options} -o {logfile} {runscript}'
+        self.cancelJobTemplate           = 'qdel {jobId}'
         self.submitScriptOptionsTemplate = '-V -cwd -q %(queue)s -N %(name)s -j y -pe smp %(nprocesses)s'
-        self.submitScriptSpecialOptions = {
+        self.submitScriptSpecialOptions  = {
             'mergesyscachingdcsplit': ' -l h_vmem=6g ',
             'singleeval': ' -l h_vmem=6g ',
             'runtraining': ' -l h_vmem=6g ',
@@ -262,7 +273,12 @@ class BatchSystemSGE(BatchSystem):
         #    dump_config(configs, logPaths['config'])
 
         return self.run(command, runScript, repDict, getJobIdFn=self.getJobIDfromOutput)
-
+    
+    def cancelJob(self, job):
+        jobId = int(job['id'])
+        command = self.cancelJobTemplate.format(jobId=jobId)
+        commandOutput = self.runShell([command])
+        return commandOutput is not None and 'has deleted job' in commandOutput
 
 class BatchSystemHTCondor(BatchSystem):
     

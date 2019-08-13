@@ -181,7 +181,7 @@ class NewStackMaker:
         self.plotTextMarginLeft = 0.16
 
         if self.debug:
-            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
+            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'] if 'nBins' in self.histogramOptions else '-')
 
     def setPlotText(self, text):
         if type(text) == list:

@@ -37,6 +37,8 @@ parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true"
                       help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
+parser.add_option("--cancel", dest="cancel", action="store_true", default=False,
+                      help="cancel submission")
 parser.add_option("-d", "--friend", dest="friend", action="store_true", default=False,
                       help="use friend trees")
 parser.add_option("-F", "--folderTag", dest="ftag", default="",
@@ -62,7 +64,7 @@ parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine 
 parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
-parser.add_option("--set", dest="setOptions", help="set config option. --set='Section.option:value'")
+parser.add_option("--set", action="append", dest="setOptions", help="set config option. --set='Section.option:value'")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
 parser.add_option("-T", "--tag", dest="tag", default="8TeV",
                       help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
@@ -182,10 +184,14 @@ if configurationNeeded:
         # e.g. --set='Plot_general.var:=<!Plot_general|vars_reduced!>'
         # this will set var in [Plot_general] to: <!Plot_general|vars_reduced!>
         # to set multiple options, use ; to separate, e.g. --set='Plot_general.var:=Hmass;Plot_general.saveDataHistograms:=True'
+
         if opts.setOptions:
+            # allow multiple --set options to be passed
+            setOptions = ';'.join(opts.setOptions)
+            
             # escaping of semicolon
-            opts.setOptions = opts.setOptions.replace('\;', '##SEMICOLON##')
-            for optValue in opts.setOptions.split(";"):
+            setOptions = setOptions.replace('\;', '##SEMICOLON##')
+            for optValue in setOptions.split(";"):
                 optValue = optValue.replace('##SEMICOLON##', ';').strip()
                 syntaxOk = True
                 try:
@@ -1775,14 +1781,14 @@ if opts.task.startswith('checklogs'):
 
 if opts.task.startswith('submissions'):
     printWidth = 200
-    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m"}
-    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted"}
+    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m"}
+    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled"}
     print "*"*printWidth
     print " legend:"
     for n in [0,1,2,-1,10,11,12,100]:
         print "  ", statusDict[n], "  ", statusNamesDict[n]
     print "*"*printWidth
-    
+
     if opts.input:
         # --input file.json
         submissionLogs = [opts.input]
@@ -1803,38 +1809,53 @@ if opts.task.startswith('submissions'):
     runningJobs = {k['id']: True for k in jobs if k['is_running']}
     pendingJobs = {k['id']: True for k in jobs if k['is_pending']}
     nResubmitted = 0
+    nCancelled   = 0
+    nCancelFailed = 0
 
     for submissionLog in reversed(submissionLogs):
         nResubmittedPerFile = 0
         with open(submissionLog, 'r') as infile:
              lastSubmission = json.load(infile)
 
-        for job in lastSubmission:
-            status = -1
-            if job['id'] in runningJobs:
-                status = 1
-            elif job['id'] in pendingJobs:
-                status = 2
-            elif os.path.isfile(job['log']):
-                with open(job['log'], 'r') as logfile:
-                    for i, line in enumerate(logfile.readlines(), 1):
-                        if line.startswith('exit code:'):
-                            job['exitCode'] = int(line.split('exit code:')[1].strip())
-                if 'exitCode' in job:
-                    if job['exitCode'] == 0:
-                        status = 0 
-                    else:
-                        status = 10 
+        # cancel jobs
+        if opts.input and opts.cancel:
+            for job in lastSubmission:
+                success = batchSystem.cancelJob(job)
+                if success:
+                    nCancelled += 1
                 else:
-                    status = 11
-            else:
-                status = 12
+                    nCancelFailed += 1
+                job['status'] = 101
 
-            job['status'] = status
+        # check status
+        else:
+            for job in lastSubmission:
+                status = -1
+                if job['id'] in runningJobs:
+                    status = 1
+                elif job['id'] in pendingJobs:
+                    status = 2
+                elif os.path.isfile(job['log']):
+                    with open(job['log'], 'r') as logfile:
+                        for i, line in enumerate(logfile.readlines(), 1):
+                            if line.startswith('exit code:'):
+                                job['exitCode'] = int(line.split('exit code:')[1].strip())
+                    if 'exitCode' in job:
+                        if job['exitCode'] == 0:
+                            status = 0 
+                        else:
+                            status = 10 
+                    else:
+                        status = 11
+                else:
+                    status = 12
+
+                job['status'] = status
         
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
         print submissionLog, jobType
 
+        # resubmit jobs
         if opts.resubmit:
             for job in lastSubmission:
                 if job['status'] in [-1, 10, 11, 12]:
@@ -1858,11 +1879,15 @@ if opts.task.startswith('submissions'):
         if nResubmittedPerFile > 0:
             with open(submissionLog, 'w') as outfile:
                 json.dump(lastSubmission, outfile)
+    
+    if nCancelFailed > 0:
+        print nCancelFailed, "jobs could not be cancelled"
 
+    if nCancelled > 0:
+        print nCancelled, "jobs cancelled"
 
     if nResubmitted > 0:
         print nResubmitted, "jobs resubmitted!"
-
 
 # -----------------------------------------------------------------------------
 # postfitplot 
