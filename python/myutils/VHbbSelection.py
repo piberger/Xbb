@@ -16,6 +16,8 @@ class VHbbSelection(AddCollectionsModule):
         self.debugEvents = []
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
+        # only use puId below this pT:
+        self.puIdMaxPt = 50.0
         super(VHbbSelection, self).__init__()
 
     def customInit(self, initVars):
@@ -202,7 +204,7 @@ class VHbbSelection(AddCollectionsModule):
             #print('Jet_PtReg', tree.Jet_PtReg[i])
             #print('Jet_eta', abs(tree.Jet_eta[i]))  
             #print('------------------------')
-            if tree.Jet_lepFilter[i] and tree.Jet_puId[i] > puIdCut and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
+            if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
                 if len(indices) < 1:
                     indices.append(i)
                     #print('indices',indices)
@@ -215,7 +217,7 @@ class VHbbSelection(AddCollectionsModule):
             for i in range(tree.nJet):
                 if i == indices[0]:
                     continue
-                if tree.Jet_lepFilter[i] and tree.Jet_puId[i] > puIdCut and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j2ptCut and abs(tree.Jet_eta[i]) < 2.5:
+                if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j2ptCut and abs(tree.Jet_eta[i]) < 2.5:
                     if len(indices) < 2:
                         indices.append(i)
                     else:
