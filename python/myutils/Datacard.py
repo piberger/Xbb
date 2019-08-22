@@ -848,6 +848,11 @@ class Datacard(object):
                                 specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
                                 self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
 
+                if not sampleTree.checkProcessingComplete():
+                    raise Exception('FileReadIncomplete')
+                else:
+                    print('INFO: sampleTree TChain: all files have been processed.')
+
 
             # if histogram is empty, fill it with 0 to avoid having histograms with 0 entries
             for systematics in systematicsList:

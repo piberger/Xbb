@@ -54,6 +54,8 @@ class SampleTree(object):
         self.disableBranchesInOutput = True
         self.samples = samples
         self.tree = None
+        self.nonEmptyTrees = []
+        self.processedTrees = []
         #print('here')
         self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         #print('here_again')
@@ -204,7 +206,14 @@ class SampleTree(object):
 
                             if self.debug:
                                 print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
-                            statusCode = self.tree.Add(chainTree)   
+
+                            nEntriesBefore = self.tree.GetEntries()
+                            statusCode = self.tree.Add(chainTree)
+                            nEntriesAfter = self.tree.GetEntries()
+
+                            if nEntriesAfter>nEntriesBefore:
+                                self.nonEmptyTrees.append(rootFileName)
+
                             #chainTree = root://t3dcachedb03.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_8_58d6472a6c2138455ddc891e46742bf0bf4635409bea6cbea1891808.root/Events                         
                             #print('This is where each tree is added to TChain object self.tree')
                             #print('statusCode', statusCode)   #1 always (if added)
@@ -586,6 +595,12 @@ class SampleTree(object):
                 if self.debug:
                     perfStats = perfStats + ' max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
+
+                # in case files of the chain get inaccessible in the time between making the chain (file exsitence will be checked and error raised if file does not exist!) 
+                # and the time the file is read (ROOT will silently ignore it ad there will be just Xrootd error message printed)
+                # add processed numbers to array and check if all trees have been processed in the end
+                self.processedTrees.append(treeNum)
+
                 if self.debugProfiling:
                     self.tree.PrintCacheStats()
                 sys.stdout.flush()
@@ -1016,8 +1031,15 @@ class SampleTree(object):
         passedTime = time.time() - self.timeStart
         perfStats = 'INPUT: {erps:1.4f}/s, OUTPUT: {ewps:1.4f}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
         print('INFO: throughput:', perfStats)
+        print('INFO: number of trees processed:', len(self.processedTrees))
         sys.stdout.flush()
-        
+      
+        if not self.checkProcessingComplete():
+            print('ERROR: some files might have gone unavailable during iteration of the TChain!')
+            print('ERROR:  -> expected number of trees:', len(self.nonEmptyTrees))
+            print('ERROR:  -> actual number of processed trees:', len(self.processedTrees))
+            raise Exception('FileException')
+
         # callbacks after loop 
         self._runCallbacks('finish')
 
@@ -1070,6 +1092,13 @@ class SampleTree(object):
             except:
                 pass
 
+    def checkProcessingComplete(self):
+        if self.debug:
+            print('DEBUG: verify that all tree files were seen once during iteration') 
+            print('DEBUG:  -> number of trees:', len(self.sampleFileNames))
+            print('DEBUG:  -> number of non-empty trees:', len(self.nonEmptyTrees))
+            print('DEBUG:  -> actual number of processed trees:', len(self.processedTrees))
+        return len(self.nonEmptyTrees) == len(self.processedTrees)
 
     @staticmethod
     def countSampleFiles(samples):
