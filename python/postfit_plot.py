@@ -290,6 +290,8 @@ if __name__ == "__main__":
                           help="shapes_prefit, shapes_fit_b, shapes_fit_s")
     parser.add_option("-u", "--unblind", action="store_true", dest="unblind", default=False,
                               help="Unblind")
+    parser.add_option("-b","--bins", dest="bins", default='',
+            help="for eff. scale factor computation: restrict to this list of comma separated bins (Starting at bin 1)")
 
     (opts, args) = parser.parse_args(argv)
     if opts.config == "":
@@ -341,6 +343,15 @@ if __name__ == "__main__":
                     nBins_prefit = histogram_prefit.GetXaxis().GetNbins()
                     nBins_postfit = histogram_postfit.GetXaxis().GetNbins()
                     assert nBins_prefit == nBins_postfit
+
+                    # restrict to bin list
+                    if len(opts.bins.strip()) > 0:
+                        binList = [int(x) for x in opts.bins.strip().split(',')]
+                        for i in range(nBins_prefit):
+                            if i+1 not in binList:
+                                histogram_prefit.SetBinContent(i+1, 0)
+                                histogram_postfit.SetBinContent(i+1, 0)
+
                     histogram_postfit.Rebin(nBins_postfit)
                     histogram_prefit.Rebin(nBins_prefit)
                     

@@ -80,12 +80,14 @@ class tensorflowEvaluator(AddCollectionsModule):
             match = True
             for i in range(self.nFeatures):
                 if self.features[i] != self.info['variables'][i]: 
-                    print("\x1b[41mINFO:", self.features[i].ljust(40), "---->", self.info['variables'][i].ljust(40), " => MISMATCH!\x1b[0m")
+                    print("\x1b[41m\x1b[37mINFO:", self.features[i].ljust(40), "---->", self.info['variables'][i].ljust(40), " => MISMATCH!\x1b[0m")
                     match = False
                 else:
-                    print("INFO:", self.features[i].ljust(40), "---->", self.info['variables'][i])
+                    print("INFO:\x1b[32m", self.features[i].ljust(40), "---->", self.info['variables'][i], "(match)\x1b[0m")
             if match:
                 print("INFO: => all input variables match!")
+            else:
+                print("WARNING: some variables are not identically defined as for the training, please check!")
 
         # SIGNAL definition
         self.signalIndex = 0
@@ -96,7 +98,7 @@ class tensorflowEvaluator(AddCollectionsModule):
             self.signalClassIds = [x for x,y in enumerate(self.classes) if y[0].startswith('SIG')]
             print("INFO: signals:", self.signalClassIds)
 
-        print("\x1b[31mnum categories:", self.nClasses, "\x1b[0m")
+        print("INFO: number of classes:", self.nClasses if self.nClasses > 1 else 2)
 
         # systematics
         self.systematics = self.config.get('systematics', 'systematics').split(' ')
