@@ -1817,7 +1817,7 @@ if opts.task.startswith('submissions'):
         # no --input: list last N submissions (e.g. use -N 10)
         nSubmissions = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else 5
         submissionLogs = glob.glob("submissions/*_*.json")
-        submissionLogs.sort(key=os.path.getmtime, reverse=True)
+        submissionLogs.sort(key=os.path.getctime, reverse=True)
 
         if len(submissionLogs) > nSubmissions:
             submissionLogs = submissionLogs[:nSubmissions]
