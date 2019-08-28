@@ -19,7 +19,7 @@ class Jet:
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, decorrelatePtEta=False, jetPtBranchName="Jet_Pt", includeLeptons=False, ptCut=20, etaCut=2.5):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, decorrelatePtEta=False, jetPtBranchName="Jet_Pt", ptCut=20, etaCut=2.5, puIdCut=6):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
@@ -28,17 +28,14 @@ class BTagWeights(AddCollectionsModule):
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
         self.absoluteEta = True
-        self.includeLeptons = includeLeptons 
         self.ptCut = ptCut
         self.etaCut = etaCut
+        self.puIdCut = puIdCut
 
         if jetBtagBranchName is None:
             print("\x1b[31mERROR: tagger name has to be specified with jetBtagBranchName argument!\x1b[0m")
             raise Exception("TaggerNameEmpty")
 
-        if self.includeLeptons:
-            print "INFO: Jet_lepFilter will not be applied!"
-        
         # map of calibrators. E.g. btag_calibrators["CSVM_nominal_bc"], btag_calibrators["CSVM_up_l"], ...
         self.sysMap = {
                     "JESUp": "up_jes",
@@ -113,7 +110,7 @@ class BTagWeights(AddCollectionsModule):
     def get_SF(self, pt=30., eta=0.0, fl=5, val=0.0, syst="central", algo="CSV", wp="M"):
         
         # the .csv files use the convention: b=0, c=1, l=2. (fl_index)
-        # hadronFlavour convention: b=5, c=4, f=0  (fl)
+        # hadronFlavour convention:          b=5, c=4, f=0  (fl)
         fl_index = min(-fl+5,2)
         if self.absoluteEta:
             eta = abs(eta)
@@ -144,31 +141,23 @@ class BTagWeights(AddCollectionsModule):
         if not self.hasBeenProcessed(tree) and not self.isData:
             self.markProcessed(tree)
 
-            jets_cmva = []
-            treeJet_Pt = getattr(tree, self.jetPtBranchName)
+            jets = []
             for i in range(tree.nJet):
-                #if (tree.Jet_Pt[i] > 20 and abs(tree.Jet_eta[i]) < 2.5 and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 0):
-                if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and (self.includeLeptons or tree.Jet_lepFilter[i] > 0) and tree.Jet_puId[i] > 0):
-                    jet_cmva = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
-                    jets_cmva.append(jet_cmva)
+                if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > self.puIdCut or tree.Jet_Pt[i] > 50.0)):
+                    jet = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
+                    jets.append(jet)
 
             ptmin = 20.
             ptmax = 1000.
             etamin = 0.
             etamax = 2.4
-            
-            #print "----"
-            #print tree.event
-            central_SF = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, "central", self.calibName)
-            self.btagCollection[''][0] = central_SF
-            #print "nominal:", central_SF
-            #return True
 
-            #print "computed sf is:", central_SF, " btagWeight_DeepCSVB is:", tree.btagWeight_DeepCSVB
+            central_SF = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets, "central", self.calibName)
+            self.btagCollection[''][0] = central_SF
 
             for syst in self.systList: 
                 for sdir in self.systVars:
-                    self.btagCollection[syst + sdir][0] = self.get_event_SF( ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
+                    self.btagCollection[syst + sdir][0] = self.get_event_SF( ptmin, ptmax, etamin, etamax, jets, self.sysMap[syst+sdir], self.calibName)
 
                     if self.decorrelatePtEta:
                         for ipt in range(0,5):
@@ -206,6 +195,6 @@ class BTagWeights(AddCollectionsModule):
                                     etamax = 2.4
 
                                 sysName = syst+"_pt"+str(ipt)+"_eta"+str(ieta)+sdir
-                                self.btagCollection[sysName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets_cmva, self.sysMap[syst+sdir], self.calibName)
+                                self.btagCollection[sysName][0] = self.get_event_SF(ptmin, ptmax, etamin, etamax, jets, self.sysMap[syst+sdir], self.calibName)
 
         return True
