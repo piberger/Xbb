@@ -137,12 +137,12 @@ class CachePlot(object):
                         if not self.sampleTree:
                             self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config, saveMemory=True)
                             if not self.sampleTree or not self.sampleTree.tree:
-                                print ("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
+                                print("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
                                 raise Exception("CreationOfSampleTreeFailed")
                             # consistency check on the file list at submission time and now
                             fileListNow = self.sampleTree.getSampleFileNameChunk(self.chunkNumber)
                             if self.fileList and (sorted(self.fileList) != sorted(fileListNow)):
-                                print ("\x1b[31mERROR: sample files have changed between submission and run of the job!\x1b[0m")
+                                print("\x1b[31mERROR: sample files have changed between submission and run of the job!\x1b[0m")
                                 raise Exception("SampleFilesHaveChanged")
 
                         treeCaches.append(tc.setSampleTree(self.sampleTree).cache())

@@ -1042,8 +1042,9 @@ if opts.task.startswith('dnn'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cacheplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    if len(opts.regions.strip()) > 0:
-        regions = opts.regions.split(',')
+    if opts.regions:
+        if len(opts.regions.strip()) > 0:
+            regions = opts.regions.split(',')
     sampleNames = list(eval(config.get('Plot_general', 'samples')))
     dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
@@ -1119,7 +1120,7 @@ if opts.task.startswith('runplot'):
         sampleIdentifiers = None
 
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    if len(opts.regions.strip()) > 0:
+    if opts.regions and len(opts.regions.strip()) > 0:
         regions = opts.regions.split(',')
 
     if len(opts.vars.strip()) > 0:

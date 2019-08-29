@@ -5,7 +5,11 @@ import sys
 import subprocess
 import ROOT
 import hashlib
+import fnmatch
 from time import sleep
+
+# TODO: make it possible to have several Xrootd clients active at the same time
+# e.g. self.clients = {'t3dcachedb03.psi.ch': <client object>, 'eoscms.cern.ch': <client object>} ...
 
 class FileLocator(object):
 
@@ -330,4 +334,49 @@ class FileLocator(object):
     def getXrootdRedirector(self):
         return self.xrootdRedirectors[0] if self.xrootdRedirectors and len(self.xrootdRedirectors)>0 else None
 
+    # filesystem should be mounted read-only as normal nfs mount for e.g. glob operations, but since this very often fails on T3 worker nodes, use this 
+    # as fallback when applicable! (can NOT fully replace glob, only list ALL files in a directory so use with care!)
+    def lsRemote(self, path):
+        if self.client:
+            # when python bindings are available, use them for directory listing
+            status, listing = self.client.dirlist(path)
+            fileList = sorted([(x.name if x.name.startswith('/') else path + '/' + x.name) for x in listing])
+        else:
+            # fallback for the fallback...
+            serverName = self.xrootdRedirectors[0].replace('root://','').split(':')[0].strip()
+            lsRemoteCommand = ["xrdfs {serverName} ls {path}".format(serverName=serverName, path=path)]
+            print("DEBUG: command=", lsRemoteCommand)
+            counter = 0
+            status = 0
+            # since every call to xrdfs has a random chance to produce [Auth failed] errors on T3, try few times
+            while status < 1 and counter < 5:
+                counter += 1
+                try:
+                    out = subprocess.check_output(
+                        lsRemoteCommand, stderr=subprocess.STDOUT, shell=True,
+                        universal_newlines=True)
+                    status = 1
+                except subprocess.CalledProcessError as exc:
+                    print("ERROR: xrdfs ls failed:", exc.returncode, exc.output)
+            
+            if counter > 4:
+                raise Exception("RemoteFSError")
+
+            fileList = []
+            for fileName in sorted(out.strip("\n").split("\n")):
+                if fileName.startswith('/'):
+                    fileList.append(fileName)
+                else:
+                    fileList.append(path + '/' + fileName)
+        return fileList
+
+    # like glob but allows wildcards only in the last level
+    def globLightRemote(self, path):
+        path = self.removeRedirector(path.strip())
+        basePath = '/'.join(path.split('/')[:-1])
+        if '*' in basePath:
+            raise Exception("NotImplemented")
+        dirListing = self.lsRemote(basePath)
+        fileList = [x for x in dirListing if fnmatch.fnmatch(x, path)]
+        return fileList
 

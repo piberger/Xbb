@@ -445,12 +445,26 @@ class SampleTree(object):
             #print('redirector', redirector)   #root://t3dcachedb03.psi.ch:1094
             if self.verbose:
                 print ("INFO: use ", samplesMask)
-            sampleFileNames = glob.glob(samplesMask)  
-            #print('sampleFileNames = glob.glob(samplesMask)', sampleFileNames)  #['/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_10_619c0318d0c592698755987d1bd9208fea26b3e3fea0d4dd3a9a7f54.root', '/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_16...........] 
+
+            # don't use glob since nfs mount on T3 worker nodes fails too often...
+            if 0 and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
+                sampleFileNames = glob.glob(samplesMask)
+            else:
+                #print("\x1b[31mWARNING: sample folder not found, either sample folder is missing or /pnfs storage not mounted on worker node!\x1b[0m")
+                print("WARNING: using fallback method to get directory listing for storage element directory")
+                sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
+
+                ## test
+                #sampleFileNames2 = glob.glob(samplesMask)
+                #print("COMP:", set(sampleFileNames)==set(sampleFileNames2))
+
             sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
-            #print('sampleFileNames', sampleFileNames)  #['root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_10_619c0318d0c592698755987d1bd9208fea26b3e3fea0d4dd3a9a7f54.root', 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pyth.........]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
+                if self.debug:
+                    for sampleFileName in sampleFileNames:
+                        print("DEBUG: >", sampleFileName)
+
         # given argument is a single file name -> read this .txt file 
         else:
             sampleTextFileName = samples
