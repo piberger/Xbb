@@ -142,7 +142,7 @@ class TreeCache:
         #self.cachedFileNames = glob.glob(cachedFilesMask)
 
         # workaround: use xrootd for directory listing 
-        self.cachedFileNames = self.fileLocator.globLightRemote(cachedFilesMaskRaw)
+        self.cachedFileNames = self.fileLocator.glob(cachedFilesMaskRaw)
 
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)

@@ -450,13 +450,8 @@ class SampleTree(object):
             if 0 and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
                 sampleFileNames = glob.glob(samplesMask)
             else:
-                #print("\x1b[31mWARNING: sample folder not found, either sample folder is missing or /pnfs storage not mounted on worker node!\x1b[0m")
                 print("WARNING: using fallback method to get directory listing for storage element directory")
                 sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
-
-                ## test
-                #sampleFileNames2 = glob.glob(samplesMask)
-                #print("COMP:", set(sampleFileNames)==set(sampleFileNames2))
 
             sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
             if self.verbose:

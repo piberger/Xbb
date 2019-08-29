@@ -6,6 +6,7 @@ import subprocess
 import ROOT
 import hashlib
 import fnmatch
+import glob
 from time import sleep
 
 # TODO: make it possible to have several Xrootd clients active at the same time
@@ -379,4 +380,10 @@ class FileLocator(object):
         dirListing = self.lsRemote(basePath)
         fileList = [x for x in dirListing if fnmatch.fnmatch(x, path)]
         return fileList
+
+    def glob(self, path):
+        if self.isRemotePath(path):
+            return self.globLightRemote(path)
+        else:
+            return glob.glob(path)
 
