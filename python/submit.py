@@ -1836,6 +1836,7 @@ if opts.task.startswith('submissions'):
 
     for submissionLog in reversed(submissionLogs):
         nResubmittedPerFile = 0
+        logfileDirectory = '-'
         with open(submissionLog, 'r') as infile:
              lastSubmission = json.load(infile)
 
@@ -1875,9 +1876,13 @@ if opts.task.startswith('submissions'):
                     status = 12
 
                 job['status'] = status
+                try:
+                    logfileDirectory = job['log'].split('/')[-4]
+                except:
+                    pass
         
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
-        print submissionLog, jobType
+        print "\x1b[34m", submissionLog, "\x1b[0m of type \x1b[35m", jobType, "\x1b[0m log files saved to -> \x1b[34m", logfileDirectory, "\x1b[0m"
 
         # resubmit jobs
         if opts.resubmit:
