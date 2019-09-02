@@ -191,10 +191,12 @@ class PostfitPlotter(object):
             nBins    = eval(self.config.get(varSection, "nBins")) if self.config.has_section(varSection) and self.config.has_option(varSection, "nBins") else None
             rangeMin = eval(self.config.get(varSection, "min")) if self.config.has_section(varSection) and self.config.has_option(varSection, "min") else None
             rangeMax = eval(self.config.get(varSection, "max")) if self.config.has_section(varSection) and self.config.has_option(varSection, "max") else None
-            if rangeMin is not None and rangeMax is not None and nBins is not None:
-                histogram = self.setBinRange(histogram_raw, nBins, rangeMin, rangeMax) 
-            else:
-                histogram = histogram_raw
+            print("DEBUG:", varSection, ": process=", process, "->", self.dcDict[process])
+            if histogram_raw:
+                if rangeMin is not None and rangeMax is not None and nBins is not None:
+                    histogram = self.setBinRange(histogram_raw, nBins, rangeMin, rangeMax) 
+                else:
+                    histogram = histogram_raw
 
             if histogram:
                 self.stack.histograms.append({
@@ -244,21 +246,27 @@ class PostfitPlotter(object):
         rangeMax = eval(self.config.get(varSection, "max")) if self.config.has_section(varSection) and self.config.has_option(varSection, "max") else None
         if rangeMin is not None and rangeMax is not None and nBins is not None:
             # move tgraph points to bin centers
-            for i in range(dataHistogram.GetN()):
-                dataHistogram.GetPoint(i, pointX, pointY)
-                binCenterPosition = (float(i)+0.5)/float(nBins)*(rangeMax-rangeMin)+rangeMin 
-                print(">>> move point", i, pointX[0], " -> ", binCenterPosition, " nBins=", nBins)
-                dataHistogram.SetPoint(i, binCenterPosition, pointY[0])
-                dataHistogram.SetPointEXlow(i, 0.5/float(nBins)*(rangeMax-rangeMin))
-                dataHistogram.SetPointEXhigh(i, 0.5/float(nBins)*(rangeMax-rangeMin))
+            try:
+                for i in range(dataHistogram.GetN()):
+                    dataHistogram.GetPoint(i, pointX, pointY)
+                    binCenterPosition = (float(i)+0.5)/float(nBins)*(rangeMax-rangeMin)+rangeMin 
+                    print(">>> move point", i, pointX[0], " -> ", binCenterPosition, " nBins=", nBins)
+                    dataHistogram.SetPoint(i, binCenterPosition, pointY[0])
+                    dataHistogram.SetPointEXlow(i, 0.5/float(nBins)*(rangeMax-rangeMin))
+                    dataHistogram.SetPointEXhigh(i, 0.5/float(nBins)*(rangeMax-rangeMin))
+            except Exception as e:
+                print("ERROR:",e)
 
         # blind last few bins
         dataIntegral = 0
-        for i in range(dataHistogram.GetN()):
-            dataHistogram.GetPoint(i, pointX, pointY)
-            dataIntegral += pointY[0]
-            if int(pointX[0]+1) in self.blindBins:
-                dataHistogram.SetPoint(i, -100, -100)
+        try:
+            for i in range(dataHistogram.GetN()):
+                dataHistogram.GetPoint(i, pointX, pointY)
+                dataIntegral += pointY[0]
+                if int(pointX[0]+1) in self.blindBins:
+                    dataHistogram.SetPoint(i, -100, -100)
+        except Exception as e:
+            print("ERROR:",e)
 
         print("DATA:", dataIntegral, "MC:", sum_s+sum_b)
 
