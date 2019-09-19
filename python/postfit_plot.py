@@ -179,7 +179,7 @@ class PostfitPlotter(object):
             self.config.set(self.varSection, 'nBins', '%d'%nBins)
             self.config.set(self.varSection, 'min', '0')
             self.config.set(self.varSection, 'max', '%d'%nBins) 
-        self.stack = StackMaker(self.config, self.var, self.region[0], True, self.setup, '_', title=self.title)
+        self.stack = StackMaker(self.config, self.var, self.region[0], True, self.setup, '_', title=self.title, configSectionPrefix="Fit")
         self.stack.setPlotText(self.plotText)
 
         # add MC
@@ -197,6 +197,8 @@ class PostfitPlotter(object):
                     histogram = self.setBinRange(histogram_raw, nBins, rangeMin, rangeMax) 
                 else:
                     histogram = histogram_raw
+            else:
+                histogram = None
 
             if histogram:
                 self.stack.histograms.append({
@@ -206,7 +208,12 @@ class PostfitPlotter(object):
                     })
             else:
                 print("\x1b[31mINFO: empty: ",process,"\x1b[0m")
-        
+
+        #for histogram in self.stack.histograms:
+        #    print("DEBUG:", histogram['name'])
+        #    for i in range(histogram['histogram'].GetXaxis().GetNbins()):
+        #        print(" > ", histogram['histogram'].GetBinContent(1+i))
+
         # dump S/B
         #shapeS = self.getShape("total_signal")
         #shapeB = self.getShape("total_background")
@@ -365,7 +372,7 @@ if __name__ == "__main__":
                     
                     histogram_postfit.Divide(histogram_prefit)
 
-                    scaleFactorTable.append("{region} {process} prefit/postfit = {scale} +/- {error}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
+                    scaleFactorTable.append("{region} {process} prefit/postfit = {scale:.2f} +/- {error:.2f}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
                     regionSF[process] = histogram_postfit.GetBinContent(1)
                 except Exception as e:
                     print("WARNING:", e)

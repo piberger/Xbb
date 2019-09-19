@@ -161,8 +161,10 @@ class kinFitterXbb(AddCollectionsModule):
                     # vary JEC
                     else:
                         pt = getattr(tree, 'Jet_pt_' + syst.replace('_','')) 
-                        pt_reg = tree.Jet_PtReg
+                        # propagate JEC to regressed pt
+                        pt_reg = [tree.Jet_PtReg[i] * getattr(tree, 'Jet_pt_' + syst.replace('_',''))[i] / tree.Jet_Pt[i] for i in range(len(tree.Jet_PtReg))]
                         mass = getattr(tree, 'Jet_mass_' + syst.replace('_',''))
+
                 # nominal
                 else:
                     pt = tree.Jet_Pt
@@ -172,14 +174,13 @@ class kinFitterXbb(AddCollectionsModule):
                     else:
                         mass = tree.Jet_mass
 
-
                 # higgs jets
-                j1 = fourvector(pt_reg[hJidx[0]], eta[hJidx[0]], phi[hJidx[0]], mass[hJidx[0]] * pt_reg[hJidx[0]]/pt[hJidx[0]])
-                j2 = fourvector(pt_reg[hJidx[1]], eta[hJidx[1]], phi[hJidx[1]], mass[hJidx[1]] * pt_reg[hJidx[1]]/pt[hJidx[1]])
+                j1 = fourvector(pt_reg[hJidx[0]], eta[hJidx[0]], phi[hJidx[0]], mass[hJidx[0]] * tree.Jet_PtReg[hJidx[0]]/tree.Jet_Pt[hJidx[0]])
+                j2 = fourvector(pt_reg[hJidx[1]], eta[hJidx[1]], phi[hJidx[1]], mass[hJidx[1]] * tree.Jet_PtReg[hJidx[1]]/tree.Jet_Pt[hJidx[1]])
 
                 # FSR jets
                 for i in range(tree.nJet):
-                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and tree.Jet_puId[i] > 6 and pt[i] > 20 and abs(eta[i]) < 3.0:
+                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and pt[i] > 20 and abs(eta[i]) < 3.0:
 
                         j_fsr = fourvector(pt[i], eta[i], phi[i], mass[i])
 
@@ -199,7 +200,7 @@ class kinFitterXbb(AddCollectionsModule):
                 # recoil jets
                 recoil_jets = []
                 for i in range(tree.nJet):
-                    if i not in hJidx and i not in fsrJidx and tree.Jet_puId[i] > 6 and tree.Jet_jetId[i] > 1 and tree.Jet_lepFilter[i] > 0 and pt[i] > 20:
+                    if i not in hJidx and i not in fsrJidx and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and tree.Jet_lepFilter[i] > 0 and pt[i] > 30:
                         recoil_jets.append(fourvector(pt[i], eta[i], phi[i], mass[i]))
                 recoil_sum = sum(recoil_jets, ROOT.TLorentzVector())
 

@@ -16,6 +16,7 @@ from XbbConfig import XbbConfigReader, XbbConfigTools
 import BetterConfigParser
 from sample_parser import ParseInfo
 import hashlib
+import subprocess
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -318,28 +319,31 @@ class SampleTree(object):
             pass
         self.fileLocator = None
         self.config = None
-        for outputTree in self.outputTrees:
-            del outputTree['file']
-        try:
-            for formulaName, formula in self.formulas.iteritems():
-                if formula:
-                    del formula
-                    formula = None
-        except e:
-            print("EXCEPTION:", e)
-        try:
+        if hasattr(self, "outputTrees"):
             for outputTree in self.outputTrees:
-                if outputTree['tree']:
-                    del outputTree['tree']
-                    outputTree['tree'] = None
-        except e:
-            print("EXCEPTION:", e)
+                del outputTree['file']
+        try:
+            if hasattr(self, "formulas"):
+                for formulaName, formula in self.formulas.iteritems():
+                    if formula:
+                        del formula
+                        formula = None
+        except Exception as e:
+            print("EXCEPTION: (destructor) ", e)
+        try:
+            if hasattr(self, "outputTrees"):
+                for outputTree in self.outputTrees:
+                    if outputTree['tree']:
+                        del outputTree['tree']
+                        outputTree['tree'] = None
+        except Exception as e:
+            print("EXCEPTION: (destructor)", e)
         try:
             if self.tree:
                 del self.tree
                 self.tree = None
-        except e:
-            print("EXCEPTION:", e)
+        except Exception as e:
+            print("EXCEPTION: (destructor)", e)
 
     def getFriendTreeFileNames(self, directory):
         # get list of files in this chain and make list of friend file names
@@ -446,13 +450,23 @@ class SampleTree(object):
             if self.verbose:
                 print ("INFO: use ", samplesMask)
 
-            # don't use glob since nfs mount on T3 worker nodes fails too often...
-            if 0 and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
+            nfsAvailable = False
+            ## DIRTY WORKAROUND
+            ## don't use glob since nfs mount on T3 worker nodes fails too often...
+            #try:
+            #    nfsAvailable = 'ui' in subprocess.check_output(["uname -n"], shell=True)
+            #except Exception as e:
+            #    print(e)
+
+            if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
                 sampleFileNames = glob.glob(samplesMask)
             else:
                 print("WARNING: using fallback method to get directory listing for storage element directory")
                 sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
 
+            if sampleFileNames is None or len(sampleFileNames) < 1:
+                print("\x1b[31mERROR: no tree files found for this sample in",sampleFolder,"!\x1b[0m")
+                raise Exception("FilesMissing")
             sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")

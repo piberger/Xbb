@@ -70,6 +70,8 @@ parser.add_option("-T", "--tag", dest="tag", default="default",
                       help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
+                      help="unblind")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-v","--vars",dest="vars",default="", help="comma separated list of variables")
@@ -1924,6 +1926,8 @@ if opts.task.startswith('submissions'):
 if opts.task.startswith('postfitplot'):
     jobDict = repDict.copy()
     jobDict.update({'arguments': {'regions': opts.regions}})
+    if opts.unblind:
+        jobDict['arguments']['unblind'] = ''
     jobName = 'postfitplot'
     submit(jobName, jobDict)
 

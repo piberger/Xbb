@@ -56,6 +56,7 @@ echo
 # parse named input arguments
 # todo: pass everything as named argument
 force="0"
+unblind="0"
 friend="0"
 join="0"
 noretry="0"
@@ -78,6 +79,9 @@ while [ $# -gt 0 ]; do
       ;;
     --force)
       force="1"
+      ;;
+    --unblind)
+      unblind="1"
       ;;
     --friend)
       friend="1"
@@ -445,8 +449,10 @@ if [ "$runCommand" ]; then
     if [ "$outputDir" ]; then
         runCommand="${runCommand} --outputDir ${outputDir}"
     fi
-    
-    
+    if [ "$unblind" = "1" ]; then
+        runCommand="${runCommand} --unblind"
+    fi
+
     echo "$runCommand"
     eval "$runCommand"
 fi

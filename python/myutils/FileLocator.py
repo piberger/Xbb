@@ -18,6 +18,7 @@ class FileLocator(object):
         self.config = config
         self.debug = 'XBBDEBUG' in os.environ
         self.timeBetweenAttempts = 1
+        self.dirListingCache = {}
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             #print('self.xrootdRedirectors', self.xrootdRedirectors) #['root://t3dcachedb03.psi.ch:1094/']
@@ -337,10 +338,16 @@ class FileLocator(object):
 
     # filesystem should be mounted read-only as normal nfs mount for e.g. glob operations, but since this very often fails on T3 worker nodes, use this 
     # as fallback when applicable! (can NOT fully replace glob, only list ALL files in a directory so use with care!)
-    def lsRemote(self, path):
+    def lsRemote(self, path, allowCachedRead=False):
         if self.client:
-            # when python bindings are available, use them for directory listing
-            status, listing = self.client.dirlist(path)
+            if allowCachedRead and path in self.dirListingCache:
+                listing = self.dirListingCache[path]
+            else:
+                # when python bindings are available, use them for directory listing
+                status, listing = self.client.dirlist(path)
+                self.dirListingCache[path] = listing
+            if listing is None:
+                return None 
             fileList = sorted([(x.name if x.name.startswith('/') else path + '/' + x.name) for x in listing])
         else:
             # fallback for the fallback...

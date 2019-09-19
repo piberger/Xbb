@@ -30,17 +30,15 @@ class NewStackMaker:
         else:
             return default
 
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title='CMS'):
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title='CMS', configSectionPrefix='Plot'):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.saveShapes = True
         self.var = var
         self.region = region
-        if self.config.has_section('Plot:%s'%region):
-            self.configSection = 'Plot:%s'%region
-        elif self.config.has_section('Fit:%s'%region):
-            self.configSection = 'Fit:%s'%region
-        else:
+        self.configSectionPrefix = configSectionPrefix
+        self.configSection = '{prefix}:{region}'.format(prefix=self.configSectionPrefix, region=region)
+        if not self.config.has_section(self.configSection):
             print("\x1b[31mWARNING: no section '%s' in config, using defaults.\x1b[0m"%('Plot:%s'%region))
             self.configSection = None
             #raise Exception("ConfigError")
@@ -57,6 +55,7 @@ class NewStackMaker:
         self.blind         = self.readConfig(self.configSection, 'blind', False)
 
         self.mcUncertaintyLegend = self.readConfig('Plot_general', 'mcUncertaintyLegend', 'MC uncert. (stat.)')
+        self.drawMCErrorForNormalizedPlots = self.readConfig('Plot_general', 'drawMCErrorForNormalizedPlots', False)
 
         self.xAxis = self.readConfigStr(self.plotVarSection, 'xAxis', '')
         self.yAxis = self.readConfigStr(self.plotVarSection, 'yAxis', '')
@@ -83,7 +82,7 @@ class NewStackMaker:
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
             self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
-            if self.config.has_option(self.configSection, 'additionalText'):
+            if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
                 aText = eval(self.config.get(self.configSection, 'additionalText'))
                 if type(aText) == list:
                     self.additionalTextLines += aText
@@ -131,11 +130,13 @@ class NewStackMaker:
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
             for configKey in configKeysList:
-                if self.config.has_option(self.configSection, configKey):
+                if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, configKey):
                     self.histogramOptions[optionName] = self.config.get(self.configSection, configKey)
+                    print(self.configSection, configKey,self.histogramOptions[optionName])
                     break
                 elif self.config.has_option('plotDef:%s'%var, configKey):
                     self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
+                    print('plotDef:%s'%var, configKey,self.histogramOptions[optionName])
                     break
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
@@ -385,7 +386,7 @@ class NewStackMaker:
             if not self.log:
                 t0.DrawTextNDC(0.1059, 0.96, "0")
 
-    def drawSampleLegend(self, groupedHistograms, theErrorGraph):
+    def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
         self.legends['left'] = ROOT.TLegend(0.45, 0.6,0.75,0.92)
@@ -418,7 +419,7 @@ class NewStackMaker:
                     self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
             elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
-        if theErrorGraph: 
+        if theErrorGraph and not normalize:
             self.legends['right'].AddEntry(theErrorGraph, self.mcUncertaintyLegend, "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
@@ -678,10 +679,22 @@ class NewStackMaker:
                 theErrorGraph.Draw('SAME2')
             else:
                 print("INFO: no DATA available")
+        elif normalize and not self.is2D and self.drawMCErrorForNormalizedPlots:
+            # draw error bands for all individual groups
+            self.errorGraphs = []
+            colorDict = eval(self.config.get('Plot_general', 'colorDict'))
+            histogramGroups = set(list([histogram['group'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot]))
+            print(groupedHistograms)
+            for histogramGroup in histogramGroups:
+                theErrorGraph = ROOT.TGraphErrors(NewStackMaker.sumHistograms(histograms=[groupedHistograms[histogramGroup]], outputName='summedMcHistograms_'+histogramGroup))
+                theErrorGraph.SetFillColor(colorDict[histogramGroup])
+                theErrorGraph.SetFillStyle(3013)
+                theErrorGraph.Draw('SAME2')
+                self.errorGraphs.append(theErrorGraph)
 
         # draw legend
         if not self.is2D:
-            self.drawSampleLegend(groupedHistograms, theErrorGraph)
+            self.drawSampleLegend(groupedHistograms, theErrorGraph, normalize=normalize)
 
         # draw various labels
         if not normalize:
