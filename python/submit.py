@@ -1805,7 +1805,7 @@ if opts.task.startswith('checklogs'):
 
 if opts.task.startswith('submissions'):
     printWidth = 200
-    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[34mL\x1b[0m"}
+    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
     statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
     print "*"*printWidth
     print " legend:"
@@ -1830,8 +1830,8 @@ if opts.task.startswith('submissions'):
     batchSystem = BatchSystem.create(config)
     jobs = batchSystem.getJobs()
 
-    runningJobs = {k['id']: True for k in jobs if k['is_running']}
-    pendingJobs = {k['id']: True for k in jobs if k['is_pending']}
+    runningJobs = {int(k['id']): True for k in jobs if k['is_running']}
+    pendingJobs = {int(k['id']): True for k in jobs if k['is_pending']}
     nResubmitted = 0
     nCancelled   = 0
     nCancelFailed = 0

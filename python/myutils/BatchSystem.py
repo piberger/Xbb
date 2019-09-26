@@ -167,8 +167,8 @@ class BatchSystem(object):
                 try:
                     jobId = getJobIdFn(stdOutput)
                     batchJob.setProperty('id', jobId)
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
             else:
                 subprocess.call([command], shell=True)
 
