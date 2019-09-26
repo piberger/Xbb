@@ -8,9 +8,10 @@ from BranchTools import AddCollectionsModule
 
 class LOtoNLOweight(AddCollectionsModule):
 
-    def __init__(self, branchName='weightLOtoNLO', paperStyle=True):
+    def __init__(self, branchName='weightLOtoNLO', year=2016):
         super(LOtoNLOweight, self).__init__()
         self.branchName = branchName
+        self.year = int(year)
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -28,7 +29,10 @@ class LOtoNLOweight(AddCollectionsModule):
                 etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
                 njets = tree.sampleIndex % 10
                 if njets < 3:
-                    self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
+                    if self.year == 2017:
+                        self._b(self.branchName)[0] = self.LOtoNLOWeightBjetSplitEtabb2017(etabb, njets) 
+                    else:
+                        self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
                 else:
                     print("\x1b[31mERROR: sampleIndex==", tree.sampleIndex, "\x1b[0m")
                     raise Exception("IllegalSampleIndex")
@@ -60,3 +64,13 @@ class LOtoNLOweight(AddCollectionsModule):
                 SF = (0.721265 -0.105643*etabb -0.0206835*etabb*etabb +0.00558626*etabb*etabb*etabb)*np.exp(0.450244*etabb)
         return SF
 
+    def LOtoNLOWeightBjetSplitEtabb2017(self, etabb, njets):
+        SF = 1.0
+        etabb = min(etabb, 5.0)
+        if njets < 1:
+            SF = (0.958 + 0.0286 * etabb + 0.0014156 * etabb * etabb)
+        elif njets == 1:
+            SF = ((0.972 - 0.264 * etabb + 0.026919 * etabb * etabb) * np.exp(0.29901 * etabb))
+        else:
+            SF = (0.81 + 0.1493 * etabb - 0.000965976 * etabb * etabb)
+        return SF
