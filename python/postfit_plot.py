@@ -30,6 +30,10 @@ class PostfitPlotter(object):
         if self.config.has_option('Fit', 'plotText'):
             self.plotText = eval(self.config.get('Fit', 'plotText'))
 
+        # plot Data/B and (S+B)/B instead of Data/(S+B)
+        self.dataOverBackground = self.config.has_option('Fit', 'plotDataOverBackground') and eval(self.config.get('Fit', 'plotDataOverBackground'))
+        self.ratioRange = [0.5, 1.75]
+
         if self.config.has_section('Fit:'+self.region[0]):
             if self.config.has_option('Fit:'+self.region[0], 'var'):
                 self.var = self.config.get('Fit:'+self.region[0], 'var')
@@ -37,10 +41,15 @@ class PostfitPlotter(object):
                 self.blindBins = eval(self.config.get('Fit:'+self.region[0], 'blindBins'))
             if self.config.has_option('Fit:'+self.region[0], 'plotText'):
                 self.plotText += eval(self.config.get('Fit:'+self.region[0],'plotText'))
+            if self.config.has_option('Fit:'+self.region[0], 'plotDataOverBackground'):
+                self.dataOverBackground = eval(self.config.get('Fit:'+self.region[0], 'plotDataOverBackground'))
+            if self.config.has_option('Fit:'+self.region[0], 'ratioRange'):
+                self.ratioRange = eval(self.config.get('Fit:'+self.region[0], 'ratioRange'))
 
         self.samplesInfo = ParseInfo(samples_path=config.get('Directories', 'dcSamples'), config=self.config)
         self.sampleGroupDict = eval(self.config.get('LimitGeneral', 'Group')) if self.config.has_option('LimitGeneral', 'Group') else {}
 
+        # make dictionary to get sample type ('SIG'/'BKG') for each sample group
         self.sampleGroupTypeDict = {}
         for x in self.samplesInfo:
             sampleGroup = self.getSampleGroup(x)
@@ -71,7 +80,8 @@ class PostfitPlotter(object):
         self.regionDict = eval(self.config.get('Fit', 'regions'))
         self.reverseRegionDict = {v:k for k,v in self.regionDict.items()}
         self.setup = eval(self.config.get('LimitGeneral','setup'))
-        if False and self.config.has_option('LimitGeneral','setupSignals'):
+        self.overwriteSignalDefinition = eval(self.config.get('LimitGeneral','overwriteSignalDefinition')) if self.config.has_option('LimitGeneral','overwriteSignalDefinition') else False
+        if self.overwriteSignalDefinition and self.config.has_option('LimitGeneral','setupSignals'):
             self.setupSignals = eval(self.config.get('LimitGeneral','setupSignals'))
         else:
             self.setupSignals = [x for x in self.setup if self.sampleGroupTypeDict[x] == 'SIG']
@@ -204,7 +214,8 @@ class PostfitPlotter(object):
                 self.stack.histograms.append({
                         'name': process, 
                         'histogram': histogram, 
-                        'group': process
+                        'group': process,
+                        'signal': process in self.setupSignals
                     })
             else:
                 print("\x1b[31mINFO: empty: ",process,"\x1b[0m")
@@ -288,7 +299,7 @@ class PostfitPlotter(object):
             })
 
         # draw
-        self.stack.Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region[0], var=self.directory))
+        self.stack.Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region[0], var=self.directory), dataOverBackground=self.dataOverBackground, ratioRange=self.ratioRange)
 
 
 if __name__ == "__main__":
@@ -379,7 +390,8 @@ if __name__ == "__main__":
 
             # VHbb specific plot commands for simplifity
             try:
-                plotCommand = "./submit.py -J runplot --parallel=8 --regions '{region}' --set='General.SF_TT={SF[TT]};General.SF_ZJets=[{SF[ZJets_0b]},{SF[ZJets_1b]},{SF[ZJets_2b]}];General.SF_WJets=[{SF[WJets_0b]},{SF[WJets_1b]},{SF[WJets_2b]}]'".format(region=region, SF=regionSF)
+                regionFormatted = ",".join(region) if type(region) == list else region
+                plotCommand = "./submit.py -J runplot --parallel=8 --regions '{region}' --set='General.SF_TT={SF[TT]};General.SF_ZJets=[{SF[ZJets_0b]},{SF[ZJets_1b]},{SF[ZJets_2b]}];General.SF_WJets=[{SF[WJets_0b]},{SF[WJets_1b]},{SF[WJets_2b]}]'".format(region=regionFormatted, SF=regionSF)
                 plotCommands.append(plotCommand)
             except Exception as e:
                 print("WARNING:", e)

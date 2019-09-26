@@ -280,7 +280,7 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # data/MC ratio
     # ------------------------------------------------------------------------------
-    def drawRatioPlot(self, dataHistogram, mcHistogram):
+    def drawRatioPlot(self, dataHistogram, mcHistogram, yAxisTitle="Data/MC", same=False, ratioRange=[0.5,1.75]):
 
         self.pads['unten'].cd()
         ROOT.gPad.SetTicks(1,1)
@@ -307,7 +307,7 @@ class NewStackMaker:
             dataHistogram = convertedDataHistogram
 
         # draw ratio plot
-        self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
+        self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
 
         ksScore = dataHistogram.KolmogorovTest(mcHistogram)
         chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
@@ -318,7 +318,7 @@ class NewStackMaker:
             self.ratioError = ROOT.TGraphErrors(error)
             self.ratioError.SetFillColor(ROOT.kGray+3)
             self.ratioError.SetFillStyle(3013)
-            self.ratioPlot.Draw("E1")
+            self.ratioPlot.Draw("E1 SAME" if same else "E1")
             self.ratioError.Draw('SAME2')
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
@@ -501,8 +501,9 @@ class NewStackMaker:
 
     # ------------------------------------------------------------------------------
     # draw the stacked histograms 
+    # dataOverBackground=False => draw DATA/MC
     # ------------------------------------------------------------------------------
-    def Draw(self, outputFolder='./', prefix='', normalize=False):
+    def Draw(self, outputFolder='./', prefix='', normalize=False, dataOverBackground=False, ratioRange=[0.5,1.75]):
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
 
@@ -550,6 +551,7 @@ class NewStackMaker:
                         groupedHistograms[groupName].Scale(1./groupedHistograms[groupName].Integral())
                         if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
                             maximumNormalized = groupedHistograms[groupName].GetMaximum()
+                    groupedHistograms[groupName].SetLineColor(ROOT.kBlack)
                     allStack.Add(groupedHistograms[groupName])
 
         # draw options
@@ -669,8 +671,28 @@ class NewStackMaker:
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
-                mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
-                self.drawRatioPlot(dataHistogram, mcHistogram)
+                if dataOverBackground:
+                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms')
+                    signalHistogram     = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']], outputName='summedSignalHistograms')
+                    mcHistogram         = backgroundHistogram.Clone()
+                    mcHistogram.Add(signalHistogram)
+                    
+                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG',ratioRange=ratioRange)
+
+                    # draw blue line for (S+B)/B expectation
+                    expectedRatio = mcHistogram.Clone()
+                    expectedRatio.Divide(backgroundHistogram)
+                    expectedRatio.SetLineColor(ROOT.kBlue)
+                    expectedRatio.SetLineWidth(2)
+                    expectedRatio.SetFillStyle(0)
+                    self.pads['unten'].cd()
+                    expectedRatio.Draw("HIST;SAME")
+                    
+                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG', same=True)
+
+                else:
+                    mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                    self.drawRatioPlot(dataHistogram, mcHistogram)
 
                 self.pads['oben'].cd()
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
