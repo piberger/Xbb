@@ -40,7 +40,7 @@ import subprocess
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None, fileLocator=None):
         # sequentialProcessing not much tested yet, can maybe be used as workaround for problems with ROOT version 6.12.07. (not needed in 6.10.09)
         self.sequentialProcessing = False
         self.verbose = verbose
@@ -58,7 +58,7 @@ class SampleTree(object):
         self.nonEmptyTrees = []
         self.processedTrees = []
         #print('here')
-        self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
+        self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector) if fileLocator is None else fileLocator
         #print('here_again')
         self.sampleIdentifier = None
         self.numParts = -1
@@ -461,7 +461,7 @@ class SampleTree(object):
             if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
                 sampleFileNames = glob.glob(samplesMask)
             else:
-                print("WARNING: using fallback method to get directory listing for storage element directory")
+                print("INFO: using fallback method to get directory listing for storage element directory")
                 sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
 
             if sampleFileNames is None or len(sampleFileNames) < 1:

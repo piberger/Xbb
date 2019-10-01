@@ -18,6 +18,7 @@ from myutils.sampleTree import SampleTree as SampleTree
 from myutils.Datacard import Datacard
 from myutils.BranchList import BranchList
 from myutils.FileList import FileList
+from myutils.FileLocator import FileLocator
 
 class MergeDatacards(object):
 
@@ -25,7 +26,8 @@ class MergeDatacards(object):
     def __init__(self, config, region):
         self.config = config
         self.region = region
-        self.dcMaker = Datacard(config=self.config, region=region)
+        self.fileLocator = FileLocator(config=self.config, useDirectoryListingCache=True)
+        self.dcMaker = Datacard(config=self.config, region=region, fileLocator=self.fileLocator)
    
     def getTextFileName(self, sampleIdentifier):
         return self.dcMaker.getDatacardBaseName(sampleIdentifier)+'.txt'

@@ -18,7 +18,7 @@ import itertools
 import math
 
 class Datacard(object):
-    def __init__(self, config, region, verbose=True):
+    def __init__(self, config, region, verbose=True, fileLocator=None):
         self.reshapeBins = True
         self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
@@ -26,6 +26,7 @@ class Datacard(object):
         self.DCtype = 'TH'
         self.histograms = None
         self.histogramCounter = 0
+        self.fileLocator = fileLocator
         self.DCprocessSeparatorDict = {'WS':':','TH':'/'}
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         returnCode = ROOT.gSystem.Load(VHbbNameSpace)
@@ -418,7 +419,8 @@ class Datacard(object):
                         cutList=self.getCacheCut(sample),
                         inputFolder=self.path,
                         config=self.config,
-                        debug=False
+                        debug=False,
+                        fileLocator=self.fileLocator
                     )
                 if not tc.isCached():
                     print("\x1b[31m:ERROR not cached! run cachedc step again\x1b[0m")
@@ -628,6 +630,7 @@ class Datacard(object):
                     inputFolder=self.path,
                     config=self.config,
                     debug=self.debug,
+                    fileLocator=self.fileLocator
                 )
             # check if fiels are complete
             if not tc.isCached():
@@ -661,6 +664,7 @@ class Datacard(object):
                     inputFolder=self.path,
                     config=self.config,
                     debug=self.debug,
+                    fileLocator=self.fileLocator
                 )
             cacheStatus[sample.name] = tc.isCached()
         return cacheStatus
@@ -735,7 +739,8 @@ class Datacard(object):
                         cutList=sampleCuts,
                         inputFolder=self.path,
                         config=self.config,
-                        debug=True
+                        debug=True,
+                        fileLocator=self.fileLocator
                     )
 
                 if not tc.isCached():
@@ -743,7 +748,7 @@ class Datacard(object):
                     print (json.dumps(sampleCuts, sort_keys=True, indent=4, default=str))
                     raise Exception("NotCached")
 
-                chunkSize = int(self.config.get(sample.identifier, 'dcChunkSize')) if chunkNumber > 0 else -1
+                chunkSize = self.getChunkSize(sample.identifier) if chunkNumber > 0 else -1
                 sampleTree = tc.getTree(chunkSize, chunkNumber)
 
                 systematicsList = self.getSystematicsList(isData=sample.isData())
@@ -901,16 +906,24 @@ class Datacard(object):
                     print("INFO: and the additional cuts was:", systematics['addCut'])
                 break
 
+    # return sample dependent number of chunks
     def getChunkSize(self, sampleIdentifier):
-        return int(self.config.get(sampleIdentifier, 'dcChunkSize')) if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
+        if self.config.has_option('Configuration', 'disableShapeChunks') and eval(self.config.get('Configuration', 'disableShapeChunks')):
+            return 99999 if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
+        else:
+            return int(self.config.get(sampleIdentifier, 'dcChunkSize')) if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
 
+    # number of chunks, -1 if split into chunks is disabled
     def getNumberOfChunks(self, sampleIdentifier):
         chunkSize = self.getChunkSize(sampleIdentifier)
         if chunkSize < 1:
-            return -1
-        nFiles = self.getNumberOfCachedFiles(sampleIdentifier)
-        return int(math.ceil(1.0*nFiles/chunkSize))
+            nChunks = -1
+        else:
+            nFiles = self.getNumberOfCachedFiles(sampleIdentifier)
+            nChunks = int(math.ceil(1.0*nFiles/chunkSize))
+        return nChunks 
 
+    # if split into chunks is enabled, file name will end in _#.root with # being the chunk number, # starts from 1
     def getShapeFileNames(self, sampleIdentifier):
         nChunks = self.getNumberOfChunks(sampleIdentifier)
         if nChunks > 0:

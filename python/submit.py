@@ -1333,30 +1333,32 @@ if opts.task.startswith('rundc'):
             print('run cachedc again!')
             raise Exception("NotCached")
 
+    fileLocator = FileLocator(config=config, useDirectoryListingCache=True)
+
     # submit all the DC regions as separate jobs
     for region in regions:
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
-                
+               
+                datacard = None
                 # check if shape files exist already and skip
                 if opts.skipExisting:
-                    datacard = Datacard(config=config, region=region, verbose=False)
+                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator)
                     shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
                     # skip if all files exist or no shapes needed for this region/sample
                     if all(shapeFileExists) or len(shapeFileExists) == 0:
-                        print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
+                        print "INFO: shapes files:", datacard.getShapeFileNames(sampleIdentifier)
                         print "INFO: > all files exist! => skip"
                         continue
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
-                    chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
-                    datacard = Datacard(config=config, region=region, verbose=False)
-                    nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    nJobs = datacard.getNumberOfChunks(sampleIdentifier)
-
+                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator) if datacard is None else datacard
+                    chunkSize = datacard.getChunkSize(sampleIdentifier) 
+                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier)
+                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier)
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
