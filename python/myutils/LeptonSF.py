@@ -127,6 +127,19 @@ class LeptonSF:
                 if abs(ptL-pt)<closestPt or abs(ptH-pt)<closestPt and not ptFound:
                     closestPt = min(abs(ptL-pt), abs(ptH-pt))
                     closestPtBin = ptKey
+            ## adding dummy MET branches with jer and jes
+            self.addBranch('MET_pt_minmaxUp')
+            self.addBranch('MET_pt_minmaxDown')
+            self.addBranch('MET_phi_minmaxUp')
+            self.addBranch('MET_phi_minmaxDown')
+
+
+            ## adding jms and jmr to FatJet pt
+
+            for syst in ['jmr','jms','jerReg']:
+                for Q in ['Up', 'Down']:
+                    self.addBranch('MET_pt_{s}{d}'.format(s=syst, d=Q))
+                    self.addBranch('MET_phi_{s}{d}'.format(s=syst, d=Q))
 
                 if (pt>ptL and pt<ptH):
                     closestPtBin = ptKey

@@ -66,19 +66,6 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             self.puppisd_resolution_cen = filejmr.Get("massResolution_0eta1v3")
             self.puppisd_resolution_for = filejmr.Get("massResolution_1v3eta2v5")
 
-            ## adding dummy MET branches with jer and jes
-            self.addBranch('MET_pt_minmaxUp')
-            self.addBranch('MET_pt_minmaxDown')
-            self.addBranch('MET_phi_minmaxUp')
-            self.addBranch('MET_phi_minmaxDown')
-
-
-            ## adding jms and jmr to FatJet pt
-
-            for syst in ['jmr','jms']:
-                for Q in ['Up', 'Down']:
-                    self.addBranch('MET_pt_{s}{d}'.format(s=syst, d=Q))
-                    self.addBranch('MET_phi_{s}{d}'.format(s=syst, d=Q))
 
             for syst in ['_jmr','_jms']:
                 for p in ['Jet_pt', 'Jet_mass']:
@@ -87,6 +74,19 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                         self.branchBuffers[p+syst+q] = array.array('f', [0.0]*self.nJetMax)
                         self.branches.append({'name': p+syst+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+syst+q}, 'length': self.nJetMax, 'leaflist': p+syst+q+'[nJet]/F'})
 
+        ## adding dummy MET branches with jer and jes
+        self.addBranch('MET_pt_minmaxUp')
+        self.addBranch('MET_pt_minmaxDown')
+        self.addBranch('MET_phi_minmaxUp')
+        self.addBranch('MET_phi_minmaxDown')
+
+
+        ## adding jms and jmr to FatJet pt
+
+        for syst in ['jmr','jms','jerReg']:
+            for Q in ['Up', 'Down']:
+                self.addBranch('MET_pt_{s}{d}'.format(s=syst, d=Q))
+                self.addBranch('MET_phi_{s}{d}'.format(s=syst, d=Q))
 
         self.tagidx = self.config.get('General', 'hJidx')
         if self.debug:
@@ -464,8 +464,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                     for Q in ['Up', 'Down']:
                         METptList.append(MET_pt_sys[syst+Q])
                         METphiList.append(MET_phi_sys[syst+Q])
-
-
+        
+            #if self.addBoostSystematics:
             self.branchBuffers['MET_pt_minmaxUp'][0]       = max(METptList)
             self.branchBuffers['MET_pt_minmaxDown'][0]     = min(METptList)
             self.branchBuffers['MET_phi_minmaxUp'][0]      = max(METphiList)
