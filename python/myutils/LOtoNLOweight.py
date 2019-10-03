@@ -18,19 +18,23 @@ class LOtoNLOweight(AddCollectionsModule):
         self.config = initVars['config']
         if not self.sample.isData():
             self.addBranch(self.branchName)
+            self.addBranch(self.branchName + '_LHEVpt')
 
     def processEvent(self, tree):
         # if current entry has not been processed yet
         if not self.sample.isData() and not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
             self._b(self.branchName)[0] = 1.0
+            self._b(self.branchName + '_LHEVpt')[0] = 1.0
 
             if self.applies(tree):
                 etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
                 njets = tree.sampleIndex % 10
                 if njets < 3:
                     if self.year == 2017:
-                        self._b(self.branchName)[0] = self.LOtoNLOWeightBjetSplitEtabb2017(etabb, njets) 
+                        # apply only one of the two!
+                        self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb2017(etabb, njets) 
+                        self._b(self.branchName + '_LHEVpt')[0] = 1.153 * self.LOtoNLOWeightBjetSplitVpt2017(tree.LHE_Vpt, njets)
                     else:
                         self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
                 else:
@@ -74,3 +78,15 @@ class LOtoNLOweight(AddCollectionsModule):
         else:
             SF = (0.81 + 0.1493 * etabb - 0.000965976 * etabb * etabb)
         return SF
+    
+    def LOtoNLOWeightBjetSplitVpt2017(self, vpt, njets):
+        SF = 1.0
+        vpt = max(min(vpt,500.0),100.0)
+        if njets < 1:
+            SF = 1.056 - 9.480e-4*vpt 
+        elif njets == 1:
+            SF = 1.05 - 1.235e-3*vpt
+        else:
+            SF = 1.15 - 2.068e-3*vpt
+        return SF
+
