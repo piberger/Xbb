@@ -998,7 +998,7 @@ class Datacard(object):
                     print ("\x1b[31mERROR: bad root file:", rootFileName, "\x1b[0m")
                     raise Exception("FileIOError")
 
-                # in every ROOT file samples for several groups can be resent if split
+                # in every ROOT file samples for several groups can be present if split into subsamples
                 sampleGroups      = list(set([self.getSampleGroup(sample) for sample in allSamples if sample.identifier==sampleIdentifier]))
 
                 # loop over datacard processes 

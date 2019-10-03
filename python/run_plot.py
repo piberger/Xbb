@@ -9,6 +9,7 @@ from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
 from myutils.NewStackMaker import NewStackMaker as StackMaker
 from myutils.samplesclass import Sample
+from myutils.FileLocator import FileLocator
 import os,sys
 
 class PlotHelper(object):
@@ -104,7 +105,9 @@ class PlotHelper(object):
         self.histogramStacks = {}
         for var in self.vars:
             self.histogramStacks[var] = StackMaker(self.config, var, self.region, self.signalRegion, None, '_'+self.subcutPlotName, title=self.title)
-        
+
+        fileLocator = FileLocator(config=self.config, useDirectoryListingCache=True)
+
         # add DATA + MC samples
         for sample in self.dataSamples + self.mcSamples:
             
@@ -122,7 +125,8 @@ class PlotHelper(object):
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.samplesPath,
-                    config=config
+                    config=config,
+                    fileLocator=fileLocator
                 )
             sampleTree = tc.getTree()
 
