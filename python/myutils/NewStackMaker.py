@@ -11,6 +11,7 @@ import math
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from sampleTree import SampleTree as SampleTree
+from XbbTools import XbbTools
 
 # ------------------------------------------------------------------------------
 # produces histograms from trees with HistoMaker, groups them, and draws a
@@ -132,11 +133,11 @@ class NewStackMaker:
             for configKey in configKeysList:
                 if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, configKey):
                     self.histogramOptions[optionName] = self.config.get(self.configSection, configKey)
-                    print(self.configSection, configKey,self.histogramOptions[optionName])
+                    #print(self.configSection, configKey,self.histogramOptions[optionName])
                     break
                 elif self.config.has_option('plotDef:%s'%var, configKey):
                     self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
-                    print('plotDef:%s'%var, configKey,self.histogramOptions[optionName])
+                    #print('plotDef:%s'%var, configKey,self.histogramOptions[optionName])
                     break
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
@@ -389,14 +390,20 @@ class NewStackMaker:
     def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
-        self.legends['left'] = ROOT.TLegend(0.45, 0.6,0.75,0.92)
+
+        legendX1 = float(self.config.get('Plot_general','legendX1')) if self.config.has_option('Plot_general','legendX1') else 0.45
+        legendY1 = float(self.config.get('Plot_general','legendY1')) if self.config.has_option('Plot_general','legendY1') else 0.6
+        legendX2 = float(self.config.get('Plot_general','legendX2')) if self.config.has_option('Plot_general','legendX2') else 0.92
+        legendY2 = float(self.config.get('Plot_general','legendY2')) if self.config.has_option('Plot_general','legendY2') else 0.92
+
+        self.legends['left'] = ROOT.TLegend(legendX1,legendY1,legendX1+0.638*(legendX2-legendX1),legendY2)
         self.legends['left'].SetLineWidth(2)
         self.legends['left'].SetBorderSize(0)
         self.legends['left'].SetFillColor(0)
         self.legends['left'].SetFillStyle(4000)
         self.legends['left'].SetTextFont(62)
         self.legends['left'].SetTextSize(0.035)
-        self.legends['right'] = ROOT.TLegend(0.68, 0.6,0.92,0.92)
+        self.legends['right'] = ROOT.TLegend(legendX1+0.49*(legendX2-legendX1), legendY1,legendX2,legendY2)
         self.legends['right'].SetLineWidth(2)
         self.legends['right'].SetBorderSize(0)
         self.legends['right'].SetFillColor(0)
@@ -410,6 +417,9 @@ class NewStackMaker:
         groupNamesOrdered = self.setup + sorted([x for x in groupNames if x not in self.setup])
 
         numLegendEntries = len(groupNames) + 2
+        if self.config.has_option('Plot_general', '__modNumLegentries'):
+            numLegendEntries += int(self.config.get('Plot_general', '__modNumLegentries'))
+
         for itemPosition, groupName in enumerate(groupNamesOrdered): 
             if groupName != self.dataGroupName and groupName in groupedHistograms:
                 legendEntryName = self.typLegendDict[groupName] if groupName in self.typLegendDict else groupName
@@ -551,7 +561,8 @@ class NewStackMaker:
                         groupedHistograms[groupName].Scale(1./groupedHistograms[groupName].Integral())
                         if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
                             maximumNormalized = groupedHistograms[groupName].GetMaximum()
-                    groupedHistograms[groupName].SetLineColor(ROOT.kBlack)
+                    if not normalize:
+                        groupedHistograms[groupName].SetLineColor(ROOT.kBlack)
                     allStack.Add(groupedHistograms[groupName])
 
         # draw options
