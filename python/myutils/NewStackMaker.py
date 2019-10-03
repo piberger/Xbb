@@ -17,44 +17,62 @@ from sampleTree import SampleTree as SampleTree
 # stacked histogram
 # ------------------------------------------------------------------------------
 class NewStackMaker:
-    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title=None):
+
+    def readConfig(self, section, option, default=None):
+        if self.config.has_section(section) and self.config.has_option(section, option):
+            return eval(self.config.get(section, option))
+        else:
+            return default
+    
+    def readConfigStr(self, section, option, default=None):
+        if self.config.has_section(section) and self.config.has_option(section, option):
+            return self.config.get(section, option)
+        else:
+            return default
+
+    def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title='CMS', configSectionPrefix='Plot'):
         self.debug = 'XBBDEBUG' in os.environ
         self.config = config
         self.saveShapes = True
         self.var = var
         self.region = region
-        if self.config.has_section('Plot:%s'%region):
-            self.configSection = 'Plot:%s'%region
-        elif self.config.has_section('Fit:%s'%region):
-            self.configSection = 'Fit:%s'%region
-        else:
-            print("ERROR: no section '%s'"%('Plot:%s'%region))
-            raise Exception("ConfigError")
+        self.configSectionPrefix = configSectionPrefix
+        self.configSection = '{prefix}:{region}'.format(prefix=self.configSectionPrefix, region=region)
+        if not self.config.has_section(self.configSection):
+            print("\x1b[31mWARNING: no section '%s' in config, using defaults.\x1b[0m"%('Plot:%s'%region))
+            self.configSection = None
+            #raise Exception("ConfigError")
+
+        self.plotVarSection = 'plotDef:%s'%var
+        self.hasPlotVarSection = self.config.has_section(self.plotVarSection)
 
         self.dataGroupName = 'DATA'
-        self.anaTag = self.config.get("Analysis", "tag")
-        self.subcut = subcut
-        self.forceLog = None
-        self.normalize = eval(self.config.get(self.configSection, 'Normalize')) if self.config.has_option(self.configSection, 'Normalize') else False
-        self.log = eval(self.config.get(self.configSection, 'log')) if self.config.has_option(self.configSection, 'log') else False
-        self.mcUncertaintyLegend = eval(self.config.get('Plot_general','mcUncertaintyLegend')) if self.config.has_option('Plot_general','mcUncertaintyLegend') else "MC uncert. (stat.)"
-        if self.config.has_option('plotDef:%s'%var, 'log'):
-            self.log = eval(self.config.get('plotDef:%s'%var,'log'))
-        self.blind = eval(self.config.get(self.configSection,'blind')) if self.config.has_option(self.configSection,'blind') else False
-        self.xAxis = self.config.get('plotDef:%s'%self.var,'xAxis')
-        self.yAxis = self.config.get('plotDef:%s'%self.var,'yAxis') if self.config.has_option('plotDef:%s'%self.var,'yAxis') else None
+        self.anaTag        = self.config.get("Analysis", "tag")
+        self.subcut        = subcut
+        self.forceLog      = None
+        self.normalize     = self.readConfig(self.configSection, 'Normalize', False)
+        self.log           = self.readConfig(self.configSection, 'log', False)
+        self.blind         = self.readConfig(self.configSection, 'blind', False)
+
+        self.mcUncertaintyLegend = self.readConfig('Plot_general', 'mcUncertaintyLegend', 'MC uncert. (stat.)')
+        self.drawMCErrorForNormalizedPlots = self.readConfig('Plot_general', 'drawMCErrorForNormalizedPlots', False)
+
+        self.xAxis = self.readConfigStr(self.plotVarSection, 'xAxis', '')
+        self.yAxis = self.readConfigStr(self.plotVarSection, 'yAxis', '')
+
+        if self.hasPlotVarSection: 
+            if self.config.has_option(self.plotVarSection, 'log'):
+                self.log = eval(self.config.get(self.plotVarSection, 'log'))
+
         self.is2D = True if self.yAxis else False
-        self.typLegendDict = eval(config.get('Plot_general','typLegendDict'))
+        self.typLegendDict = self.readConfig('Plot_general','typLegendDict', {})
         self.plotLabels = {}
         if setup is None:
             self.setup = [x.strip() for x in self.config.get('Plot_general', 'setupLog' if self.log else 'setup').split(',') if len(x.strip()) > 0]
         else:
             self.setup = setup
-        if not title:
-            if self.config.has_option('Plot_general', 'title'):
-                title = eval(self.config.get('Plot_general', 'title'))
 
-        self.plotTitle = title if title else "CMS"
+        self.plotTitle = self.readConfig('Plot_general', 'title', title) 
 
         self.rebin = 1
         self.histogramOptions = {
@@ -64,7 +82,7 @@ class NewStackMaker:
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
             self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
-            if self.config.has_option(self.configSection, 'additionalText'):
+            if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
                 aText = eval(self.config.get(self.configSection, 'additionalText'))
                 if type(aText) == list:
                     self.additionalTextLines += aText
@@ -112,11 +130,13 @@ class NewStackMaker:
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
             for configKey in configKeysList:
-                if self.config.has_option(self.configSection, configKey):
+                if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, configKey):
                     self.histogramOptions[optionName] = self.config.get(self.configSection, configKey)
+                    print(self.configSection, configKey,self.histogramOptions[optionName])
                     break
                 elif self.config.has_option('plotDef:%s'%var, configKey):
                     self.histogramOptions[optionName] = self.config.get('plotDef:%s'%var, configKey)
+                    print('plotDef:%s'%var, configKey,self.histogramOptions[optionName])
                     break
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
@@ -162,7 +182,7 @@ class NewStackMaker:
         self.plotTextMarginLeft = 0.16
 
         if self.debug:
-            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'])
+            print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'] if 'nBins' in self.histogramOptions else '-')
 
     def setPlotText(self, text):
         if type(text) == list:
@@ -260,7 +280,7 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # data/MC ratio
     # ------------------------------------------------------------------------------
-    def drawRatioPlot(self, dataHistogram, mcHistogram):
+    def drawRatioPlot(self, dataHistogram, mcHistogram, yAxisTitle="Data/MC", same=False, ratioRange=[0.5,1.75]):
 
         self.pads['unten'].cd()
         ROOT.gPad.SetTicks(1,1)
@@ -287,7 +307,7 @@ class NewStackMaker:
             dataHistogram = convertedDataHistogram
 
         # draw ratio plot
-        self.ratioPlot, error = getRatio(dataHistogram, mcHistogram, self.histogramOptions['minX'], self.histogramOptions['maxX'], "", self.maxRatioUncert, True)
+        self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
 
         ksScore = dataHistogram.KolmogorovTest(mcHistogram)
         chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
@@ -298,7 +318,7 @@ class NewStackMaker:
             self.ratioError = ROOT.TGraphErrors(error)
             self.ratioError.SetFillColor(ROOT.kGray+3)
             self.ratioError.SetFillStyle(3013)
-            self.ratioPlot.Draw("E1")
+            self.ratioPlot.Draw("E1 SAME" if same else "E1")
             self.ratioError.Draw('SAME2')
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
@@ -366,7 +386,7 @@ class NewStackMaker:
             if not self.log:
                 t0.DrawTextNDC(0.1059, 0.96, "0")
 
-    def drawSampleLegend(self, groupedHistograms, theErrorGraph):
+    def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
         self.legends['left'] = ROOT.TLegend(0.45, 0.6,0.75,0.92)
@@ -399,7 +419,7 @@ class NewStackMaker:
                     self.legends['right'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
             elif groupName not in groupedHistograms:
                 print("WARNING: histogram group not found:", groupName)
-        if theErrorGraph: 
+        if theErrorGraph and not normalize:
             self.legends['right'].AddEntry(theErrorGraph, self.mcUncertaintyLegend, "fl")
         self.canvas.Update()
         ROOT.gPad.SetTicks(1,1)
@@ -481,8 +501,9 @@ class NewStackMaker:
 
     # ------------------------------------------------------------------------------
     # draw the stacked histograms 
+    # dataOverBackground=False => draw DATA/MC
     # ------------------------------------------------------------------------------
-    def Draw(self, outputFolder='./', prefix='', normalize=False):
+    def Draw(self, outputFolder='./', prefix='', normalize=False, dataOverBackground=False, ratioRange=[0.5,1.75]):
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
 
@@ -530,6 +551,7 @@ class NewStackMaker:
                         groupedHistograms[groupName].Scale(1./groupedHistograms[groupName].Integral())
                         if groupedHistograms[groupName].GetMaximum() > maximumNormalized:
                             maximumNormalized = groupedHistograms[groupName].GetMaximum()
+                    groupedHistograms[groupName].SetLineColor(ROOT.kBlack)
                     allStack.Add(groupedHistograms[groupName])
 
         # draw options
@@ -649,8 +671,28 @@ class NewStackMaker:
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
-                mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
-                self.drawRatioPlot(dataHistogram, mcHistogram)
+                if dataOverBackground:
+                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms')
+                    signalHistogram     = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']], outputName='summedSignalHistograms')
+                    mcHistogram         = backgroundHistogram.Clone()
+                    mcHistogram.Add(signalHistogram)
+                    
+                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG',ratioRange=ratioRange)
+
+                    # draw blue line for (S+B)/B expectation
+                    expectedRatio = mcHistogram.Clone()
+                    expectedRatio.Divide(backgroundHistogram)
+                    expectedRatio.SetLineColor(ROOT.kBlue)
+                    expectedRatio.SetLineWidth(2)
+                    expectedRatio.SetFillStyle(0)
+                    self.pads['unten'].cd()
+                    expectedRatio.Draw("HIST;SAME")
+                    
+                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG', same=True)
+
+                else:
+                    mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                    self.drawRatioPlot(dataHistogram, mcHistogram)
 
                 self.pads['oben'].cd()
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
@@ -659,10 +701,22 @@ class NewStackMaker:
                 theErrorGraph.Draw('SAME2')
             else:
                 print("INFO: no DATA available")
+        elif normalize and not self.is2D and self.drawMCErrorForNormalizedPlots:
+            # draw error bands for all individual groups
+            self.errorGraphs = []
+            colorDict = eval(self.config.get('Plot_general', 'colorDict'))
+            histogramGroups = set(list([histogram['group'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot]))
+            print(groupedHistograms)
+            for histogramGroup in histogramGroups:
+                theErrorGraph = ROOT.TGraphErrors(NewStackMaker.sumHistograms(histograms=[groupedHistograms[histogramGroup]], outputName='summedMcHistograms_'+histogramGroup))
+                theErrorGraph.SetFillColor(colorDict[histogramGroup])
+                theErrorGraph.SetFillStyle(3013)
+                theErrorGraph.Draw('SAME2')
+                self.errorGraphs.append(theErrorGraph)
 
         # draw legend
         if not self.is2D:
-            self.drawSampleLegend(groupedHistograms, theErrorGraph)
+            self.drawSampleLegend(groupedHistograms, theErrorGraph, normalize=normalize)
 
         # draw various labels
         if not normalize:

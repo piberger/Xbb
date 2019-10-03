@@ -137,7 +137,13 @@ class TreeCache:
             parts=self.splitFilesChunks
         )
         cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
-        self.cachedFileNames = glob.glob(cachedFilesMask)
+
+        # this does not work reliably on T3 worker nodes anymore 
+        #self.cachedFileNames = glob.glob(cachedFilesMask)
+
+        # workaround: use xrootd for directory listing 
+        self.cachedFileNames = self.fileLocator.glob(cachedFilesMaskRaw)
+
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)
             print ('\x1b[32mDEBUG: files:')
@@ -159,8 +165,10 @@ class TreeCache:
             part=self.chunkNumber,
             parts=self.splitFilesChunks
         )
-        cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
-        return len(glob.glob(cachedFilesMask)) > 0
+        # this does not work reliably on T3 worker nodes anymore 
+        #cachedFilesMask = self.fileLocator.getLocalFileName(cachedFilesMaskRaw)
+        #return len(glob.glob(cachedFilesMask)) > 0
+        return self.fileLocator.remoteFileExists(cachedFilesMaskRaw)
 
     # isCached == all files containing the skimmed tree found!
     def isCached(self):

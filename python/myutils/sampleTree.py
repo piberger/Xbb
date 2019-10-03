@@ -16,6 +16,7 @@ from XbbConfig import XbbConfigReader, XbbConfigTools
 import BetterConfigParser
 from sample_parser import ParseInfo
 import hashlib
+import subprocess
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -54,6 +55,8 @@ class SampleTree(object):
         self.disableBranchesInOutput = True
         self.samples = samples
         self.tree = None
+        self.nonEmptyTrees = []
+        self.processedTrees = []
         #print('here')
         self.fileLocator = FileLocator(config=self.config, xrootdRedirector=xrootdRedirector)
         #print('here_again')
@@ -204,7 +207,14 @@ class SampleTree(object):
 
                             if self.debug:
                                 print ('\x1b[42mDEBUG: chaining '+chainTree,'\x1b[0m')
-                            statusCode = self.tree.Add(chainTree)   
+
+                            nEntriesBefore = self.tree.GetEntries()
+                            statusCode = self.tree.Add(chainTree)
+                            nEntriesAfter = self.tree.GetEntries()
+
+                            if nEntriesAfter>nEntriesBefore:
+                                self.nonEmptyTrees.append(rootFileName)
+
                             #chainTree = root://t3dcachedb03.psi.ch:1094///pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_8_58d6472a6c2138455ddc891e46742bf0bf4635409bea6cbea1891808.root/Events                         
                             #print('This is where each tree is added to TChain object self.tree')
                             #print('statusCode', statusCode)   #1 always (if added)
@@ -309,28 +319,31 @@ class SampleTree(object):
             pass
         self.fileLocator = None
         self.config = None
-        for outputTree in self.outputTrees:
-            del outputTree['file']
-        try:
-            for formulaName, formula in self.formulas.iteritems():
-                if formula:
-                    del formula
-                    formula = None
-        except e:
-            print("EXCEPTION:", e)
-        try:
+        if hasattr(self, "outputTrees"):
             for outputTree in self.outputTrees:
-                if outputTree['tree']:
-                    del outputTree['tree']
-                    outputTree['tree'] = None
-        except e:
-            print("EXCEPTION:", e)
+                del outputTree['file']
+        try:
+            if hasattr(self, "formulas"):
+                for formulaName, formula in self.formulas.iteritems():
+                    if formula:
+                        del formula
+                        formula = None
+        except Exception as e:
+            print("EXCEPTION: (destructor) ", e)
+        try:
+            if hasattr(self, "outputTrees"):
+                for outputTree in self.outputTrees:
+                    if outputTree['tree']:
+                        del outputTree['tree']
+                        outputTree['tree'] = None
+        except Exception as e:
+            print("EXCEPTION: (destructor)", e)
         try:
             if self.tree:
                 del self.tree
                 self.tree = None
-        except e:
-            print("EXCEPTION:", e)
+        except Exception as e:
+            print("EXCEPTION: (destructor)", e)
 
     def getFriendTreeFileNames(self, directory):
         # get list of files in this chain and make list of friend file names
@@ -436,12 +449,31 @@ class SampleTree(object):
             #print('redirector', redirector)   #root://t3dcachedb03.psi.ch:1094
             if self.verbose:
                 print ("INFO: use ", samplesMask)
-            sampleFileNames = glob.glob(samplesMask)  
-            #print('sampleFileNames = glob.glob(samplesMask)', sampleFileNames)  #['/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_10_619c0318d0c592698755987d1bd9208fea26b3e3fea0d4dd3a9a7f54.root', '/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_16...........] 
+
+            nfsAvailable = False
+            ## DIRTY WORKAROUND
+            ## don't use glob since nfs mount on T3 worker nodes fails too often...
+            #try:
+            #    nfsAvailable = 'ui' in subprocess.check_output(["uname -n"], shell=True)
+            #except Exception as e:
+            #    print(e)
+
+            if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
+                sampleFileNames = glob.glob(samplesMask)
+            else:
+                print("WARNING: using fallback method to get directory listing for storage element directory")
+                sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
+
+            if sampleFileNames is None or len(sampleFileNames) < 1:
+                print("\x1b[31mERROR: no tree files found for this sample in",sampleFolder,"!\x1b[0m")
+                raise Exception("FilesMissing")
             sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
-            #print('sampleFileNames', sampleFileNames)  #['root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/tree_RunIIAutumn18NanoAOD-102X_upgr86_190416_171253_0000_10_619c0318d0c592698755987d1bd9208fea26b3e3fea0d4dd3a9a7f54.root', 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pyth.........]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
+                if self.debug:
+                    for sampleFileName in sampleFileNames:
+                        print("DEBUG: >", sampleFileName)
+
         # given argument is a single file name -> read this .txt file 
         else:
             sampleTextFileName = samples
@@ -586,6 +618,12 @@ class SampleTree(object):
                 if self.debug:
                     perfStats = perfStats + ' max mem used = %d'%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
                 print ('INFO: switching trees --> %d (=%1.1f %%, ETA: %s min, %s)'%(treeNum, percentage, self.getETA(), perfStats))
+
+                # in case files of the chain get inaccessible in the time between making the chain (file exsitence will be checked and error raised if file does not exist!) 
+                # and the time the file is read (ROOT will silently ignore it ad there will be just Xrootd error message printed)
+                # add processed numbers to array and check if all trees have been processed in the end
+                self.processedTrees.append(treeNum)
+
                 if self.debugProfiling:
                     self.tree.PrintCacheStats()
                 sys.stdout.flush()
@@ -1016,8 +1054,15 @@ class SampleTree(object):
         passedTime = time.time() - self.timeStart
         perfStats = 'INPUT: {erps:1.4f}/s, OUTPUT: {ewps:1.4f}/s '.format(erps=self.eventsRead / passedTime if passedTime>0 else 0, ewps=sum([x['passed'] for x in self.outputTrees]) / passedTime if passedTime>0 else 0)
         print('INFO: throughput:', perfStats)
+        print('INFO: number of trees processed:', len(self.processedTrees))
         sys.stdout.flush()
-        
+      
+        if not self.checkProcessingComplete():
+            print('ERROR: some files might have gone unavailable during iteration of the TChain!')
+            print('ERROR:  -> expected number of trees:', len(self.nonEmptyTrees))
+            print('ERROR:  -> actual number of processed trees:', len(self.processedTrees))
+            raise Exception('FileException')
+
         # callbacks after loop 
         self._runCallbacks('finish')
 
@@ -1070,6 +1115,13 @@ class SampleTree(object):
             except:
                 pass
 
+    def checkProcessingComplete(self):
+        if self.debug:
+            print('DEBUG: verify that all tree files were seen once during iteration') 
+            print('DEBUG:  -> number of trees:', len(self.sampleFileNames))
+            print('DEBUG:  -> number of non-empty trees:', len(self.nonEmptyTrees))
+            print('DEBUG:  -> actual number of processed trees:', len(self.processedTrees))
+        return len(self.nonEmptyTrees) == len(self.processedTrees)
 
     @staticmethod
     def countSampleFiles(samples):

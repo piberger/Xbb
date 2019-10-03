@@ -24,8 +24,8 @@ class CachePlot(object):
         self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config) 
         self.sampleFilesFolder = self.config.get('Directories', 'samplefiles')
 
-        self.sampleNames = eval(self.config.get('Plot_general', 'samples'))
-        self.dataNames = eval(self.config.get('Plot_general', 'Data'))
+        self.sampleNames = list(eval(self.config.get('Plot_general', 'samples')))
+        self.dataNames = list(eval(self.config.get('Plot_general', 'Data')))
         self.samples = self.samplesInfo.get_samples(self.sampleNames + self.dataNames)
 
         self.regionsDict = {}
@@ -137,12 +137,12 @@ class CachePlot(object):
                         if not self.sampleTree:
                             self.sampleTree = SampleTree({'name': sample.identifier, 'folder': self.samplesPath}, splitFilesChunkSize=self.splitFilesChunkSize, chunkNumber=self.chunkNumber, config=self.config, saveMemory=True)
                             if not self.sampleTree or not self.sampleTree.tree:
-                                print ("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
+                                print("\x1b[31mERROR: creation of sample tree failed!!\x1b[0m")
                                 raise Exception("CreationOfSampleTreeFailed")
                             # consistency check on the file list at submission time and now
                             fileListNow = self.sampleTree.getSampleFileNameChunk(self.chunkNumber)
                             if self.fileList and (sorted(self.fileList) != sorted(fileListNow)):
-                                print ("\x1b[31mERROR: sample files have changed between submission and run of the job!\x1b[0m")
+                                print("\x1b[31mERROR: sample files have changed between submission and run of the job!\x1b[0m")
                                 raise Exception("SampleFilesHaveChanged")
 
                         treeCaches.append(tc.setSampleTree(self.sampleTree).cache())

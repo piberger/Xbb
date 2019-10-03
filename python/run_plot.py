@@ -61,7 +61,17 @@ class PlotHelper(object):
             print ('adding add. blinding cut:', self.addBlindingCut)
 
         # load samples
-        self.data = eval(self.config.get(self.configSection, 'Datas')) # read the data corresponding to each CR (section)
+        if self.config.has_section(self.configSection):
+            # read data from region definition
+            if self.config.has_option(self.configSection, 'Datas'):
+                self.data = eval(self.config.get(self.configSection, 'Datas')) # read the data corresponding to each CR (section)
+            elif self.config.has_option(self.configSection, 'Data'):
+                self.data = eval(self.config.get(self.configSection, 'Data')) # read the data corresponding to each CR (section)
+            else:
+                self.data = eval(self.config.get('Plot_general', 'Data'))
+        else:
+            # use default datasets
+            self.data = eval(self.config.get('Plot_general', 'Data'))
         self.mc = eval(self.config.get('Plot_general', 'samples')) # read the list of mc samples
         self.total_lumi = eval(self.config.get('General', 'lumi'))
         self.signalRegion = False

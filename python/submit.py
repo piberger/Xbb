@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import datetime
+import glob
 from myutils.sampleTree import SampleTree as SampleTree
 from myutils.FileList import FileList
 from myutils.Datacard import Datacard
@@ -36,6 +37,8 @@ parser.add_option("-C", "--checkCached", dest="checkCached", action="store_true"
                       help="check if all cached trees exist before submitting the jobs")
 parser.add_option("-c", "--condor-nobatch", dest="condorNobatch", action="store_true", default=False,
                       help="submit in a single submit file per job instead of using batches")
+parser.add_option("--cancel", dest="cancel", action="store_true", default=False,
+                      help="cancel submission")
 parser.add_option("-d", "--friend", dest="friend", action="store_true", default=False,
                       help="use friend trees")
 parser.add_option("-F", "--folderTag", dest="ftag", default="",
@@ -61,12 +64,14 @@ parser.add_option("-p", "--parallel", dest="parallel", default=None, help="Fine 
 parser.add_option("-q", "--queue", dest="queue", default=None, help="overwrites queue settings in config")
 parser.add_option("-r", "--regions", dest="regions", default=None, help="regions to plot, can contain * as wildcard")
 parser.add_option("-S","--samples",dest="samples",default="", help="samples you want to run on")
-parser.add_option("--set", dest="setOptions", help="set config option. --set='Section.option:value'")
+parser.add_option("--set", action="append", dest="setOptions", help="set config option. --set='Section.option:value'")
 parser.add_option("-s","--folders",dest="folders",default="", help="folders to check, e.g. PREPout,SYSin")
-parser.add_option("-T", "--tag", dest="tag", default="8TeV",
-                      help="Tag to run the analysis with, example '8TeV' uses config8TeV and pathConfig8TeV to run the analysis")
+parser.add_option("-T", "--tag", dest="tag", default="default",
+                      help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
+                      help="unblind")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
                       help="Activate verbose flag for debug printouts")
 parser.add_option("-v","--vars",dest="vars",default="", help="comma separated list of variables")
@@ -116,6 +121,7 @@ if debugPrintOUts:
     print 'samplesList', samplesList
     print 'timestamp', timestamp
 
+
 # ------------------------------------------------------------------------------
 # the LIST OF CONFIG FILES is taken from the path config
 # ------------------------------------------------------------------------------
@@ -123,9 +129,11 @@ pathconfig = BetterConfigParser()
 pathconfig.read('%sconfig/paths.ini'%(opts.tag))
 try:
     _configs = [x for x in pathconfig.get('Configuration', 'List').split(" ") if len(x.strip()) > 0]
-    _configs.remove('volatile.ini')
+    if 'volatile.ini' in _configs:
+        _configs.remove('volatile.ini')
     configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
-except:
+except Exception as e:
+    print("\x1b[31mERROR:" + str(e) + "\x1b[0m")
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
     raise Exception("ConfigNotFound")
 
@@ -180,10 +188,15 @@ if configurationNeeded:
         # e.g. --set='Plot_general.var:=<!Plot_general|vars_reduced!>'
         # this will set var in [Plot_general] to: <!Plot_general|vars_reduced!>
         # to set multiple options, use ; to separate, e.g. --set='Plot_general.var:=Hmass;Plot_general.saveDataHistograms:=True'
+
         if opts.setOptions:
+            # allow multiple --set options to be passed
+            setOptions = ';'.join(opts.setOptions)
+            
             # escaping of semicolon
-            opts.setOptions = opts.setOptions.replace('\;', '##SEMICOLON##')
-            for optValue in opts.setOptions.split(";"):
+            setOptions = setOptions.replace('\;', '##SEMICOLON##')
+            prevSection = None
+            for optValue in setOptions.split(";"):
                 optValue = optValue.replace('##SEMICOLON##', ';').strip()
                 syntaxOk = True
                 try:
@@ -207,13 +220,24 @@ if configurationNeeded:
                     raise
 
                 if syntaxOk:
-                    if not vConfig.has_section(opt.split('.')[0]):
-                        vConfig.add_section(opt.split('.')[0])
-                    if config.has_section(opt.split('.')[0]) and config.has_option(opt.split('.')[0], opt.split('.')[1]):
-                        print "\x1b[31mCONFIG: SET", opt, "=", value, "\x1b[0m"
+
+                    configSection = opt.split('.')[0]
+                    configOption  = opt.split('.')[1]
+
+                    if len(configSection.strip()) < 1:
+                        if prevSection is None:
+                            raise Exception("ConfigSetError")
+                        else:
+                            configSection = prevSection
+                    
+                    prevSection = configSection
+                    if not vConfig.has_section(configSection):
+                        vConfig.add_section(configSection)
+                    if config.has_section(configSection) and config.has_option(configSection, configOption):
+                        print "\x1b[31mCONFIG: SET", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
                     else:
-                        print "\x1b[31mCONFIG: ADD", opt, "=", value, "\x1b[0m"
-                    vConfig.set(opt.split('.')[0], opt.split('.')[1], value)
+                        print "\x1b[31mCONFIG: ADD", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
+                    vConfig.set(configSection, configOption, value)
 
 
         outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
@@ -291,8 +315,9 @@ print 'run_locally', run_locally
 fileLocator = FileLocator(config=config)
 if 'PSI' in whereToLaunch:
     for dirName in ['PREPout', 'SYSout', 'MVAout', 'tmpSamples']:
-        if not fileLocator.exists(config.get('Directories', dirName)):
-            fileLocator.makedirs(config.get('Directories', dirName))
+        if config.has_option('Directories', dirName):
+            if not fileLocator.exists(config.get('Directories', dirName)):
+                fileLocator.makedirs(config.get('Directories', dirName))
 if 'condor' in whereToLaunch:
     if 'X509_USER_PROXY' not in os.environ:
         print '\x1b[41m\x1b[97mX509 proxy certificate not set, run:\x1b[0m'
@@ -1019,8 +1044,11 @@ if opts.task.startswith('dnn'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cacheplot'):
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
-    sampleNames = eval(config.get('Plot_general', 'samples'))
-    dataSampleNames = eval(config.get('Plot_general', 'Data'))
+    if opts.regions:
+        if len(opts.regions.strip()) > 0:
+            regions = opts.regions.split(',')
+    sampleNames = list(eval(config.get('Plot_general', 'samples')))
+    dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
     # get samples info
     info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
@@ -1086,14 +1114,17 @@ if opts.task.startswith('runplot'):
     if len(opts.samples.strip()) > 0:
         # get samples info
         info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
-        sampleNames = eval(config.get('Plot_general', 'samples'))
-        dataSampleNames = eval(config.get('Plot_general', 'Data'))
+        sampleNames = list(eval(config.get('Plot_general', 'samples')))
+        dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
         samples = info.get_samples(sampleNames + dataSampleNames)
         sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
     else:
         sampleIdentifiers = None
 
     regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    if opts.regions and len(opts.regions.strip()) > 0:
+        regions = opts.regions.split(',')
+
     if len(opts.vars.strip()) > 0:
         plotVars = opts.vars.strip().split(',')
     else:
@@ -1110,7 +1141,8 @@ if opts.task.startswith('runplot'):
     for region in regions:
 
         # if --regions is given, only plot those regions
-        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        #regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        regionMatched = True
         if regionMatched:
             nRegionsMatched += 1
             for j, plotVarList in enumerate(plotVarChunks):
@@ -1311,7 +1343,9 @@ if opts.task.startswith('rundc'):
                 # check if shape files exist already and skip
                 if opts.skipExisting:
                     datacard = Datacard(config=config, region=region, verbose=False)
-                    if all([os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]):
+                    shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
+                    # skip if all files exist or no shapes needed for this region/sample
+                    if all(shapeFileExists) or len(shapeFileExists) == 0:
                         print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
                         print "INFO: > all files exist! => skip"
                         continue
@@ -1768,12 +1802,132 @@ if opts.task.startswith('checklogs'):
                     nResubmitted += 1
     print "%d jobs in total, %d complete, %d jobs failed, %d jobs resubmitted, %d retries"%(len(lastSubmission), nComplete, nFailed, nResubmitted, nRetries)
 
+
+if opts.task.startswith('submissions'):
+    printWidth = 200
+    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
+    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
+    print "*"*printWidth
+    print " legend:"
+    for n in [0,1,2,-1,10,11,12,100]:
+        print "  ", statusDict[n], "  ", statusNamesDict[n]
+    print "*"*printWidth
+
+    if opts.input:
+        # --input file.json
+        submissionLogs = [opts.input]
+    else:
+        # no --input: list last N submissions (e.g. use -N 10)
+        nSubmissions = int(opts.nevents_split_nfiles_single) if int(opts.nevents_split_nfiles_single) > 0 else 5
+        submissionLogs = glob.glob("submissions/*_*.json")
+        submissionLogs.sort(key=os.path.getctime, reverse=True)
+
+        if len(submissionLogs) > nSubmissions:
+            submissionLogs = submissionLogs[:nSubmissions]
+        print "showing the latest", nSubmissions, "submissions, use --input to specify .json file to check an individual one"
+
+    # check job status
+    batchSystem = BatchSystem.create(config)
+    jobs = batchSystem.getJobs()
+
+    runningJobs = {int(k['id']): True for k in jobs if k['is_running']}
+    pendingJobs = {int(k['id']): True for k in jobs if k['is_pending']}
+    nResubmitted = 0
+    nCancelled   = 0
+    nCancelFailed = 0
+
+    for submissionLog in reversed(submissionLogs):
+        nResubmittedPerFile = 0
+        logfileDirectory = '-'
+        with open(submissionLog, 'r') as infile:
+             lastSubmission = json.load(infile)
+
+        # cancel jobs
+        if opts.input and opts.cancel:
+            for job in lastSubmission:
+                success = batchSystem.cancelJob(job)
+                if success:
+                    nCancelled += 1
+                else:
+                    nCancelFailed += 1
+                job['status'] = 101
+
+        # check status
+        else:
+            for job in lastSubmission:
+                status = -1
+                if 'id' not in job:
+                    status = 110
+                elif job['id'] in runningJobs:
+                    status = 1
+                elif job['id'] in pendingJobs:
+                    status = 2
+                elif os.path.isfile(job['log']):
+                    with open(job['log'], 'r') as logfile:
+                        for i, line in enumerate(logfile.readlines(), 1):
+                            if line.startswith('exit code:'):
+                                job['exitCode'] = int(line.split('exit code:')[1].strip())
+                    if 'exitCode' in job:
+                        if job['exitCode'] == 0:
+                            status = 0 
+                        else:
+                            status = 10 
+                    else:
+                        status = 11
+                else:
+                    status = 12
+
+                job['status'] = status
+                try:
+                    logfileDirectory = job['log'].split('/')[-4]
+                except:
+                    pass
+        
+        jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
+        print "\x1b[34m", submissionLog, "\x1b[0m of type \x1b[35m", jobType, "\x1b[0m log files saved to -> \x1b[34m", logfileDirectory, "\x1b[0m"
+
+        # resubmit jobs
+        if opts.resubmit:
+            for job in lastSubmission:
+                if job['status'] in [-1, 10, 11, 12]:
+                    # resubmit
+                    batchSystem.resubmit(job)
+                    nResubmitted += 1
+                    nResubmittedPerFile += 1
+                    job['status'] = 100
+
+        jobStatus = [job['status'] for job in lastSubmission]
+        while len(jobStatus) > 0:
+            if len(jobStatus) > printWidth:
+                printJobs = jobStatus[:printWidth]
+                jobStatus = jobStatus[printWidth:]
+            else:
+                printJobs = jobStatus
+                jobStatus = []
+            print ''.join([statusDict[x] for x in printJobs])
+        print "-"*printWidth
+
+        if nResubmittedPerFile > 0:
+            with open(submissionLog, 'w') as outfile:
+                json.dump(lastSubmission, outfile)
+    
+    if nCancelFailed > 0:
+        print nCancelFailed, "jobs could not be cancelled"
+
+    if nCancelled > 0:
+        print nCancelled, "jobs cancelled"
+
+    if nResubmitted > 0:
+        print nResubmitted, "jobs resubmitted!"
+
 # -----------------------------------------------------------------------------
 # postfitplot 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('postfitplot'):
     jobDict = repDict.copy()
     jobDict.update({'arguments': {'regions': opts.regions}})
+    if opts.unblind:
+        jobDict['arguments']['unblind'] = ''
     jobName = 'postfitplot'
     submit(jobName, jobDict)
 
@@ -1822,8 +1976,13 @@ batchSystem.submitQueue()
 
 # dump submitted jobs
 if batchSystem.getNJobsSubmitted() > 0 and not opts.resubmit:
-    for fileName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
-        try:
-            batchSystem.dumpSubmittedJobs(fileName)
-        except Exception as e:
-            print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e
+    fileName = 'submissions/' + opts.tag + '_' + submitTimestamp +  '.json' 
+    try:
+        batchSystem.dumpSubmittedJobs(fileName)
+        for copyName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
+            shutil.copyfile(fileName, copyName)
+    except Exception as e:
+        print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e
+
+
+    

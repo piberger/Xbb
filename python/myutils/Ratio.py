@@ -6,7 +6,7 @@ def renewHist(hist,reference,min,max):
     theHist.SetMarkerSize(1)
     return theHist, theReference
 
-def getRatio(hist,reference,min,max,yTitle="",maxUncertainty = 1000.000,restrict=True):
+def getRatio(hist,reference,min,max,yTitle="Data/MC",maxUncertainty = 1000.000,restrict=True, yRange=[0.5,1.75]):
     from ROOT import gROOT,gSystem
     theHist, theReference = renewHist(hist,reference,min,max)
     try:
@@ -21,8 +21,8 @@ def getRatio(hist,reference,min,max,yTitle="",maxUncertainty = 1000.000,restrict
     print "theRation: range",min," ",max
     #theRatio.GetXaxis().SetRangeUser(0,1)
     if restrict:
-        theRatio.SetMinimum(0.5)
-        theRatio.SetMaximum(1.75)
+        theRatio.SetMinimum(yRange[0])
+        theRatio.SetMaximum(yRange[1])
     else:
         theRatio.SetMinimum(int(theRatio.GetMinimum()))
         theRatio.SetMaximum(int(theRatio.GetMaximum()*1.5))
@@ -37,7 +37,7 @@ def getRatio(hist,reference,min,max,yTitle="",maxUncertainty = 1000.000,restrict
     theRatio.GetYaxis().SetTitleOffset(0.4)
     theRatio.GetYaxis().CenterTitle(ROOT.kTRUE)
     theRatio.GetYaxis().SetDrawOption("M")
-    theRatio.SetXTitle(yTitle)
-    theRatio.SetYTitle("Data/MC")
+    theRatio.SetXTitle("")
+    theRatio.SetYTitle(yTitle)
     return theRatio, refError
 

@@ -2,6 +2,8 @@
 from __future__ import print_function
 import BetterConfigParser
 import os
+from copytreePSI import filelist
+from FileLocator import FileLocator
 
 # helper class to read full config object
 # use:
@@ -40,6 +42,11 @@ class XbbConfigTools(object):
 
     def __init__(self, config):
         self.config = config
+        self.fileLocator = None
+
+    def initFS(self, force=False): 
+        if self.fileLocator is None or force:
+            self.fileLocator = FileLocator(config=self.config)
 
     # list of DATA sample names
     def getData(self):
@@ -52,4 +59,18 @@ class XbbConfigTools(object):
     # list of all sample names (data + mc)
     def getUsedSamples(self):
         return self.getMC() + self.getData()
- 
+
+    # get list of original file names: /store/...
+    def getOriginalFileNames(self, sampleIdentifier):
+        return filelist(self.config.get('Directories', 'samplefiles'), sampleIdentifier)
+
+    # get list of file names (e.g. in SYSout folder)
+    def getFileNames(self, sampleIdentifier, folder='SYSout'):
+        self.initFS()
+        originalFileNames = self.getOriginalFileNames(sampleIdentifier)
+        samplePath = self.config.get('Directories', folder)
+        fileNames = ["{path}/{subfolder}/{filename}".format(path=samplePath, subfolder=sampleIdentifier, filename=self.fileLocator.getFilenameAfterPrep(x)) for x in originalFileNames]
+        return fileNames
+
+
+
