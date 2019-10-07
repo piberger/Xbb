@@ -19,6 +19,7 @@ class LOtoNLOweight(AddCollectionsModule):
         if not self.sample.isData():
             self.addBranch(self.branchName)
             self.addBranch(self.branchName + '_LHEVpt')
+            self.addBranch(self.branchName + '_LHEVptShape')
 
     def processEvent(self, tree):
         # if current entry has not been processed yet
@@ -26,15 +27,17 @@ class LOtoNLOweight(AddCollectionsModule):
             self.markProcessed(tree)
             self._b(self.branchName)[0] = 1.0
             self._b(self.branchName + '_LHEVpt')[0] = 1.0
+            self._b(self.branchName + '_LHEVptShape')[0] = 1.0
 
             if self.applies(tree):
                 etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
                 njets = tree.sampleIndex % 10
                 if njets < 3:
                     if self.year == 2017:
-                        # apply only one of the two!
+                        # apply only one of them!
                         self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb2017(etabb, njets) 
                         self._b(self.branchName + '_LHEVpt')[0] = 1.153 * self.LOtoNLOWeightBjetSplitVpt2017(tree.LHE_Vpt, njets)
+                        self._b(self.branchName + '_LHEVptShape')[0] = 1.153 * self.LOtoNLOWeightBjetSplitVpt2017preserveNormalization(tree.LHE_Vpt, njets)
                     else:
                         self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
                 else:
@@ -81,12 +84,24 @@ class LOtoNLOweight(AddCollectionsModule):
     
     def LOtoNLOWeightBjetSplitVpt2017(self, vpt, njets):
         SF = 1.0
-        vpt = max(min(vpt,500.0),100.0)
+        vpt = max(min(vpt,500.0),50.0)
         if njets < 1:
-            SF = 1.056 - 9.480e-4*vpt 
+            SF = 1.1596-7.1563e-04*(vpt-5.000e+01)-1.1169e-06*(vpt-5.000e+01)**2 
         elif njets == 1:
-            SF = 1.05 - 1.235e-3*vpt
+            SF = 1.1153-7.3720e-04*(vpt-5.000e+01)-1.7232e-06*(vpt-5.000e+01)**2
         else:
-            SF = 1.15 - 2.068e-3*vpt
+            SF = 1.1667-8.9528e-04*(vpt-5.000e+01)-2.1150e-06*(vpt-5.000e+01)**2
         return SF
+    
+    def LOtoNLOWeightBjetSplitVpt2017preserveNormalization(self, vpt, njets):
+        SF = 1.0
+        vpt = max(min(vpt,500.0),50.0)
+        if njets < 1:
+            SF = 0.883*(1.1596-7.1563e-04*(vpt-5.000e+01)-1.1169e-06*(vpt-5.000e+01)**2) 
+        elif njets == 1:
+            SF = 0.926*(1.1153-7.3720e-04*(vpt-5.000e+01)-1.7232e-06*(vpt-5.000e+01)**2)
+        else:
+            SF = 0.887*(1.1667-8.9528e-04*(vpt-5.000e+01)-2.1150e-06*(vpt-5.000e+01)**2)
+        return SF
+
 
