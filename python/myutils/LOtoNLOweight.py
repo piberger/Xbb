@@ -20,6 +20,7 @@ class LOtoNLOweight(AddCollectionsModule):
             self.addBranch(self.branchName)
             self.addBranch(self.branchName + '_LHEVpt')
             self.addBranch(self.branchName + '_LHEVptShape')
+            self.addBranch(self.branchName + '_2016')
 
     def processEvent(self, tree):
         # if current entry has not been processed yet
@@ -28,6 +29,7 @@ class LOtoNLOweight(AddCollectionsModule):
             self._b(self.branchName)[0] = 1.0
             self._b(self.branchName + '_LHEVpt')[0] = 1.0
             self._b(self.branchName + '_LHEVptShape')[0] = 1.0
+            self._b(self.branchName + '_2016')[0] = 1.0
 
             if self.applies(tree):
                 etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
@@ -38,6 +40,7 @@ class LOtoNLOweight(AddCollectionsModule):
                         self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb2017(etabb, njets) 
                         self._b(self.branchName + '_LHEVpt')[0] = 1.153 * self.LOtoNLOWeightBjetSplitVpt2017(tree.LHE_Vpt, njets)
                         self._b(self.branchName + '_LHEVptShape')[0] = 1.153 * self.LOtoNLOWeightBjetSplitVpt2017preserveNormalization(tree.LHE_Vpt, njets)
+                        self._b(self.branchName + '_2016')[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
                     else:
                         self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
                 else:

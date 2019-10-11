@@ -23,9 +23,7 @@ class BatchSystemSLURM(BatchSystem):
         return jobNames
 
     def getJobs(self, includeDeleted=True):
-        lines = subprocess.Popen(["squeue"], stdout=subprocess.PIPE).stdout.read().split("\n")
-        #JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-        #19171        wn dc_run_t berger_p  R       0:15      1 t3wn48
+        lines = subprocess.Popen(["squeue -u $USER"], shell=True, stdout=subprocess.PIPE).stdout.read().split("\n")
         headerParts = [x.strip() for x in lines[0].strip().split(' ') if len(x.strip()) > 0]
         result = []
         for line in lines[1:]:
@@ -45,7 +43,6 @@ class BatchSystemSLURM(BatchSystem):
 
     def getJobIDfromOutput(self, stdOutput):
         jobId = -1
-        #Submitted batch job 19124
         if stdOutput.startswith('Submitted batch job'):
             jobId = int(stdOutput.split('Submitted batch job')[1].strip())
         else:
