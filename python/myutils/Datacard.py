@@ -528,7 +528,7 @@ class Datacard(object):
     def getSystematicsVar(self, syst, Q):
         treevar = self.treevar
         #replace tree variable
-        if self.anType.lower() == 'bdt':
+        if self.anType.lower() in ['bdt', 'dnn']:
             if not 'UD' in syst:
                 if self.debug:
                     print ('treevar was', treevar)
@@ -782,7 +782,7 @@ class Datacard(object):
                         self.histograms[sampleHistogramName][systematics['systematicsName']].Sumw2()
 
                     # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
-                    if (self.anType.lower() == 'bdt' or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and not sample.isData():
+                    if (self.anType.lower() in ['bdt','dnn'] or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and not sample.isData():
                         systematics['addCut'] = self.EvalCut
                         systematics['mcRescale'] = 2.0
                         sampleTree.addFormula(systematics['addCut'], systematics['addCut'])

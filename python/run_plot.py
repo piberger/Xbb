@@ -38,6 +38,7 @@ class PlotHelper(object):
 
         # plot regions
         self.configSection='Plot:%s'%region
+        self.dataOverBackground = self.config.has_option('Plot', 'plotDataOverBackground') and eval(self.config.get('Plot', 'plotDataOverBackground'))
 
         # variables
         if self.vars and type(self.vars) == list:
@@ -147,7 +148,7 @@ class PlotHelper(object):
     def run(self):
         # draw
         for var in self.vars:
-            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
+            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var), dataOverBackground=self.dataOverBackground)
             if self.config.has_option('Plot_general', 'drawNormalizedPlots') and eval(self.config.get('Plot_general', 'drawNormalizedPlots')):
                 self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
         return self

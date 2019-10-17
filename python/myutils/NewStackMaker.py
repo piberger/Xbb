@@ -220,7 +220,8 @@ class NewStackMaker:
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
-            'group': groupName
+            'group': groupName,
+            'signal': sample.type=='SIG'
             })
     
     # add object to collection
@@ -683,8 +684,10 @@ class NewStackMaker:
             if dataGroupName in groupedHistograms:
                 dataHistogram = groupedHistograms[dataGroupName]
                 if dataOverBackground:
-                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms')
-                    signalHistogram     = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']], outputName='summedSignalHistograms')
+                    bkgHistogramList = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']]
+                    sigHistogramList = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']]
+                    backgroundHistogram = NewStackMaker.sumHistograms(histograms=bkgHistogramList, outputName='summedBackgroundHistograms')
+                    signalHistogram     = NewStackMaker.sumHistograms(histograms=sigHistogramList, outputName='summedSignalHistograms')
                     mcHistogram         = backgroundHistogram.Clone()
                     mcHistogram.Add(signalHistogram)
                     
