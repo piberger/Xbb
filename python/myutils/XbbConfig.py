@@ -72,5 +72,21 @@ class XbbConfigTools(object):
         fileNames = ["{path}/{subfolder}/{filename}".format(path=samplePath, subfolder=sampleIdentifier, filename=self.fileLocator.getFilenameAfterPrep(x)) for x in originalFileNames]
         return fileNames
 
+    def has_section(self, section):
+        return self.config.has_section(section)
 
+    def has_option(self, section, option):
+        return self.config.has_section(section) and self.config.has_option(section, option)
+
+    def get(self, section, option, default=None):
+        if default is not None:
+            if self.has_option(section, option):
+                return self.config.get(section, option)
+            else:
+                return default
+        else:
+            return self.config.get(section, option)
+
+    def getPlotVariableSections(self):
+        return [x for x in self.config.sections() if x.startswith('plotDef:')]
 

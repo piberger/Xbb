@@ -24,6 +24,12 @@ class BatchJob(object):
 
 # batch system base class / factory
 class BatchSystem(object):
+    # if command returns 0, batch system is installed
+    autoDetectionCommnds = {
+                'SLURM': 'command -v squeue', 
+                'SGE': 'command -v qstat',
+                'HTCondor': 'command -v condor_q',
+                }
 
     def __init__(self, interactive=False, local=False, configFile=None):
         self.name = 'undefined'
@@ -39,6 +45,25 @@ class BatchSystem(object):
     @staticmethod
     def create(config, interactive=False, local=False, configFile=None):
         whereToLaunch = config.get('Configuration', 'whereToLaunch').strip()
+
+        # automatic detection
+        if whereToLaunch.lower() == 'auto':
+            batchSystemsFound = []
+            for batchSystem, detectionCommand in BatchSystem.autoDetectionCommnds.items():
+                try:
+                    if subprocess.call(detectionCommand, shell=True) == 0:
+                        batchSystemsFound.append(batchSystem)
+                except:
+                    pass
+            if len(batchSystemsFound) < 1:
+                print("\x1b[31mERROR: no batch system could be detected! Configuration.whereToLaunch = auto will not work.\x1b[0m")
+                raise Exception("NoBatchSystemFound")
+            elif len(batchSystemsFound) > 1:
+                print("\x1b[31mERROR: multiple batch systems found:", ",".join(batchSystemsFound), " use Configuration.whereToLaunch to specify which one to use, not auto.\x1b[0m")
+                raise Exception("MultipleBatchSystemsFound")
+            else:
+                whereToLaunch = batchSystemsFound[0]
+                print("INFO: auto-detected batch system:", whereToLaunch)
 
         # for backward compatibility
         if whereToLaunch == 'PSI':

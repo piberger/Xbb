@@ -14,10 +14,11 @@ from time import sleep
 
 class FileLocator(object):
 
-    def __init__(self, config=None, xrootdRedirector=None, usePythonXrootD=True):
+    def __init__(self, config=None, xrootdRedirector=None, usePythonXrootD=True, useDirectoryListingCache=False):
         self.config = config
         self.debug = 'XBBDEBUG' in os.environ
         self.timeBetweenAttempts = 1
+        self.useDirectoryListingCache = useDirectoryListingCache
         self.dirListingCache = {}
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
@@ -338,9 +339,9 @@ class FileLocator(object):
 
     # filesystem should be mounted read-only as normal nfs mount for e.g. glob operations, but since this very often fails on T3 worker nodes, use this 
     # as fallback when applicable! (can NOT fully replace glob, only list ALL files in a directory so use with care!)
-    def lsRemote(self, path, allowCachedRead=False):
+    def lsRemote(self, path, allowCachedRead=True):
         if self.client:
-            if allowCachedRead and path in self.dirListingCache:
+            if allowCachedRead and self.useDirectoryListingCache and path in self.dirListingCache:
                 listing = self.dirListingCache[path]
             else:
                 # when python bindings are available, use them for directory listing

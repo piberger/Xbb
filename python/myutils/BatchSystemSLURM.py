@@ -5,6 +5,7 @@ import fnmatch
 import hashlib
 import json
 from BatchSystem import BatchSystem
+from time import sleep
 
 class BatchSystemSLURM(BatchSystem):
 
@@ -12,7 +13,7 @@ class BatchSystemSLURM(BatchSystem):
         super(BatchSystemSLURM, self).__init__(interactive=interactive, local=local, configFile=configFile)
         self.name = 'SLURM'
         self.config = config
-        self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output}  {runscript}"
+        self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} {extraOptions} {runscript}"
 
     def getJobNames(self, includeDeleted=True):
         return jobNames
@@ -23,9 +24,7 @@ class BatchSystemSLURM(BatchSystem):
         return jobNames
 
     def getJobs(self, includeDeleted=True):
-        lines = subprocess.Popen(["squeue"], stdout=subprocess.PIPE).stdout.read().split("\n")
-        #JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-        #19171        wn dc_run_t berger_p  R       0:15      1 t3wn48
+        lines = subprocess.Popen(["squeue -u $USER"], shell=True, stdout=subprocess.PIPE).stdout.read().split("\n")
         headerParts = [x.strip() for x in lines[0].strip().split(' ') if len(x.strip()) > 0]
         result = []
         for line in lines[1:]:
@@ -45,7 +44,6 @@ class BatchSystemSLURM(BatchSystem):
 
     def getJobIDfromOutput(self, stdOutput):
         jobId = -1
-        #Submitted batch job 19124
         if stdOutput.startswith('Submitted batch job'):
             jobId = int(stdOutput.split('Submitted batch job')[1].strip())
         else:
@@ -54,6 +52,7 @@ class BatchSystemSLURM(BatchSystem):
         return jobId
 
     def resubmit(self, job):
+        print("RESUBMIT:", job['submitCommand'])
         stdOutput = subprocess.check_output([job['submitCommand']], shell=True)
         job['id'] = self.getJobIDfromOutput(stdOutput)
         return job
@@ -77,7 +76,9 @@ class BatchSystemSLURM(BatchSystem):
                 timeLimit = '1-00:00'
                 memoryLimit = '12000M'
 
-        command = self.submitScriptTemplate.format(jobName=repDict['name'], memory=memoryLimit, time=timeLimit, runscript=runscript, output=logPaths['out'])
+        extraOptions = self.config.get('SLURM', 'options') if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'options') else ''
+
+        command = self.submitScriptTemplate.format(jobName=repDict['name'], memory=memoryLimit, time=timeLimit, runscript=runscript, output=logPaths['out'], extraOptions=extraOptions)
         return self.run(command, runscript, repDict, getJobIdFn=self.getJobIDfromOutput)
 
     def cancelJob(self, job):

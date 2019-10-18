@@ -9,6 +9,7 @@ from myutils.sampleTree import SampleTree as SampleTree
 from myutils import BetterConfigParser, ParseInfo
 from myutils.NewStackMaker import NewStackMaker as StackMaker
 from myutils.samplesclass import Sample
+from myutils.FileLocator import FileLocator
 import os,sys
 
 class PlotHelper(object):
@@ -37,6 +38,7 @@ class PlotHelper(object):
 
         # plot regions
         self.configSection='Plot:%s'%region
+        self.dataOverBackground = self.config.has_option('Plot', 'plotDataOverBackground') and eval(self.config.get('Plot', 'plotDataOverBackground'))
 
         # variables
         if self.vars and type(self.vars) == list:
@@ -104,7 +106,9 @@ class PlotHelper(object):
         self.histogramStacks = {}
         for var in self.vars:
             self.histogramStacks[var] = StackMaker(self.config, var, self.region, self.signalRegion, None, '_'+self.subcutPlotName, title=self.title)
-        
+
+        fileLocator = FileLocator(config=self.config, useDirectoryListingCache=True)
+
         # add DATA + MC samples
         for sample in self.dataSamples + self.mcSamples:
             
@@ -122,7 +126,8 @@ class PlotHelper(object):
                     sample=sample,
                     cutList=sampleCuts,
                     inputFolder=self.samplesPath,
-                    config=config
+                    config=config,
+                    fileLocator=fileLocator
                 )
             sampleTree = tc.getTree()
 
@@ -143,7 +148,7 @@ class PlotHelper(object):
     def run(self):
         # draw
         for var in self.vars:
-            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var))
+            self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region, var=var), dataOverBackground=self.dataOverBackground)
             if self.config.has_option('Plot_general', 'drawNormalizedPlots') and eval(self.config.get('Plot_general', 'drawNormalizedPlots')):
                 self.histogramStacks[var].Draw(outputFolder=self.plotPath, prefix='comp_{region}__{var}_'.format(region=self.region, var=var), normalize=True)
         return self

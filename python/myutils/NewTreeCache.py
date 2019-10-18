@@ -54,9 +54,9 @@ import resource
 # ------------------------------------------------------------------------------
 class TreeCache:
 
-    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder=None, outputFolder=None, chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name='', config=None):
+    def __init__(self, sample, cutList='1', branches=None, inputFolder=None, tmpFolder=None, outputFolder=None, chunkNumber=-1, splitFilesChunks=-1, splitFilesChunkSize=-1, debug=False, fileList=None, cutSequenceMode='AND', name='', config=None, fileLocator=None):
         self.config = config
-        self.fileLocator = FileLocator(config=self.config)
+        self.fileLocator = fileLocator if fileLocator is not None else FileLocator(config=self.config)
         self.debug = debug or ('XBBDEBUG' in os.environ)
 
         # SAMPLE
@@ -65,7 +65,7 @@ class TreeCache:
             # count number of chunks the cached data is split into
             defaultChunkSize = int(config.get('General', 'mergeCachingSize')) if config.has_option('General', 'mergeCachingSize') else 100
             splitFilesChunkSize = sample.mergeCachingSize if sample.mergeCachingSize > 0 else defaultChunkSize
-            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug).getNumberOfParts()
+            splitFilesChunks = SampleTree({'name': sample.identifier, 'folder': inputFolder}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config, verbose=self.debug, fileLocator=self.fileLocator).getNumberOfParts()
             # if sample passed as object, it can be a 'subsample' and habe different name and identifier
             self.sample = sample.name
             self.sampleIdentifier = sample.identifier

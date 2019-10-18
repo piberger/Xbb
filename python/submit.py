@@ -1333,30 +1333,32 @@ if opts.task.startswith('rundc'):
             print('run cachedc again!')
             raise Exception("NotCached")
 
+    fileLocator = FileLocator(config=config, useDirectoryListingCache=True)
+
     # submit all the DC regions as separate jobs
     for region in regions:
         regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
         if regionMatched:
             # submit separate jobs for either sampleIdentifiers
             for sampleIdentifier in sampleIdentifiers:
-                
+               
+                datacard = None
                 # check if shape files exist already and skip
                 if opts.skipExisting:
-                    datacard = Datacard(config=config, region=region, verbose=False)
+                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator)
                     shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
                     # skip if all files exist or no shapes needed for this region/sample
                     if all(shapeFileExists) or len(shapeFileExists) == 0:
-                        print "INFO: shapes files", datacard.getShapeFileNames(sampleIdentifier)
+                        print "INFO: shapes files:", datacard.getShapeFileNames(sampleIdentifier)
                         print "INFO: > all files exist! => skip"
                         continue
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
-                    chunkSize = int(config.get(sampleIdentifier, 'dcChunkSize'))
-                    datacard = Datacard(config=config, region=region, verbose=False)
-                    nFiles = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    nJobs = datacard.getNumberOfChunks(sampleIdentifier)
-
+                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator) if datacard is None else datacard
+                    chunkSize = datacard.getChunkSize(sampleIdentifier) 
+                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier)
+                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier)
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
@@ -1804,7 +1806,8 @@ if opts.task.startswith('checklogs'):
 
 
 if opts.task.startswith('submissions'):
-    printWidth = 200
+    rows, columns = subprocess.check_output(['stty', 'size']).split()
+    printWidth = min(int(columns) - 5, 200)
     statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
     statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
     print "*"*printWidth
