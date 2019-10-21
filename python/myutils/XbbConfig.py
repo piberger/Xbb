@@ -6,6 +6,7 @@ import inspect
 from itertools import ifilter
 from copytreePSI import filelist
 from FileLocator import FileLocator
+from sample_parser import ParseInfo
 
 # helper class to read full config object
 # use:
@@ -124,6 +125,9 @@ class XbbConfigTools(object):
 
     def getCutString(self, cutName):
         return self.get('Cuts', cutName)
+
+    def sections(self):
+        return self.config.sections()
 
     def has_section(self, section):
         return self.config.has_section(section)
@@ -248,6 +252,17 @@ class XbbConfigChecker(object):
                 print("  -> TYPE:", regionType)
             except Exception as e:
                 self.addError('datacard region', datacardRegion + ' ' + repr(e))
+
+    def checkSamples(self):
+        samples         = ParseInfo(config=self.config)
+        availableSampleNames = [x.name for x in samples]
+        usedSampleNames = self.config.getUsedSamples()
+        for sampleName in usedSampleNames:
+            print(sampleName)
+            if sampleName not in availableSampleNames:
+                print("ERROR: not found sample:", sampleName)
+                raise Exception("SampleNotFound")
+
 
     # runs all methods starting with 'check'
     def checkAll(self):
