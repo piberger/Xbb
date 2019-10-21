@@ -112,6 +112,23 @@ class XbbConfigTools(object):
         else:
             raise Exception("DatacardTypeUndefined")
         return None
+    
+    def getDatacardRegionSignals(self, datacardRegion):
+        configSection = 'dc:' + datacardRegion
+        if self.has_option(configSection, 'signal'):
+            return eval(self.get(configSection, 'signal'))
+        else:
+            raise Exception("DatacardTypeUndefined")
+        return None
+    
+    def getDatacardRegionBackgrounds(self, datacardRegion):
+        configSection = 'dc:' + datacardRegion
+        if self.has_option(configSection, 'background'):
+            return eval(self.get(configSection, 'background'))
+        else:
+            raise Exception("DatacardTypeUndefined")
+        return None
+
 
     def getPlotVariables(self):
         return self.parseCommaSeparatedList(self.get('Plot_general', 'var'))
@@ -239,7 +256,9 @@ class XbbConfigChecker(object):
                 self.addError('Plot variables', 'Variable not found: %s'%plotVariable)
 
     def checkDatacardRegions(self):
-        datacardRegions = self.config.getDatacardRegions()
+        datacardRegions      = self.config.getDatacardRegions()
+        samples              = ParseInfo(config=self.config)
+        availableSampleNames = [x.name for x in samples]
         for datacardRegion in datacardRegions:
             try:
                 cutName = self.config.getDatacardCutName(datacardRegion)
@@ -250,6 +269,15 @@ class XbbConfigChecker(object):
 
                 regionType = self.config.getDatacardRegionType(datacardRegion)
                 print("  -> TYPE:", regionType)
+
+                signals = self.config.getDatacardRegionSignals(datacardRegion)
+                backgrounds = self.config.getDatacardRegionBackgrounds(datacardRegion)
+
+                for x in list(signals) + list(backgrounds):
+                    if x not in availableSampleNames:
+                         print("ERROR: not found: sample for datacard:", x)
+                         raise Exception("SampleNotFound")
+
             except Exception as e:
                 self.addError('datacard region', datacardRegion + ' ' + repr(e))
 
