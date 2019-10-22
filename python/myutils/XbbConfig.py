@@ -78,6 +78,9 @@ class XbbConfigTools(object):
     def parseCommaSeparatedList(self, listAsString):
         return [x.strip() for x in listAsString.split(',') if len(x.strip()) > 0]
 
+    def parseSpaceSeparatedList(self, listAsString):
+        return [x.strip() for x in listAsString.split(' ') if len(x.strip()) > 0]
+
     def getPlotRegions(self):
         return self.parseCommaSeparatedList(self.get('Plot_general', 'List'))
     
@@ -100,6 +103,20 @@ class XbbConfigTools(object):
             return self.get(configSection, 'Cut')
         else:
             return datacardRegion
+
+    def getTrainingRegionCutName(self, trainingRegion):
+        configSection = trainingRegion
+        if self.has_option(configSection, 'Cut'):
+            return self.get(configSection, 'Cut')
+        else:
+            return trainingRegion
+
+    def getTrainingRegionVarSet(self, trainingRegion):
+        return self.get(trainingRegion, 'treeVarSet')
+
+    def getTrainingRegionVariables(self, trainingRegion):
+        treeVarSet = self.getTrainingRegionVarSet(trainingRegion)
+        return self.parseSpaceSeparatedList(self.get(treeVarSet, 'Nominal'))
 
     def getDatacardRegionType(self, datacardRegion):
         configSection = 'dc:' + datacardRegion
@@ -128,7 +145,6 @@ class XbbConfigTools(object):
         else:
             raise Exception("DatacardTypeUndefined")
         return None
-
 
     def getPlotVariables(self):
         return self.parseCommaSeparatedList(self.get('Plot_general', 'var'))
@@ -282,6 +298,24 @@ class XbbConfigChecker(object):
 
             except Exception as e:
                 self.addError('datacard region', datacardRegion + ' ' + repr(e))
+
+    def checkTrainingRegions(self):
+        trainingRegions = self.config.getTrainingRegions()
+        for trainingRegion in trainingRegions:
+            print("training region:", trainingRegion)
+            try:
+                cutName = self.config.getTrainingRegionCutName(trainingRegion)
+                cutString = self.config.getCutString(cutName)
+                print("  ->", cutName)
+                print("    ->", cutString)
+                treeVarSet = self.config.getTrainingRegionVarSet(trainingRegion)
+                print("  -> VARSET:\x1b[35m", treeVarSet, "\x1b[0m")
+                variables = self.config.getTrainingRegionVariables(trainingRegion)
+                variablesList = " ".join([(("\x1b[34m"+x+"\x1b[0m") if (i % 2) == 0 else ("\x1b[32m"+x+"\x1b[0m")) for i,x in enumerate(variables)])
+                print("  -> VARS:", variablesList)
+
+            except Exception as e:
+                self.addError('Training region', plotRegion + ' ' + repr(e))
 
     def checkSamples(self):
         samples         = ParseInfo(config=self.config)
