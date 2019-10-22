@@ -12,7 +12,7 @@ parser.add_option("--set", action="append", dest="setOptions", help="set config 
 (opts, args) = parser.parse_args(argv)
 
 config = XbbConfigTools(config=XbbConfigReader.read(opts.tag))
-if len(opts.setOptions) > 0:
+if opts.setOptions is not None and len(opts.setOptions) > 0:
     setOptions = ';'.join(opts.setOptions)
     config.setList(setOptions) 
 
