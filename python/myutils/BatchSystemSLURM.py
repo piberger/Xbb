@@ -72,6 +72,10 @@ class BatchSystemSLURM(BatchSystem):
                 timeLimit = '1-00:00'
             elif repDict['queue'] == 'short.q':
                 timeLimit = '0-01:30'
+            elif repDict['queue'] == 'veryshort.q':
+                timeLimit = '0-00:30'
+            elif repDict['queue'] == 'espresso.q':
+                timeLimit = '0-00:05'
             elif repDict['queue'] == 'bigmem.q':
                 timeLimit = '1-00:00'
                 memoryLimit = '12000M'

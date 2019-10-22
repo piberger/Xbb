@@ -28,7 +28,7 @@ class XbbConfigReader(object):
         # paths.ini contains list of config files to use, relative to configDirectory
         pathconfig = BetterConfigParser.BetterConfigParser()
         pathconfig.read(configDirectory + '/paths.ini')
-        configFiles = pathconfig.get('Configuration', 'List').split(' ')
+        configFiles = [x.strip() for x in pathconfig.get('Configuration', 'List').split(' ') if x.strip() != 'volatile.ini']
 
         # read actual config
         config = BetterConfigParser.BetterConfigParser()
@@ -272,6 +272,8 @@ class XbbConfigChecker(object):
 
                 signals = self.config.getDatacardRegionSignals(datacardRegion)
                 backgrounds = self.config.getDatacardRegionBackgrounds(datacardRegion)
+                print("  -> SIG:\x1b[34m", signals, "\x1b[0m")
+                print("  -> BKG:\x1b[35m", backgrounds, "\x1b[0m")
 
                 for x in list(signals) + list(backgrounds):
                     if x not in availableSampleNames:
