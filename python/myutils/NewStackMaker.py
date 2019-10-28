@@ -211,6 +211,8 @@ class NewStackMaker:
     # create histogram out of a tree
     # ------------------------------------------------------------------------------
     def addSampleTree(self, sample, sampleTree, groupName, cut='1'):
+        if 'treeVar' not in self.histogramOptions:
+            print("ERROR:", self.var, " not found.")
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
