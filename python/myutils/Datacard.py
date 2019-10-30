@@ -65,6 +65,7 @@ class Datacard(object):
             os.stat(self.outpath)
         except:
             os.mkdir(self.outpath)
+        self.produceTextFiles = eval(self.config.get('Datacard', 'produceTextFiles')) if self.config.has_option('Datacard', 'produceTextFiles') else True
 
         # parse histogram config:
         self.treevar = config.get('dc:%s'%self.region, 'var')
@@ -87,6 +88,7 @@ class Datacard(object):
                 'rebin_method': (config.get('dc:%s'%self.region,'rebin_method') if config.has_option('dc:%s'%self.region, 'rebin_method') else 'no'),
                 'rebin_list': (eval(config.get('dc:%s'%self.region,'rebin_list')) if config.has_option('dc:%s'%self.region, 'rebin_list') else []),
                 }
+        print("INFO: bin list:", self.binning['rebin_list'])
         if self.config.has_option('dc:%s'%self.region, 'range'):
             self.binning['nBinsX'] = int(self.config.get('dc:%s'%self.region, 'range').split(',')[0])
             self.binning['minX']   = float(self.config.get('dc:%s'%self.region, 'range').split(',')[1])
@@ -199,7 +201,8 @@ class Datacard(object):
         if self.sysOptions['ptRegionsDict']:
             self.ptRegion = [ptRegion for ptRegion, outputNames in self.sysOptions['ptRegionsDict'].iteritems() if len([x for x in outputNames if x.upper() in self.ROOToutname.upper()])>0]
             if len(self.ptRegion) != 1:
-                print("WARNING: invalid pt region:", self.ptRegion, ", use default.")
+                if self.verbose:
+                    print("INFO: invalid pt region:", self.ptRegion, ", use default.")
                 self.ptRegion = None
             else:
                 self.ptRegion = self.ptRegion[0]
@@ -1041,7 +1044,8 @@ class Datacard(object):
                 break
             rootFile.Close()
             txtFileName = self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.txt'
-            filesExist = filesExist and os.path.isfile(txtFileName)
+            if self.produceTextFiles:
+                filesExist = filesExist and os.path.isfile(txtFileName)
         return filesExist
 
     def getHistogramName(self, process, systematics):
@@ -1171,146 +1175,147 @@ class Datacard(object):
         # ----------------------------------------------
         # write TEXT file
         # ----------------------------------------------
-        txtFileName = self.getDatacardBaseName(dcName, ext='.txt', chunkNumber=chunkNumber)
-        print("INFO: TEXTFILE:\x1b[34m", txtFileName, "\x1b[0m")
+        if self.produceTextFiles:
+            txtFileName = self.getDatacardBaseName(dcName, ext='.txt', chunkNumber=chunkNumber)
+            print("INFO: TEXTFILE:\x1b[34m", txtFileName, "\x1b[0m")
 
-        numProcesses = len([x for x in sampleGroups if x != 'DATA'])
-        numSignals = len(self.sysOptions['setupSignals']) if 'setupSignals' in self.sysOptions else 1
-        numBackgrounds = numProcesses - numSignals
+            numProcesses = len([x for x in sampleGroups if x != 'DATA'])
+            numSignals = len(self.sysOptions['setupSignals']) if 'setupSignals' in self.sysOptions else 1
+            numBackgrounds = numProcesses - numSignals
 
-        with open(txtFileName, 'w') as f:
-            f.write('imax\t1\tnumber of channels\n')
-            f.write('jmax\t%s\tnumber of processes minus 1 (\'*\' = automatic)\n'%(numProcesses-1))
-            f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
-            f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(self.DCtype, self.ROOToutname, self.DCprocessSeparatorDict[self.DCtype], self.DCprocessSeparatorDict[self.DCtype]))
-            f.write('bin\t%s\n\n'%self.Datacardbin)
-            # TODO: implement
-            #if toy or signal_inject:
-            #    f.write('observation\t%s\n\n'%(hDummy.Integral()))
-            #else:
-            #    if not split or (split and split_data):
-            #        f.write('observation\t%s\n\n'%(theData.Integral()))
-            if len([s for s in samples if s.isData()]) > 0:
-                nominalDict = self.getSystematicsList(isData=True)
-                if len(nominalDict) == 1:
-                    nominalValue = nominalDict[0]['histograms']['DATA'].Integral()
-                    print("\x1b[42mOBSERVED:", nominalValue, "\x1b[0m")
-                    f.write('observation\t%s\n\n'%(nominalValue))
+            with open(txtFileName, 'w') as f:
+                f.write('imax\t1\tnumber of channels\n')
+                f.write('jmax\t%s\tnumber of processes minus 1 (\'*\' = automatic)\n'%(numProcesses-1))
+                f.write('kmax\t*\tnumber of nuisance parameters (sources of systematical uncertainties)\n\n')
+                f.write('shapes * * vhbb_%s_%s.root $CHANNEL%s$PROCESS $CHANNEL%s$PROCESS$SYSTEMATIC\n\n'%(self.DCtype, self.ROOToutname, self.DCprocessSeparatorDict[self.DCtype], self.DCprocessSeparatorDict[self.DCtype]))
+                f.write('bin\t%s\n\n'%self.Datacardbin)
+                # TODO: implement
+                #if toy or signal_inject:
+                #    f.write('observation\t%s\n\n'%(hDummy.Integral()))
+                #else:
+                #    if not split or (split and split_data):
+                #        f.write('observation\t%s\n\n'%(theData.Integral()))
+                if len([s for s in samples if s.isData()]) > 0:
+                    nominalDict = self.getSystematicsList(isData=True)
+                    if len(nominalDict) == 1:
+                        nominalValue = nominalDict[0]['histograms']['DATA'].Integral()
+                        print("\x1b[42mOBSERVED:", nominalValue, "\x1b[0m")
+                        f.write('observation\t%s\n\n'%(nominalValue))
+                    else:
+                        print("\x1b[31mERROR: more or less than 1 nominal values found!!\x1b[0m")
+                        raise Exception("DcDictError")
+
+                # MC datacard processes
+                if len([s for s in samples if not s.isData()]) < 1:
+                    dcProcesses = []
                 else:
-                    print("\x1b[31mERROR: more or less than 1 nominal values found!!\x1b[0m")
-                    raise Exception("DcDictError")
+                    #dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
+                    dcProcesses = [self.getProcessName(sampleGroup) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
 
-            # MC datacard processes
-            if len([s for s in samples if not s.isData()]) < 1:
-                dcProcesses = []
-            else:
-                #dcProcesses = [(self.sysOptions['Dict'][sampleGroup]) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
-                dcProcesses = [self.getProcessName(sampleGroup) for sampleGroup in sampleGroups if sampleGroup != 'DATA']
+                # order datacard processes as given in config
+                dcProcesses.sort(key=lambda x: self.sysOptions['setup'].index(self.getGroupNameFromProcessName(x)) if self.getGroupNameFromProcessName(x) in self.sysOptions['setup'] else 99999)
 
-            # order datacard processes as given in config
-            dcProcesses.sort(key=lambda x: self.sysOptions['setup'].index(self.getGroupNameFromProcessName(x)) if self.getGroupNameFromProcessName(x) in self.sysOptions['setup'] else 99999)
+                # header
+                dcRows = []
+                dcRows.append(['bin', ''] + [self.Datacardbin for x in range(numProcesses)])
+                dcRows.append(['process', ''] + dcProcesses)
 
-            # header
-            dcRows = []
-            dcRows.append(['bin', ''] + [self.Datacardbin for x in range(numProcesses)])
-            dcRows.append(['process', ''] + dcProcesses)
+                # negative or zero for signals, otherwise for backgrounds
+                dcRows.append(['process', ''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
 
-            # negative or zero for signals, otherwise for backgrounds
-            dcRows.append(['process', ''] + ['%d'%x for x in range(-numSignals+1,1)] + ['%d'%x for x in range(1, numBackgrounds+1)])
+                nominalHistograms = [x for x in self.systematicsList if x['sysType'] == 'nominal'][0]['histograms']
+                histogramTotals = [nominalHistograms[self.getGroupNameFromProcessName(dcProcess)].Integral() for dcProcess in dcProcesses]
 
-            nominalHistograms = [x for x in self.systematicsList if x['sysType'] == 'nominal'][0]['histograms']
-            histogramTotals = [nominalHistograms[self.getGroupNameFromProcessName(dcProcess)].Integral() for dcProcess in dcProcesses]
+                dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
+                
+                # write non-shape systematics
+                nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'InUse'))
+                for systematic in nonShapeSystematics:
+                    systematicDict = eval(self.config.get('Datacard', systematic))
+                    dcRow = [systematic, systematicDict['type']]
+                    for dcProcess in dcProcesses:
+                        dcRow.append(str(systematicDict[self.getGroupNameFromProcessName(dcProcess)]) if self.getGroupNameFromProcessName(dcProcess) in systematicDict else '-')
+                    dcRows.append(dcRow)
 
-            dcRows.append(['rate', ''] + ['%f'%x for x in histogramTotals])
-            
-            # write non-shape systematics
-            nonShapeSystematics = eval(self.config.get('Datacard', 'InUse_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'InUse'))
-            for systematic in nonShapeSystematics:
-                systematicDict = eval(self.config.get('Datacard', systematic))
-                dcRow = [systematic, systematicDict['type']]
-                for dcProcess in dcProcesses:
-                    dcRow.append(str(systematicDict[self.getGroupNameFromProcessName(dcProcess)]) if self.getGroupNameFromProcessName(dcProcess) in systematicDict else '-')
-                dcRows.append(dcRow)
+                # bin by bin
+                if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
+                    # sort rows for bbb systematics in the same order as the processes and only include the bins below threshold
+                    bbbSystematics = sorted([x for x in self.systematicsList if x['sysType'] == 'bbb' and x['binBelowThreshold']], key=lambda y: dcProcesses.index(y['dcProcess']) if y['dcProcess'] in dcProcesses else -1)
+                    for systematics in bbbSystematics:
+                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                            dcRow = [systematicsNameForDC, 'shape']
+                            for dcProcess in dcProcesses:
+                                value = '1.0' if dcProcess == systematics['dcProcess'] else '-'
+                                dcRow.append(value)
+                            dcRows.append(dcRow)
 
-            # bin by bin
-            if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
-                # sort rows for bbb systematics in the same order as the processes and only include the bins below threshold
-                bbbSystematics = sorted([x for x in self.systematicsList if x['sysType'] == 'bbb' and x['binBelowThreshold']], key=lambda y: dcProcesses.index(y['dcProcess']) if y['dcProcess'] in dcProcesses else -1)
-                for systematics in bbbSystematics:
-                    systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
-                    if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
-                        dcRow = [systematicsNameForDC, 'shape']
-                        for dcProcess in dcProcesses:
-                            value = '1.0' if dcProcess == systematics['dcProcess'] else '-'
-                            dcRow.append(value)
-                        dcRows.append(dcRow)
-
-            # UEPS systematics
-            for systematics in self.systematicsList:
-                if systematics['sysType'] == 'weight':
-                    systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
-                    if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
-                        dcRow = [systematicsNameForDC, 'shape']
-                        for dcProcess in dcProcesses:
-                            value = '-'
-                            if systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
-                                if self.getGroupNameFromProcessName(dcProcess) in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
-                                    value = '1.0'
-                            else:
-                                value = '1.0'
-                            dcRow.append(value)
-                        dcRows.append(dcRow)
-
-            # shape systematics
-            for systematics in self.systematicsList:
-                if systematics['sysType'] == 'shape':
-                    systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
-                    if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
-                        dcRows.append([systematicsNameForDC, 'shape']  + ['1.0' for x in range(numProcesses)])
-
-            # sample systematics
-            for systematics in self.systematicsList:
-                if systematics['sysType'] == 'sample':
-
-                    systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
-                    if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
-                        dcRow = [systematicsNameForDC, 'shape']
-                        
-                        # check if the samples belonging to the current DC process are affected by sample sys
-                        #TODO: too many list levels here, [0] index is not useful
-                        sampleSysSamples = [x[0] for x in systematics['samples']]
-                        sampleSysSamplesFlat = sum(sampleSysSamples, [])
-                        sampleSysSamplesFlat = sum(sampleSysSamplesFlat, [])
-                        sampleSysGroups = [self.sysOptions['Group'][x] for x in sampleSysSamplesFlat] 
-
-                        for dcProcess in dcProcesses:
-                            if self.getGroupNameFromProcessName(dcProcess) in sampleSysGroups:
-                                value = '1.0'
-                            else:
+                # UEPS systematics
+                for systematics in self.systematicsList:
+                    if systematics['sysType'] == 'weight':
+                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                            dcRow = [systematicsNameForDC, 'shape']
+                            for dcProcess in dcProcesses:
                                 value = '-'
-                            dcRow.append(value)
+                                if systematics['name'] in self.sysOptions['decorrelate_sys_weight']:
+                                    if self.getGroupNameFromProcessName(dcProcess) in self.sysOptions['decorrelate_sys_weight'][systematics['name']]:
+                                        value = '1.0'
+                                else:
+                                    value = '1.0'
+                                dcRow.append(value)
+                            dcRows.append(dcRow)
 
-                        dcRows.append(dcRow)
+                # shape systematics
+                for systematics in self.systematicsList:
+                    if systematics['sysType'] == 'shape':
+                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                            dcRows.append([systematicsNameForDC, 'shape']  + ['1.0' for x in range(numProcesses)])
 
-            # rate params
-            rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'rateParams'))
-            try:
-                rateParamRange = eval(self.config.get('Datacard', 'rateParamRange'))
-            except:
-                rateParamRange = [0, 10]
-            assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:' + len(rateParamRange)
-            for rateParam in rateParams:
-                dictProcs = eval(self.config.get('Datacard', rateParam))
-                for dcProcess in dictProcs.keys():
-                    dcRows.append([rateParam, 'rateParam', self.Datacardbin, dcProcess, str(dictProcs[dcProcess]), '[{minR},{maxR}]'.format(minR=rateParamRange[0], maxR=rateParamRange[1])])
+                # sample systematics
+                for systematics in self.systematicsList:
+                    if systematics['sysType'] == 'sample':
 
-            # write DC txt file 
-            nColumns = max([len(dcRow) for dcRow in dcRows])
-            nRows = len(dcRows)
-            columnWidths = [max([(len(dcRows[row][column]) if len(dcRows[row]) > column else 0) for row in range(nRows)]) for column in range(nColumns)]
+                        systematicsNameForDC = systematics['systematicsName'].split('_'+self.UD[0])[0].split('_'+self.UD[1])[0]
+                        if systematicsNameForDC not in [dcRow[0] for dcRow in dcRows]:
+                            dcRow = [systematicsNameForDC, 'shape']
+                            
+                            # check if the samples belonging to the current DC process are affected by sample sys
+                            #TODO: too many list levels here, [0] index is not useful
+                            sampleSysSamples = [x[0] for x in systematics['samples']]
+                            sampleSysSamplesFlat = sum(sampleSysSamples, [])
+                            sampleSysSamplesFlat = sum(sampleSysSamplesFlat, [])
+                            sampleSysGroups = [self.sysOptions['Group'][x] for x in sampleSysSamplesFlat] 
 
-            for dcRow in dcRows:
-                f.write(' '.join([value.ljust(columnWidths[columnIndex]) for columnIndex, value in enumerate(dcRow)]) + '\n')
+                            for dcProcess in dcProcesses:
+                                if self.getGroupNameFromProcessName(dcProcess) in sampleSysGroups:
+                                    value = '1.0'
+                                else:
+                                    value = '-'
+                                dcRow.append(value)
+
+                            dcRows.append(dcRow)
+
+                # rate params
+                rateParams = eval(self.config.get('Datacard', 'rateParams_%s_%s'%(self.anType, self.ptRegion) if self.ptRegion else 'rateParams'))
+                try:
+                    rateParamRange = eval(self.config.get('Datacard', 'rateParamRange'))
+                except:
+                    rateParamRange = [0, 10]
+                assert len(rateParamRange) is 2, 'rateParamRange is not 2! rateParamRange:' + len(rateParamRange)
+                for rateParam in rateParams:
+                    dictProcs = eval(self.config.get('Datacard', rateParam))
+                    for dcProcess in dictProcs.keys():
+                        dcRows.append([rateParam, 'rateParam', self.Datacardbin, dcProcess, str(dictProcs[dcProcess]), '[{minR},{maxR}]'.format(minR=rateParamRange[0], maxR=rateParamRange[1])])
+
+                # write DC txt file 
+                nColumns = max([len(dcRow) for dcRow in dcRows])
+                nRows = len(dcRows)
+                columnWidths = [max([(len(dcRows[row][column]) if len(dcRows[row]) > column else 0) for row in range(nRows)]) for column in range(nColumns)]
+
+                for dcRow in dcRows:
+                    f.write(' '.join([value.ljust(columnWidths[columnIndex]) for columnIndex, value in enumerate(dcRow)]) + '\n')
 
         print("done")
 
