@@ -23,6 +23,7 @@ run unit tests
 ./test_SampleTree_AddBranches.py    test the functionality to add new branches
                         to the output tree, filled by a TTreeFormula or a
                         (lambda) function.
+./test_configs.py       runs basic checks on some of the config folders
 
 ------------------------------------------------------------------------------
 clean up

@@ -14,6 +14,7 @@ class BatchSystemSLURM(BatchSystem):
         self.name = 'SLURM'
         self.config = config
         self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} {extraOptions} {runscript}"
+        self.submissionDelay = eval(self.config.get('SLURM', 'submissionDelay')) if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'submissionDelay') else 0
 
     def getJobNames(self, includeDeleted=True):
         return jobNames
@@ -72,13 +73,20 @@ class BatchSystemSLURM(BatchSystem):
                 timeLimit = '1-00:00'
             elif repDict['queue'] == 'short.q':
                 timeLimit = '0-01:30'
+            elif repDict['queue'] == 'veryshort.q':
+                timeLimit = '0-00:30'
+            elif repDict['queue'] == 'espresso.q':
+                timeLimit = '0-00:05'
             elif repDict['queue'] == 'bigmem.q':
                 timeLimit = '1-00:00'
                 memoryLimit = '12000M'
 
         extraOptions = self.config.get('SLURM', 'options') if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'options') else ''
-
         command = self.submitScriptTemplate.format(jobName=repDict['name'], memory=memoryLimit, time=timeLimit, runscript=runscript, output=logPaths['out'], extraOptions=extraOptions)
+
+        if self.submissionDelay > 0:
+            sleep(self.submissionDelay)
+
         return self.run(command, runscript, repDict, getJobIdFn=self.getJobIDfromOutput)
 
     def cancelJob(self, job):

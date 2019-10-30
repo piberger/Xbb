@@ -1408,16 +1408,18 @@ if opts.task.startswith('mergedc'):
 
     # submit all the DC regions as separate jobs
     for region in regions:
-        jobDict = repDict.copy()
-        jobDict.update({
-            #'queue': submitQueueDict['mergedc'],
-            'arguments':
-                {
-                    'regions': region,
-                }
-            })
-        jobName = 'dc_merge_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
-        submit(jobName, jobDict)
+        regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True
+        if regionMatched:
+            jobDict = repDict.copy()
+            jobDict.update({
+                #'queue': submitQueueDict['mergedc'],
+                'arguments':
+                    {
+                        'regions': region,
+                    }
+                })
+            jobName = 'dc_merge_' + '_'.join([v for k,v in jobDict['arguments'].iteritems()])
+            submit(jobName, jobDict)
 
 # -----------------------------------------------------------------------------
 # regression training
