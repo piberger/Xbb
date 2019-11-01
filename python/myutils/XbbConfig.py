@@ -315,7 +315,7 @@ class XbbConfigChecker(object):
                 print("  -> VARS:", variablesList)
 
             except Exception as e:
-                self.addError('Training region', plotRegion + ' ' + repr(e))
+                self.addError('Training region', trainingRegion + ' ' + repr(e))
 
     def checkSamples(self):
         samples         = ParseInfo(config=self.config)

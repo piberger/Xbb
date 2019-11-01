@@ -8,7 +8,7 @@ class MvaEvaluator:
         #Define reader
         self.reader = ROOT.TMVA.Reader("!Color:!Silent")
         MVAdir=config.get('Directories','vhbbpath')
-        self.systematics=config.get('systematics','systematics').split(' ')
+        self.systematics=config.get('systematics','systematics').split(' ') 
         self.MVA_Vars={}
         self.MVAname = MVAinfo.MVAname
         for systematic in self.systematics:

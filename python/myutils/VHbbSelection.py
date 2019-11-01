@@ -420,9 +420,12 @@ class VHbbSelection(AddCollectionsModule):
             else:
                 self._b("hJidx")[0] = -1
                 self._b("hJidx")[1] = -1 
+            boostedPass = False
+            if (tree.Hbb_fjidx>-1 and tree.FatJet_pt[tree.Hbb_fjidx]>250 and tree.V_pt>250):  #AC: selection for boosted analysis
+                boostedPass=True
 
             # discard event if none of the jet selections finds two Higgs candidate jets
-            if not (defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
+            if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
                 return False
 
             self.cutFlow[4] += 1
