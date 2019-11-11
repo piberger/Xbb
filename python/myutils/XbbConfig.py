@@ -38,6 +38,7 @@ class XbbConfigReader(object):
             config.read(configDirectory + configFile)
         if debug:
             print('DEBUG: \x1b[35m read', len(config.sections()), 'sections\x1b[0m')
+        config.set('Configuration', '__self', configTag)
 
         return config
 
@@ -315,7 +316,7 @@ class XbbConfigChecker(object):
                 print("  -> VARS:", variablesList)
 
             except Exception as e:
-                self.addError('Training region', plotRegion + ' ' + repr(e))
+                self.addError('Training region', trainingRegion + ' ' + repr(e))
 
     def checkSamples(self):
         samples         = ParseInfo(config=self.config)
@@ -327,6 +328,13 @@ class XbbConfigChecker(object):
                 print("ERROR: not found sample:", sampleName)
                 raise Exception("SampleNotFound")
 
+    def checkConfigFiles(self):
+        configFiles = [x.strip() for x in self.config.get('Configuration', 'List').split(' ') if x.strip() != 'volatile.ini' and len(x.strip()) > 0]
+        for configFile in configFiles:
+            filePath = self.config.get('Configuration','__self') + 'config/' + configFile
+            print("  -> config file:", filePath)
+            if not os.path.isfile(filePath):
+                raise Exception("FileNotFound:"+filePath)
 
     # runs all methods starting with 'check'
     def checkAll(self):

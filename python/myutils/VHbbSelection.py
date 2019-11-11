@@ -497,10 +497,13 @@ class VHbbSelection(AddCollectionsModule):
                 self._b("hJidx")[1] = -1 
 
             # discard event if none of the jet selections finds two Higgs candidate jets
-            if not (defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
-                return False
+            #if not (defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
+            #    return False
             #print("event added")  
             #print(tree.FatJet_Msoftdrop[selectedJets[0]])
+            boostedPass = False
+            
+           
             self.cutFlow[4] += 1
 
             # VECTOR
@@ -550,6 +553,21 @@ class VHbbSelection(AddCollectionsModule):
             self._b("V_eta")[0] = V.Eta()
             self._b("V_phi")[0] = V.Phi()
             self._b("V_mass")[0] = V.M()
+
+
+
+            #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
+
+            
+            if (tree.Hbb_fjidx>-1 and tree.FatJet_pt[tree.Hbb_fjidx]>250 and V.Pt()>250):  #AC: selection for boosted analysis
+                boostedPass=True
+
+            # discard event if none of the jet selections finds two Higgs candidate jets
+            if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
+                return False
+
+
+
 
             if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 50.0:
                 return False
