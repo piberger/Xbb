@@ -34,6 +34,8 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else None
         self.branchName = self.config.get(self.mvaName, 'branchName')
 
+        self.addDebugVariables = eval(self.config.get('Multi', 'evalAddDebugVariables')) if self.config.has_section('Multi') and self.config.has_option('Multi', 'evalAddDebugVariables') else False
+
         if self.checkpoint is None:
             print("\x1b[31mERROR: 'checkpoint' option missing for MVA config section [%s]! .../model.ckpt has to be specified to be able to restore classifier.\x1b[0m"%self.mvaName)
             raise Exception("CheckpointError")
@@ -107,9 +109,10 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.dnnCollections = []
         for i in range(self.nClasses):
             collectionName = self.branchName if self.nClasses==1 else self.branchName + "_%d"%i
-            self.dnnCollection = Collection(collectionName, self.systematics, leaves=True) 
-            self.addCollection(self.dnnCollection)
-            self.dnnCollections.append(self.dnnCollection)
+            if self.nClasses==1 or self.addDebugVariables:
+                self.dnnCollection = Collection(collectionName, self.systematics, leaves=True) 
+                self.addCollection(self.dnnCollection)
+                self.dnnCollections.append(self.dnnCollection)
 
         # create formulas for input variables
         self.inputVariables = {}
@@ -121,12 +124,15 @@ class tensorflowEvaluator(AddCollectionsModule):
         # additional pre-computed values for multi-classifiers
         if self.nClasses > 1:
             self.dnnCollectionsMulti = {
-                        'argmax' : Collection(self.branchName + "_argmax", self.systematics, leaves=True),
-                        'max'    : Collection(self.branchName + "_max",    self.systematics, leaves=True),
-                        'max2'   : Collection(self.branchName + "_max2",   self.systematics, leaves=True),  
-                        'signal' : Collection(self.branchName + "_signal", self.systematics, leaves=True),
                         'default': Collection(self.branchName,   self.systematics, leaves=True),
                     }
+            if self.addDebugVariables:
+                self.dnnCollectionsMulti.update({
+                            'argmax' : Collection(self.branchName + "_argmax", self.systematics, leaves=True),
+                            'max'    : Collection(self.branchName + "_max",    self.systematics, leaves=True),
+                            'max2'   : Collection(self.branchName + "_max2",   self.systematics, leaves=True),  
+                            'signal' : Collection(self.branchName + "_signal", self.systematics, leaves=True),
+                        })
 
             for k,v in self.dnnCollectionsMulti.items(): 
                 self.addCollection(v)
@@ -156,22 +162,26 @@ class tensorflowEvaluator(AddCollectionsModule):
                     for j, syst in enumerate(self.systematics):
                         dnnCollection[dnnCollection.name][j] = probabilities[j, self.signalIndex]
             else:
-                # for multi-class, store all
-                for i,dnnCollection in enumerate(self.dnnCollections):
-                    for j, syst in enumerate(self.systematics):
-                        dnnCollection[dnnCollection.name][j] = probabilities[j, i]
-                for j, syst in enumerate(self.systematics):
-                    self.dnnCollectionsMulti['argmax']._b()[j] = np.argmax(probabilities[j])
-                    sortedValues = np.sort(probabilities[j])
-                    self.dnnCollectionsMulti['max']._b()[j] = min(sortedValues[-1], 0.9999)
-                    self.dnnCollectionsMulti['max2']._b()[j] = min(sortedValues[-2], 0.9999)
+                if self.addDebugVariables:
+                    # for multi-class, store all
+                    for i,dnnCollection in enumerate(self.dnnCollections):
+                        for j, syst in enumerate(self.systematics):
+                            dnnCollection[dnnCollection.name][j] = probabilities[j, i]
 
-                    # sum the total signal probability, useful in case of multiple signals
-                    self.dnnCollectionsMulti['signal']._b()[j] = min(sum([probabilities[j, i] for i in self.signalClassIds]), 0.9999)
+                for j, syst in enumerate(self.systematics):
+                    sortedValues = np.sort(probabilities[j])
+                    argmaxP = np.argmax(probabilities[j])
+                    maxP = min(sortedValues[-1], 0.9999)
+                    if self.addDebugVariables:
+                        self.dnnCollectionsMulti['argmax']._b()[j] = argmaxP
+                        self.dnnCollectionsMulti['max']._b()[j]    = maxP 
+                        self.dnnCollectionsMulti['max2']._b()[j]   = min(sortedValues[-2], 0.9999)
+
+                        # sum the total signal probability, useful in case of multiple signals
+                        self.dnnCollectionsMulti['signal']._b()[j] = min(sum([probabilities[j, i] for i in self.signalClassIds]), 0.9999)
 
                     # default linearization method
-                    #self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(np.power(sortedValues[-1] - sortedValues[-2], 0.25), 0.9999)
-                    self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(sortedValues[-1], 0.9999) 
+                    self.dnnCollectionsMulti['default']._b()[j] = argmaxP + maxP
 
         return True
 
