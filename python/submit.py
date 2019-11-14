@@ -1984,6 +1984,8 @@ if batchSystem.getNJobsSubmitted() > 0 and not opts.resubmit:
     fileName = 'submissions/' + opts.tag + '_' + submitTimestamp +  '.json' 
     try:
         batchSystem.dumpSubmittedJobs(fileName)
+        if not os.path.isdir('submissions'):
+            os.makedirs('submissions')
         for copyName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
             shutil.copyfile(fileName, copyName)
     except Exception as e:
