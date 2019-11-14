@@ -417,6 +417,8 @@ class VHbbSelection(AddCollectionsModule):
                             print "DEBUG-EVENT: max bjet pt < 60 -> discard" 
                         #return False
                         defaultTaggerPassed = False
+                        self._b("hJidx")[0] = -1
+                        self._b("hJidx")[1] = -1 
             else:
                 self._b("hJidx")[0] = -1
                 self._b("hJidx")[1] = -1 
