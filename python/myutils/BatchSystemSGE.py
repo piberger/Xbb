@@ -85,6 +85,7 @@ class BatchSystemSGE(BatchSystem):
     def resubmit(self, job):
         stdOutput = subprocess.check_output([job['submitCommand']], shell=True)
         job['id'] = self.getJobIDfromOutput(stdOutput)
+        job['nResubmits'] = (job['nResubmits']+1) if 'nResubmits' in job else 1
         return job
 
     def submit(self, job, repDict):
@@ -98,11 +99,15 @@ class BatchSystemSGE(BatchSystem):
 
         if repDict['task'] in self.submitScriptSpecialOptions:
             qsubOptions += self.submitScriptSpecialOptions[repDict['task']]
+        if 'queue' in repDict:
+            if repDict['queue'] == 'veryshort.q':
+                repDict['queue'] = 'short.q'
 
         command = self.submitScriptTemplate.format(options=qsubOptions, logfile=logPaths['out'], runscript=runScript)
         #if not os.path.isfile(logPaths['config']):
         #    dump_config(configs, logPaths['config'])
 
+        repDict['batchSystem'] = self.name
         return self.run(command, runScript, repDict, getJobIdFn=self.getJobIDfromOutput)
     
     def cancelJob(self, job):
