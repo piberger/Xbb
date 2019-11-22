@@ -38,7 +38,7 @@ class PlotHelper(object):
 
         # plot regions
         self.configSection='Plot:%s'%region
-        self.dataOverBackground = self.config.has_option('Plot', 'plotDataOverBackground') and eval(self.config.get('Plot', 'plotDataOverBackground'))
+        self.dataOverBackground = self.config.has_option('Plot_general', 'plotDataOverBackground') and eval(self.config.get('Plot_general', 'plotDataOverBackground'))
 
         # variables
         if self.vars and type(self.vars) == list:
