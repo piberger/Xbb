@@ -49,6 +49,8 @@ fi
 
 echo "Task: $task"
 echo "Pwd: $PWD"
+echo "Host: $HOSTNAME"
+echo "User: $USER"
 echo
 
 
