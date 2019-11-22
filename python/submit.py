@@ -77,6 +77,7 @@ parser.add_option("-V", "--verbose", dest="verbose", action="store_true", defaul
 parser.add_option("-v","--vars",dest="vars",default="", help="comma separated list of variables")
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
+parser.add_option("--verify", dest="verify", action="store_true", default=False, help="verify integrity of root files (header bits, no zombie etc)")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -1627,7 +1628,8 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
             localFileName = fileLocator.getFilenameAfterPrep(sampleFileName)
             for folder in foldersToCheck:
                 localFilePath = "{base}/{sample}/{file}".format(base=basePaths[folder], sample=sampleIdentifier, file=localFileName)
-                fileStatus[folder][sampleIdentifier].append([fileLocator.exists(localFilePath), partNumber])
+                fileGood = fileLocator.exists(localFilePath) and (not opts.verify or fileLocator.isValidRootFile(localFilePath))
+                fileStatus[folder][sampleIdentifier].append([fileGood, partNumber])
    
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
