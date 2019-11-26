@@ -57,3 +57,9 @@ class XbbTools(object):
         replacedStringParts = [XbbTools.applyReplacementRules(x, replacementRules) for x in stringParts]
         replacedVariable    = XbbTools.joinParts(replacedStringParts)
         return replacedVariable
+
+    @staticmethod
+    def getReplacementRulesList(config, syst):
+        replacementRulesDict = eval(config.get('LimitGeneral', 'sys_cut_suffix'))
+        return replacementRulesDict[syst] if isinstance(replacementRulesDict[syst], list) else [replacementRulesDict[syst]]
+
