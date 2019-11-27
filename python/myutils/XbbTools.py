@@ -13,7 +13,7 @@ class XbbTools(object):
 
     @staticmethod
     def splitParts(s):
-        p_raw = [x for x in re.split('([+\-=/*,\(\)><^\|\&\!])', s) if len(x) > 0] 
+        p_raw = [x for x in re.split('([+\-=/*,\(\)><^\|\&\!])', s) if len(x) > 0]
         p     = []
         ac    = []
         for x in p_raw:
@@ -25,7 +25,7 @@ class XbbTools(object):
         if len(ac) > 0:
             raise Exception("UnbalancedBrackets")
         return p
-    
+
     @staticmethod
     def joinParts(p):
         return ''.join(p)
@@ -63,3 +63,21 @@ class XbbTools(object):
         replacementRulesDict = eval(config.get('LimitGeneral', 'sys_cut_suffix'))
         return replacementRulesDict[syst] if isinstance(replacementRulesDict[syst], list) else [replacementRulesDict[syst]]
 
+class XbbMvaInputsList(object):
+
+    def __init__(self, expressions, config=None):
+        self.config = config
+        self.expressions = expressions
+
+    def get(self, i, syst=None, UD=None):
+        nominal = self.expressions[i]
+        if syst is None:
+            return nominal
+        else:
+            replacementRulesList = XbbTools.getReplacementRulesList(self.config, syst)
+            sysVar = XbbTools.getSystematicsVariationTemplate(nominal, replacementRulesList)
+            sysVar = sysVar.replace('{syst}', syst).replace('{UD}', UD)
+            return sysVar
+
+    def length(self):
+        return len(self.expressions)
