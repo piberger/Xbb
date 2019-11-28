@@ -203,6 +203,9 @@ class XbbRun:
                             sampleTree.addOutputBranches(wObject.getBranches())
 
                         pyModules.append(wObject)
+                    else:
+                        print "\x1b[31mERROR: config option not found:", collection, " the format should be: [Section].[Option]\x1b[0m"
+                        raise Exception("ConfigError")
 
                 # DEPRECATED, do not use anymore ---> use BranchTools.TreeFormulas()
                 if 'addbranches' in self.collections:
