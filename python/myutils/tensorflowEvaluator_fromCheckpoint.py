@@ -143,7 +143,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         # create formulas for input variables
         self.inputVariables = {}
         for syst in self.systematics:
-            if syst.lower() == 'nominal':
+            if syst.lower() == 'nominal' or self.sample.isData():
                 systBase = None
                 UD = None
             else:
