@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+import ROOT
+from BranchTools import Collection
+from BranchTools import AddCollectionsModule
+import array
+import os
+
+# do jet/lepton selection and skimming
+class VReco(AddCollectionsModule):
+
+    # original 2017: puIdCut=0, jetIdCut=-1
+    def __init__(self, debug=False):
+        self.debug = debug or 'XBBDEBUG' in os.environ
+        super(VReco, self).__init__()
+
+    def customInit(self, initVars):
+        self.sampleTree = initVars['sampleTree']
+        self.isData = initVars['sample'].isData()
+        self.sample = initVars['sample']
+
+        self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        self.metSystematics = ['unclustEn']
+
+
+        self.allVariations = (['Nominal'] + self.jetSystematics + self.metSystematics) if not self.isData else ['Nominal']
+        for syst in self.allVariations:
+            self.addVsystematics(syst)
+
+        self.addBranch("selLeptonWln_pt")
+        self.addBranch("selLeptonWln_eta")
+        self.addBranch("selLeptonWln_phi")
+        self.addBranch("selLeptonWln_mass")
+
+    def addVsystematics(self, syst):
+        if syst.lower() == 'nominal':
+            self.addBranch("V_mt")
+            self.addBranch("V_pt")
+            self.addBranch("V_eta")
+            self.addBranch("V_phi")
+            self.addBranch("V_mass")
+        else:
+            for UD in ['Up','Down']:
+                self.addBranch(self._v("V_mt", syst, UD))
+                self.addBranch(self._v("V_pt", syst, UD))
+                self.addBranch(self._v("V_eta", syst, UD))
+                self.addBranch(self._v("V_phi", syst, UD))
+                self.addBranch(self._v("V_mass", syst, UD))
+
+    def _v(self, n, syst, UD):
+        if syst.lower() == 'nominal':
+            return n
+        else:
+            return n + "_{syst}_{UD}".format(syst=syst, UD=UD)
+
+    def processEvent(self, tree):
+        if not self.hasBeenProcessed(tree):
+            self.markProcessed(tree)
+            self._b("selLeptonWln_pt")[0] = -99.0
+            self._b("selLeptonWln_eta")[0] = -99.0
+            self._b("selLeptonWln_phi")[0] = -99.0
+            self._b("selLeptonWln_mass")[0] = -99.0
+
+            for syst in self.allVariations:
+                directions = [''] if syst.lower() == 'nominal' else ['Up','Down']
+                for UD in directions:
+                    self._b(self._v("V_mt", syst, UD))[0] = -1.0
+
+                    if tree.Vtype == 0 or tree.Vtype == 1:
+                        lep1 = ROOT.TLorentzVector()
+                        lep2 = ROOT.TLorentzVector()
+                        i1 = tree.vLidx[0]
+                        i2 = tree.vLidx[1]
+                        if tree.Vtype==1:
+                            lep1.SetPtEtaPhiM(tree.Electron_pt[i1], tree.Electron_eta[i1], tree.Electron_phi[i1], tree.Electron_mass[i1])
+                            lep2.SetPtEtaPhiM(tree.Electron_pt[i2], tree.Electron_eta[i2], tree.Electron_phi[i2], tree.Electron_mass[i2])
+                        else:
+                            lep1.SetPtEtaPhiM(tree.Muon_pt[i1], tree.Muon_eta[i1], tree.Muon_phi[i1], tree.Muon_mass[i1])
+                            lep2.SetPtEtaPhiM(tree.Muon_pt[i2], tree.Muon_eta[i2], tree.Muon_phi[i2], tree.Muon_mass[i2])
+                        V = lep1 + lep2
+                    elif  tree.Vtype == 2 or tree.Vtype == 3:
+                        i1 = tree.vLidx[0]
+                        if tree.Vtype==3:
+                            sel_lepton_pt   = tree.Electron_pt[i1]
+                            sel_lepton_eta  = tree.Electron_eta[i1]
+                            sel_lepton_phi  = tree.Electron_phi[i1]
+                            sel_lepton_mass = tree.Electron_mass[i1]
+                        else:
+                            sel_lepton_pt   = tree.Muon_pt[i1]
+                            sel_lepton_eta  = tree.Muon_eta[i1]
+                            sel_lepton_phi  = tree.Muon_phi[i1]
+                            sel_lepton_mass = tree.Muon_mass[i1]
+
+                        MET = ROOT.TLorentzVector()
+                        Lep = ROOT.TLorentzVector()
+                        if syst.lower()=='nominal':
+                            MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
+                        else:
+                            MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)
+                        Lep.SetPtEtaPhiM(sel_lepton_pt, sel_lepton_eta, sel_lepton_phi, sel_lepton_mass)
+                        cosPhi12 = (Lep.Px()*MET.Px() + Lep.Py()*MET.Py()) / (Lep.Pt() * MET.Pt())
+                        self._b(self._v("V_mt", syst,UD))[0] = ROOT.TMath.Sqrt(2*Lep.Pt()*MET.Pt() * (1 - cosPhi12))
+
+                        V = MET + Lep
+
+                        if syst.lower() == 'nominal':
+                            self._b("selLeptonWln_pt")[0] = Lep.Pt()
+                            self._b("selLeptonWln_eta")[0] = Lep.Eta()
+                            self._b("selLeptonWln_phi")[0] = Lep.Phi()
+                            self._b("selLeptonWln_mass")[0] = Lep.M()
+                    elif tree.Vtype == 4:
+                        MET = ROOT.TLorentzVector()
+                        if syst.lower()=='nominal':
+                            MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
+                        else:
+                            MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)
+                        V = MET
+                    else:
+                        V = None
+                        self._b(self._v("V_pt", syst, UD))[0] = -1.0
+                        self._b(self._v("V_eta", syst, UD))[0] = -1.0
+                        self._b(self._v("V_phi", syst, UD))[0] = -1.0
+                        self._b(self._v("V_mass", syst, UD))[0] = -1.0
+
+                    if V is not None:
+                        self._b(self._v("V_pt", syst, UD))[0] = V.Pt()
+                        self._b(self._v("V_eta", syst, UD))[0] = V.Eta()
+                        self._b(self._v("V_phi", syst, UD))[0] = V.Phi()
+                        self._b(self._v("V_mass", syst, UD))[0] = V.M()
+
