@@ -242,7 +242,15 @@ class NewStackMaker:
             histoMaker_Down = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Down)
             self.histograms[-1]['histogram_Up']   = histoMaker_Up.getHistogram(cut)
             self.histograms[-1]['histogram_Down'] = histoMaker_Down.getHistogram(cut)
-    
+
+            # set up/down normalizations to nominal
+            if self.config.has_option('Plot_general', 'drawWeightSystematicErrorNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorNormalized')):
+                if self.histograms[-1]['histogram_Up'].Integral() > 0:
+                    self.histograms[-1]['histogram_Up'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Up'].Integral())
+                if self.histograms[-1]['histogram_Down'].Integral() > 0:
+                    self.histograms[-1]['histogram_Down'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Down'].Integral())
+
+
     # add object to collection
     def addObject(self, object):
         self.collectedObjects.append(object)
