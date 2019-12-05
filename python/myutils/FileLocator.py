@@ -386,6 +386,12 @@ class FileLocator(object):
         if '*' in basePath:
             raise Exception("NotImplemented")
         dirListing = self.lsRemote(basePath)
+        if dirListing is None:
+            print("\x1b[31mERROR: directory listing failed for:", basePath, ", retrying once ...\x1b[0m")
+            dirListing = self.lsRemote(basePath)
+            if dirListing is None:
+                print("\x1b[31mERROR: directory listing still failing.\x1b[0m")
+
         fileList = [x for x in dirListing if fnmatch.fnmatch(x, path)]
         return fileList
 

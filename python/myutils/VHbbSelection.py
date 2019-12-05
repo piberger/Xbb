@@ -486,6 +486,7 @@ class VHbbSelection(AddCollectionsModule):
                         if debugEvent:
                             print "DEBUG-EVENT: max bjet pt < 60 -> discard" 
                         defaultTaggerPassed = False
+
             elif len(selectedJets)==1 and self.analysis=="boosted":
                 #print("boosted")
                 self._b("hJidx")[0] = selectedJets[0]
@@ -493,7 +494,9 @@ class VHbbSelection(AddCollectionsModule):
                     print("event selected")
                     if debugEvent:
                         print "DEBUG-EVENT: highest btag < ", j1Btag, " -> discard"
-                    return False
+                    #return False
+                        self._b("hJidx")[0] = -1
+                        self._b("hJidx")[1] = -1 
             else:
                 self._b("hJidx")[0] = -1
                 self._b("hJidx")[1] = -1 

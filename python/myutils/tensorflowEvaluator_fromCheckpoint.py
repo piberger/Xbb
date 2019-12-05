@@ -8,10 +8,11 @@ from BranchTools import AddCollectionsModule
 import sys
 import os
 import json
-sys.path.append("..")
-sys.path.append("../tfVHbbDNN/")
+from myutils.XbbTools import XbbMvaInputsList
 
 # tfZllDNN repository has to be cloned inside the python folder
+sys.path.append("..")
+sys.path.append("../tfVHbbDNN/")
 from tfVHbbDNN.tfDNNevaluator import TensorflowDNNEvaluator
 
 # reads tensorflow checkpoints and applies DNN output to ntuples,
@@ -34,6 +35,8 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else None
         self.branchName = self.config.get(self.mvaName, 'branchName')
 
+        self.addDebugVariables = eval(self.config.get('Multi', 'evalAddDebugVariables')) if self.config.has_section('Multi') and self.config.has_option('Multi', 'evalAddDebugVariables') else False
+
         if self.checkpoint is None:
             print("\x1b[31mERROR: 'checkpoint' option missing for MVA config section [%s]! .../model.ckpt has to be specified to be able to restore classifier.\x1b[0m"%self.mvaName)
             raise Exception("CheckpointError")
@@ -42,7 +45,7 @@ class tensorflowEvaluator(AddCollectionsModule):
             self.scalerDump = None
 
         if os.path.isdir(self.checkpoint):
-            self.checkpoint += '/model.ckpt' 
+            self.checkpoint += '/model.ckpt'
 
         if not os.path.isfile(self.checkpoint + '.meta'):
             print("\x1b[31mERROR: can't restore from graph! .meta file not found in checkpoint:", self.checkpoint, "\x1b[0m")
@@ -65,29 +68,54 @@ class tensorflowEvaluator(AddCollectionsModule):
                 self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
             except Exception as e:
                 self.nClasses = 1
-        
+
         # FEATURES
-        self.features  = self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" ")
-        self.nFeatures = len(self.features)
+
+        self.featuresConfig = None
+        self.featuresCheckpoint = None
+        try:
+            self.featuresConfig = self.config.get(self.config.get(self.mvaName, "treeVarSet"), "Nominal").strip().split(" ")
+        except Exception as e:
+            print("WARNING: could not get treeVarSet from config:", e)
         if 'variables' in self.info:
-            if len(self.info['variables']) != self.nFeatures:
-                print("\x1b[31mERROR: number of input features does not match!")
-                print(" > classifier expects:", len(self.info['variables']))
-                print(" > configuration has:", self.nFeatures, "\x1b[0m")
-                raise Exception("CheckpointError")
+            self.featuresCheckpoint = self.info['variables']
+
+        if self.featuresConfig is None and self.featuresCheckpoint is not None:
+            self.features = self.featuresCheckpoint
+        elif self.featuresConfig is not None and self.featuresCheckpoint is None:
+            self.features = self.featuresConfig
+        elif self.featuresConfig is None and self.featuresCheckpoint is None:
+            raise Exception("NoInputFeaturesDefined")
+        else:
+            self.features = self.featuresCheckpoint
+            if len(self.featuresConfig) != len(self.featuresCheckpoint):
+                print("\x1b[31mWARNING: number of input features does not match!")
+                print(" > classifier expects:", len(self.featuresCheckpoint))
+                print(" > configuration has:", len(self.featuresConfig), "\x1b[0m")
+                print("INFO: => feature list from checkpoint will be used.")
+            else:
+                if self.config.has_option(self.mvaName, 'forceInputFeaturesFromConfig') and eval(self.config.get(self.mvaName, 'forceInputFeaturesFromConfig')):
+                    print("INFO: forceInputFeaturesFromConfig is enabled, features from configuration will be used")
+                    self.features = self.featuresConfig
+
             print("INFO: list of input features:")
             print("INFO:", "config".ljust(40), "---->", "checkpoint")
             match = True
-            for i in range(self.nFeatures):
-                if self.features[i] != self.info['variables'][i]: 
-                    print("\x1b[41m\x1b[37mINFO:", self.features[i].ljust(40), "---->", self.info['variables'][i].ljust(40), " => MISMATCH!\x1b[0m")
+            for i in range(min(len(self.featuresConfig),len(self.featuresCheckpoint))):
+                if self.featuresConfig[i] != self.featuresCheckpoint[i]:
+                    print("\x1b[41m\x1b[37mINFO:", self.featuresConfig[i].ljust(40), "---->", self.featuresCheckpoint[i].ljust(40), " => MISMATCH!\x1b[0m")
                     match = False
                 else:
-                    print("INFO:\x1b[32m", self.features[i].ljust(40), "---->", self.info['variables'][i], "(match)\x1b[0m")
+                    print("INFO:\x1b[32m", self.featuresConfig[i].ljust(40), "---->", self.featuresCheckpoint[i], "(match)\x1b[0m")
             if match:
                 print("INFO: => all input variables match!")
             else:
-                print("WARNING: some variables are not identically defined as for the training, please check!")
+                print("INFO: some variables are not identically defined as for the training, please check!")
+                if self.config.has_option(self.mvaName, 'forceInputFeaturesFromConfig') and eval(self.config.get(self.mvaName, 'forceInputFeaturesFromConfig')):
+                    print("\x1b[31mWARNING: forceInputFeaturesFromConfig is enabled, features from configuration will be used although they could be incompatible with the features used during training.\x1b[0m")
+
+        self.featureList = XbbMvaInputsList(self.features, config=self.config)
+        self.nFeatures   = self.featureList.length()
 
         # SIGNAL definition
         self.signalIndex = 0
@@ -107,28 +135,38 @@ class tensorflowEvaluator(AddCollectionsModule):
         self.dnnCollections = []
         for i in range(self.nClasses):
             collectionName = self.branchName if self.nClasses==1 else self.branchName + "_%d"%i
-            self.dnnCollection = Collection(collectionName, self.systematics, leaves=True) 
-            self.addCollection(self.dnnCollection)
-            self.dnnCollections.append(self.dnnCollection)
+            if self.nClasses==1 or self.addDebugVariables:
+                self.dnnCollection = Collection(collectionName, self.systematics, leaves=True)
+                self.addCollection(self.dnnCollection)
+                self.dnnCollections.append(self.dnnCollection)
 
         # create formulas for input variables
         self.inputVariables = {}
         for syst in self.systematics:
-            self.inputVariables[syst] = self.config.get(self.config.get(self.mvaName, "treeVarSet"), syst if self.sample.isMC() else 'Nominal').split(' ')
+            if syst.lower() == 'nominal':
+                systBase = None
+                UD = None
+            else:
+                systBase = '_'.join(syst.split('_')[:-1])
+                UD = syst.split('_')[-1]
+            self.inputVariables[syst] = [self.featureList.get(i, syst=systBase, UD=UD) for i in range(self.nFeatures)]
             for var in self.inputVariables[syst]:
                 self.sampleTree.addFormula(var)
 
         # additional pre-computed values for multi-classifiers
         if self.nClasses > 1:
             self.dnnCollectionsMulti = {
-                        'argmax' : Collection(self.branchName + "_argmax", self.systematics, leaves=True),
-                        'max'    : Collection(self.branchName + "_max",    self.systematics, leaves=True),
-                        'max2'   : Collection(self.branchName + "_max2",   self.systematics, leaves=True),  
-                        'signal' : Collection(self.branchName + "_signal", self.systematics, leaves=True),
                         'default': Collection(self.branchName,   self.systematics, leaves=True),
                     }
+            if self.addDebugVariables:
+                self.dnnCollectionsMulti.update({
+                            'argmax' : Collection(self.branchName + "_argmax", self.systematics, leaves=True),
+                            'max'    : Collection(self.branchName + "_max",    self.systematics, leaves=True),
+                            'max2'   : Collection(self.branchName + "_max2",   self.systematics, leaves=True),
+                            'signal' : Collection(self.branchName + "_signal", self.systematics, leaves=True),
+                        })
 
-            for k,v in self.dnnCollectionsMulti.items(): 
+            for k,v in self.dnnCollectionsMulti.items():
                 self.addCollection(v)
 
         # create tensorflow graph
@@ -139,14 +177,14 @@ class tensorflowEvaluator(AddCollectionsModule):
 
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-            
+
             # fill input variables
             inputs = np.full((len(self.systematics), self.nFeatures), 0.0, dtype=np.float32)
             for j, syst in enumerate(self.systematics):
                 for i, var in enumerate(self.inputVariables[syst]):
                     inputs[j,i] = self.sampleTree.evaluate(var)
 
-            # use TensorflowDNNEvaluator 
+            # use TensorflowDNNEvaluator
             probabilities = self.ev.eval(inputs)
 
             # fill output branches
@@ -156,22 +194,26 @@ class tensorflowEvaluator(AddCollectionsModule):
                     for j, syst in enumerate(self.systematics):
                         dnnCollection[dnnCollection.name][j] = probabilities[j, self.signalIndex]
             else:
-                # for multi-class, store all
-                for i,dnnCollection in enumerate(self.dnnCollections):
-                    for j, syst in enumerate(self.systematics):
-                        dnnCollection[dnnCollection.name][j] = probabilities[j, i]
-                for j, syst in enumerate(self.systematics):
-                    self.dnnCollectionsMulti['argmax']._b()[j] = np.argmax(probabilities[j])
-                    sortedValues = np.sort(probabilities[j])
-                    self.dnnCollectionsMulti['max']._b()[j] = min(sortedValues[-1], 0.9999)
-                    self.dnnCollectionsMulti['max2']._b()[j] = min(sortedValues[-2], 0.9999)
+                if self.addDebugVariables:
+                    # for multi-class, store all
+                    for i,dnnCollection in enumerate(self.dnnCollections):
+                        for j, syst in enumerate(self.systematics):
+                            dnnCollection[dnnCollection.name][j] = probabilities[j, i]
 
-                    # sum the total signal probability, useful in case of multiple signals
-                    self.dnnCollectionsMulti['signal']._b()[j] = min(sum([probabilities[j, i] for i in self.signalClassIds]), 0.9999)
+                for j, syst in enumerate(self.systematics):
+                    sortedValues = np.sort(probabilities[j])
+                    argmaxP = np.argmax(probabilities[j])
+                    maxP = min(sortedValues[-1], 0.9999)
+                    if self.addDebugVariables:
+                        self.dnnCollectionsMulti['argmax']._b()[j] = argmaxP
+                        self.dnnCollectionsMulti['max']._b()[j]    = maxP
+                        self.dnnCollectionsMulti['max2']._b()[j]   = min(sortedValues[-2], 0.9999)
+
+                        # sum the total signal probability, useful in case of multiple signals
+                        self.dnnCollectionsMulti['signal']._b()[j] = min(sum([probabilities[j, i] for i in self.signalClassIds]), 0.9999)
 
                     # default linearization method
-                    #self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(np.power(sortedValues[-1] - sortedValues[-2], 0.25), 0.9999)
-                    self.dnnCollectionsMulti['default']._b()[j] = self.dnnCollectionsMulti['argmax']._b()[j] + min(sortedValues[-1], 0.9999) 
+                    self.dnnCollectionsMulti['default']._b()[j] = argmaxP + maxP
 
         return True
 

@@ -132,11 +132,11 @@ class SampleTreesToNumpyConverter(object):
         weightListSYStotal = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         eventNumberStat = []
 
-        for i,category in enumerate(categories):
+        for iCat,category in enumerate(categories):
             if self.testRun:
                 self.samples[category] = self.samples[category][0:1]
             for j,sample in enumerate(self.samples[category]):
-                print ('*'*80,'\n%s (category %d/%d sample %d/%d)\n'%(sample, i+1, len(categories), j+1, len(self.samples[category])),'*'*80)
+                print ('*'*80,'\n%s (category %d/%d sample %d/%d)\n'%(sample, iCat+1, len(categories), j+1, len(self.samples[category])),'*'*80)
                 for datasetName, additionalCut in datasetParts.iteritems():
                     # cuts
                     sampleCuts = [sample.subcut]
