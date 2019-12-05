@@ -402,17 +402,17 @@ class VHbbSelection(AddCollectionsModule):
                 if self._b("isZnn")[0]:
                     j1ptCut = 35.0
                     j2ptCut = 35.0
-                    j1Btag = self.btagWP['loose']
+                    j1BtagName = 'loose'
                     j1Btag = self.btagWP[j1BtagName]
                 elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
                     j1ptCut = 25.0
                     j2ptCut = 25.0
-                    j1Btag = self.btagWP['loose']
+                    j1BtagName = 'loose'
                     j1Btag = self.btagWP[j1BtagName]
                 elif self._b("isZmm")[0] or self._b("isZee")[0]:
                     j1ptCut = 20.0
                     j2ptCut = 20.0
-                    j1Btag = self.btagWP['none']
+                    j1BtagName = 'none'
                     j1Btag = self.btagWP[j1BtagName]
                 else:
                     return False
@@ -423,10 +423,12 @@ class VHbbSelection(AddCollectionsModule):
                     j1Btag = self.btagWP['none']
                 else:
                     return False
-            j2Btag = self.btagWP['none'] 
+             
+            j2BtagName = 'none'  
+            j2Btag = self.btagWP[j2BtagName] 
             
             #selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName)
-            j2Btag = self.btagWP[j2BtagName]
+            #j2Btag = self.btagWP[j2BtagName]
 
             # alternative jet selections (-> hJidx_*)
             for jetDefinition in self.jetDefinitions:
