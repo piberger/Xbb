@@ -819,6 +819,28 @@ class NewStackMaker:
                     self.pads['unten'].cd()
                     expectedRatio.Draw("HIST;SAME")
 
+                    # set up/down normalizations of groups to nominal
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicErrorGroupsNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorGroupsNormalized')):
+                        print("INFO: normalize systematic variations per group")
+
+                        groupNormalizations = {'Nom': {}, 'Up':{}, 'Down': {}}
+                        for histogram in self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if histogram['group'] not in groupNormalizations['Nom']:
+                                    groupNormalizations['Nom'][histogram['group']] = 0.0
+                                    groupNormalizations['Up'][histogram['group']] = 0.0
+                                    groupNormalizations['Down'][histogram['group']] = 0.0
+                                groupNormalizations['Nom'][histogram['group']] += histogram['histogram'].Integral()
+                                groupNormalizations['Up'][histogram['group']] += histogram['histogram_Up'].Integral()
+                                groupNormalizations['Down'][histogram['group']] += histogram['histogram_Down'].Integral()
+
+                        for histogram in  self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if groupNormalizations['Up'][histogram['group']] > 0:
+                                    histogram['histogram_Up'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Up'][histogram['group']])
+                                if groupNormalizations['Down'][histogram['group']] > 0:
+                                    histogram['histogram_Down'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Down'][histogram['group']])
+
                     if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
                         backgroundHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Up')
                         backgroundHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Down')
