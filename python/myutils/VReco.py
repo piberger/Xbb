@@ -4,6 +4,7 @@ from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 import array
 import os
+import numpy as np
 
 # do jet/lepton selection and skimming
 class VReco(AddCollectionsModule):
@@ -38,6 +39,8 @@ class VReco(AddCollectionsModule):
             self.addBranch("V_eta")
             self.addBranch("V_phi")
             self.addBranch("V_mass")
+            self.addBranch("MET_sig30")
+            self.addBranch("MET_sig30puid")
         else:
             for UD in ['Up','Down']:
                 self.addBranch(self._v("V_mt", syst, UD))
@@ -45,6 +48,9 @@ class VReco(AddCollectionsModule):
                 self.addBranch(self._v("V_eta", syst, UD))
                 self.addBranch(self._v("V_phi", syst, UD))
                 self.addBranch(self._v("V_mass", syst, UD))
+                if syst not in ['jerReg']:
+                    self.addBranch(self._v("MET_sig30", syst, UD))
+                    self.addBranch(self._v("MET_sig30puid", syst, UD))
 
     def _v(self, n, syst, UD):
         if syst.lower() == 'nominal':
@@ -126,4 +132,21 @@ class VReco(AddCollectionsModule):
                         self._b(self._v("V_eta", syst, UD))[0] = V.Eta()
                         self._b(self._v("V_phi", syst, UD))[0] = V.Phi()
                         self._b(self._v("V_mass", syst, UD))[0] = V.M()
+
+                    # MET significance (approx.)
+                    if syst != 'jerReg':
+                        HTsum30 = 0
+                        HTsum30puid = 0
+                        if syst.lower() == 'nominal' or syst == 'unclustEn':
+                            jetPt = tree.Jet_Pt
+                        else:
+                            jetPt = getattr(tree, "Jet_pt_{syst}{UD}".format(syst=syst, UD=UD))
+                        for i in range(tree.nJet):
+                            if jetPt[i]>30 and tree.Jet_lepFilter[i]>0:
+                                HTsum30 += jetPt[i]
+                                if tree.Jet_puId[i]>6 or jetPt[i]>50.0:
+                                    HTsum30puid += jetPt[i]
+
+                        self._b(self._v("MET_sig30", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30)) if HTsum30 > 0 else -1.0 
+                        self._b(self._v("MET_sig30puid", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30puid)) if HTsum30puid > 0 else -1.0
 
