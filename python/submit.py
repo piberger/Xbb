@@ -1174,7 +1174,7 @@ if opts.task.startswith('runplot'):
 # -----------------------------------------------------------------------------
 # DCYIELDS: print yields table for data in datacar regions, without caching
 # -----------------------------------------------------------------------------
-if opts.task.startswith('dcyields'):
+if opts.task.startswith('dcyields') or opts.task == 'yields':
     # get list of all sample names used in DC step
     sampleNames = []
     regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
@@ -1208,7 +1208,7 @@ if opts.task.startswith('dcyields'):
         branchList = BranchList(sample.subcut) 
         cutDict = {}
         for region in regions:
-            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') )
+            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') if config.has_option('dc:%s'%region, 'cut') else region)
             branchList.addCut(cutDict[region])
             sampleTree.addFormula(cutDict[region])
         branchList.addCut(config.get('Weights', 'weightF'))

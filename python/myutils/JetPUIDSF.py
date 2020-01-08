@@ -109,7 +109,7 @@ class JetPUIDSF(AddCollectionsModule):
     def getEventSF(self, tree, var=0.0):
         eventSF = 1.0
         for i in range(tree.nJet):
-            if tree.Jet_lepFilter[i] and (tree.Jet_Pt[i] > self.ptCut and tree.Jet_Pt[i] < 50.0) and abs(tree.Jet_eta[i]) < self.etaCut:
+            if tree.Jet_lepFilter[i] and (tree.Jet_Pt[i] > self.ptCut and tree.Jet_Pt[i] < 50.0) and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_jetId[i] > 4:
                 # sf is eff(data)/eff(MC)
                 sf = max(self.getJetPUIDSF(tree.Jet_Pt[i], tree.Jet_eta[i]) + var, 0.0)
                 if tree.Jet_puId[i] > self.puidCut:
