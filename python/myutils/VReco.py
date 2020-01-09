@@ -9,9 +9,9 @@ import numpy as np
 # do jet/lepton selection and skimming
 class VReco(AddCollectionsModule):
 
-    # original 2017: puIdCut=0, jetIdCut=-1
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, replaceNominal=False):
         self.debug = debug or 'XBBDEBUG' in os.environ
+        self.replaceNominal = replaceNominal
         super(VReco, self).__init__()
 
     def customInit(self, initVars):
@@ -22,8 +22,15 @@ class VReco(AddCollectionsModule):
         self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
         self.metSystematics = ['unclustEn']
 
+        if self.replaceNominal:
+            self.allVariations = ['Nominal']
+        else:
+            self.allVariations = []
+       
+        # jet and MET systematics for MC
+        if not self.isData:
+            self.allVariations += self.jetSystematics + self.metSystematics
 
-        self.allVariations = (['Nominal'] + self.jetSystematics + self.metSystematics) if not self.isData else ['Nominal']
         for syst in self.allVariations:
             self.addVsystematics(syst)
 
@@ -142,7 +149,7 @@ class VReco(AddCollectionsModule):
                         else:
                             jetPt = getattr(tree, "Jet_pt_{syst}{UD}".format(syst=syst, UD=UD))
                         for i in range(tree.nJet):
-                            if jetPt[i]>30 and tree.Jet_lepFilter[i]>0:
+                            if jetPt[i]>30 and tree.Jet_lepFilter[i]>0 and tree.Jet_jetId[i] > 4:
                                 HTsum30 += jetPt[i]
                                 if tree.Jet_puId[i]>6 or jetPt[i]>50.0:
                                     HTsum30puid += jetPt[i]

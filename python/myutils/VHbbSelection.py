@@ -423,11 +423,6 @@ class VHbbSelection(AddCollectionsModule):
                 self._b("hJidx")[0] = -1
                 self._b("hJidx")[1] = -1
 
-            # discard event if none of the jet selections finds two Higgs candidate jets
-            if not (defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
-                return False
-
-            self.cutFlow[4] += 1
 
             # VECTOR
             if self._b("isZee")[0] or self._b("isZmm")[0]:
@@ -470,12 +465,22 @@ class VHbbSelection(AddCollectionsModule):
                 MET = ROOT.TLorentzVector()
                 MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
                 V = MET
-            self.cutFlow[5] += 1
+            self.cutFlow[4] += 1
 
             self._b("V_pt")[0] = V.Pt()
             self._b("V_eta")[0] = V.Eta()
             self._b("V_phi")[0] = V.Phi()
             self._b("V_mass")[0] = V.M()
+
+            #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
+
+            boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
+
+            # discard event if none of the jet selections finds two Higgs candidate jets
+            if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
+                return False
+
+            self.cutFlow[5] += 1
 
             if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 50.0:
                 return False
@@ -499,8 +504,8 @@ class VHbbSelection(AddCollectionsModule):
         print "  HLT                ", self.cutFlow[1]
         print "  Leptons            ", self.cutFlow[2]
         print "  Channel            ", self.cutFlow[3]
-        print "  Jets               ", self.cutFlow[4]
-        print "  Vector boson       ", self.cutFlow[5]
+        print "  Vector boson       ", self.cutFlow[4]
+        print "  Jets               ", self.cutFlow[5]
         print "  Vpt                ", self.cutFlow[6]
         print "  end                ", self.cutFlow[7]
 

@@ -154,7 +154,7 @@ class BTagWeights(AddCollectionsModule):
                     jets.append(jet)
             else:
                 for i in range(tree.nJet):
-                    if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > self.puIdCut or tree.Jet_Pt[i] > 50.0)):
+                    if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > self.puIdCut or tree.Jet_Pt[i] > 50.0) and tree.Jet_jetId[i] > 4):
                         jet = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
                         jets.append(jet)
 
