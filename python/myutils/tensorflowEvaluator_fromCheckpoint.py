@@ -33,7 +33,12 @@ class tensorflowEvaluator(AddCollectionsModule):
 
         self.scalerDump = self.config.get(self.mvaName, 'scalerDump') if self.config.has_option(self.mvaName, 'scalerDump') else None
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else None
-        self.branchName = self.config.get(self.mvaName, 'branchName')
+        if self.config.has_option(self.mvaName, 'branchName'):
+            self.branchName = self.config.get(self.mvaName, 'branchName')
+        elif self.checkpoint is not None:
+            self.branchName = self.checkpoint.strip().replace('/model.ckpt','').replace('/','_')
+            if self.branchName[0] in ['0','1','2','3','4','5','6','7','8','9']:
+                self.branchName = 'DNN_' + self.branchName
 
         self.addDebugVariables = eval(self.config.get('Multi', 'evalAddDebugVariables')) if self.config.has_section('Multi') and self.config.has_option('Multi', 'evalAddDebugVariables') else False
 
@@ -143,7 +148,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         # create formulas for input variables
         self.inputVariables = {}
         for syst in self.systematics:
-            if syst.lower() == 'nominal':
+            if syst.lower() == 'nominal' or self.sample.isData():
                 systBase = None
                 UD = None
             else:

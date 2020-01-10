@@ -19,7 +19,7 @@ class Jet:
 
 class BTagWeights(AddCollectionsModule):
 
-    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, decorrelatePtEta=False, jetPtBranchName="Jet_Pt", ptCut=20, etaCut=2.5, puIdCut=6):
+    def __init__(self, calibName, calibFile, method="iterativefit", branchName=None, jetBtagBranchName=None, decorrelatePtEta=False, jetPtBranchName="Jet_Pt", ptCut=20, etaCut=2.5, puIdCut=6, selected=False):
         super(BTagWeights, self).__init__()
         self.jetPtBranchName = jetPtBranchName
         self.method = method
@@ -31,6 +31,7 @@ class BTagWeights(AddCollectionsModule):
         self.ptCut = ptCut
         self.etaCut = etaCut
         self.puIdCut = puIdCut
+        self.selected = selected
 
         if jetBtagBranchName is None:
             print("\x1b[31mERROR: tagger name has to be specified with jetBtagBranchName argument!\x1b[0m")
@@ -142,10 +143,20 @@ class BTagWeights(AddCollectionsModule):
             self.markProcessed(tree)
 
             jets = []
-            for i in range(tree.nJet):
-                if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > self.puIdCut or tree.Jet_Pt[i] > 50.0)):
+            if self.selected:
+                if tree.hJidx[0] > -1:
+                    i = tree.hJidx[0]
                     jet = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
                     jets.append(jet)
+                if tree.hJidx[1] > -1:
+                    i = tree.hJidx[1]
+                    jet = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
+                    jets.append(jet)
+            else:
+                for i in range(tree.nJet):
+                    if (tree.Jet_Pt[i] > self.ptCut and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > self.puIdCut or tree.Jet_Pt[i] > 50.0) and tree.Jet_jetId[i] > 4):
+                        jet = Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], fl=tree.Jet_hadronFlavour[i], csv=getattr(tree,self.jetBtagBranchName)[i])
+                        jets.append(jet)
 
             ptmin = 20.
             ptmax = 1000.
