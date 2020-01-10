@@ -450,7 +450,7 @@ class SampleTree(object):
             if self.verbose:
                 print ("INFO: use ", samplesMask)
 
-            nfsAvailable = False
+            nfsAvailable = True
             ## DIRTY WORKAROUND
             ## don't use glob since nfs mount on T3 worker nodes fails too often...
             #try:
@@ -465,8 +465,18 @@ class SampleTree(object):
                 sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
 
             if sampleFileNames is None or len(sampleFileNames) < 1:
-                print("\x1b[31mERROR: no tree files found for this sample in",sampleFolder,"!\x1b[0m")
-                raise Exception("FilesMissing")
+
+                # try again:
+                if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
+                    sampleFileNames = glob.glob(samplesMask)
+                else:
+                    print("INFO: using fallback method to get directory listing for storage element directory")
+                    sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
+
+                if sampleFileNames is None or len(sampleFileNames) < 1:
+                    print("\x1b[31mERROR: no tree files found for this sample in",sampleFolder + "/\x1b[35m" + sampleName + "\x1b[31m !\x1b[0m")
+                    raise Exception("FilesMissing")
+
             sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")

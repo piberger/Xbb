@@ -315,11 +315,12 @@ class Datacard(object):
                 systematicsDictionary.update({
                         'cut': self.getSystematicsCut(syst, Q),
                         # 'cachecut': looser cut, which is the same for many of the systematics and therefore reduces number of unique cuts
-                        'cachecut': self.getSystematicsCut('minmax', Q) if self.sysOptions['useMinmaxCuts'] else self.getSystematicsCut(syst, Q),
+                        #'cachecut': self.getSystematicsCut('minmax', Q) if self.sysOptions['useMinmaxCuts'] else self.getSystematicsCut(syst, Q),
+                        'cachecut': self.getSystematicsCut(syst, Q),
                         'var': self.getSystematicsVar(syst, Q),
                         'weight': self.getSystematicsWeight(syst, Q),
                         'sysType': 'shape',
-                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][syst], Q=Q) 
+                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][syst] if syst in self.sysOptions['systematicsnaming'] else syst, Q=Q) 
                     })
                 self.systematicsList.append(systematicsDictionary)
         
@@ -562,52 +563,14 @@ class Datacard(object):
             print ('weight is \x1b[34m{weight}\x1b[0m'.format(weight=weight))
         return weight
 
+    def getReplacementRulesList(self, syst):
+        return self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]]
+
     # return cut for systematics variation as string
     def getSystematicsCut(self, syst, Q):
-        cut = self.treecut
-        tempReplacements = {}
-
-        # case 1: cuts are given as dictionary
-        # use specific cut dict or default one if no specific one exists
-        cutDict = self.sysOptions['sys_cut_dict_per_syst'][syst] if self.sysOptions['sys_cut_dict_per_syst'] and syst in self.sysOptions['sys_cut_dict_per_syst'] else self.sysOptions['sys_cut_dict']
-
-        if cutDict: 
-            cut = cut.replace(' ', '')
-            for k,v in cutDict.iteritems():
-                if syst == 'minmax':
-                    # only for the minmax the direction is given by the comparison (>/<)
-                    if k in cut:
-                        tempName = 'cut%d'%(1+len(tempReplacements.items()))
-                        tempReplacements[tempName] = v.format(syst=syst, Up='Up', Down='Down')
-                        cut = cut.replace(k, '{%s}'%tempName)
-                else:
-                    # for all other systematics, there is a separate cut for up and down variation
-                    if k in cut:
-                        tempName = 'cut%d'%(1+len(tempReplacements.items()))
-                        tempReplacements[tempName] = v.format(syst=syst, Up=Q, Down=Q)
-                        cut = cut.replace(k, '{%s}'%tempName)
-
-        # case 2: (DEPRECATED)
-        # now do "old style" list based replacements
-        if (syst != 'minmax' or not cutDict) and self.sysOptions['sys_cut_suffix']:
-            new_cut_list = self.sysOptions['sys_cut_suffix'][syst] if isinstance(self.sysOptions['sys_cut_suffix'][syst], list) else [self.sysOptions['sys_cut_suffix'][syst]] 
-            for new_cut in new_cut_list:
-                if self.debug:
-                    print('DEBUG: replacement rule:', new_cut)
-                if not new_cut == 'nominal':
-                    old_str, new_str = new_cut.split('>')
-                    new_str = new_str.format(syst=syst, UD=Q).replace('SYS', syst).replace('UD', Q).replace('?', Q)
-                    cut = cut.replace(old_str, new_str)
-
-        # replace temporary cuts back
-        if tempReplacements:
-            cut = cut.format(**tempReplacements)
-        
-        # optional: now do some last final replacements
-        if self.sysOptions['sys_cut_replacement_final'] and syst in self.sysOptions['sys_cut_replacement_final']:
-            for needle, replace in self.sysOptions['sys_cut_replacement_final'][syst]:
-                cut = cut.replace(needle, replace)
-
+        replacementRulesList = XbbTools.getReplacementRulesList(self.config, syst)
+        cut = XbbTools.getSystematicsVariationTemplate(self.treecut, replacementRulesList)
+        cut = cut.replace('{syst}', syst).replace('{UD}', Q)
         return cut
 
     # return full (flattened) list of sample objects

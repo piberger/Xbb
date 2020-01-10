@@ -7,6 +7,7 @@ import array
 import time
 import subprocess
 import math
+from copy import deepcopy
 
 from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
@@ -37,6 +38,7 @@ class NewStackMaker:
         self.saveShapes = True
         self.var = var
         self.region = region
+        self.outputFolder = '.'
         self.configSectionPrefix = configSectionPrefix
         self.configSection = '{prefix}:{region}'.format(prefix=self.configSectionPrefix, region=region)
         if not self.config.has_section(self.configSection):
@@ -57,6 +59,7 @@ class NewStackMaker:
 
         self.mcUncertaintyLegend = self.readConfig('Plot_general', 'mcUncertaintyLegend', 'MC uncert. (stat.)')
         self.drawMCErrorForNormalizedPlots = self.readConfig('Plot_general', 'drawMCErrorForNormalizedPlots', False)
+        self.asimovData    = self.readConfig('Plot_general', 'AsimovData', False)
 
         self.xAxis = self.readConfigStr(self.plotVarSection, 'xAxis', '')
         self.yAxis = self.readConfigStr(self.plotVarSection, 'yAxis', '')
@@ -225,7 +228,28 @@ class NewStackMaker:
             'group': groupName,
             'signal': sample.type=='SIG'
             })
-    
+
+        if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+            histogramOptions_Up   = histogramOptions.copy()
+            histogramOptions_Down = histogramOptions.copy()
+            try:
+                histogramOptions_Up['weight']   = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_UP')
+                histogramOptions_Down['weight'] = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_DOWN')
+            except:
+                histogramOptions_Up['weight']   = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_Up')
+                histogramOptions_Down['weight'] = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_Down')
+            histoMaker_Up   = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Up)
+            histoMaker_Down = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Down)
+            self.histograms[-1]['histogram_Up']   = histoMaker_Up.getHistogram(cut)
+            self.histograms[-1]['histogram_Down'] = histoMaker_Down.getHistogram(cut)
+
+            # set up/down normalizations to nominal
+            if self.config.has_option('Plot_general', 'drawWeightSystematicErrorNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorNormalized')):
+                if self.histograms[-1]['histogram_Up'].Integral() > 0:
+                    self.histograms[-1]['histogram_Up'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Up'].Integral())
+                if self.histograms[-1]['histogram_Down'].Integral() > 0:
+                    self.histograms[-1]['histogram_Down'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Down'].Integral())
+
     # add object to collection
     def addObject(self, object):
         self.collectedObjects.append(object)
@@ -243,7 +267,7 @@ class NewStackMaker:
         self.canvas.SetFrameFillColor(0)
         self.canvas.SetTopMargin(0.035)
         self.canvas.SetBottomMargin(0.12)
-       
+
         self.pads = {}
         self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
         self.pads['oben'].SetBottomMargin(0)
@@ -284,7 +308,7 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     # data/MC ratio
     # ------------------------------------------------------------------------------
-    def drawRatioPlot(self, dataHistogram, mcHistogram, yAxisTitle="Data/MC", same=False, ratioRange=[0.5,1.75]):
+    def drawRatioPlot(self, dataHistogram, mcHistogram, yAxisTitle="Data/MC", same=False, ratioRange=[0.5,1.75], mcHistogram_Up=None, mcHistogram_Down=None):
 
         self.pads['unten'].cd()
         ROOT.gPad.SetTicks(1,1)
@@ -324,6 +348,73 @@ class NewStackMaker:
             self.ratioError.SetFillStyle(3013)
             self.ratioPlot.Draw("E1 SAME" if same else "E1")
             self.ratioError.Draw('SAME2')
+            self.ratioPlot.SetDirectory(0)
+
+            # print table and export ratio histogram with stats+MCstats error combined into .root file
+            if self.debug:
+                print("INFO: DATA/MC ratios:")
+                print("      bin     ratio    error(stat+MCstat)")
+                shapesName = "ratioWithStatsPlusMCstatsError_" + self.config.get('Plot_general', 'suffix') + '.root' if self.config.has_option('Plot_general', 'suffix') else "ratioWithStatsPlusMCstatsError.root"
+                outputFileName = self.outputFileTemplate.format(outputFolder=self.outputFolder, prefix=self.prefix, prefixSeparator='_' if len(self.prefix)>0 else '', var=self.var,  ext=shapesName)
+                print("INFO: \x1b[33mratio with stats+MCstats error\x1b[0m saved to:", outputFileName)
+                ratioShapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
+                #thRatioWithTotalError = ROOT.TH1D("rte", "", self.ratioPlot.GetXaxis().GetNbins(), self.ratioPlot.GetXaxis().GetXmin(), self.ratioPlot.GetXaxis().GetXmax())
+                thRatioWithTotalError = self.ratioPlot.Clone()
+                thRatioWithTotalError.SetDirectory(ratioShapesFile)
+                for i in range(self.ratioPlot.GetXaxis().GetNbins()):
+                    # mind the different bin number conventions for TH1D and TGraphErrors!
+                    statError   = self.ratioPlot.GetBinError(1+i)
+                    mcStatError = self.ratioError.GetErrorY(i)
+                    totalError = math.sqrt(statError*statError + mcStatError*mcStatError)
+                    print("     ", self.ratioPlot.GetXaxis().GetBinCenter(1+i), self.ratioPlot.GetBinContent(1+i), totalError)
+                    thRatioWithTotalError.SetBinContent(1+i, self.ratioPlot.GetBinContent(1+i))
+                    thRatioWithTotalError.SetBinError(1+i, totalError)
+                thRatioWithTotalError.Write()
+                ratioShapesFile.Close()
+
+            if self.config.has_option('Plot_general', 'drawWeightSystematicError') and mcHistogram_Up is not None and mcHistogram_Down is not None:
+                self.ratioPlot_Up, error_Up     = getRatio(dataHistogram, reference=mcHistogram_Up, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
+                self.ratioPlot_Down, error_Down = getRatio(dataHistogram, reference=mcHistogram_Down, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
+
+                px = []
+                py = []
+                ex = []
+                eyh = []
+                eyl = []
+
+                x = array.array('d', [0.0])
+                y = array.array('d', [0.0])
+
+                for i in range(self.ratioError.GetN()):
+                    self.ratioError.GetPoint(i, x, y)
+                    px.append(x[0])
+                    py.append(self.ratioPlot.GetBinContent(1+i))
+                    ex.append(self.ratioError.GetErrorX(i))
+
+                    var_up   = self.ratioPlot_Up.GetBinContent(1+i)
+                    var_down = self.ratioPlot_Down.GetBinContent(1+i)
+
+                    var_max  = max(var_up, var_down)
+                    var_min  = min(var_up, var_down)
+
+                    eyh.append(abs(var_max-self.ratioPlot.GetBinContent(1+i)))
+                    eyl.append(abs(var_min-self.ratioPlot.GetBinContent(1+i)))
+
+                a_px  = array.array('d', px)
+                a_py  = array.array('d', py)
+                a_ex  = array.array('d', ex)
+                a_eyh = array.array('d', eyh)
+                a_eyl = array.array('d', eyl)
+
+                if self.config.has_option('Plot_general', 'drawWeightSystematicErrorHatchesSpacing'):
+                    ROOT.gStyle.SetHatchesSpacing(float(self.config.get('Plot_general', 'drawWeightSystematicErrorHatchesSpacing')))
+                self.ratioWeightSystematicError = ROOT.TGraphAsymmErrors(len(px), a_px, a_py, a_ex, a_ex, a_eyl, a_eyh)
+                self.ratioWeightSystematicError.SetFillColor(eval(self.config.get('Plot_general', 'drawWeightSystematicErrorColor')) if self.config.has_option('Plot_general', 'drawWeightSystematicErrorColor') else ROOT.kBlue)
+                self.ratioWeightSystematicError.SetFillStyle(3144)
+                self.ratioWeightSystematicError.Draw('SAME2')
+                self.ratioPlot.Draw("E1 SAME")
+                self.legends['ratio'].AddEntry(self.ratioWeightSystematicError, self.config.get('Plot_general', 'drawWeightSystematicError') ,"f")
+
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
 
@@ -516,9 +607,18 @@ class NewStackMaker:
     # draw the stacked histograms 
     # dataOverBackground=False => draw DATA/MC
     # ------------------------------------------------------------------------------
-    def Draw(self, outputFolder='./', prefix='', normalize=False, dataOverBackground=False, ratioRange=[0.5,1.75]):
+    def Draw(self, outputFolder='./', prefix='', normalize=False, dataOverBackground=False, ratioRange=None):
+
+        if ratioRange is None:
+            if self.config.has_option('Plot_general', 'ratioRange'):
+                ratioRange = eval(self.config.get('Plot_general', 'ratioRange'))
+                print("INFO: using custom range for ratio plot:", ratioRange)
+            else:
+                ratioRange = [0.5,1.75]
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
+        self.outputFolder = outputFolder
+        self.prefix = prefix
 
         dataGroupName = self.dataGroupName
         # group ("sum") MC+DATA histograms 
@@ -662,9 +762,16 @@ class NewStackMaker:
             drawOption = self.histogramOptions['drawOptionData'] if 'drawOptionData' in self.histogramOptions else 'PE'
             if allStack and allStack.GetXaxis():
                 drawOption += ',SAME'
-            if normalize and groupedHistograms[dataGroupName].Integral() > 0:
-                groupedHistograms[dataGroupName].Scale(1./groupedHistograms[dataGroupName].Integral())
-            groupedHistograms[dataGroupName].Draw(drawOption)
+
+            if self.asimovData:
+                dataHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='asimovDataHistogram')
+                for i in range(dataHistogram.GetXaxis().GetNbins()):
+                    dataHistogram.SetBinError(1+i, math.sqrt(dataHistogram.GetBinContent(1+i)))
+            else:
+                dataHistogram = groupedHistograms[dataGroupName]
+            if normalize and dataHistogram.Integral() > 0:
+                dataHistogram.Scale(1./dataHistogram.Integral())
+            dataHistogram.Draw(drawOption)
 
         # draw total entry number
         if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
@@ -684,7 +791,14 @@ class NewStackMaker:
         mcHistogram   = None
         if not normalize and not self.is2D:
             if dataGroupName in groupedHistograms:
-                dataHistogram = groupedHistograms[dataGroupName]
+
+                if self.asimovData:
+                    dataHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='asimovDataHistogram')
+                    for i in range(dataHistogram.GetXaxis().GetNbins()):
+                        dataHistogram.SetBinError(1+i, math.sqrt(dataHistogram.GetBinContent(1+i)))
+                else:
+                    dataHistogram = groupedHistograms[dataGroupName]
+
                 if dataOverBackground:
                     bkgHistogramList = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']]
                     sigHistogramList = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']]
@@ -692,7 +806,7 @@ class NewStackMaker:
                     signalHistogram     = NewStackMaker.sumHistograms(histograms=sigHistogramList, outputName='summedSignalHistograms')
                     mcHistogram         = backgroundHistogram.Clone()
                     mcHistogram.Add(signalHistogram)
-                    
+
                     self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG',ratioRange=ratioRange)
 
                     # draw blue line for (S+B)/B expectation
@@ -703,12 +817,44 @@ class NewStackMaker:
                     expectedRatio.SetFillStyle(0)
                     self.pads['unten'].cd()
                     expectedRatio.Draw("HIST;SAME")
-                    
-                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG', same=True)
+
+                    # set up/down normalizations of groups to nominal
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicErrorGroupsNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorGroupsNormalized')):
+                        print("INFO: normalize systematic variations per group")
+
+                        groupNormalizations = {'Nom': {}, 'Up':{}, 'Down': {}}
+                        for histogram in self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if histogram['group'] not in groupNormalizations['Nom']:
+                                    groupNormalizations['Nom'][histogram['group']] = 0.0
+                                    groupNormalizations['Up'][histogram['group']] = 0.0
+                                    groupNormalizations['Down'][histogram['group']] = 0.0
+                                groupNormalizations['Nom'][histogram['group']] += histogram['histogram'].Integral()
+                                groupNormalizations['Up'][histogram['group']] += histogram['histogram_Up'].Integral()
+                                groupNormalizations['Down'][histogram['group']] += histogram['histogram_Down'].Integral()
+
+                        for histogram in  self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if groupNormalizations['Up'][histogram['group']] > 0:
+                                    histogram['histogram_Up'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Up'][histogram['group']])
+                                if groupNormalizations['Down'][histogram['group']] > 0:
+                                    histogram['histogram_Down'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Down'][histogram['group']])
+
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+                        backgroundHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Up')
+                        backgroundHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Down')
+                        self.drawRatioPlot(dataHistogram, backgroundHistogram, mcHistogram_Up=backgroundHistogram_Up, mcHistogram_Down=backgroundHistogram_Down, yAxisTitle='Data/BKG', same=True, ratioRange=ratioRange)
+                    else:
+                        self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG', same=True, ratioRange=ratioRange)
 
                 else:
                     mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
-                    self.drawRatioPlot(dataHistogram, mcHistogram)
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+                        mcHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Up')
+                        mcHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Down')
+                        self.drawRatioPlot(dataHistogram, mcHistogram, mcHistogram_Up=mcHistogram_Up, mcHistogram_Down=mcHistogram_Down, ratioRange=ratioRange)
+                    else:
+                        self.drawRatioPlot(dataHistogram, mcHistogram, ratioRange=ratioRange)
 
                 self.pads['oben'].cd()
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
@@ -777,7 +923,7 @@ class NewStackMaker:
                     signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
                     backgroundHistogram.SetDirectory(shapesFile)
                     signalHistogram.SetDirectory(shapesFile)
-                    
+
                     sspb_sum = 0.0
                     q_a_sum = 0.0
                     s_sum = 0.0
