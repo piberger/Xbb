@@ -78,6 +78,7 @@ parser.add_option("-v","--vars",dest="vars",default="", help="comma separated li
 parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait for another job to finish")
 parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
 parser.add_option("--verify", dest="verify", action="store_true", default=False, help="verify integrity of root files (header bits, no zombie etc)")
+parser.add_option("--files", dest="files", default=None)
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -791,6 +792,14 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     for sampleIdentifier in sampleIdentifiers:
         try:
             sampleFileList = filelist(samplefiles, sampleIdentifier)
+
+            # filter to run only on specific files
+            if opts.files is not None:
+                fileListFilter = opts.files.split(",")
+                sampleFileList = [x for x in sampleFileList if x.strip() in fileListFilter]
+                if len(sampleFileList) < 1:
+                    print "=> no files match the criteria, skip this chunk"
+                    continue
         except:
             print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
             continue
@@ -1165,7 +1174,7 @@ if opts.task.startswith('runplot'):
 # -----------------------------------------------------------------------------
 # DCYIELDS: print yields table for data in datacar regions, without caching
 # -----------------------------------------------------------------------------
-if opts.task.startswith('dcyields'):
+if opts.task.startswith('dcyields') or opts.task == 'yields':
     # get list of all sample names used in DC step
     sampleNames = []
     regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
@@ -1199,7 +1208,7 @@ if opts.task.startswith('dcyields'):
         branchList = BranchList(sample.subcut) 
         cutDict = {}
         for region in regions:
-            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') )
+            cutDict[region] = config.get('Cuts', config.get('dc:%s'%region, 'cut') if config.has_option('dc:%s'%region, 'cut') else region)
             branchList.addCut(cutDict[region])
             sampleTree.addFormula(cutDict[region])
         branchList.addCut(config.get('Weights', 'weightF'))

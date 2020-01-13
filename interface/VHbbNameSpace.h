@@ -113,6 +113,33 @@ double DYBW_B200(int nGenJet) {
         return 1.25;
 }
 
+double VptNLOweightDY(int nGenJets, int nB, double Vpt) {
+    double SF=1.0;
+    if (Vpt > 500) Vpt=500.0;
+    if (Vpt < 50.0) Vpt=50.0;
+    if (nGenJets==0&&nB==0) SF=1.41667257-0.001230725*Vpt;
+    if (nGenJets==1&&nB==0) SF=1.393552626-0.001233994*Vpt;
+    if (nGenJets==2&&nB==0) SF=1.347529697-0.001160407*Vpt;
+    if (nGenJets==3&&nB==0) SF=1.071661786-0.000555197*Vpt;
+    if (nGenJets==4&&nB==0) SF=0.729464542-2.05154e-05*Vpt;
+    if (nGenJets==5&&nB==0) SF=0.679199746-0.000232446*Vpt;
+    if (nGenJets==0&&nB==1) SF=1.393949937-0.001378941*Vpt;
+    if (nGenJets==1&&nB==1) SF=1.424499504-0.001661213*Vpt;
+    if (nGenJets==2&&nB==1) SF=1.288121414-0.001039063*Vpt;
+    if (nGenJets==3&&nB==1) SF=1.090142309-0.000854487*Vpt;
+    if (nGenJets==4&&nB==1) SF=0.861623061-0.000975446*Vpt;
+    if (nGenJets==5&&nB==1) SF=0.376231418+0.000346819*Vpt;
+    if (nGenJets==0&&nB==2) SF=1.681719504-0.004419806*Vpt;
+    if (nGenJets==1&&nB==2) SF=1.546154404-0.002363307*Vpt;
+    if (nGenJets==2&&nB==2) SF=1.453219102-0.002123416*Vpt;
+    if (nGenJets==3&&nB==2) SF=1.078354952-0.000859408*Vpt;
+    if (nGenJets==4&&nB==2) SF=0.949781804-0.001050688*Vpt;
+    if (nGenJets==5&&nB==2) SF=0.709471838-0.000694619*Vpt;    
+    if (SF < 0.0) SF=0;
+    return SF;
+}
+
+
 double SoverSBWeight(double BDT, int channel) {
 
     //Check to which bin the BDT belongs to

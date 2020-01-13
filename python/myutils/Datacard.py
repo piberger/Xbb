@@ -320,7 +320,7 @@ class Datacard(object):
                         'var': self.getSystematicsVar(syst, Q),
                         'weight': self.getSystematicsWeight(syst, Q),
                         'sysType': 'shape',
-                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][syst], Q=Q) 
+                        'systematicsName': '{sysName}_{Q}'.format(sysName=self.sysOptions['systematicsnaming'][syst] if syst in self.sysOptions['systematicsnaming'] else syst, Q=Q) 
                     })
                 self.systematicsList.append(systematicsDictionary)
         

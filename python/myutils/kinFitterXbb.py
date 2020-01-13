@@ -180,7 +180,7 @@ class kinFitterXbb(AddCollectionsModule):
 
                 # FSR jets
                 for i in range(tree.nJet):
-                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and pt[i] > 20 and abs(eta[i]) < 3.0:
+                    if i not in hJidx and tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and pt[i] > 20 and abs(eta[i]) < 3.0:
 
                         j_fsr = fourvector(pt[i], eta[i], phi[i], mass[i])
 

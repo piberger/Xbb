@@ -8,7 +8,7 @@ from BranchTools import AddCollectionsModule
 
 class ElectronSFfromJSON(AddCollectionsModule):
     
-    def __init__(self, jsonFiles=None, branchName="electronSF",channel='None'):
+    def __init__(self, jsonFiles=None, branchName="electronSF",channel='None',year=2017):
         super(ElectronSFfromJSON, self).__init__()
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
@@ -19,12 +19,16 @@ class ElectronSFfromJSON(AddCollectionsModule):
         self.channel = channel 
         self.trackerSfName = None
         if self.channel== 'Zll':
-            self.idIsoSfName = 'doubleEleIDISO2017'
-            self.triggerLegNames = ['doubleEleTriggerLeg1', 'doubleEleTriggerLeg2']
+            #self.idIsoSfName = 'doubleEleIDISO2017'
+            self.idIsoSfName = 'IDs2017passingMVA94Xwp90iso'
+            #self.triggerLegNames = ['doubleEleTriggerLeg1', 'doubleEleTriggerLeg2']
+            self.triggerLegNames = ['Trig{year}passingDoubleEleLeg1'.format(year=year), 'Trig{year}passingDoubleEleLeg2'.format(year=year)]
             self.trackerSfName = 'ScaleFactor_tracker_80x'
         elif self.channel == 'Wlv':
-            self.idIsoSfName = 'singleEleIDISO2017'
-            self.triggerLegNames = ['singleEleTrigger']
+            #self.idIsoSfName = 'singleEleIDISO2017'
+            self.idIsoSfName = 'IDs2017passingMVA94Xwp80iso'
+            #self.triggerLegNames = ['singleEleTrigger']
+            self.triggerLegNames = ['Trig{year}passingSingleEle'.format(year=year)]
             self.trackerSfName = 'ScaleFactor_tracker_80x'
         else: 
             print "Channel not defined!"
@@ -189,12 +193,12 @@ class ElectronSFfromJSON(AddCollectionsModule):
 
 if __name__ == "__main__":
     sfObject = ElectronSFfromJSON([
-            'weights/Zll/Electrons/VHbb2ElectronIDISO2017.json',
-            'weights/Zll/Electrons/VHbb2ElectronTriggerLeg12017.json',
-            'weights/Zll/Electrons/VHbb2ElectronTriggerLeg22017.json',
-        ])
+            'data/Run2ElectronSF/Trig2017passingDoubleEleLeg1.json',
+            'data/Run2ElectronSF/Trig2017passingDoubleEleLeg2.json',
+            'data/Run2ElectronSF/IDs2017passingMVA94Xwp90iso.json',
+        ], channel='Zll', year=2017)
     print sfObject.getIdIsoSf(0.5, 50)
     print sfObject.getIdIsoSf(-2.5, 50)
     print sfObject.getIdIsoSf(2.5, 250)
     print sfObject.getIdIsoSf(-0.5, 250)
-    print sfObject.getTriggerSf(0.5, 50, 1.1, 40)
+    print sfObject.getTriggerSf([0.5, 1.1], [50, 30], 2)
