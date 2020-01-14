@@ -96,6 +96,9 @@ class FileLocator(object):
         hash = hashlib.sha224(filename).hexdigest()
         return filename.replace('.root','')+'_'+str(hash)+'.root'
 
+    def getFilePath(self, basePath, sampleIdentifier, originalFileName):
+        return "{path}/{subfolder}/{filename}".format(path=basePath, subfolder=sampleIdentifier, filename=self.getFilenameAfterPrep(originalFileName))
+
     # check if path is relative to /store/
     def isStoragePath(self, path):
         return path.startswith(self.storagePathPrefix)

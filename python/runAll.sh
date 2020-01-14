@@ -51,6 +51,7 @@ echo "Task: $task"
 echo "Pwd: $PWD"
 echo "Host: $HOSTNAME"
 echo "User: $USER"
+echo "StartTime: "`date +"%Y-%m-%d %T"`
 echo
 
 
@@ -463,6 +464,7 @@ fi
 EXITCODE=$?
 echo "--------------------------------------------------------------------------------"
 echo "exit code: $EXITCODE"
+echo "EndTime: "`date +"%Y-%m-%d %T"`
 ENDTIME=$(date +%s.%N)
 DIFFTIME=$(echo "($ENDTIME - $STARTTIME)/60" | bc)
 echo "duration (real time): $DIFFTIME minutes"

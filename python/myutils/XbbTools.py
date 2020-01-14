@@ -2,6 +2,7 @@
 from __future__ import print_function
 import json
 import re
+import fnmatch
 
 class XbbTools(object):
 
@@ -62,6 +63,39 @@ class XbbTools(object):
     def getReplacementRulesList(config, syst):
         replacementRulesDict = eval(config.get('LimitGeneral', 'sys_cut_suffix'))
         return replacementRulesDict[syst] if isinstance(replacementRulesDict[syst], list) else [replacementRulesDict[syst]]
+
+    @staticmethod
+    def filterSampleList(sampleIdentifiers, samplesList):
+        if samplesList and len([x for x in samplesList if x]) > 0:
+            filteredList = []
+            for expr in samplesList:
+                if expr in sampleIdentifiers:
+                    filteredList.append(expr)
+                elif '*' in expr:
+                    for sampleIdentifier in sampleIdentifiers:
+                        if fnmatch.fnmatch(sampleIdentifier, expr):
+                            filteredList.append(sampleIdentifier)
+            filteredList = list(set(filteredList))
+            return filteredList
+        else:
+            return sampleIdentifiers
+
+    @staticmethod
+    def parseSamplesList(samplesListString):
+        return [x.strip() for x in samplesListString.strip().split(',') if len(x.strip()) > 0]
+
+    @staticmethod
+    def getSampleTreeFileNames(pathIN, folderName):
+        filenames = open(pathIN+'/'+folderName+'.txt').readlines()
+
+        ## search the folder containing the input files
+        inputFiles = []
+
+        for filename_ in filenames:
+            if '.root' in filename_ :
+                inputFiles.append(filename_.rstrip('\n'))
+
+        return inputFiles
 
 class XbbMvaInputsList(object):
 

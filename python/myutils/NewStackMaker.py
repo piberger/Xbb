@@ -245,7 +245,14 @@ class NewStackMaker:
             histoMaker_Down = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Down)
             self.histograms[-1]['histogram_Up']   = histoMaker_Up.getHistogram(cut)
             self.histograms[-1]['histogram_Down'] = histoMaker_Down.getHistogram(cut)
-    
+
+            # set up/down normalizations to nominal
+            if self.config.has_option('Plot_general', 'drawWeightSystematicErrorNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorNormalized')):
+                if self.histograms[-1]['histogram_Up'].Integral() > 0:
+                    self.histograms[-1]['histogram_Up'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Up'].Integral())
+                if self.histograms[-1]['histogram_Down'].Integral() > 0:
+                    self.histograms[-1]['histogram_Down'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Down'].Integral())
+
     # add object to collection
     def addObject(self, object):
         self.collectedObjects.append(object)
@@ -263,7 +270,7 @@ class NewStackMaker:
         self.canvas.SetFrameFillColor(0)
         self.canvas.SetTopMargin(0.035)
         self.canvas.SetBottomMargin(0.12)
-       
+
         self.pads = {}
         self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
         self.pads['oben'].SetBottomMargin(0)
@@ -814,6 +821,28 @@ class NewStackMaker:
                     self.pads['unten'].cd()
                     expectedRatio.Draw("HIST;SAME")
 
+                    # set up/down normalizations of groups to nominal
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicErrorGroupsNormalized') and eval(self.config.get('Plot_general', 'drawWeightSystematicErrorGroupsNormalized')):
+                        print("INFO: normalize systematic variations per group")
+
+                        groupNormalizations = {'Nom': {}, 'Up':{}, 'Down': {}}
+                        for histogram in self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if histogram['group'] not in groupNormalizations['Nom']:
+                                    groupNormalizations['Nom'][histogram['group']] = 0.0
+                                    groupNormalizations['Up'][histogram['group']] = 0.0
+                                    groupNormalizations['Down'][histogram['group']] = 0.0
+                                groupNormalizations['Nom'][histogram['group']] += histogram['histogram'].Integral()
+                                groupNormalizations['Up'][histogram['group']] += histogram['histogram_Up'].Integral()
+                                groupNormalizations['Down'][histogram['group']] += histogram['histogram_Down'].Integral()
+
+                        for histogram in  self.histograms:
+                            if histogram['group'] in mcHistogramGroupsToPlot:
+                                if groupNormalizations['Up'][histogram['group']] > 0:
+                                    histogram['histogram_Up'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Up'][histogram['group']])
+                                if groupNormalizations['Down'][histogram['group']] > 0:
+                                    histogram['histogram_Down'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Down'][histogram['group']])
+
                     if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
                         backgroundHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Up')
                         backgroundHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Down')
@@ -897,7 +926,7 @@ class NewStackMaker:
                     signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
                     backgroundHistogram.SetDirectory(shapesFile)
                     signalHistogram.SetDirectory(shapesFile)
-                    
+
                     sspb_sum = 0.0
                     q_a_sum = 0.0
                     s_sum = 0.0

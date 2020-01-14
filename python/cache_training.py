@@ -31,7 +31,7 @@ class CacheTraining(object):
 
         self.trainingRegionsDict = {}
         for trainingRegion in self.trainingRegions:
-            treeCutName = config.get(trainingRegion, 'treeCut')
+            treeCutName = config.get(trainingRegion, 'treeCut') if config.has_option(trainingRegion, 'treeCut') else trainingRegion
             treeVarSet = config.get(trainingRegion, 'treeVarSet').strip()
             #systematics = [x for x in config.get('systematics', 'systematics').split(' ') if len(x.strip())>0]
             systematics = eval(config.get(trainingRegion, 'systematics')) if config.has_option(trainingRegion, 'systematics') else []

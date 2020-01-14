@@ -13,6 +13,9 @@ luca
 *config/*.swp
 *config/volatile.ini
 */*.swo
+myutils/*.swo
+myutils/*.swp
+myutils/*.py~
 !csv/*
 csv/*.d
 csv/*.pcm

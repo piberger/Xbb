@@ -70,7 +70,7 @@ class NewHistoMaker:
                 weightF = "({weight})".format(weight=self.histogramOptions['weight'] if ('weight' in self.histogramOptions and self.histogramOptions['weight']) else '1') 
 
             # drop training events and rescale MC by 2 for BDT plots
-            if 'BDT' in self.histogramOptions['treeVar'] and self.sample.type != 'DATA':
+            if ('BDT' in self.histogramOptions['treeVar'] or 'DNN' in self.histogramOptions['treeVar']) and self.sample.type != 'DATA':
                 cut = '(({cut1})&&({cut2}))'.format(cut1=cut, cut2=self.EvalCut)
                 weightF = '(({weight1})*({weight2}))'.format(weight1=weightF, weight2='2.0')
                 print("INFO: training events removed for \x1b[32m", self.histogramOptions['treeVar'], "\x1b[0m plot with additional cut \x1b[35m", self.EvalCut, "\x1b[0m, MC rescaled by \x1b[36m2.0\x1b[0m")
