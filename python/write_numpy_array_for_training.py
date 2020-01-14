@@ -35,7 +35,7 @@ class SampleTreesToNumpyConverter(object):
         self.samplesInfo = ParseInfo(samples_path=self.samplesPath, config=self.config) 
 
         # region
-        self.treeCutName = config.get(mvaName, 'treeCut')
+        self.treeCutName = config.get(mvaName, 'treeCut') if config.has_option(mvaName, 'treeCut') else mvaName
         self.treeCut = config.get('Cuts', self.treeCutName)
 
         # split in train/eval sets
