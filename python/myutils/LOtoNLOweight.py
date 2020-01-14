@@ -14,7 +14,7 @@ class LOtoNLOweight(AddCollectionsModule):
         self.year = int(year)
 
         self.addV3 = False
-        self.addV4 = True
+        self.addV4 = False
             
         self.ZjetsToNuNuNLOweightNjet2017 = [
                 [0,0,1.228032,0.006932,-0.001342,0.000038],
@@ -178,7 +178,10 @@ class LOtoNLOweight(AddCollectionsModule):
                         self._b(self.branchName + '_LHEVptV4_deta%d_%s'%(n, v))[0] = 1.0
 
             if self.applies(tree):
-                etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
+                if tree.hJidx[0] > -1 and tree.hJidx[1] > -1:
+                    etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
+                else:
+                    etabb = 0.0
                 njets = tree.sampleIndex % 10
                 if njets < 3:
                     if self.year == 2017:

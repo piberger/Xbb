@@ -54,46 +54,24 @@ class EWKweights(AddCollectionsModule):
             self._b('EWKwSIG' + self.suffix)[:]   = array.array('d', [1.0, 1.0, 1.0])
             self._b('QCDw' + self.suffix)[:]      = array.array('d', [1.0, 1.0, 1.0])
 
-            if self.nano:
+            # background
+            sf = 1.0
+            if self.applyEWK:
+                if tree.nGenVbosons > 0:
+                    GenVBosonPt    = tree.LeadGenVBoson_pt
+                    GenVBosonPdgId = tree.LeadGenVBoson_pdgId
+                    if GenVBosonPdgId == pdgId.Z:
+                        sf = -0.1808051+6.04146*(pow((GenVBosonPt+759.098),-0.242556))
+                    elif GenVBosonPdgId in [pdgId.Wp, pdgId.Wm]:
+                        sf = -0.830041+7.93714*(pow((GenVBosonPt+877.978),-0.213831))
+            self._b('EWKwVJets' + self.suffix)[:] = array.array('d', [sf]*3)
 
-                zBosonPts = [tree.GenPart_pt[i] for i in range(tree.nGenPart) if tree.GenPart_genPartIdxMother[i]==0 and tree.GenPart_pdgId[i] in [pdgId.Z] and tree.GenPart_pt[i] > 100.0 and tree.GenPart_pt[i] < 3000]
-                wBosonPts = [tree.GenPart_pt[i] for i in range(tree.nGenPart) if tree.GenPart_genPartIdxMother[i]==0 and tree.GenPart_pdgId[i] in [pdgId.Wp, pdgId.Wm] and tree.GenPart_pt[i] > 100.0 and tree.GenPart_pt[i] < 3000]
-                zBosonPts.sort(reverse=True)
-                wBosonPts.sort(reverse=True)
-
-                if self.applyEWK:
-                    sf = 1.0
-                    if len(zBosonPts) > 0 and len(wBosonPts) == 0:
-                        sf = -0.1808051+6.04146*(pow((zBosonPts[0]+759.098),-0.242556))
-                        self.stats['nZ'] += 1
-                    elif len(zBosonPts) == 0 and len(wBosonPts) > 0:
-                        sf = -0.830041+7.93714*(pow((wBosonPts[0]+877.978),-0.213831))
-                        self.stats['nW'] += 1
-                    self._b('EWKwVJets' + self.suffix)[:] = array.array('d', [sf]*3)
-
-                if len(zBosonPts) > 0 and self.sys_sample:
-                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'nom')
-                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'down')
-                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(zBosonPts[0], self.sys_sample, 'up')
-                    self.stats['nSIG'] += 1
-                elif len(wBosonPts) > 0 and self.sys_sample:
-                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'nom')
-                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'down')
-                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(wBosonPts[0], self.sys_sample, 'up')
-                    self.stats['nSIG'] += 1
-
-            else:
-                if self.applyEWK and len(tree.GenVbosons_pt) > 0 and tree.GenVbosons_pt[0] > 100. and  tree.GenVbosons_pt[0] < 3000:
-                    self._b('EWKwVJets' + self.suffix)[0] = -0.1808051+6.04146*(pow((tree.GenVbosons_pt[0]+759.098),-0.242556))
-                    self._b('EWKwVJets' + self.suffix)[1] = self._b('EWKwVJets' + self.suffix)[0]
-                    self._b('EWKwVJets' + self.suffix)[2] = self._b('EWKwVJets' + self.suffix)[0]
-                    self.stats['nZ'] += 1
-
-                if tree.nGenVbosons > 0 and self.sys_sample:
-                    self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'nom')
-                    self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'down')
-                    self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(tree.GenVbosons_pt[0], self.sys_sample, 'up')
-                    self.stats['nSIG'] += 1
+            # signal
+            if tree.nGenVbosons > 0 and self.sys_sample:
+                GenVBosonPt    = tree.LeadGenVBoson_pt
+                self._b('EWKwSIG' + self.suffix)[0] = self.signal_ewk(GenVBosonPt, self.sys_sample, 'nom')
+                self._b('EWKwSIG' + self.suffix)[1] = self.signal_ewk(GenVBosonPt, self.sys_sample, 'down')
+                self._b('EWKwSIG' + self.suffix)[2] = self.signal_ewk(GenVBosonPt, self.sys_sample, 'up')
 
             self._b('EWKw' + self.suffix)[0] = self._b('EWKwSIG' + self.suffix)[0] * self._b('EWKwVJets' + self.suffix)[0]
             self._b('EWKw' + self.suffix)[1] = self._b('EWKwSIG' + self.suffix)[1] * self._b('EWKwVJets' + self.suffix)[1]

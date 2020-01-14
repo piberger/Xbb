@@ -648,7 +648,9 @@ if opts.task == 'hadd':
                 chunkSize = int(config.get('Hadd', sampleIdentifier).strip())
                 print "INFO: chunkSize read from config => ", chunkSize
             else:
-                raise Exception("HaddChunkSizeUndefined")
+                #raise Exception("HaddChunkSizeUndefined")
+                print("WARNING: no number of files to hadd found, using default")
+                chunkSize = 1
 
             sampleFileList = filelist(samplefiles, sampleIdentifier)
             if opts.limit and len(sampleFileList) > int(opts.limit):
@@ -1767,11 +1769,14 @@ if opts.task.startswith('checklogs'):
         if job['jobName'] in unfinishedJobs:
             status = 'running/queued'
         else:
+            job['host'] = None
             if os.path.isfile(job['log']):
                 with open(job['log'], 'r') as logfile:
                     for i, line in enumerate(logfile.readlines(), 1):
                         if line.startswith('exit code:'):
                             job['exitCode'] = int(line.split('exit code:')[1].strip())
+                        if line.startswith('Host:'):
+                            job['host'] = line.split('Host:')[1].strip()
                         if line.startswith('duration (real time)'):
                             job['duration'] = line.split('duration (real time):')[1].strip()
                         for errorMarker in errorMarkers:
@@ -1805,6 +1810,9 @@ if opts.task.startswith('checklogs'):
             print " NAME:", job['jobName']
             print " LOG:", job['log']
             print " STATUS:", ("\x1b[31m"+status+"\x1b[0m" if errorStatus else status)
+            if 'host' in job and job['host'] is not None:
+                print " HOST:", job['host']
+
             if len(errorLines) > 0:
                 print " ERRORS:"
                 for errorLine in errorLines:
@@ -1823,6 +1831,7 @@ if opts.task.startswith('submissions'):
     printWidth = min(int(columns) - 5, 200)
     statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
     statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
+    failureCodes = [-1, 10, 11, 12]
     print "*"*printWidth
     print " legend:"
     for n in [0,1,2,-1,10,11,12,100]:
@@ -1851,6 +1860,8 @@ if opts.task.startswith('submissions'):
     nResubmitted = 0
     nCancelled   = 0
     nCancelFailed = 0
+
+    hostFailures = {}
 
     for submissionLog in reversed(submissionLogs):
         nResubmittedPerFile = 0
@@ -1883,6 +1894,8 @@ if opts.task.startswith('submissions'):
                         for i, line in enumerate(logfile.readlines(), 1):
                             if line.startswith('exit code:'):
                                 job['exitCode'] = int(line.split('exit code:')[1].strip())
+                            if line.startswith('Host:'):
+                                job['host'] = line.split('Host:')[1].strip()
                     if 'exitCode' in job:
                         if job['exitCode'] == 0:
                             status = 0 
@@ -1898,7 +1911,13 @@ if opts.task.startswith('submissions'):
                     logfileDirectory = job['log'].split('/')[-4]
                 except:
                     pass
-        
+
+                if 'host' in job and status in failureCodes:
+                    if job['host'] not in hostFailures:
+                        hostFailures[job['host']] = 1
+                    else:
+                        hostFailures[job['host']] += 1
+
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
         print "\x1b[34m", submissionLog, "\x1b[0m of type \x1b[35m", jobType, "\x1b[0m log files saved to -> \x1b[34m", logfileDirectory, "\x1b[0m"
 
@@ -1936,6 +1955,12 @@ if opts.task.startswith('submissions'):
     if nResubmitted > 0:
         print nResubmitted, "jobs resubmitted!"
 
+    if len(hostFailures.keys()) > 0:
+        print("worker nodes with failed jobs:")
+        w = [[k,v] for k,v in hostFailures.items()]
+        w.sort(key=lambda x: x[1], reverse=True)
+        for x in w:
+            print " ",x[0],":",x[1]
 # -----------------------------------------------------------------------------
 # postfitplot 
 # -----------------------------------------------------------------------------
