@@ -62,7 +62,7 @@ class GetTopMass(object):
         if self.dataset == '2016':
            self.METpt = 'MET_Pt' 
            self.METphi = 'MET_Phi' 
-        elif self.dataset == '2017':
+        elif self.dataset in ['2017','2018']:
            self.METpt = 'MET_Pt' 
            self.METphi = 'MET_Phi' 
 
