@@ -78,6 +78,8 @@ class CachePlot(object):
             keepBranchesPlot.append(regionInfo['cut'])
         keepBranchesPlotFinal = BranchList(keepBranchesPlot).getListOfBranches()
         print("KEEP:", keepBranchesPlotFinal)
+        if('Zvv2018_SR_medhigh_Znn_191121_V11finalVars1.Nominal' in keepBranchesPlotFinal): print("yessssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss")
+        if('H_mass' in keepBranchesPlotFinal): print("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") 
 
 
         # ----------------------------------------------------------------------------------------------------------------------
