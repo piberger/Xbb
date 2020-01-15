@@ -10,13 +10,14 @@ from BranchTools import AddCollectionsModule
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(AddCollectionsModule):
     
-    def __init__(self, addSystematics=True, prefix="H", addBoostSystematics=False):
+    def __init__(self, addSystematics=True, prefix="H", addBoostSystematics=False, addMinMax=False):
         super(HiggsCandidateSystematics, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.lastEntry = -1
         self.nJet = -1
         self.nJetMax = 100
         self.addSystematics = addSystematics
+        self.addMinMax = addMinMax
         self.prefix = prefix
         self.addBoostSystematics = addBoostSystematics
 
@@ -81,10 +82,11 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                 self.addBranch('MET_phi_{s}{d}'.format(s=syst, d=Q))
 
         ## adding dummy MET branches with jer and jes
-        self.addBranch('MET_pt_minmaxUp')
-        self.addBranch('MET_pt_minmaxDown')
-        self.addBranch('MET_phi_minmaxUp')
-        self.addBranch('MET_phi_minmaxDown')
+        if self.addMinMax:
+            self.addBranch('MET_pt_minmaxUp')
+            self.addBranch('MET_pt_minmaxDown')
+            self.addBranch('MET_phi_minmaxUp')
+            self.addBranch('MET_phi_minmaxDown')
 
 
         self.tagidx = self.config.get('General', 'hJidx')
@@ -96,7 +98,9 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             self.addBranch(higgsProperty)
             
             # for data only include the min/max (set to nominal) to simplify cutting
-            systList = self.jetSystematics + ['minmax'] if higgsProperty in self.higgsPropertiesWithSys else ['minmax']
+            systList = self.jetSystematics if higgsProperty in self.higgsPropertiesWithSys else []
+            if self.addMinMax:
+                systList += ['minmax']
 
             for syst in systList:
                 for Q in ['Up', 'Down']:
@@ -113,12 +117,13 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.addBranch('hJets_1_pt_FSRrecovered')
         self.addIntegerBranch('nFSRrecovered')
 
-        for p in ['Jet_pt_minmax', 'Jet_mass_minmax']:
-            for q in ['Up', 'Down']:
-                self.branchBuffers[p+q] = array.array('f', [0.0]*self.nJetMax)
-                self.branches.append({'name': p+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+q}, 'length': self.nJetMax, 'leaflist': p+q+'[nJet]/F'})
-                ## wrong values when using this. Use two lines above instead.
-                #self.addVectorBranch(p+q, length=self.nJetMax, leaflist=p+q+'[nJet]/F')
+        if self.addMinMax:
+            for p in ['Jet_pt_minmax', 'Jet_mass_minmax']:
+                for q in ['Up', 'Down']:
+                    self.branchBuffers[p+q] = array.array('f', [0.0]*self.nJetMax)
+                    self.branches.append({'name': p+q, 'formula': self.getVectorBranch, 'arguments': {'branch': p+q}, 'length': self.nJetMax, 'leaflist': p+q+'[nJet]/F'})
+                    ## wrong values when using this. Use two lines above instead.
+                    #self.addVectorBranch(p+q, length=self.nJetMax, leaflist=p+q+'[nJet]/F')
 
     # read from buffers which have been filled in processEvent()    
     def getVectorBranch(self, event, arguments=None, destinationArray=None):
@@ -365,100 +370,101 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                             valueList[self.prefix + '_phi_noFSR'].append(dijet.Phi())
                             valueList[self.prefix + '_mass_noFSR'].append(dijet.M())
 
-            # get minimum and maximum variation
-            for syst in ['minmax']:
-                for Q in ['Up', 'Down']:
-                    for p in self.higgsProperties:
-                        #if p == 'FatJet_msoftdrop_sys':
-                            #print valueList['FatJet_msoftdrop_sys'] 
-                            self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
-                        #if not p == 'FatJet_pt':
-                        #    self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
-                        #else:
-                        #    print valueList[p]
-                        #    self.branchBuffers['{p}_{s}{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
-
-            # min/max variations for Jet pt/mass
-            self.nJet = tree.nJet
-            treeJet_mass_sys = {}
-            treeJet_pt_sys = {}
-            if self.addSystematics and self.sample.type != 'DATA':
-                # read all the arrays once to avoid getattr in the loop over the jets
-                for syst in self.jetSystematics:
+            if self.addMinMax:
+                # get minimum and maximum variation
+                for syst in ['minmax']:
                     for Q in ['Up', 'Down']:
-                        if syst == 'jerReg':
-                            treeJet_mass_sys[syst+Q] = treeJet_mass 
-                            treeJet_pt_sys[syst+Q] = treeJet_Pt
-                        elif syst == 'jmr' or syst == 'jms':
-                            # nominal values (as jmr and jms are not defined on jet)
-                            treeJet_pt_sys[syst+Q] = treeJet_Pt
-                            treeJet_mass_sys[syst+Q] = treeJet_mass_nom
-                            # self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_pt_sys[syst+Q]
-                            # self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_mass_sys[syst+Q]
-                        else:
-                            treeJet_mass_sys[syst+Q] = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))
-                            treeJet_pt_sys[syst+Q] = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q)) 
+                        for p in self.higgsProperties:
+                            #if p == 'FatJet_msoftdrop_sys':
+                                #print valueList['FatJet_msoftdrop_sys'] 
+                                self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
+                            #if not p == 'FatJet_pt':
+                            #    self.branchBuffers['{p}_{s}_{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
+                            #else:
+                            #    print valueList[p]
+                            #    self.branchBuffers['{p}_{s}{d}'.format(p=p, s=syst, d=Q)][0] = min(valueList[p]) if Q=='Down' else max(valueList[p])
 
-            # compute min/max for each jet
-            for i in range(min(self.nJet, self.nJetMax)):
-                ptList = [treeJet_Pt[i]]
-                massList = [treeJet_mass[i]]
+                # min/max variations for Jet pt/mass
+                self.nJet = tree.nJet
+                treeJet_mass_sys = {}
+                treeJet_pt_sys = {}
                 if self.addSystematics and self.sample.type != 'DATA':
+                    # read all the arrays once to avoid getattr in the loop over the jets
                     for syst in self.jetSystematics:
                         for Q in ['Up', 'Down']:
                             if syst == 'jerReg':
-                                ptList.append(treeJet_pt_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
-                                massList.append(treeJet_mass_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
+                                treeJet_mass_sys[syst+Q] = treeJet_mass 
+                                treeJet_pt_sys[syst+Q] = treeJet_Pt
+                            elif syst == 'jmr' or syst == 'jms':
+                                # nominal values (as jmr and jms are not defined on jet)
+                                treeJet_pt_sys[syst+Q] = treeJet_Pt
+                                treeJet_mass_sys[syst+Q] = treeJet_mass_nom
+                                # self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_pt_sys[syst+Q]
+                                # self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][0] = treeJet_mass_sys[syst+Q]
                             else:
-                                ptList.append(treeJet_pt_sys[syst+Q][i])
-                                massList.append(treeJet_mass_sys[syst+Q][i])
-                            if syst == 'jmr' or syst == 'jms':
-                                #print 'test'
-                                #print treeJet_pt_sys[syst+Q][i]
-                                #print 'test2'
-                                self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_pt_sys[syst+Q][i]
-                                self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_mass_sys[syst+Q][i]
+                                treeJet_mass_sys[syst+Q] = getattr(tree, 'Jet_mass_{s}{d}'.format(s=syst, d=Q))
+                                treeJet_pt_sys[syst+Q] = getattr(tree, 'Jet_pt_{s}{d}'.format(s=syst, d=Q)) 
 
-                # compute maximum/minimum
-                self.branchBuffers['Jet_pt_minmaxUp'][i] = max(ptList)
-                self.branchBuffers['Jet_pt_minmaxDown'][i] = min(ptList)
-                self.branchBuffers['Jet_mass_minmaxUp'][i] = max(massList)
-                self.branchBuffers['Jet_mass_minmaxDown'][i] = min(massList)
+                # compute min/max for each jet
+                for i in range(min(self.nJet, self.nJetMax)):
+                    ptList = [treeJet_Pt[i]]
+                    massList = [treeJet_mass[i]]
+                    if self.addSystematics and self.sample.type != 'DATA':
+                        for syst in self.jetSystematics:
+                            for Q in ['Up', 'Down']:
+                                if syst == 'jerReg':
+                                    ptList.append(treeJet_pt_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
+                                    massList.append(treeJet_mass_sys[syst+Q][i] * getattr(tree,'Jet_PtReg'+Q)[i] / getattr(tree,'Jet_PtReg')[i])
+                                else:
+                                    ptList.append(treeJet_pt_sys[syst+Q][i])
+                                    massList.append(treeJet_mass_sys[syst+Q][i])
+                                if syst == 'jmr' or syst == 'jms':
+                                    #print 'test'
+                                    #print treeJet_pt_sys[syst+Q][i]
+                                    #print 'test2'
+                                    self.branchBuffers['Jet_pt_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_pt_sys[syst+Q][i]
+                                    self.branchBuffers['Jet_mass_{s}{d}'.format(s=syst, d=Q)][i] = treeJet_mass_sys[syst+Q][i]
 
-            # min/max variations for MET
-            MET_pt_sys = {}
-            MET_phi_sys = {}
-            if self.addSystematics and self.sample.type != 'DATA':
-                # read all the arrays once to avoid getattr in the loop over the jets
-                for syst in self.jetSystematics:
-                    for Q in ['Up', 'Down']:
-                        if syst == 'jmr' or syst == 'jms' or syst == 'jerReg': # nominal values (as jmr and jms are not defined on MET)
-                            MET_pt_sys[syst+Q] = getattr(tree, 'MET_Pt')
-                            MET_phi_sys[syst+Q] = getattr(tree, 'MET_Phi') 
-                            self.branchBuffers['MET_pt_{s}{d}'.format(s=syst, d=Q)][0] = MET_pt_sys[syst+Q]
-                            self.branchBuffers['MET_phi_{s}{d}'.format(s=syst, d=Q)][0] = MET_phi_sys[syst+Q]
+                    # compute maximum/minimum
+                    self.branchBuffers['Jet_pt_minmaxUp'][i] = max(ptList)
+                    self.branchBuffers['Jet_pt_minmaxDown'][i] = min(ptList)
+                    self.branchBuffers['Jet_mass_minmaxUp'][i] = max(massList)
+                    self.branchBuffers['Jet_mass_minmaxDown'][i] = min(massList)
 
-                        else:
-                            MET_pt_sys[syst+Q] = getattr(tree, 'MET_pt_{s}{d}'.format(s=syst, d=Q))
-                            MET_phi_sys[syst+Q] = getattr(tree, 'MET_phi_{s}{d}'.format(s=syst, d=Q)) 
+                # min/max variations for MET
+                MET_pt_sys = {}
+                MET_phi_sys = {}
+                if self.addSystematics and self.sample.type != 'DATA':
+                    # read all the arrays once to avoid getattr in the loop over the jets
+                    for syst in self.jetSystematics:
+                        for Q in ['Up', 'Down']:
+                            if syst == 'jmr' or syst == 'jms' or syst == 'jerReg': # nominal values (as jmr and jms are not defined on MET)
+                                MET_pt_sys[syst+Q] = getattr(tree, 'MET_Pt')
+                                MET_phi_sys[syst+Q] = getattr(tree, 'MET_Phi') 
+                                self.branchBuffers['MET_pt_{s}{d}'.format(s=syst, d=Q)][0] = MET_pt_sys[syst+Q]
+                                self.branchBuffers['MET_phi_{s}{d}'.format(s=syst, d=Q)][0] = MET_phi_sys[syst+Q]
 
-            # compute min/max for MET
-            #for i in range(min(self.nJet, self.nJetMax)):
-                #ptList = [treeJet_Pt[i]]
-                #massList = [treeJet_mass[i]]
-            METptList = [getattr(tree, 'MET_Pt')]
-            METphiList = [getattr(tree, 'MET_phi')]
-            if self.addSystematics and self.sample.type != 'DATA':
-                for syst in self.jetSystematics:
-                    for Q in ['Up', 'Down']:
-                        METptList.append(MET_pt_sys[syst+Q])
-                        METphiList.append(MET_phi_sys[syst+Q])
+                            else:
+                                MET_pt_sys[syst+Q] = getattr(tree, 'MET_pt_{s}{d}'.format(s=syst, d=Q))
+                                MET_phi_sys[syst+Q] = getattr(tree, 'MET_phi_{s}{d}'.format(s=syst, d=Q)) 
+
+                # compute min/max for MET
+                #for i in range(min(self.nJet, self.nJetMax)):
+                    #ptList = [treeJet_Pt[i]]
+                    #massList = [treeJet_mass[i]]
+                METptList = [getattr(tree, 'MET_Pt')]
+                METphiList = [getattr(tree, 'MET_phi')]
+                if self.addSystematics and self.sample.type != 'DATA':
+                    for syst in self.jetSystematics:
+                        for Q in ['Up', 'Down']:
+                            METptList.append(MET_pt_sys[syst+Q])
+                            METphiList.append(MET_phi_sys[syst+Q])
 
 
-            self.branchBuffers['MET_pt_minmaxUp'][0]       = max(METptList)
-            self.branchBuffers['MET_pt_minmaxDown'][0]     = min(METptList)
-            self.branchBuffers['MET_phi_minmaxUp'][0]      = max(METphiList)
-            self.branchBuffers['MET_phi_minmaxDown'][0]    = min(METphiList)
+                self.branchBuffers['MET_pt_minmaxUp'][0]       = max(METptList)
+                self.branchBuffers['MET_pt_minmaxDown'][0]     = min(METptList)
+                self.branchBuffers['MET_phi_minmaxUp'][0]      = max(METphiList)
+                self.branchBuffers['MET_phi_minmaxDown'][0]    = min(METphiList)
 
         return True
 
