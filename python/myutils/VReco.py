@@ -105,7 +105,7 @@ class VReco(AddCollectionsModule):
 
                         MET = ROOT.TLorentzVector()
                         Lep = ROOT.TLorentzVector()
-                        if syst.lower()=='nominal':
+                        if syst.lower()=='nominal' or syst=='jerReg':
                             MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
                         else:
                             MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)

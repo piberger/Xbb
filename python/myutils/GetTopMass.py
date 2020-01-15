@@ -15,7 +15,7 @@ import sys
 
 class GetTopMass(object):
 
-    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass', addBoostSystematics=False):
+    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass', addBoostSystematics=False, addMinMax=False):
         self.nano = nano
         self.lastEntry = -1
         self.branchName = branchName
@@ -37,6 +37,7 @@ class GetTopMass(object):
         self.branchBuffers['closestHJidx'] = array.array('f', [0]) 
 
         self.addBoostSystematics = addBoostSystematics
+        self.addMinMax = addMinMax
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -59,12 +60,8 @@ class GetTopMass(object):
 
         self.dataset = self.config.get('General','dataset')
 
-        if self.dataset == '2016':
-           self.METpt = 'MET_Pt' 
-           self.METphi = 'MET_Phi' 
-        elif self.dataset == '2017':
-           self.METpt = 'MET_Pt' 
-           self.METphi = 'MET_Phi' 
+        self.METpt = 'MET_Pt' 
+        self.METphi = 'MET_Phi' 
 
 
         if self.sample.type != 'DATA':
@@ -79,7 +76,7 @@ class GetTopMass(object):
         # only defined for nano at the moment
 
         if self.propagateJES and self.nano:
-            self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal'] 
+            self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','unclustEn'] 
 
             if self.dataset == '2016':
                 self.jetSystematics.remove('jerReg')
@@ -89,8 +86,12 @@ class GetTopMass(object):
                 self.jetSystematics+= ['jmr']
 
 
-            if self.sample.type != 'DATA': systList = self.jetSystematics + ['minmax']
-            else: systList = ['minmax']
+            if self.sample.type != 'DATA':
+                systList = self.jetSystematics
+            else:
+                systList = []
+            if self.addMinMax:
+                systList += ['minmax']
             for syst in systList:
                 for Q in ['Up', 'Down']:
                     top_massSyst = "{p}_{s}_{q}".format(p=self.branchName, s=syst, q=Q)
@@ -126,8 +127,7 @@ class GetTopMass(object):
             self.hJidx1 = getattr(tree,self.tagidx)[1]
 
 
-            treeMETpt = getattr(tree,self.METpt) 
-            treeMETphi = getattr(tree,self.METphi) 
+            treeMETpt, treeMETphi = self.getMET(tree)
 
 
             lep = TLorentzVector()
@@ -202,6 +202,10 @@ class GetTopMass(object):
                         top_massSyst = "{p}_{s}_{q}".format(p=self.branchName, s=syst, q=Q)
                         variation = "{s}{q}".format(s=syst, q=Q)
 
+                        treeMETpt, treeMETphi = self.getMET(tree, variation=variation)
+                        met.SetPtEtaPhiM(treeMETpt, 0, treeMETphi, 0)
+
+
                         cJidx, cHJidx = self.clossestJetIdx(tree, lep, variation)
                         
                         closestIdx = cJidx if self.useHJets == 0 else cHJidx 
@@ -235,16 +239,17 @@ class GetTopMass(object):
                         else:
                             top_mass_min = min(top_mass_min,top_mass)
                             top_mass_max = max(top_mass_max,top_mass)
-
-                self.branchBuffers[self.branchName + '_minmax_Down'][0] = top_mass_min
-                self.branchBuffers[self.branchName + '_minmax_Up'][0] = top_mass_max
+                if self.addMinMax:
+                    self.branchBuffers[self.branchName + '_minmax_Down'][0] = top_mass_min
+                    self.branchBuffers[self.branchName + '_minmax_Up'][0] = top_mass_max
 
             elif self.propagateJES and self.nano and self.sample.type == 'DATA':
                 top_mass_min = top_mass
                 top_mass_max = top_mass
 #                print 'top_mass_min is', top_mass_min
-                self.branchBuffers[self.branchName + '_minmax_Down'][0] = top_mass_min
-                self.branchBuffers[self.branchName + '_minmax_Up'][0] = top_mass_max
+                if self.addMinMax:
+                    self.branchBuffers[self.branchName + '_minmax_Down'][0] = top_mass_min
+                    self.branchBuffers[self.branchName + '_minmax_Up'][0] = top_mass_max
 
 
             return True
@@ -447,15 +452,15 @@ class GetTopMass(object):
         JetPtNom = getattr(tree,self.brJetPtNom)[i] 
         JetMassNom = getattr(tree,self.brJetMassNom)[i] 
 
-        if not variation:
+        if variation is None or variation.startswith('unclustEn'):
            JetPt =  JetPtReg
            JetMass = JetMassNom * JetPtReg /JetPtNom
 
         elif 'jerReg' in variation:
            Q = "Up" if "Up" in variation else "Down"
            JetPtSys = getattr(tree,"Jet_PtReg" + Q)[i]
-   
-           JetPt =  JetPtSys 
+
+           JetPt =  JetPtSys
            JetMass = JetMassNom * JetPtSys / JetPtNom
 
         else:
@@ -468,6 +473,14 @@ class GetTopMass(object):
 #           print "JetPt {}, JetMass: {}".format(JetPt,JetMass)
         return JetPt, JetMass
 
+    def getMET(self, tree, variation=None):
+        if variation is not None and not variation.startswith('jerReg'):
+            treeMETpt = getattr(tree, "MET_pt_" + variation)
+            treeMETphi = getattr(tree, "MET_phi_" + variation)
+        else:
+            treeMETpt = getattr(tree,self.METpt)
+            treeMETphi = getattr(tree,self.METphi)
+        return treeMETpt, treeMETphi
 
     def clossestJetIdx(self, tree, lep, variation = None):
         #neutrino = self.getNu4Momentum(lep, met)
@@ -483,20 +496,22 @@ class GetTopMass(object):
 
            temPt , temMass = self.getJetPtMass(tree, i, variation) 
            tembTag = getattr(tree,self.Jet_btag)[i]
-           if temPt < 30 or tembTag < self.minbTag or not (tree.Jet_lepFilter): continue
+           #if temPt < 30 or tembTag < self.minbTag or not (tree.Jet_lepFilter): continue
 
-           tempJet = TLorentzVector()
-           tempJet.SetPtEtaPhiM(temPt,tree.Jet_eta[i],tree.Jet_phi[i], temMass)
-           dR = tempJet.DeltaR(lep)
-#           print "Jetidx: {}, dR = {}".format(i,dR)
+           if temPt >= 30 and tembTag >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > 4 and (tree.Jet_puId[i]>6 or tree.Jet_Pt[i]>50.0):
 
-           if dR < minDR:
-              minDR = dR
-              ClosestJIdx = i
+               tempJet = TLorentzVector()
+               tempJet.SetPtEtaPhiM(temPt,tree.Jet_eta[i],tree.Jet_phi[i], temMass)
+               dR = tempJet.DeltaR(lep)
+    #           print "Jetidx: {}, dR = {}".format(i,dR)
 
-           if (i == self.hJidx0 or i == self.hJidx1) and dR < minHDR:
-              minHDR = dR
-              ClosestHJIdx = i
+               if dR < minDR:
+                  minDR = dR
+                  ClosestJIdx = i
+
+               if (i == self.hJidx0 or i == self.hJidx1) and dR < minHDR:
+                  minHDR = dR
+                  ClosestHJIdx = i
 
 #        print "hJidx0 = {}, hJidx1 = {}".format(self.hJidx0,self.hJidx1)
         return ClosestJIdx, ClosestHJIdx
