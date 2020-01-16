@@ -1,0 +1,4 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11_v3/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/-v1/190523_195606/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11_v3/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/-v1/190523_195606/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11_v3/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/-v1/190523_195606/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11_v3/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8/-v1/190523_195606/0000/tree_4.root
