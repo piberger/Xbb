@@ -283,7 +283,7 @@ class TreeCache:
             self.fileLocator.makedirs(self.outputFolder)
 
     # move files from temporary to final location
-    def moveFilesToFinalLocation(self):
+    def moveFilesToFinalLocation(self, raiseOnFailure=True):
         success = True
         # free some memory for file copy command
         if self.debug:
@@ -299,10 +299,15 @@ class TreeCache:
                 self.deleteFile(outputFileName)
             copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
             if not copySuccessful:
-                success = False
-                print('\x1b[31mERROR: copy failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
+                print("WARNING: first copy attempt failed! retry once!")
+                copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
+                if not copySuccessful:
+                    success = False
+                    print('\x1b[31mERROR: copy failed for {tmpfile}->{outputfile} !\x1b[0m'.format(tmpfile=tmpFileName,
                                                                                                 outputfile=outputFileName))
-            else:
+                    if raiseOnFailure:
+                        raise Exception("CopyToFinalDestinationFailed")
+            if success:
                 # delete temporary file if copy was successful
                 self.deleteFile(tmpFileName)
         return success
