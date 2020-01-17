@@ -12,6 +12,7 @@ from math import acos
 from math import cos
 from math import sin
 import sys
+import numpy as np
 
 class GetTopMass(object):
 
@@ -444,6 +445,31 @@ class GetTopMass(object):
         top = lep + met + bjet
         return top.M()
 
+    def getJetPtMasses(self, tree, variation=None):
+
+        JetPtReg = np.array(getattr(tree, self.brJetPtReg))
+        JetPtNom = np.array(getattr(tree,self.brJetPtNom))
+        JetMassNom = np.array(getattr(tree,self.brJetMassNom))
+
+        if variation is None or variation.startswith('unclustEn'):
+           JetPt =  JetPtReg
+           JetMass = JetMassNom * JetPtReg /JetPtNom
+
+        elif 'jerReg' in variation:
+           Q = "Up" if "Up" in variation else "Down"
+           JetPtSys = np.array(getattr(tree,"Jet_PtReg" + Q))
+
+           JetPt =  JetPtSys
+           JetMass = JetMassNom * JetPtSys / JetPtNom
+
+        else:
+           JetPtSys = np.array(getattr(tree,"Jet_pt" + "_" + variation))
+           JetMassSys = np.array(getattr(tree, "Jet_mass" + "_" + variation))
+
+           JetPt =  JetPtSys * JetPtReg / JetPtNom
+           JetMass = JetMassSys * JetPtReg / JetPtNom
+
+        return JetPt, JetMass
 
 
     def getJetPtMass(self, tree, i, variation=None):
@@ -492,16 +518,17 @@ class GetTopMass(object):
         ClosestJIdx = -1
         ClosestHJIdx = -1
 
+        jetPts, jetMasses = self.getJetPtMasses(tree, variation)
+        jetBtags = getattr(tree,self.Jet_btag)
+
         for i in range(tree.nJet):
 
-           temPt , temMass = self.getJetPtMass(tree, i, variation) 
-           tembTag = getattr(tree,self.Jet_btag)[i]
            #if temPt < 30 or tembTag < self.minbTag or not (tree.Jet_lepFilter): continue
 
-           if temPt >= 30 and tembTag >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > 4 and (tree.Jet_puId[i]>6 or tree.Jet_Pt[i]>50.0):
+           if jetPts[i] >= 30 and jetBtags[i] >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > 4 and (tree.Jet_puId[i]>6 or jetPts[i] >50.0):
 
                tempJet = TLorentzVector()
-               tempJet.SetPtEtaPhiM(temPt,tree.Jet_eta[i],tree.Jet_phi[i], temMass)
+               tempJet.SetPtEtaPhiM(jetPts[i],tree.Jet_eta[i],tree.Jet_phi[i], jetMasses[i])
                dR = tempJet.DeltaR(lep)
     #           print "Jetidx: {}, dR = {}".format(i,dR)
 

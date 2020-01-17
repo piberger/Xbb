@@ -157,7 +157,12 @@ class VReco(AddCollectionsModule):
                                 HTsum30 += jetPt[i]
                                 if tree.Jet_puId[i]>6 or jetPt[i]>50.0:
                                     HTsum30puid += jetPt[i]
+                        
+                        if syst.lower() == 'nominal':
+                            metPt = tree.MET_Pt
+                        else:
+                            metPt = getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD))
 
-                        self._b(self._v("MET_sig30", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30)) if HTsum30 > 0 else -1.0 
-                        self._b(self._v("MET_sig30puid", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30puid)) if HTsum30puid > 0 else -1.0
+                        self._b(self._v("MET_sig30", syst, UD))[0] = (metPt / np.sqrt(HTsum30)) if HTsum30 > 0 else -1.0 
+                        self._b(self._v("MET_sig30puid", syst, UD))[0] = (metPt / np.sqrt(HTsum30puid)) if HTsum30puid > 0 else -1.0
 
