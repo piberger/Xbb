@@ -356,6 +356,8 @@ class GetTopMass(object):
         nNuSol = 2;
 
         pznu = pz1;
+        if abs(pz2)<abs(pz1):
+            pznu = pz2
 
         Enu = sqrt(MisET2 + pznu*pznu);
 
@@ -378,7 +380,7 @@ class GetTopMass(object):
 
         solutions = self.EquationSolve(EquationA,EquationB,EquationC,EquationD)
 
-        solutions2 = self.EquationSolve(EquationA,EquationB,EquationC,EquationD);
+        solutions2 = self.EquationSolve(EquationA,-EquationB,EquationC,-EquationD);
 
         deltaMin = 14000*14000
         zeroValue = -mW*mW/(4*pxlep)
