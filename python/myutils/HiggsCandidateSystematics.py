@@ -115,7 +115,16 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.addBranch('hJets_1_pt_noFSR')
         self.addBranch('hJets_0_pt_FSRrecovered')
         self.addBranch('hJets_1_pt_FSRrecovered')
+        self.addBranch('hJets_FSRrecovered_dEta')
+        self.addBranch('hJets_FSRrecovered_dPhi')
         self.addIntegerBranch('nFSRrecovered')
+
+        for syst in self.jetSystematics:
+            for Q in ['Up', 'Down']:
+                self.addBranch('hJets_0_pt_FSRrecovered_{s}_{q}'.format(s=syst, q=Q))
+                self.addBranch('hJets_1_pt_FSRrecovered_{s}_{q}'.format(s=syst, q=Q))
+                self.addBranch('hJets_FSRrecovered_dEta_{s}_{q}'.format(s=syst, q=Q))
+                self.addBranch('hJets_FSRrecovered_dPhi_{s}_{q}'.format(s=syst, q=Q))
 
         if self.addMinMax:
             for p in ['Jet_pt_minmax', 'Jet_mass_minmax']:
@@ -225,6 +234,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
 
                 self.branchBuffers['hJets_0_pt_FSRrecovered'][0] = hJ0.Pt()
                 self.branchBuffers['hJets_1_pt_FSRrecovered'][0] = hJ1.Pt()
+                self.branchBuffers['hJets_FSRrecovered_dEta'][0] = abs(hJ0.Eta()-hJ1.Eta())
+                self.branchBuffers['hJets_FSRrecovered_dPhi'][0] = abs(hJ0.DeltaPhi(hJ1))
                 self.branchBuffers['nFSRrecovered'][0] = len(fsrIndices0) + len(fsrIndices1)
 
             # systematics
@@ -357,18 +368,24 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                             self.branchBuffers[self.prefix + '_eta_noFSR_{s}_{d}'.format(s=syst, d=Q)][0]  = dijet_noFSR.Eta()
                             self.branchBuffers[self.prefix + '_phi_noFSR_{s}_{d}'.format(s=syst, d=Q)][0]  = dijet_noFSR.Phi()
                             self.branchBuffers[self.prefix + '_mass_noFSR_{s}_{d}'.format(s=syst, d=Q)][0] = dijet_noFSR.M()
+                            
+                            self.branchBuffers['hJets_0_pt_FSRrecovered_{s}_{d}'.format(s=syst, d=Q)][0] = hJ0.Pt()
+                            self.branchBuffers['hJets_1_pt_FSRrecovered_{s}_{d}'.format(s=syst, d=Q)][0] = hJ1.Pt()
+                            self.branchBuffers['hJets_FSRrecovered_dEta_{s}_{d}'.format(s=syst, d=Q)][0] = abs(hJ0.Eta()-hJ1.Eta())
+                            self.branchBuffers['hJets_FSRrecovered_dPhi_{s}_{d}'.format(s=syst, d=Q)][0] = abs(hJ0.DeltaPhi(hJ1))
 
-                            # add to the list for min/max
-                            valueList[self.prefix + '_pt'].append(dijet.Pt())
-                            valueList[self.prefix + '_eta'].append(dijet.Eta())
-                            valueList[self.prefix + '_phi'].append(dijet.Phi())
-                            valueList[self.prefix + '_mass'].append(dijet.M())
+                            if self.addMinMax:
+                                # add to the list for min/max
+                                valueList[self.prefix + '_pt'].append(dijet.Pt())
+                                valueList[self.prefix + '_eta'].append(dijet.Eta())
+                                valueList[self.prefix + '_phi'].append(dijet.Phi())
+                                valueList[self.prefix + '_mass'].append(dijet.M())
 
-                            ## add to the list for min/max
-                            valueList[self.prefix + '_pt_noFSR'].append(dijet.Pt())
-                            valueList[self.prefix + '_eta_noFSR'].append(dijet.Eta())
-                            valueList[self.prefix + '_phi_noFSR'].append(dijet.Phi())
-                            valueList[self.prefix + '_mass_noFSR'].append(dijet.M())
+                                ## add to the list for min/max
+                                valueList[self.prefix + '_pt_noFSR'].append(dijet.Pt())
+                                valueList[self.prefix + '_eta_noFSR'].append(dijet.Eta())
+                                valueList[self.prefix + '_phi_noFSR'].append(dijet.Phi())
+                                valueList[self.prefix + '_mass_noFSR'].append(dijet.M())
 
             if self.addMinMax:
                 # get minimum and maximum variation
