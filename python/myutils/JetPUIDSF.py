@@ -11,11 +11,12 @@ from sampleTree import SampleTree
 from sample_parser import ParseInfo
 import BetterConfigParser
 from XbbConfig import XbbConfigReader
+import root_numpy
 
 # adds the weight from General->weightF as a new branch
 class JetPUIDSF(AddCollectionsModule):
 
-    def __init__(self, branchName='weightJetPUID', year=2017, workingPoint="tight", ptCut=30.0, etaCut=2.5):
+    def __init__(self, branchName='weightJetPUID', year=2017, workingPoint="tight", ptCut=30.0, etaCut=2.5, fName_sf="data/jetPUID/2020_01_22/h2_eff_sf_2017_T.root", hName_sf="h2_eff_sf2017_T", fName_mcEff="data/jetPUID/2020_01_22/h2_eff_mc_2017_T.root", hName_mcEff="h2_eff_mc2017_T"):
         super(JetPUIDSF, self).__init__()
 
         self.ptCut = ptCut
@@ -27,83 +28,33 @@ class JetPUIDSF(AddCollectionsModule):
         self.addBranch(self.branchName)
         self.addBranch(self.branchName + '_Up')
         self.addBranch(self.branchName + '_Down')
-        
-        # reference: https://lathomas.web.cern.ch/lathomas/JetMETStuff/PUIDStudies/Oct2019/
-        # preliminary 2017 SF
-        self.ptBins  = [15,20,25,30,40,50,100000]
-        self.etaBins = [-3.0, -2.75, -2.5, -2.0, -1.5, 0, 1.5, 2.0, 2.5, 2.75, 3.0]
-        if year==2017 and workingPoint=="tight":
-            self.scalefactors = [
-                [1.0,0.78,0.85,0.85,0.79,0.86,1.0],
-                [1.0,0.94,0.91,0.88,0.81,0.85,1.0],
-                [1.0,0.99,0.98,0.96,0.95,0.95,1.0],
-                [1.0,0.82,0.90,0.93,0.90,0.93,1.0],
-                [1.0,0.85,0.91,0.94,0.91,0.95,1.0],
-                [1.0,0.87,0.91,0.94,0.94,0.97,1.0],
-                [1.0,0.88,0.92,0.95,0.94,0.97,1.0],
-                [1.0,0.84,0.89,0.92,0.90,0.94,1.0],
-                [1.0,0.84,0.88,0.91,0.88,0.92,1.0],
-                [1.0,0.97,0.97,0.93,0.91,0.92,1.0],
-                [1.0,1.01,0.90,0.86,0.79,0.82,1.0],
-                [1.0,0.88,0.85,0.89,0.83,0.87,1.0]
-            ]
-            self.mcEfficiencies = [
-                    [1.00,0.00,0.00,0.52,0.44,0.61,1.00],
-                    [1.00,0.59,0.59,0.68,0.68,0.79,1.00],
-                    [1.00,0.78,0.82,0.88,0.90,0.95,1.00],
-                    [1.00,0.55,0.66,0.75,0.70,0.79,1.00],
-                    [1.00,0.54,0.66,0.78,0.74,0.82,1.00],
-                    [1.00,0.60,0.75,0.84,0.82,0.98,1.00],
-                    [1.00,0.59,0.74,0.84,0.81,0.88,1.00],
-                    [1.00,0.54,0.67,0.77,0.73,0.82,1.00],
-                    [1.00,0.52,0.65,0.74,0.68,0.76,1.00],
-                    [1.00,0.81,0.80,0.86,0.88,0.92,1.00],
-                    [1.00,0.55,0.57,0.63,0.63,0.75,1.00],
-                    [1.00,0.00,0.00,0.51,0.44,0.61,1.00]
-                    ]
-        elif year==2017 and workingPoint=="medium":
-            self.scalefactors = [
-                [1.0, 0.84, 0.89, 0.91, 0.88, 0.92, 1.0],
-                [1.0, 0.99, 0.94, 0.91, 0.83, 0.88, 1.0],
-                [1.0, 1.01, 1.00, 0.97, 0.96, 0.97, 1.0],
-                [1.0, 0.89, 0.95, 0.96, 0.95, 0.96, 1.0],
-                [1.0, 0.91, 0.95, 0.97, 0.96, 0.98, 1.0],
-                [1.0, 0.91, 0.95, 0.97, 0.97, 0.98, 1.0],
-                [1.0, 0.92, 0.95, 0.97, 0.97, 0.98, 1.0],
-                [1.0, 0.89, 0.94, 0.95, 0.95, 0.97, 1.0],
-                [1.0, 0.91, 0.93, 0.96, 0.94, 0.96, 1.0],
-                [1.0, 0.97, 1.03, 0.96, 0.93, 0.95, 1.0],
-                [1.0, 1.03, 0.96, 0.89, 0.82, 0.87, 1.0],
-                [1.0, 0.91, 0.91, 0.94, 0.89, 0.93, 1.0]
-                ]
-            self.mcEfficiencies = [
-                    [1.00,0.45,0.57,0.70,0.62,0.78,1.00],
-                    [1.00,0.70,0.70,0.77,0.78,0.88,1.00],
-                    [1.00,0.86,0.88,0.93,0.93,0.97,1.00],
-                    [1.00,0.75,0.81,0.87,0.85,0.89,1.00],
-                    [1.00,0.74,0.82,0.88,0.87,0.91,1.00],
-                    [1.00,0.78,0.87,0.92,0.92,0.95,1.00],
-                    [1.00,0.77,0.86,0.92,0.92,0.95,1.00],
-                    [1.00,0.74,0.82,0.89,0.87,0.91,1.00],
-                    [1.00,0.71,0.81,0.86,0.84,0.88,1.00],
-                    [1.00,0.90,0.84,0.91,0.92,0.95,1.00],
-                    [1.00,0.68,0.67,0.74,0.74,0.84,1.00],
-                    [1.00,0.42,0.56,0.68,0.62,0.77,1.00]
-                    ]
-        else:
-            raise Exception("JetPUID:Year/WP combination not found.")
+
+        self.scalefactors, self.ptBins, self.etaBins = self.loadHistogram(fName_sf, hName_sf)
+        self.mcEfficiencies, self.ptBins, self.etaBins = self.loadHistogram(fName_mcEff, hName_mcEff)
+
+    def loadHistogram(self, fName, hName):
+        if not os.path.exists(fName):
+            raise Exception("JetPUID correction file not found.")
+        rootfile = ROOT.TFile.Open(fName)
+        histo = rootfile.Get(hName)
+        arr, bins = root_numpy.hist2array(histo, return_edges=True)
+        ptBins = bins[0].tolist() + [100000]
+        etaBins = bins[1].tolist()[1:-1]
+        return arr, ptBins, etaBins
 
     def getJetPUIDSF(self, pt, eta):
         eta = min(max(eta,-5.0),5.0)
-        ptBin  = bisect(self.ptBins, pt)
-        etaBin = bisect(self.etaBins, eta)
-        return self.scalefactors[etaBin][ptBin]
+        if pt<self.ptBins[0] or pt>self.ptBins[-2]: return 1.0
+        ptBin  = bisect(self.ptBins, pt) - 1
+        etaBin = bisect(self.etaBins, eta) 
+        return self.scalefactors[ptBin, etaBin]
     
     def getJetPUIDEfficiency(self, pt, eta):
         eta = min(max(eta,-5.0),5.0)
-        ptBin  = bisect(self.ptBins, pt)
+        if pt<self.ptBins[0] or pt>self.ptBins[-2]: return 1.0
+        ptBin  = bisect(self.ptBins, pt) - 1
         etaBin = bisect(self.etaBins, eta)
-        return self.mcEfficiencies[etaBin][ptBin]
+        return self.mcEfficiencies[ptBin, etaBin]
 
     # reference: https://indico.cern.ch/event/860457/contributions/3623772/attachments/1939432/3215160/puid5nov2019.pdf
     def getEventSF(self, tree, var=0.0):
@@ -117,7 +68,7 @@ class JetPUIDSF(AddCollectionsModule):
                 else:
                     # epsilon is eff(MC)
                     epsilon = self.getJetPUIDEfficiency(tree.Jet_Pt[i], tree.Jet_eta[i])
-                    eventSF *= ((1.0 - sf * epsilon) / (1.0 - epsilon)) if epsilon < 1.00 else 1.0 
+                    eventSF *= ((1.0 - sf * epsilon) / (1.0 - epsilon)) if epsilon < 1.00 else 1.0
         return eventSF
 
     def processEvent(self, tree):
