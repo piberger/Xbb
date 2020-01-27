@@ -80,10 +80,15 @@ class tensorflowEvaluator(AddCollectionsModule):
             try:
                 self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
             except Exception as e:
-                self.nClasses = 1
+                self.nClasses = len(self.info["labels"].keys())
+        if self.nClasses < 3:
+            self.nClasses = 1
+        if self.nClasses > 1:
+            print("INFO: multi-class checkpoint found! number of classes =", self.nClasses)
+        else:
+            print("INFO: binary-classifier found!")
 
         # FEATURES
-
         self.featuresConfig = None
         self.featuresCheckpoint = None
         try:
