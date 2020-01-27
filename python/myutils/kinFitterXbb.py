@@ -58,7 +58,7 @@ def fit_lepton(v, ptErr):
 # https://github.com/capalmer85/AnalysisTools/blob/master/python/kinfitter.py
 class kinFitterXbb(AddCollectionsModule):
 
-    def __init__(self, year, branchName="kinFit", useMZconstraint=True):
+    def __init__(self, year, branchName="kinFit", useMZconstraint=True, recoilPtThreshold=20.0):
         self.branchName = branchName
         self.useMZconstraint = useMZconstraint
         self.debug = False
@@ -68,6 +68,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.LLVV_PXY_VAR = 8.0**2 
         self.Z_MASS = 91.0
         self.Z_WIDTH = 1.7*3
+        self.recoilPtThreshold = recoilPtThreshold
         self.systematics = None
         super(kinFitterXbb, self).__init__()
         
@@ -235,7 +236,7 @@ class kinFitterXbb(AddCollectionsModule):
                 # recoil jets
                 recoil_jets = []
                 for i in range(tree.nJet):
-                    if i not in hJidx and i not in fsrJidx and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and tree.Jet_lepFilter[i] > 0 and pt[i] > 20:
+                    if i not in hJidx and i not in fsrJidx and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and tree.Jet_lepFilter[i] > 0 and pt[i] > self.recoilPtThreshold:
                         recoil_jets.append(fourvector(pt[i], eta[i], phi[i], mass[i]))
                 recoil_sum = sum(recoil_jets, ROOT.TLorentzVector())
 
