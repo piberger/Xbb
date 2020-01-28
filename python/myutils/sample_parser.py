@@ -37,7 +37,7 @@ class ParseInfo:
         for sample in configSamples:
             sampleName = config.get(sample, 'sampleName')
             sampleType = config.get(sample,'sampleType')
-            cut = config.get(sample, 'cut')
+            cut = config.get(sample, 'cut') if config.has_option(sample, 'cut') else '1'
 
             specialweight = config.get(sample, 'specialweight') if config.has_option(sample, 'specialweight') else "1"
             fullname = config.get(sample, 'sampleName')

@@ -20,16 +20,24 @@ from tfVHbbDNN.tfDNNevaluator import TensorflowDNNEvaluator
 # needs: tensorflow >=1.4
 class tensorflowEvaluator(AddCollectionsModule):
 
-    def __init__(self, mvaName, nano=False):
+    def __init__(self, mvaName, nano=False, condition=None, defaultForNegativeJetIndices=True):
         self.mvaName = mvaName
         self.nano = nano
         self.debug = False
+        self.condition = condition
+        # this avoids evaluating negative jet indices
+        self.defaultForNegativeJetIndices = defaultForNegativeJetIndices
         super(tensorflowEvaluator, self).__init__()
 
     def customInit(self, initVars):
         self.config = initVars['config']
         self.sampleTree = initVars['sampleTree']
         self.sample = initVars['sample']
+
+        if self.condition:
+            self.sampleTree.addFormula(self.condition)
+
+        self.hJidx = self.config.get('General', 'hJidx') if self.config.has_option('General', 'hJidx') else 'hJidx'
 
         self.scalerDump = self.config.get(self.mvaName, 'scalerDump') if self.config.has_option(self.mvaName, 'scalerDump') else None
         self.checkpoint = self.config.get(self.mvaName, 'checkpoint') if self.config.has_option(self.mvaName, 'checkpoint') else None
@@ -72,10 +80,15 @@ class tensorflowEvaluator(AddCollectionsModule):
             try:
                 self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
             except Exception as e:
-                self.nClasses = 1
+                self.nClasses = len(self.info["labels"].keys())
+        if self.nClasses < 3:
+            self.nClasses = 1
+        if self.nClasses > 1:
+            print("INFO: multi-class checkpoint found! number of classes =", self.nClasses)
+        else:
+            print("INFO: binary-classifier found!")
 
         # FEATURES
-
         self.featuresConfig = None
         self.featuresCheckpoint = None
         try:
@@ -134,7 +147,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         print("INFO: number of classes:", self.nClasses if self.nClasses > 1 else 2)
 
         # systematics
-        self.systematics = self.config.get('systematics', 'systematics').split(' ')
+        self.systematics = self.config.get(self.mvaName, 'systematics').split(' ') if self.config.has_option(self.mvaName, 'systematics') else self.config.get('systematics', 'systematics').split(' ')
 
         # create output branches
         self.dnnCollections = []
@@ -156,7 +169,10 @@ class tensorflowEvaluator(AddCollectionsModule):
                 UD = syst.split('_')[-1]
             self.inputVariables[syst] = [self.featureList.get(i, syst=systBase, UD=UD) for i in range(self.nFeatures)]
             for var in self.inputVariables[syst]:
-                self.sampleTree.addFormula(var)
+                if self.defaultForNegativeJetIndices:
+                    self.sampleTree.addFormula(var,var.replace("{hJidx}[0]".format(hJidx=self.hJidx),"(max({hJidx}[0],0))".format(hJidx=self.hJidx)).replace("{hJidx}[1]".format(hJidx=self.hJidx),"(max({hJidx}[1],0))".format(hJidx=self.hJidx)))
+                else:
+                    self.sampleTree.addFormula(var)
 
         # additional pre-computed values for multi-classifiers
         if self.nClasses > 1:
@@ -183,14 +199,17 @@ class tensorflowEvaluator(AddCollectionsModule):
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
 
-            # fill input variables
-            inputs = np.full((len(self.systematics), self.nFeatures), 0.0, dtype=np.float32)
-            for j, syst in enumerate(self.systematics):
-                for i, var in enumerate(self.inputVariables[syst]):
-                    inputs[j,i] = self.sampleTree.evaluate(var)
+            if self.condition is None or self.sampleTree.evaluate(self.condition):
+                # fill input variables
+                inputs = np.full((len(self.systematics), self.nFeatures), 0.0, dtype=np.float32)
+                for j, syst in enumerate(self.systematics):
+                    for i, var in enumerate(self.inputVariables[syst]):
+                        inputs[j,i] = self.sampleTree.evaluate(var)
 
-            # use TensorflowDNNEvaluator
-            probabilities = self.ev.eval(inputs)
+                # use TensorflowDNNEvaluator
+                probabilities = self.ev.eval(inputs)
+            else:
+                probabilities = np.full((len(self.systematics), self.nFeatures), -1.0, dtype=np.float32)
 
             # fill output branches
             if len(self.dnnCollections) == 1:

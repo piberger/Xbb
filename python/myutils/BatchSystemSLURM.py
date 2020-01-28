@@ -13,7 +13,7 @@ class BatchSystemSLURM(BatchSystem):
         super(BatchSystemSLURM, self).__init__(interactive=interactive, local=local, configFile=configFile)
         self.name = 'SLURM'
         self.config = config
-        self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} {extraOptions} {runscript}"
+        self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} --open-mode=append {extraOptions} {runscript}"
         self.cancelJobTemplate = "scancel {jobId}"
         self.submissionDelay = eval(self.config.get('SLURM', 'submissionDelay')) if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'submissionDelay') else 0.2
 

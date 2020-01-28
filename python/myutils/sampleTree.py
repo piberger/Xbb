@@ -603,7 +603,7 @@ class SampleTree(object):
     def next(self):
         self.treeIterator.next()
         self.eventsRead += 1
-        if self.debug and self.eventsRead % 1000 == 0:
+        if self.debug and (self.eventsRead % 1000 == 0 or self.eventsRead == 10 or self.eventsRead == 100):
             throughput = 1.0*self.eventsRead / (1.0*(time.time() - self.timeStart) + 0.001)
             print('DEBUG: %d events read, %1.2f /s'%(self.eventsRead, throughput))
         treeNum = self.tree.GetTreeNumber()

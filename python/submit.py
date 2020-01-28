@@ -79,6 +79,7 @@ parser.add_option("-w", "--wait-for", dest="waitFor", default=None, help="wait f
 parser.add_option("--unfinished", dest="unfinished", action="store_true", default=False, help="show only unfinished jobs")
 parser.add_option("--verify", dest="verify", action="store_true", default=False, help="verify integrity of root files (header bits, no zombie etc)")
 parser.add_option("--files", dest="files", default=None)
+parser.add_option("--dependencies", "--depends", "--depends-on", dest="depends", default=None)
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -855,6 +856,11 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
                         'outputDir': outputDir,
                     },
                     'batch': opts.task + '_' + sampleIdentifier,
+                    # allow other jobs to depend on this
+                    'chainable': True,
+                    'chain_sample': sampleIdentifier,
+                    'chain_part': chunkNumber,
+                    'chain_parts': len(splitFilesChunks),
                     })
                 if opts.force:
                     jobDict['arguments']['force'] = ''
@@ -862,6 +868,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
                     jobDict['arguments']['friend'] = ''
                 if opts.join:
                     jobDict['arguments']['join'] = ''
+
                 filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
                 jobName = '{task}_{sample}_part{part}{files}'.format(task=opts.task, sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
                 submit(jobName, jobDict)
@@ -1838,6 +1845,11 @@ if opts.task.startswith('submissions'):
         print "  ", statusDict[n], "  ", statusNamesDict[n]
     print "*"*printWidth
 
+    try:
+        os.makedirs('submissions')
+    except:
+        pass
+
     if opts.input:
         # --input file.json
         submissionLogs = [opts.input]
@@ -1862,6 +1874,7 @@ if opts.task.startswith('submissions'):
     nCancelFailed = 0
 
     hostFailures = {}
+    failedJobs = []
 
     for submissionLog in reversed(submissionLogs):
         nResubmittedPerFile = 0
@@ -1912,6 +1925,9 @@ if opts.task.startswith('submissions'):
                 except:
                     pass
 
+                if status in failureCodes:
+                    failedJobs.append(job)
+
                 if 'host' in job and status in failureCodes:
                     if job['host'] not in hostFailures:
                         hostFailures[job['host']] = 1
@@ -1945,7 +1961,12 @@ if opts.task.startswith('submissions'):
         if nResubmittedPerFile > 0:
             with open(submissionLog, 'w') as outfile:
                 json.dump(lastSubmission, outfile)
-    
+
+    # print logfiles of failed jobs
+    if len(failedJobs) > 0 and opts.verbose:
+        for job in failedJobs:
+            print job['id'], statusDict[job['status']] if job['status'] in statusDict else job['status'], job['log']
+
     if nCancelFailed > 0:
         print nCancelFailed, "jobs could not be cancelled"
 
@@ -1955,6 +1976,7 @@ if opts.task.startswith('submissions'):
     if nResubmitted > 0:
         print nResubmitted, "jobs resubmitted!"
 
+    # summary of WNs of failed jobs
     if len(hostFailures.keys()) > 0:
         print("worker nodes with failed jobs:")
         w = [[k,v] for k,v in hostFailures.items()]

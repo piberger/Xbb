@@ -22,10 +22,10 @@ class VReco(AddCollectionsModule):
         self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
         self.metSystematics = ['unclustEn']
 
-        if self.replaceNominal:
-            self.allVariations = ['Nominal']
-        else:
-            self.allVariations = []
+        #if self.replaceNominal:
+        self.allVariations = ['Nominal']
+        #else:
+        #    self.allVariations = []
        
         # jet and MET systematics for MC
         if not self.isData:
@@ -41,11 +41,13 @@ class VReco(AddCollectionsModule):
 
     def addVsystematics(self, syst):
         if syst.lower() == 'nominal':
+            # replace values from post-processor / selection
+            if self.replaceNominal:
+                self.addBranch("V_pt")
+                self.addBranch("V_eta")
+                self.addBranch("V_phi")
+                self.addBranch("V_mass")
             self.addBranch("V_mt")
-            self.addBranch("V_pt")
-            self.addBranch("V_eta")
-            self.addBranch("V_phi")
-            self.addBranch("V_mass")
             self.addBranch("MET_sig30")
             self.addBranch("MET_sig30puid")
         else:
@@ -105,7 +107,7 @@ class VReco(AddCollectionsModule):
 
                         MET = ROOT.TLorentzVector()
                         Lep = ROOT.TLorentzVector()
-                        if syst.lower()=='nominal':
+                        if syst.lower()=='nominal' or syst=='jerReg':
                             MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
                         else:
                             MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)
@@ -129,16 +131,18 @@ class VReco(AddCollectionsModule):
                         V = MET
                     else:
                         V = None
-                        self._b(self._v("V_pt", syst, UD))[0] = -1.0
-                        self._b(self._v("V_eta", syst, UD))[0] = -1.0
-                        self._b(self._v("V_phi", syst, UD))[0] = -1.0
-                        self._b(self._v("V_mass", syst, UD))[0] = -1.0
+                        if syst != 'Nominal' or self.replaceNominal:
+                            self._b(self._v("V_pt", syst, UD))[0] = -1.0
+                            self._b(self._v("V_eta", syst, UD))[0] = -1.0
+                            self._b(self._v("V_phi", syst, UD))[0] = -1.0
+                            self._b(self._v("V_mass", syst, UD))[0] = -1.0
 
                     if V is not None:
-                        self._b(self._v("V_pt", syst, UD))[0] = V.Pt()
-                        self._b(self._v("V_eta", syst, UD))[0] = V.Eta()
-                        self._b(self._v("V_phi", syst, UD))[0] = V.Phi()
-                        self._b(self._v("V_mass", syst, UD))[0] = V.M()
+                        if syst != 'Nominal' or self.replaceNominal:
+                            self._b(self._v("V_pt", syst, UD))[0] = V.Pt()
+                            self._b(self._v("V_eta", syst, UD))[0] = V.Eta()
+                            self._b(self._v("V_phi", syst, UD))[0] = V.Phi()
+                            self._b(self._v("V_mass", syst, UD))[0] = V.M()
 
                     # MET significance (approx.)
                     if syst != 'jerReg':
@@ -153,7 +157,12 @@ class VReco(AddCollectionsModule):
                                 HTsum30 += jetPt[i]
                                 if tree.Jet_puId[i]>6 or jetPt[i]>50.0:
                                     HTsum30puid += jetPt[i]
+                        
+                        if syst.lower() == 'nominal':
+                            metPt = tree.MET_Pt
+                        else:
+                            metPt = getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD))
 
-                        self._b(self._v("MET_sig30", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30)) if HTsum30 > 0 else -1.0 
-                        self._b(self._v("MET_sig30puid", syst, UD))[0] = (tree.MET_Pt / np.sqrt(HTsum30puid)) if HTsum30puid > 0 else -1.0
+                        self._b(self._v("MET_sig30", syst, UD))[0] = (metPt / np.sqrt(HTsum30)) if HTsum30 > 0 else -1.0 
+                        self._b(self._v("MET_sig30puid", syst, UD))[0] = (metPt / np.sqrt(HTsum30puid)) if HTsum30puid > 0 else -1.0
 

@@ -11,7 +11,7 @@ class TestBranchListMethods(unittest.TestCase):
         pass
 
     def test_configs(self):
-        configTags = ['Zll2017', 'Zvv2017', 'Wlv2017']
+        configTags = ['Zll2017', 'Zvv2017', 'Wlv2017', 'Zvv2016']
         for configTag in configTags:
             config = XbbConfigTools(config=XbbConfigReader.read('../' + configTag))
             xcc    = XbbConfigChecker(config)

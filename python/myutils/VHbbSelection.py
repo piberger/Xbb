@@ -75,7 +75,7 @@ class VHbbSelection(AddCollectionsModule):
         self.jetDefinitions = []
 
         # additional jet definitions for DeepJet
-        if self.year in ["2017", "2018"]:
+        if self.year in ["2016","2017", "2018"]:
             self.jetDefinitions = [
                     {'taggerName': 'Jet_btagDeepB'},
                     {'taggerName': 'Jet_btagDeepFlavB'},

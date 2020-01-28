@@ -15,7 +15,7 @@ class Jet:
         self.sf = sf
 
 # example how to included it in config for sys step:
-# BTagWeights = BTagWeightsNano2017.BTagWeights(calibName='DeepCSV',calibFile='DeepCSV_94XSF_V1_B_F.csv')
+# BTagWeights = BTagWeightsFromCSV.BTagWeights(calibName='DeepCSV',calibFile='DeepCSV_94XSF_V1_B_F.csv')
 
 class BTagWeights(AddCollectionsModule):
 
