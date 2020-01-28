@@ -147,7 +147,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         print("INFO: number of classes:", self.nClasses if self.nClasses > 1 else 2)
 
         # systematics
-        self.systematics = self.config.get('systematics', 'systematics').split(' ')
+        self.systematics = self.config.get(self.mvaName, 'systematics').split(' ') if self.config.has_option(self.mvaName, 'systematics') else self.config.get('systematics', 'systematics').split(' ')
 
         # create output branches
         self.dnnCollections = []
