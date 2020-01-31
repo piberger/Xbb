@@ -1148,6 +1148,7 @@ if opts.task.startswith('runplot'):
         plotVars = opts.vars.strip().split(',')
     else:
         plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+    plotVars = list(set(plotVars))
 
     # split list of variables to plot for multiple jobs
     if opts.parallel:
