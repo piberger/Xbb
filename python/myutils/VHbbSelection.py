@@ -8,23 +8,13 @@ import os
 # do jet/lepton selection and skimming
 class VHbbSelection(AddCollectionsModule):
 
-
-    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"],analysis="resolved", puIdCut=6, jetIdCut=4):
-
     # original 2017: puIdCut=0, jetIdCut=-1
-<<<<<<< ours
-        self.year = year
-        self.channels = channels
-        self.analysis = analysis
-        self.debugEvents = []
-=======
     # now:           puIdCut=6, jetIdCut=4
     def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[]):
         self.debug = debug or 'XBBDEBUG' in os.environ
         self.year = year
         self.channels = channels
         self.debugEvents = debugEvents
->>>>>>> theirs
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
         # only use puId below this pT:
@@ -63,13 +53,8 @@ class VHbbSelection(AddCollectionsModule):
         if self.isData:
             self.metFilters.append("Flag_eeBadScFilter")
 
-
-        if self.analysis == "resolved" and self.year == "2018": 
-            self.taggerName = "Jet_btagDeepB"
-        elif self.analysis == "boosted" and self.year == "2017":
-            self.taggerName = "FatJet_btagHbb"
-        elif self.analysis == "resolved" and self.year == "2017":
-            self.taggerName = "Jet_btagDeepB"
+        # main tagger (-> hJidx)
+        self.taggerName = "Jet_btagDeepB"
 
         # alternative jet selections to check (->hJidx_*)
         self.jetDefinitions = []
@@ -81,15 +66,14 @@ class VHbbSelection(AddCollectionsModule):
                     {'taggerName': 'Jet_btagDeepFlavB'},
                     ]
 
-
         self.btagWPs = {
-                        "2018": {
-                        'Jet_btagDeepB': {
+                       "2018": {
+                      'Jet_btagDeepB': {
                             'loose':  0.1241,
                             'medium': 0.4184,
                             'tight':  0.7527,
-                            'none': -1.0,
-                            },                                
+                            'none':   -1.0,
+                            },
                       'Jet_btagDeepFlavB': {
                             'loose':  0.0494, 
                             'medium': 0.2770,
@@ -110,10 +94,6 @@ class VHbbSelection(AddCollectionsModule):
                             'tight':  0.7489,
                             'none':   -1.0,
                             },
-                        'FatJet_btagHbb':{
-                            'loose': 0.3,
-                            'none': -2.0,
-                            },
                         },
                         "2016": {
                         'Jet_btagDeepB': {
@@ -130,16 +110,10 @@ class VHbbSelection(AddCollectionsModule):
                             },
                         },
                    }
-
-
+        # for main tagger, for others use self.btagWPs below
         self.btagWP = self.btagWPs[self.year][self.taggerName]
 
-<<<<<<< ours
-
-        if self.year == "2018": 
-=======
         if self.year == "2018":
->>>>>>> theirs
             self.HltPaths = {
                         'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
                         'Wln': ['HLT_Ele32_WPTight_Gsf','HLT_IsoMu24'],
@@ -168,8 +142,13 @@ class VHbbSelection(AddCollectionsModule):
                 'MET': 4,
                 }
 
+        if self.year=='2018':
+            if "Zll" in self.channels:
+                self.leptonFlav['EGamma']=1
+            elif "Wlv" in self.channels:
+                self.leptonFlav['EGamma']=3
+
         self.cutFlow = [0] * 16
-        #self.kk = 0
 
         # new branches to write
         self.addIntegerBranch("isZee")
@@ -228,68 +207,36 @@ class VHbbSelection(AddCollectionsModule):
         indices = []
         #print('----------------------event start')
         #print('len(tree.nJet)', tree.nJet)
-        if self.analysis == "resolved":
-            #print("resolved")
+        for i in range(tree.nJet):
+            #print('Jet No.', i)
+            #print('Jet_lepFilter', tree.Jet_lepFilter[i])
+            #print('Jet_puId', tree.Jet_puId[i])
+            #print('Jet_PtReg', tree.Jet_PtReg[i])
+            #print('Jet_eta', abs(tree.Jet_eta[i]))  
+            #print('------------------------')
+            if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
+                if len(indices) < 1:
+                    indices.append(i)
+                    #print('indices',indices)
+                else:
+                    if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[0]]:
+                        indices[0] = i
+        #print('indices[0] for event is', indices)
+        #print('-----------------event over')
+        if len(indices) > 0:
             for i in range(tree.nJet):
-                #print('Jet No.', i)
-                #print('Jet_lepFilter', tree.Jet_lepFilter[i])
-                #print('Jet_puId', tree.Jet_puId[i])
-                #print('Jet_PtReg', tree.Jet_PtReg[i])
-                #print('Jet_eta', abs(tree.Jet_eta[i]))  
-                #print('------------------------')
-                if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
-                    if len(indices) < 1:
-                        indices.append(i)
-                        #print('indices',indices)
-                    else:
-                        if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[0]]:
-                            indices[0] = i
-            #print('indices[0] for event is', indices)
-            #print('-----------------event over')
-            if len(indices) > 0:
-                for i in range(tree.nJet):
-                    if i == indices[0]:
-                        continue
-                    if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j2ptCut and abs(tree.Jet_eta[i]) < 2.5:
-                        if len(indices) < 2:
-                            indices.append(i)
-                        else:
-                            if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[1]]:
-                                indices[1] = i
-
-            if len(indices) > 1:
-                if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
-                    indices = [indices[1], indices[0]]
-
-        elif self.analysis == "boosted":
-            #print("boosted")
-            for i in range(tree.nFatJet):
-                #print('FatJet No.', i)
-                #print('FatJet_lepFilter', tree.FatJet_lepFilter[i])
-                if tree.FatJet_pt[i] > j1ptCut and abs(tree.FatJet_eta[i]) < 2.5 and tree.FatJet_lepFilter[i] and tree.FatJet_Msoftdrop[i] > 40 and tree.FatJet_jetId[i] > 0:
-                    #print('FatJet_pt', tree.FatJet_pt[i])
-                    #print('FatJet_eta', tree.FatJet_eta[i])
-                    #print('getattr(tree, taggerName)[i]', getattr(tree, taggerName)[i])
-                    if len(indices)<1:
+                if i == indices[0]:
+                    continue
+                if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j2ptCut and abs(tree.Jet_eta[i]) < 2.5:
+                    if len(indices) < 2:
                         indices.append(i)
                     else:
-                        if (getattr(tree, taggerName)[indices[0]] < getattr(tree, taggerName)[i]):
-                            indices[0] = i
+                        if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[1]]:
+                            indices[1] = i
 
-            if len(indices) > 0:
-                for i in range(tree.nJet):
-                    if i == indices[0]:
-                        continue
-                    if tree.FatJet_pt[i] > j1ptCut and abs(tree.FatJet_eta[i]) < 2.5 and tree.FatJet_lepFilter[i] and tree.FatJet_Msoftdrop[i] > 40 and tree.FatJet_jetId[i] > 0:
-                        if len(indices) < 2:
-                            indices.append(i)
-                        else:
-                            if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[1]]:
-                                indices[1] = i
-
-            if len(indices) > 1:
-                if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
-                    indices = [indices[1], indices[0]]
+        if len(indices) > 1:
+            if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
+                indices = [indices[1], indices[0]]
 
         return indices
 
@@ -328,18 +275,7 @@ class VHbbSelection(AddCollectionsModule):
 
             #print(triggerPassed, "triggerPassed")
             #print(self.channels, "self.channels")
-            
-            #if triggerPassed['Wln']:
-            #    print('Wln triggered')
-            
-            #print(self.kk) 
-            #if (self.kk<10):
-                #print('------------------------------------------------')
-                #if (self.kk==0):
-                    #print "\x1b[34m","event".ljust(24),"HLT_IsoMu24".ljust(24),"H_mass".ljust(24),"\x1b[0m"
-                #print getattr(tree, 'event'),''.ljust(24-len(str(abs(getattr(tree, 'event'))))),getattr(tree, 'HLT_IsoMu24'),''.ljust(24-len(str(abs(getattr(tree, 'HLT_IsoMu24'))))),getattr(tree, 'H_mass')
             #if not ((triggerPassed['0-lep'] and "Znn" in self.channels) or (triggerPassed['1-lep'] and "Wln" in self.channels) or (triggerPassed['2-lep'] and  "Zll" in self.channels)):
-            #self.kk +=1
 
             if debugEvent:
                 print "triggers:", triggerPassed
@@ -412,37 +348,25 @@ class VHbbSelection(AddCollectionsModule):
             self.cutFlow[3] += 1
 
             # JETS
-            if self.analysis == "resolved":
-                if self._b("isZnn")[0]:
-                    j1ptCut = 35.0
-                    j2ptCut = 35.0
-                    j1BtagName = 'loose'
-                    j1Btag = self.btagWP[j1BtagName]
-                elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
-                    j1ptCut = 25.0
-                    j2ptCut = 25.0
-                    j1BtagName = 'loose'
-                    j1Btag = self.btagWP[j1BtagName]
-                elif self._b("isZmm")[0] or self._b("isZee")[0]:
-                    j1ptCut = 20.0
-                    j2ptCut = 20.0
-                    j1BtagName = 'none'
-                    j1Btag = self.btagWP[j1BtagName]
-                else:
-                    return False
-            elif self.analysis == "boosted":        
-                if self._b("isWmunu")[0] or self._b("isWenu")[0]:
-                    j1ptCut = 250.0
-                    j2ptCut = 0.0
-                    j1Btag = self.btagWP['none']
-                else:
-                    return False
-             
-            j2BtagName = 'none'  
-            j2Btag = self.btagWP[j2BtagName] 
-            
-            #selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName)
-            #j2Btag = self.btagWP[j2BtagName]
+            if self._b("isZnn")[0]:
+                j1ptCut = 35.0
+                j2ptCut = 35.0
+                j1BtagName = 'loose'
+                j1Btag = self.btagWP[j1BtagName]
+            elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
+                j1ptCut = 25.0
+                j2ptCut = 25.0
+                j1BtagName = 'loose'
+                j1Btag = self.btagWP[j1BtagName]
+            elif self._b("isZmm")[0] or self._b("isZee")[0]:
+                j1ptCut = 20.0
+                j2ptCut = 20.0
+                j1BtagName = 'none'
+                j1Btag = self.btagWP[j1BtagName]
+            else:
+                return False
+            j2BtagName = 'none'
+            j2Btag = self.btagWP[j2BtagName]
 
             # alternative jet selections (-> hJidx_*)
             for jetDefinition in self.jetDefinitions:
@@ -491,37 +415,6 @@ class VHbbSelection(AddCollectionsModule):
                         print "DEBUG-EVENT: second btag < ", j2Btag, " -> discard"
                     #return False
                     defaultTaggerPassed = False
-<<<<<<< ours
-                elif self._b("isZnn")[0]:
-                    if max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]]) < 60.0:
-                        if debugEvent:
-                            print "DEBUG-EVENT: max bjet pt < 60 -> discard" 
-                        defaultTaggerPassed = False
-
-            elif len(selectedJets)==1 and self.analysis=="boosted":
-                #print("boosted")
-                self._b("hJidx")[0] = selectedJets[0]
-                if getattr(tree, self.taggerName)[selectedJets[0]] < j1Btag:
-                    print("event selected")
-                    if debugEvent:
-                        print "DEBUG-EVENT: highest btag < ", j1Btag, " -> discard"
-                    #return False
-                        self._b("hJidx")[0] = -1
-                        self._b("hJidx")[1] = -1 
-            else:
-                self._b("hJidx")[0] = -1
-                self._b("hJidx")[1] = -1 
-
-            # discard event if none of the jet selections finds two Higgs candidate jets
-            #if not (defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
-            #    return False
-            #print("event added")  
-            #print(tree.FatJet_Msoftdrop[selectedJets[0]])
-            boostedPass = False
-            
-           
-            self.cutFlow[4] += 1
-=======
                 elif self._b("isZnn")[0] and max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]]) < 60.0:
                     if debugEvent:
                         print "DEBUG-EVENT: max bjet pt < 60 -> discard"
@@ -535,7 +428,6 @@ class VHbbSelection(AddCollectionsModule):
             if not defaultTaggerPassed:
                 self._b("hJidx")[0] = -1
                 self._b("hJidx")[1] = -1
->>>>>>> theirs
 
             # VECTOR
             if self._b("isZee")[0] or self._b("isZmm")[0]:
