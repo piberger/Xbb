@@ -82,7 +82,11 @@ class XbbTools(object):
 
     @staticmethod
     def parseSamplesList(samplesListString):
-        return [x.strip() for x in samplesListString.strip().split(',') if len(x.strip()) > 0]
+        return XbbTools.parseList(samplesListString, separator=',')
+
+    @staticmethod
+    def parseList(listString, separator=' '):
+        return [x.strip() for x in listString.strip().split(separator) if len(x.strip()) > 0]
 
     @staticmethod
     def getSampleTreeFileNames(pathIN, folderName):
@@ -96,6 +100,35 @@ class XbbTools(object):
                 inputFiles.append(filename_.rstrip('\n'))
 
         return inputFiles
+
+    @staticmethod
+    def splitSystVariation(syst, sample=None):
+        if syst.lower() == 'nominal' or (sample is not None and sample.isData()):
+            systBase = None
+            UD = None
+        else:
+            systBase = '_'.join(syst.split('_')[:-1])
+            UD = syst.split('_')[-1]
+        return systBase, UD
+
+    @staticmethod
+    def sanitizeExpression(expression, config, debug=False):
+        if config.has_option('General', 'sanitizeExpression'):
+            rules = eval(config.get('General', 'sanitizeExpression'))
+            newExpression = expression
+            for rule in rules:
+                newExpression = newExpression.replace(rule[0], rule[1])
+            if debug and newExpression != expression:
+                print("DEBUG: sanitized expression:")
+                print("DEBUG: from:", expression)
+                print("DEBUG:   to:", newExpression)
+            return newExpression
+        else:
+            return expression
+
+    @staticmethod
+    def getMvaSystematics(mvaName, config):
+        return XbbTools.parseList(config.get(mvaName, 'systematics') if (config.has_section(mvaName) and config.has_option(mvaName, 'systematics')) else config.get('systematics', 'systematics'), separator=' ')
 
 class XbbMvaInputsList(object):
 
