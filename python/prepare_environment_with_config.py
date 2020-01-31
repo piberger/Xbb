@@ -32,8 +32,7 @@ fileList = FileList.decompress(opts.fileList) if len(opts.fileList)>0 else None
 
 pathOUT = config.get('Directories','PREPout')
 samplefiles = config.get('Directories','samplefiles')
-sampleconf = BetterConfigParser()
-sampleconf.read(samplesinfo)
+sampleconf = config
 
 whereToLaunch = config.get('Configuration','whereToLaunch')
 

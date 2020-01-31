@@ -40,3 +40,14 @@ class JsonTable(object):
         if self.debug:
             print "not found in table: eta:", eta, "pt:", pt, "->returning default =", default
         return default
+
+    
+    def findvalerr(self, table, eta, pt, default=[1.0,1.0,1.0]):
+        default = [1.0,1.0,1.0]
+        for sfBin in table:
+            if ((sfBin['eta_type'] == 'eta' and sfBin['eta_min'] <= eta and eta < sfBin['eta_max']) or (sfBin['eta_type'] == 'abseta' and sfBin['eta_min'] <= abs(eta) and abs(eta) < sfBin['eta_max'])) and sfBin['pt_min'] <= pt and pt < sfBin['pt_max']:
+                return [sfBin['value'],sfBin['value']-sfBin['error'],sfBin['value']+sfBin['error']]
+        if self.debug:
+            print "not found in table: eta:", eta, "pt:", pt, "->returning default =", default
+        return default
+
