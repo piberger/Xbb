@@ -8,7 +8,7 @@ from BranchTools import AddCollectionsModule
 
 class ElectronSFfromJSON(AddCollectionsModule):
     
-    def __init__(self, jsonFiles=None, branchName="electronSF",channel='None',year=2017):
+    def __init__(self, jsonFiles=None, branchName="electronSF",channel='None',year=None):
         super(ElectronSFfromJSON, self).__init__()
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
@@ -20,13 +20,13 @@ class ElectronSFfromJSON(AddCollectionsModule):
         self.trackerSfName = None
         if self.channel== 'Zll':
             #self.idIsoSfName = 'doubleEleIDISO2017'
-            self.idIsoSfName = 'IDs2017passingMVA94Xwp90iso'
+            self.idIsoSfName = 'IDs{year}passingMVA94Xwp90iso'.format(year=year)
             #self.triggerLegNames = ['doubleEleTriggerLeg1', 'doubleEleTriggerLeg2']
             self.triggerLegNames = ['Trig{year}passingDoubleEleLeg1'.format(year=year), 'Trig{year}passingDoubleEleLeg2'.format(year=year)]
             self.trackerSfName = 'ScaleFactor_tracker_80x'
         elif self.channel == 'Wlv':
             #self.idIsoSfName = 'singleEleIDISO2017'
-            self.idIsoSfName = 'IDs2017passingMVA94Xwp80iso'
+            self.idIsoSfName = 'IDs{year}passingMVA94Xwp80iso'.format(year=year)
             #self.triggerLegNames = ['singleEleTrigger']
             self.triggerLegNames = ['Trig{year}passingSingleEle'.format(year=year)]
             self.trackerSfName = 'ScaleFactor_tracker_80x'
