@@ -75,6 +75,9 @@ class SampleTreesToNumpyConverter(object):
         self.categories = None
         if self.config.has_option(mvaName, 'classDict'):
             self.sampleNames = eval(self.config.get(mvaName, 'classDict'))
+            #print('checking.........',eval(self.config.get(mvaName, 'classDict')))
+            #print('checking.........',self.config.get(mvaName, 'classDict'))
+            self.samples = {category: self.samplesInfo.get_samples(samples) for category,samples in self.sampleNames.iteritems()} 
             self.categories = self.samples.keys()
             print("classes dict:", self.sampleNames)
         elif self.config.has_option(mvaName, 'classes'):

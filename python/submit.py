@@ -719,7 +719,7 @@ if opts.task == 'hadd':
 if opts.task == 'count':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
-    pathIN = config.get("Directories", opts.input if opts.input else "SYSin")
+    pathIN = config.get("Directories", opts.input if opts.input else "HADDin")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samples_path=pathIN, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)

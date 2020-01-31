@@ -185,6 +185,9 @@ class NewStackMaker:
 
         self.plotTextMarginLeft = 0.16
 
+        if 'treeVar' not in self.histogramOptions: 
+            print ("ERROR: treeVar ", self.var)
+            raise Exception ("config error")
         if self.debug:
             print ("INFO: StackMaker initialized!", self.histogramOptions['treeVar'], " min=", self.histogramOptions['minX'], " max=", self.histogramOptions['maxX'], "nBins=", self.histogramOptions['nBins'] if 'nBins' in self.histogramOptions else '-')
 

@@ -142,6 +142,12 @@ class VHbbSelection(AddCollectionsModule):
                 'MET': 4,
                 }
 
+        if self.year=='2018':
+            if "Zll" in self.channels:
+                self.leptonFlav['EGamma']=1
+            elif "Wlv" in self.channels:
+                self.leptonFlav['EGamma']=3
+
         self.cutFlow = [0] * 16
 
         # new branches to write
