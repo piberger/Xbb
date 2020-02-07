@@ -85,13 +85,25 @@ class NewStackMaker:
                 }
         self.additionalTextLines = [""]
         if self.config.has_option('Plot_general', 'additionalText'):
-            self.additionalTextLines = eval(self.config.get('Plot_general', 'additionalText'))
-            if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
-                aText = eval(self.config.get(self.configSection, 'additionalText'))
+            aText =  eval(self.config.get('Plot_general', 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
+            aText = eval(self.config.get(self.configSection, 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.hasPlotVarSection:
+            if self.config.has_option(self.plotVarSection, 'additionalText'):
+                aText = eval(self.config.get(self.plotVarSection, 'additionalText'))
                 if type(aText) == list:
                     self.additionalTextLines += aText
                 else:
                     self.additionalTextLines.append(aText)
+
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
