@@ -395,7 +395,7 @@ class FileLocator(object):
             if dirListing is None:
                 print("\x1b[31mERROR: directory listing still failing.\x1b[0m")
 
-        fileList = [x for x in dirListing if fnmatch.fnmatch(x, path)]
+        fileList = fnmatch.filter(dirListing, path)
         return fileList
 
     def glob(self, path):
