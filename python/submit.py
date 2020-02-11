@@ -1365,7 +1365,7 @@ if opts.task.startswith('rundc'):
                 datacard = None
                 # check if shape files exist already and skip
                 if opts.skipExisting:
-                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator)
+                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator, systematics=[])
                     shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
                     # skip if all files exist or no shapes needed for this region/sample
                     if all(shapeFileExists) or len(shapeFileExists) == 0:
@@ -1375,10 +1375,10 @@ if opts.task.startswith('rundc'):
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
-                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator) if datacard is None else datacard
-                    chunkSize = datacard.getChunkSize(sampleIdentifier) 
-                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier)
+                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator, systematics=[]) if datacard is None else datacard
+                    chunkSize = datacard.getChunkSize(sampleIdentifier)
+                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier, checkExistence=opts.checkCached)
+                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier, checkExistence=opts.checkCached)
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
