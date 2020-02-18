@@ -25,6 +25,9 @@ class HeppyStyleGen(AddCollectionsModule):
 
             self.addCollection(Collection('GenBs',['pt','eta','phi','genPartIdx'], maxSize=10))
             self.addVectorBranch("GenJetAK8_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons[nGenJetAK8]/i")
+            self.addVectorBranch("GenJetAK8_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons2p4[nGenJetAK8]/i")
+            self.addVectorBranch("GenJet_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons[nGenJet]/i")
+            self.addVectorBranch("GenJet_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons2p4[nGenJet]/i")
     
     def processEvent(self, tree):
         if not self.hasBeenProcessed(tree):
@@ -123,15 +126,40 @@ class HeppyStyleGen(AddCollectionsModule):
                 self.collections['GenBs'].fromList(bHadrons)
 
                 #GenJetAK8_nBhadrons counting
+                bHadronsMatched = []
                 for i in range(tree.nGenJetAK8):
                     nB = 0
+                    nB2p4 = 0
                     for j in range(len(bHadrons)):
                         dPhi = ROOT.TVector2.Phi_mpi_pi(tree.GenJetAK8_phi[i]-bHadrons[j]['phi'])
                         dEta = tree.GenJetAK8_eta[i] - bHadrons[j]['eta']
                         dR = np.sqrt(dPhi*dPhi + dEta*dEta)
-                        if dR < 0.8:
+                        if dR < 0.8 and j not in bHadronsMatched:
                             nB += 1
+                            bHadronsMatched.append(j)
+                            if abs(bHadrons[j]['eta']) < 2.4:
+                                nB2p4 += 1
                     self._b("GenJetAK8_nBhadrons")[i] = nB
+                    self._b("GenJetAK8_nBhadrons2p4")[i] = nB2p4
+                
+                #GenJet_nBhadrons counting
+                bHadronsMatched = []
+                for i in range(tree.nGenJet):
+                    nB = 0
+                    nB2p4 = 0
+                    for j in range(len(bHadrons)):
+                        dPhi = ROOT.TVector2.Phi_mpi_pi(tree.GenJet_phi[i]-bHadrons[j]['phi'])
+                        dEta = tree.GenJet_eta[i] - bHadrons[j]['eta']
+                        dR = np.sqrt(dPhi*dPhi + dEta*dEta)
+                        if dR < 0.8 and j not in bHadronsMatched:
+                            nB += 1
+                            bHadronsMatched.append(j)
+                            if abs(bHadrons[j]['eta']) < 2.4:
+                                nB2p4 += 1
+                    self._b("GenJet_nBhadrons")[i] = nB
+                    self._b("GenJet_nBhadrons2p4")[i] = nB2p4
+
+
 
         return True
 
