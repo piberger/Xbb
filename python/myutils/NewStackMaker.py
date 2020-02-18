@@ -139,9 +139,10 @@ class NewStackMaker:
                     'nBins': ['nBins', 'nBinsX'],
                     'nBinsX': ['nBinsX', 'nBins'],
                     'nBinsY': ['nBinsY', 'nBins'],
+                    'fractions': 'fractions',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
-        evalOptions = ['binList', 'plotEqualSize']
+        evalOptions = ['binList', 'plotEqualSize','fractions']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -723,6 +724,18 @@ class NewStackMaker:
             allStack.SetStats(0)
             allStack.SetTitle('')
         ROOT.gPad.SetLogy(0)
+
+        if 'fractions' in self.histogramOptions and self.histogramOptions['fractions']:
+            histList = allStack.GetHists()    
+            for binNumber in range(self.histogramOptions['nBins']):
+                binTotal = sum([h.GetBinContent(1+binNumber) for h in histList])
+                if binTotal > 0:
+                    scale = 100.0/binTotal
+                    print("DEBUG: scale by", scale, " in bin ", binNumber)
+                    for h in histList:
+                        h.SetBinContent(1+binNumber,h.GetBinContent(1+binNumber) * scale)
+                        h.SetBinError(1+binNumber,h.GetBinError(1+binNumber) * scale)
+
         allStack.Draw(drawOption)
 
         # set axis titles
