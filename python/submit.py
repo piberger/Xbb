@@ -475,6 +475,63 @@ def getCachingChunkSize(sample, config):
         print "\x1b[31mINFO: chunk size overwritten with -N parameter!\x1b[0m"
     return chunkSize
 
+def printInputOutputInfo(inputPathName, outputPathName, config=None, opts=None):
+    print "#"*160
+    print "-"*160
+    if opts is not None:
+        print " TASK:   \x1b[33m{task}\x1b[0m".format(task=opts.task)
+    if inputPathName is not None:
+        if config is not None and config.has_option('Directories', inputPathName):
+            print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+            print " ------> \x1b[32m{input}\x1b[0m".format(input=config.get('Directories', inputPathName))
+        elif config is not None:
+            optionKeys = []
+            for k in config.options('Directories'): 
+                try:
+                    if config.has_option('Directories',k) and config.get('Directories',k).strip()==inputPathName.strip():
+                        optionKeys.append(k)
+                except:
+                    pass
+            if len(optionKeys) > 0:
+                print " INPUT:  \x1b[32m{input}\x1b[0m".format(input='/'.join(optionKeys))
+                print " ------> \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+            else:
+                print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+        else:
+            print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+
+    if outputPathName is not None:
+        if config is not None and config.has_option('Directories', outputPathName):
+            print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+            if config is not None and config.has_option('Directories', outputPathName):
+                print " ------> \x1b[35m{output}\x1b[0m".format(output=config.get('Directories', outputPathName))
+        elif config is not None:
+            optionKeys = []
+            for k in config.options('Directories'): 
+                try:
+                    if config.has_option('Directories',k) and config.get('Directories',k).strip()==outputPathName.strip():
+                        optionKeys.append(k)
+                except:
+                    pass
+            if len(optionKeys) > 0:
+                print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output='/'.join(optionKeys))
+                print " ------> \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+            else:
+                print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+        else:
+            print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+
+    if config is not None and config.has_option('General','trackedOptions'):
+        trackedOptions = eval(config.get('General','trackedOptions'))
+        print " OPTIONS:"
+        for sectionName,optionName in trackedOptions:
+            if config.has_option(sectionName,optionName):
+                print "  - {sectionName}.\x1b[34m{optionName}\x1b[0m = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName,value=config.get(sectionName,optionName))
+            elif optionName.endswith('(raw)') and config.has_option(sectionName,optionName[:-5]):
+                print "  - {sectionName}.\x1b[35m{optionName}\x1b[0m(raw) = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName[:-5],value=config.get(sectionName,optionName[:-5],True))
+    print "-"*160
+    print "#"*160
+
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 #                              process commands
@@ -952,7 +1009,9 @@ if opts.task.startswith('cachetraining'):
             print " >", sampleName
     
     # get samples info
-    info = ParseInfo(samples_path=config.get('Directories', 'MVAin'), config=config)
+    inputPath = config.get('Directories', 'MVAin')
+    tmpPath   = config.get('Directories', 'tmpSamples')
+    info = ParseInfo(samples_path=inputPath, config=config)
     samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -960,7 +1019,9 @@ if opts.task.startswith('cachetraining'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sorted(sampleIdentifiers):
         print " >", sampleIdentifier
-    
+  
+    printInputOutputInfo(inputPath, tmpPath, config=config, opts=opts)
+
     # per job parallelization parameter can split regions into several job
     if opts.parallel:
         regionChunkSize = int(opts.parallel)
@@ -974,7 +1035,7 @@ if opts.task.startswith('cachetraining'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier==sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single chunks for one sample
@@ -1006,6 +1067,9 @@ if opts.task.startswith('cachetraining'):
 # EXPORT HDF5: export training regions to HDF5 format for DNN training 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
+    
+    printInputOutputInfo(config.get('Directories', 'MVAin'), None, config=config, opts=opts)
+
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     if opts.regions:
         enabledTrainingRegions = opts.regions.strip().split(',')
@@ -1070,8 +1134,10 @@ if opts.task.startswith('cacheplot'):
     dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
     # get samples info
-    info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
+    inputPath = config.get('Directories', 'plottingSamples')
+    info = ParseInfo(samples_path=inputPath, config=config)
     samples = info.get_samples(sampleNames + dataSampleNames)
+    printInputOutputInfo(inputPath, None, config=config, opts=opts)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
@@ -1129,6 +1195,9 @@ if opts.task.startswith('cacheplot'):
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
+    
+    printInputOutputInfo(config.get('Directories', 'plottingSamples'), 'logpath', config=config, opts=opts)
+
     # if only a subset of samples is plotted
     if len(opts.samples.strip()) > 0:
         # get samples info
@@ -1276,6 +1345,8 @@ if opts.task.startswith('cachedc'):
     else:
         # default is all at once
         regionChunks = [regions]
+    
+    printInputOutputInfo(sampleFolder, config.get('Directories', 'tmpSamples'), config=config, opts=opts)
 
     # submit jobs, 1 to n separate jobs per sample
     for sampleIdentifier in sampleIdentifiers:
@@ -1354,6 +1425,8 @@ if opts.task.startswith('rundc'):
             raise Exception("NotCached")
 
     fileLocator = FileLocator(config=config, useDirectoryListingCache=True)
+    
+    printInputOutputInfo(config.get('Directories', 'dcSamples'), config.get('Directories', 'logpath') + '/Limits', config=config, opts=opts)
 
     # submit all the DC regions as separate jobs
     for region in regions:
@@ -1425,6 +1498,8 @@ if opts.task.startswith('rundc'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('mergedc'):
     regions = Datacard.getRegions(config=config)
+    
+    printInputOutputInfo(config.get('Directories', 'logpath') + '/Limits/*/*', config.get('Directories', 'logpath') + '/Limits', config=config, opts=opts)
 
     # submit all the DC regions as separate jobs
     for region in regions:
