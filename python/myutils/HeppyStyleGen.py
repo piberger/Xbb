@@ -9,8 +9,9 @@ import numpy as np
 class HeppyStyleGen(AddCollectionsModule):
 
     def __init__(self, debug=False):
-        self.debug = debug
         super(HeppyStyleGen, self).__init__()
+        self.debug = debug
+        self.version = 3
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']

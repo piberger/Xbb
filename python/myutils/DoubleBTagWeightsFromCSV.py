@@ -12,6 +12,7 @@ class DoubleBTagWeightsFromCSV(AddCollectionsModule):
 
     def __init__(self, year, branchName="bTagWeightDoubleB", fileName="data/btag/deepak8v2_bbvslight.csv"):
         super(DoubleBTagWeightsFromCSV, self).__init__()
+        self.version    = 2
         self.year       = year
         self.branchName = branchName
         self.fileName   = fileName

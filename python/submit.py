@@ -22,6 +22,7 @@ from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
 from myutils.BranchList import BranchList
+from myutils.XbbTools import XbbTools
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -80,6 +81,7 @@ parser.add_option("--unfinished", dest="unfinished", action="store_true", defaul
 parser.add_option("--verify", dest="verify", action="store_true", default=False, help="verify integrity of root files (header bits, no zombie etc)")
 parser.add_option("--files", dest="files", default=None)
 parser.add_option("--dependencies", "--depends", "--depends-on", dest="depends", default=None)
+parser.add_option("--no-version", dest="no_version", action="store_true", default=False, help="disables versioning")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -842,11 +844,57 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     info              = ParseInfo(samples_path=path, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
+    printInputOutputInfo(inputDir, outputDir, config=config, opts=opts)
+
     # check for empty list of collections to add
     addCollections = opts.addCollections
     if not addCollections or len(addCollections.strip())<1:
         print "\x1b[31mWARNING: No collections specified, using the default \x1b[32m'Sys.all'\x1b[31m instead, to force adding nothing, use \x1b[32m--addCollections None\x1b[31m!\x1b[0m"
         addCollections = 'Sys.all'
+
+    # module version table
+    print "INFO: module:version"
+    moduleVersionDict = {}
+    for collection in addCollections.split(','):
+        modulesInfo       = XbbTools.getModuleInfo(collection, config=config)
+        modulesInfoString = ", ".join(["\x1b[32m{m}\x1b[0m:\x1b[35m{v}\x1b[0m".format(m=moduleName,v=version) for moduleObject, moduleName, version in modulesInfo])
+        print " > {c} ---> {m}".format(c=collection.ljust(32),m=modulesInfoString)
+        for moduleObject, moduleName, version in modulesInfo:
+            if moduleName not in moduleVersionDict:
+                moduleVersionDict[moduleName] = -99
+            if version > moduleVersionDict[moduleName]:
+                moduleVersionDict[moduleName] = version
+
+    # module version bookkeeping
+    if not opts.no_version:
+        try:
+            moduleVersionFileName = "xbb_info.root"
+            moduleVersionTreeName = "moduleVersions"
+            inputModuleVersions = {}
+            # read version tree from input directory
+            infoFileName = path + "/" + moduleVersionFileName
+            if fileLocator.exists(infoFileName):
+                inputModuleVersions = XbbTools.readDictFromRootFile(infoFileName, moduleVersionTreeName, "name", "version")
+
+            # compare to what will be written
+            for moduleName, version in inputModuleVersions.items():
+                if moduleName not in moduleVersionDict:
+                    # this is unchanged and transfered to new dict
+                    moduleVersionDict[moduleName] = version
+                else:
+                    if moduleVersionDict[moduleName] > inputModuleVersions[moduleName]:
+                        print "\x1b[32mINFO: UPGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
+                    elif moduleVersionDict[moduleName] < inputModuleVersions[moduleName]:
+                        print "\x1b[31mWARNING: DOWNGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
+
+            # write version tree into output directory
+            infoFileName = pathOUT + "/" + moduleVersionFileName
+            XbbTools.writeDictToRootFile(infoFileName, moduleVersionTreeName, "module version numbers", "name", "version", moduleVersionDict, fileLocator)
+            if 'XBBDEBUG' in os.environ:
+                print "DEBUG: version info file created:", infoFileName
+            print "-"*160
+        except Exception as e:
+            print "ERROR: could not write version information:", e
 
     # for checksysnew step: dic contains missing number of files for each sample
     missingFiles = {}
@@ -1979,6 +2027,8 @@ if opts.task.startswith('submissions'):
                     status = 110
                 elif job['id'] in runningJobs:
                     status = 1
+                    if 'XBBDEBUG' in os.environ:
+                         print("LOGFILE:", job['log'])
                 elif job['id'] in pendingJobs:
                     status = 2
                 elif os.path.isfile(job['log']):
