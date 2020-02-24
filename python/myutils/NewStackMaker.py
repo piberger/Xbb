@@ -34,6 +34,7 @@ class NewStackMaker:
 
     def __init__(self, config, var, region, SignalRegion, setup=None, subcut='', title='CMS', configSectionPrefix='Plot'):
         self.debug = 'XBBDEBUG' in os.environ
+        self.garbage = []
         self.config = config
         self.saveShapes = True
         self.var = var
@@ -285,20 +286,44 @@ class NewStackMaker:
         self.canvas.SetBottomMargin(0.12)
 
         self.pads = {}
-        self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
-        self.pads['oben'].SetBottomMargin(0)
-        self.pads['oben'].SetFillStyle(4000)
-        self.pads['oben'].SetFrameFillStyle(1000)
-        self.pads['oben'].SetFrameFillColor(0)
-        self.pads['unten'] = ROOT.TPad('unten', 'unten', 0, 0.0, 1.0, 0.3)
-        self.pads['unten'].SetTopMargin(0.)
-        self.pads['unten'].SetBottomMargin(0.35)
-        self.pads['unten'].SetFillStyle(4000)
-        self.pads['unten'].SetFrameFillStyle(1000)
-        self.pads['unten'].SetFrameFillColor(0)
+        if 'fractions' in self.histogramOptions and self.histogramOptions['fractions']:
+            self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.4, 1.0, 1.0)
+            self.pads['oben'].SetBottomMargin(0)
+            self.pads['oben'].SetFillStyle(4000)
+            self.pads['oben'].SetFrameFillStyle(1000)
+            self.pads['oben'].SetFrameFillColor(0)
+            self.pads['fractions'] = ROOT.TPad('fractions', 'fractions', 0, 0.0, 1.0, 0.2)
+            self.pads['fractions'].SetTopMargin(0.)
+            self.pads['fractions'].SetBottomMargin(0.35)
+            self.pads['fractions'].SetFillStyle(4000)
+            self.pads['fractions'].SetFrameFillStyle(1000)
+            self.pads['fractions'].SetFrameFillColor(0)
+            self.pads['unten'] = ROOT.TPad('unten', 'unten', 0, 0.2, 1.0, 0.4)
+            self.pads['unten'].SetTopMargin(0.)
+            self.pads['unten'].SetBottomMargin(0.0)
+            self.pads['unten'].SetFillStyle(4000)
+            self.pads['unten'].SetFrameFillStyle(1000)
+            self.pads['unten'].SetFrameFillColor(0)
 
-        self.pads['oben'].Draw()
-        self.pads['unten'].Draw()
+            self.pads['oben'].Draw()
+            self.pads['fractions'].Draw()
+            self.pads['unten'].Draw()
+
+        else:
+            self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
+            self.pads['oben'].SetBottomMargin(0)
+            self.pads['oben'].SetFillStyle(4000)
+            self.pads['oben'].SetFrameFillStyle(1000)
+            self.pads['oben'].SetFrameFillColor(0)
+            self.pads['unten'] = ROOT.TPad('unten', 'unten', 0, 0.0, 1.0, 0.3)
+            self.pads['unten'].SetTopMargin(0.)
+            self.pads['unten'].SetBottomMargin(0.35)
+            self.pads['unten'].SetFillStyle(4000)
+            self.pads['unten'].SetFrameFillStyle(1000)
+            self.pads['unten'].SetFrameFillColor(0)
+
+            self.pads['oben'].Draw()
+            self.pads['unten'].Draw()
 
         self.pads['oben'].cd()
         return self.canvas
@@ -314,6 +339,23 @@ class NewStackMaker:
         self.canvas.SetFrameFillStyle(1000)
         self.canvas.SetFrameFillColor(0)
         self.pads = {}
+        if 'fractions' in self.histogramOptions and self.histogramOptions['fractions']:
+            self.pads['oben'] = ROOT.TPad('oben', 'oben', 0, 0.3, 1.0, 1.0)
+            self.pads['oben'].SetBottomMargin(0)
+            self.pads['oben'].SetFillStyle(4000)
+            self.pads['oben'].SetFrameFillStyle(1000)
+            self.pads['oben'].SetFrameFillColor(0)
+            self.pads['oben'].SetBottomMargin(0.0)
+            self.pads['fractions'] = ROOT.TPad('fractions', 'fractions', 0, 0.0, 1.0, 0.3)
+            self.pads['fractions'].SetTopMargin(0.)
+            self.pads['fractions'].SetBottomMargin(0.35)
+            self.pads['fractions'].SetFillStyle(4000)
+            self.pads['fractions'].SetFrameFillStyle(1000)
+            self.pads['fractions'].SetFrameFillColor(0)
+
+            self.pads['oben'].Draw()
+            self.pads['fractions'].Draw()
+
         if self.is2D:
             ROOT.gPad.SetTopMargin(0.05)
             ROOT.gPad.SetBottomMargin(0.13)
@@ -726,7 +768,9 @@ class NewStackMaker:
         ROOT.gPad.SetLogy(0)
 
         if 'fractions' in self.histogramOptions and self.histogramOptions['fractions']:
-            histList = allStack.GetHists()    
+            self.pads['fractions'].cd()
+            allStackCopy = allStack.Clone() 
+            histList = allStackCopy.GetHists()    
             for binNumber in range(self.histogramOptions['nBins']):
                 binTotal = sum([h.GetBinContent(1+binNumber) for h in histList])
                 if binTotal > 0:
@@ -735,8 +779,24 @@ class NewStackMaker:
                     for h in histList:
                         h.SetBinContent(1+binNumber,h.GetBinContent(1+binNumber) * scale)
                         h.SetBinError(1+binNumber,h.GetBinError(1+binNumber) * scale)
+            ROOT.gStyle.SetHistTopMargin(0.)
+            allStackCopy.SetMaximum(100.0)
+            allStackCopy.Draw(drawOption)
+            allStackCopy.GetYaxis().SetTitle("fraction [%]")
+            allStackCopy.GetXaxis().SetTitle(self.xAxis)
+            allStackCopy.GetXaxis().SetTitleSize(0.16)
+            allStackCopy.GetXaxis().SetLabelSize(0.16)
+            allStackCopy.GetYaxis().SetTitleSize(0.16)
+            allStackCopy.GetYaxis().SetTitleOffset(0.3)
+            allStackCopy.GetYaxis().SetLabelSize(0.16)
+            allStackCopy.SetMaximum(100.001)
+            self.garbage.append(allStackCopy)
+            self.garbage.append(histList)
+
+            self.pads['oben'].cd()
 
         allStack.Draw(drawOption)
+        self.garbage.append(allStack)
 
         # set axis titles
         if self.is2D:
@@ -780,6 +840,7 @@ class NewStackMaker:
             allStack.GetXaxis().SetLabelSize(0)
         else:
             allStack.GetXaxis().SetTitle(self.xAxis)
+
 
         if self.is2D:
             if 'minZ' in self.histogramOptions and 'maxZ' in self.histogramOptions:
@@ -1033,3 +1094,5 @@ class NewStackMaker:
                 groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
                 dataOutputFile.Write()
                 dataOutputFile.Close()
+        print("INFO: stack created.")
+
