@@ -92,10 +92,12 @@ class HeppyStyleGen(AddCollectionsModule):
                     # find last B
                     idx = product
                     foundB = False
-                    while not foundB and genParticles.genPartIdxMother[idx] > -1:
+                    while not foundB:
                         if ((((abs(genParticles.pdgId[idx]) // 100) % 10) == 5) or (((abs(genParticles.pdgId[idx]) // 1000) % 10) == 5)) and genParticles.status[idx] == 2:
                             foundB = True
                         else:
+                            if genParticles.genPartIdxMother[idx] < 0:
+                                break
                             idx = genParticles.genPartIdxMother[idx]
                     if foundB:
                         chain = [idx]
