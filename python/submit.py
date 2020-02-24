@@ -525,10 +525,13 @@ def printInputOutputInfo(inputPathName, outputPathName, config=None, opts=None):
         trackedOptions = eval(config.get('General','trackedOptions'))
         print " OPTIONS:"
         for sectionName,optionName in trackedOptions:
-            if config.has_option(sectionName,optionName):
-                print "  - {sectionName}.\x1b[34m{optionName}\x1b[0m = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName,value=config.get(sectionName,optionName))
-            elif optionName.endswith('(raw)') and config.has_option(sectionName,optionName[:-5]):
-                print "  - {sectionName}.\x1b[35m{optionName}\x1b[0m(raw) = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName[:-5],value=config.get(sectionName,optionName[:-5],True))
+            try:
+                if config.has_option(sectionName,optionName):
+                    print "  - {sectionName}.\x1b[34m{optionName}\x1b[0m = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName,value=config.get(sectionName,optionName))
+                elif optionName.endswith('(raw)') and config.has_option(sectionName,optionName[:-5]):
+                    print "  - {sectionName}.\x1b[35m{optionName}\x1b[0m(raw) = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName[:-5],value=config.get(sectionName,optionName[:-5],True))
+            except Exception as e:
+                print " > exception in tracked options:", e
     print "-"*160
     print "#"*160
 
