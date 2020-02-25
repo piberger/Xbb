@@ -115,7 +115,7 @@ class VHbbSelection(AddCollectionsModule):
 
         if self.year == "2018":
             self.HltPaths = {
-                        'Znn': ['HLT_PFMET120_PFMHT120_IDTight','HLT_PFMET120_PFMHT120_IDTight_PFHT60'],
+                        'Znn': ['HLT_PFMET120_PFMHT120_IDTight'],
                         'Wln': ['HLT_Ele32_WPTight_Gsf','HLT_IsoMu24'],
                         'Zll': ['HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8', 'HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL'],
                         }
