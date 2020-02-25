@@ -12,7 +12,6 @@ from Ratio import getRatio, renewHist
 from TdrStyles import tdrStyle
 from TreeCache import TreeCache
 from Rebinner import Rebinner
-from MvaEvaluator import MvaEvaluator
 from RegressionTrainer import RegressionTrainer
 from GlobalFunction import GlobalFunction
 from LeptonSF import LeptonSF

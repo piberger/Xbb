@@ -8,13 +8,13 @@ from BranchTools import AddCollectionsModule
 
 class LOtoNLOweight(AddCollectionsModule):
 
-    def __init__(self, branchName='weightLOtoNLO', year=2016):
+    def __init__(self, branchName='weightLOtoNLO', year=2016, addV3=False, addV4=False):
         super(LOtoNLOweight, self).__init__()
         self.branchName = branchName
         self.year = int(year)
 
-        self.addV3 = False
-        self.addV4 = False
+        self.addV3 = addV3
+        self.addV4 = addV4
             
         self.ZjetsToNuNuNLOweightNjet2017 = [
                 [0,0,1.228032,0.006932,-0.001342,0.000038],
@@ -123,11 +123,11 @@ class LOtoNLOweight(AddCollectionsModule):
         self.config = initVars['config']
         if not self.sample.isData():
             self.addBranch(self.branchName)
-            self.addBranch(self.branchName + '_LHEVptV2')
-            self.addBranch(self.branchName + '_LHEVptV2_p0_Up')
-            self.addBranch(self.branchName + '_LHEVptV2_p0_Down')
-            self.addBranch(self.branchName + '_LHEVptV2_p1_Up')
-            self.addBranch(self.branchName + '_LHEVptV2_p1_Down')
+            self.addBranch(self.branchName + '_LHEVptV2b')
+            self.addBranch(self.branchName + '_LHEVptV2b_p0_Up')
+            self.addBranch(self.branchName + '_LHEVptV2b_p0_Down')
+            self.addBranch(self.branchName + '_LHEVptV2b_p1_Up')
+            self.addBranch(self.branchName + '_LHEVptV2b_p1_Down')
 
             if self.addV3:
                 self.addBranch(self.branchName + '_LHEVptV3')
@@ -158,11 +158,11 @@ class LOtoNLOweight(AddCollectionsModule):
         if not self.sample.isData() and not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
             self._b(self.branchName)[0]                       = 1.0
-            self._b(self.branchName + '_LHEVptV2')[0]         = 1.0
-            self._b(self.branchName + '_LHEVptV2_p0_Up')[0]   = 1.0
-            self._b(self.branchName + '_LHEVptV2_p0_Down')[0] = 1.0
-            self._b(self.branchName + '_LHEVptV2_p1_Up')[0]   = 1.0
-            self._b(self.branchName + '_LHEVptV2_p1_Down')[0] = 1.0
+            self._b(self.branchName + '_LHEVptV2b')[0]         = 1.0
+            self._b(self.branchName + '_LHEVptV2b_p0_Up')[0]   = 1.0
+            self._b(self.branchName + '_LHEVptV2b_p0_Down')[0] = 1.0
+            self._b(self.branchName + '_LHEVptV2b_p1_Up')[0]   = 1.0
+            self._b(self.branchName + '_LHEVptV2b_p1_Down')[0] = 1.0
             self._b(self.branchName + '_2016')[0]             = 1.0
 
             if self.addV3:
@@ -194,11 +194,11 @@ class LOtoNLOweight(AddCollectionsModule):
                         self._b(self.branchName + '_2016')[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, njets) 
 
                         # vpt derived from 2017 ZJetsNuNu/WJetsLNu/DY
-                        self._b(self.branchName + '_LHEVptV2')[0]         = self.LOtoNLOWeightBjetSplitVpt2017V2(tree.LHE_Vpt, njets, self.sample.identifier)
-                        self._b(self.branchName + '_LHEVptV2_p0_Up')[0]   = self.LOtoNLOWeightBjetSplitVpt2017V2(tree.LHE_Vpt, njets, self.sample.identifier, var0=1.0)
-                        self._b(self.branchName + '_LHEVptV2_p0_Down')[0] = self.LOtoNLOWeightBjetSplitVpt2017V2(tree.LHE_Vpt, njets, self.sample.identifier, var0=-1.0)
-                        self._b(self.branchName + '_LHEVptV2_p1_Up')[0]   = self.LOtoNLOWeightBjetSplitVpt2017V2(tree.LHE_Vpt, njets, self.sample.identifier, var1=1.0)
-                        self._b(self.branchName + '_LHEVptV2_p1_Down')[0] = self.LOtoNLOWeightBjetSplitVpt2017V2(tree.LHE_Vpt, njets, self.sample.identifier, var1=-1.0)
+                        self._b(self.branchName + '_LHEVptV2b')[0]         = self.LOtoNLOWeightBjetSplitVpt2017V2b(tree.LHE_Vpt, njets, self.sample.identifier)
+                        self._b(self.branchName + '_LHEVptV2b_p0_Up')[0]   = self.LOtoNLOWeightBjetSplitVpt2017V2b(tree.LHE_Vpt, njets, self.sample.identifier, var0=1.0)
+                        self._b(self.branchName + '_LHEVptV2b_p0_Down')[0] = self.LOtoNLOWeightBjetSplitVpt2017V2b(tree.LHE_Vpt, njets, self.sample.identifier, var0=-1.0)
+                        self._b(self.branchName + '_LHEVptV2b_p1_Up')[0]   = self.LOtoNLOWeightBjetSplitVpt2017V2b(tree.LHE_Vpt, njets, self.sample.identifier, var1=1.0)
+                        self._b(self.branchName + '_LHEVptV2b_p1_Down')[0] = self.LOtoNLOWeightBjetSplitVpt2017V2b(tree.LHE_Vpt, njets, self.sample.identifier, var1=-1.0)
 
                         # LOtoNLOWeightBjetSplitVptNjet2017V3
                         if self.addV3:
@@ -337,6 +337,38 @@ class LOtoNLOweight(AddCollectionsModule):
                     SF = (1.231 + var0*0.006) - (1.168e-3 + var1*0.059e-3)*vpt 
                 else:
                     SF = (1.219 + var0*0.013) - (1.478e-3 + var1*0.105e-3)*vpt
+            if SF < 0:
+                SF = 0
+        return SF
+
+    # normalizations from NLO  (not rescaled to LOxk-factor)
+    # derived from NanoAOD without applying analysis selections
+    def LOtoNLOWeightBjetSplitVpt2017V2b(self, vpt, njets, sampleIdentifier, var0=0.0, var1=0.0):
+        SF = 1.0
+        vpt = max(min(vpt,500.0),50.0)
+        # exclude NLO samples itself
+        if 'amc' not in sampleIdentifier:
+            if any([x in sampleIdentifier for x in ['WJets', 'WBJets']]):
+                if njets < 1:
+                    SF = (1.374 + var0*1.457e-3) - (1.221e-3 + var1*4.986e-6)*vpt
+                elif njets == 1:
+                    SF = (1.202 + var0*7.968e-3) - (1.179e-3 + var1*3.067e-5)*vpt
+                else:
+                    SF = (1.000 + var0*1.406e-2) - (6.495e-4 + var1*5.384e-5)*vpt 
+            elif any([x in sampleIdentifier for x in ['ZJets', 'ZBJets']]):
+                if njets < 1:
+                    SF = (1.365 + var0*1.127e-3) - (1.425e-3 + var1*4.218e-6)*vpt
+                elif njets == 1:
+                    SF = (1.273 + var0*6.169e-3) - (1.401e-3 + var1*2.528e-5)*vpt 
+                else:
+                    SF = (1.150 + var0*9.340e-3) - (1.222e-3 + var1*3.775e-5)*vpt 
+            elif any([x in sampleIdentifier for x in ['DYJets', 'DYBJets']]):
+                if njets < 1:
+                    SF = (1.360 + var0*1.943e-3) - (1.400e-3 + var1*8.141e-6)*vpt
+                elif njets == 1:
+                    SF = (1.257 + var0*7.418e-3) - (1.371e-3 + var1*3.061e-5)*vpt 
+                else:
+                    SF = (1.177 + var0*1.195e-2) - (1.357e-3 + var1*4.697e-5)*vpt 
             if SF < 0:
                 SF = 0
         return SF

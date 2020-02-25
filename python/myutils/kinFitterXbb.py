@@ -124,7 +124,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.enabled = False
 
     def cart_cov(self, v, rho):
-        jme_res = self.jetResolution.eval(v.Eta(), rho, v.Pt())
+        jme_res = self.jetResolution.eval(v.Eta(), rho, v.Pt()) * v.Pt()
         cos_phi = np.cos(v.Phi())
         sin_phi = np.sin(v.Phi())
         cov = ROOT.TMatrixD(4, 4)
@@ -315,7 +315,7 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['V_phi_fit'])[0]         = fit_result_V.Phi()
                     self._b(self.bDict[syst]['V_mass_fit'])[0]        = fit_result_V.M()
 
-                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(fit_result_H.Phi() - fit_result_V.Phi())
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(ROOT.TVector2.Phi_mpi_pi(fit_result_H.Phi() - fit_result_V.Phi()))
                     self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = fit_result_H.Pt()/fit_result_V.Pt()
                     self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = fit_result_j1.Pt()
                     self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = fit_result_j2.Pt()
@@ -354,7 +354,7 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['V_eta_fit'])[0]         = tree.V_eta
                     self._b(self.bDict[syst]['V_phi_fit'])[0]         = tree.V_phi
                     self._b(self.bDict[syst]['V_mass_fit'])[0]        = tree.V_mass
-                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(tree.H_phi - tree.V_phi)
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(ROOT.TVector2.Phi_mpi_pi(tree.H_phi - tree.V_phi))
                     self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = tree.H_pt/tree.V_pt
                     self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = pt_reg[hJidx[0]] 
                     self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = pt_reg[hJidx[1]]

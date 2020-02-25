@@ -34,14 +34,24 @@ class CacheTraining(object):
             treeCutName = config.get(trainingRegion, 'treeCut') if config.has_option(trainingRegion, 'treeCut') else trainingRegion
             treeVarSet = config.get(trainingRegion, 'treeVarSet').strip()
             #systematics = [x for x in config.get('systematics', 'systematics').split(' ') if len(x.strip())>0]
-            systematics = eval(config.get(trainingRegion, 'systematics')) if config.has_option(trainingRegion, 'systematics') else []
+            if config.has_option(trainingRegion, 'systematics'):
+                systematicsString = config.get(trainingRegion, 'systematics').strip()
+                if systematicsString.startswith('['):
+                    systematics = eval(systematicsString)
+                else:
+                    systematics = systematicsString.split(' ')
+            else:
+                systematics = []
             mvaVars = config.get(treeVarSet, 'Nominal').split(' ')
             weightVars = []
             #for systematic in systematics:
             for syst in systematics: 
                 systNameUp   = syst+'_UP'   if self.config.has_option('Weights',syst+'_UP')   else syst+'_Up'
                 systNameDown = syst+'_DOWN' if self.config.has_option('Weights',syst+'_DOWN') else syst+'_Down'
-                weightVars += [self.config.get('Weights',systNameUp), self.config.get('Weights',systNameDown)]
+                if self.config.has_option('Weights',systNameUp):
+                    weightVars.append(self.config.get('Weights',systNameUp))
+                if self.config.has_option('Weights',systNameDown):
+                    weightVars.append(self.config.get('Weights',systNameDown))
 
             self.trainingRegionsDict[trainingRegion] = {
                     'cut': config.get('Cuts', treeCutName),
