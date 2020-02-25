@@ -157,6 +157,9 @@ class TreeCache:
         self.cachedFileNames = sorted(self.cachedFileNames, key=lambda x: int(x.split('_')[-1].split('of')[0]) if 'of' in x and '_' in x else -1)
         return self.cachedFileNames
 
+    def getTotalNumberOfOutputFiles(self):
+        return self.splitFilesChunks
+
     # check if a single part is cached, (only checks existence of the file, not validity!)
     def partIsCached(self):
         cachedFilesMaskRaw = self.outputFileNameFormat.format(

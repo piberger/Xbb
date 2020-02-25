@@ -3,6 +3,9 @@ from __future__ import print_function
 import json
 import re
 import fnmatch
+import importlib
+import ROOT
+import array
 
 class XbbTools(object):
 
@@ -82,7 +85,11 @@ class XbbTools(object):
 
     @staticmethod
     def parseSamplesList(samplesListString):
-        return [x.strip() for x in samplesListString.strip().split(',') if len(x.strip()) > 0]
+        return XbbTools.parseList(samplesListString, separator=',')
+
+    @staticmethod
+    def parseList(listString, separator=' '):
+        return [x.strip() for x in listString.strip().split(separator) if len(x.strip()) > 0]
 
     @staticmethod
     def getSampleTreeFileNames(pathIN, folderName):
@@ -96,6 +103,96 @@ class XbbTools(object):
                 inputFiles.append(filename_.rstrip('\n'))
 
         return inputFiles
+
+    @staticmethod
+    def splitSystVariation(syst, sample=None):
+        if syst.lower() == 'nominal' or (sample is not None and sample.isData()):
+            systBase = None
+            UD = None
+        else:
+            systBase = '_'.join(syst.split('_')[:-1])
+            UD = syst.split('_')[-1]
+        return systBase, UD
+
+    @staticmethod
+    def sanitizeExpression(expression, config, debug=False):
+        if config.has_option('General', 'sanitizeExpression'):
+            rules = eval(config.get('General', 'sanitizeExpression'))
+            newExpression = expression
+            for rule in rules:
+                newExpression = newExpression.replace(rule[0], rule[1])
+            if debug and newExpression != expression:
+                print("DEBUG: sanitized expression:")
+                print("DEBUG: from:", expression)
+                print("DEBUG:   to:", newExpression)
+            return newExpression
+        else:
+            return expression
+
+    @staticmethod
+    def getMvaSystematics(mvaName, config):
+        return XbbTools.parseList(config.get(mvaName, 'systematics') if (config.has_section(mvaName) and config.has_option(mvaName, 'systematics')) else config.get('systematics', 'systematics'), separator=' ')
+
+    @staticmethod
+    def getModuleInfo(module, config):
+        modulesInfo = []
+        try:
+            if '.' in module:
+                section = module.split('.')[0]
+                key = module.split('.')[1]
+                if config.has_section(section) and config.has_option(section, key):
+                    pyCode = config.get(section, key)
+                    if pyCode.strip().startswith('['):
+                        modulesList = eval(pyCode)
+                        for submodule in modulesList:
+                            modulesInfo += XbbTools.getModuleInfo(submodule, config=config)
+                    else:
+                        # import module from myutils
+                        moduleName = pyCode.split('(')[0].split('.')[0].strip()
+                        globals()[moduleName] = importlib.import_module(".{module}".format(module=moduleName), package="myutils")
+
+                        # get object
+                        wObject = eval(pyCode)
+                        version = wObject.getVersion() if hasattr(wObject, "getVersion") else 0
+
+                        modulesInfo.append([wObject, moduleName, version])
+            else:
+                modulesInfo.append([None, "unknown", -1])
+        except Exception as e:
+            print("\x1b[31mEXCEPTION:", e, "\x1b[0m")
+            modulesInfo.append([None, "unknown", -2])
+        return modulesInfo
+
+    @staticmethod
+    def readDictFromRootFile(rootFileName, treeName, key, value):
+        dictResult = {}
+        infoFile = ROOT.TFile.Open(rootFileName, "READ")
+        infoTree = infoFile.Get(treeName)
+        for ev in infoTree:
+            dictResult["%s"%getattr(ev,key)] = getattr(ev,value)
+        infoFile.Close()
+        return dictResult
+
+    @staticmethod
+    def writeDictToRootFile(rootFileName, treeName, treeDescription, key, value, dictToWrite, fileLocator):
+        pathOUT = '/'.join(rootFileName.split('/')[:-1])
+        if not fileLocator.exists(pathOUT):
+            fileLocator.makedirs(pathOUT)
+        if fileLocator.exists(rootFileName):
+            fileLocator.rm(rootFileName)
+        infoFile = ROOT.TFile.Open(rootFileName, "NEW")
+        infoTree = ROOT.TTree(treeName, treeDescription)
+        infoTree.SetDirectory(infoFile)
+        key_s = ROOT.std.string()
+        value_i = array.array( 'i', [ 0 ])
+        infoTree.Branch(key, key_s)
+        infoTree.Branch(value, value_i, value + "/I")
+        for k,v in dictToWrite.items():
+            key_s.replace(0, ROOT.std.string.npos, k)
+            value_i[0] = v
+            infoTree.Fill()
+        infoFile.Write()
+        infoFile.Close()
 
 class XbbMvaInputsList(object):
 

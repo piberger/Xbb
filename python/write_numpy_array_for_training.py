@@ -56,6 +56,15 @@ class SampleTreesToNumpyConverter(object):
         if useSyst:
             print('INFO: use systematics in training!')
             self.systList = eval(self.config.get(mvaName, 'systematics')) if self.config.has_option(mvaName, 'systematics') else []
+            if config.has_option(mvaName, 'systematics'):
+                systematicsString = config.get(mvaName, 'systematics').strip()
+                if systematicsString.startswith('['):
+                    self.systList = eval(systematicsString)
+                else:
+                    self.systList = systematicsString.split(' ')
+            else:
+                self.systList = []
+
             for syst in self.systList:
                 systNameUp   = syst+'_UP'   if self.config.has_option('Weights',syst+'_UP')   else syst+'_Up'
                 systNameDown = syst+'_DOWN' if self.config.has_option('Weights',syst+'_DOWN') else syst+'_Down'
@@ -384,7 +393,7 @@ parser.add_option("-T", "--tag", dest="tag", default='',
                       help="configuration tag")
 parser.add_option("-t","--trainingRegions", dest="trainingRegions", default='',
                       help="cut region identifier")
-parser.add_option("-S","--systematics", dest="systematics", default=2,
+parser.add_option("-S","--systematics", dest="systematics", default=0,
                       help="include systematics (0 for none, 1 for bdtVars, 2 for all (with btagWeights)")
 parser.add_option("-x", "--test", dest="test", action="store_true", help="for debugging only!!!", default=False)
 parser.add_option("-d", "--include-data", dest="include_data", action="store_true", help="include data in output file as additional dataset", default=False)

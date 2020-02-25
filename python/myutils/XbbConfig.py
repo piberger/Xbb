@@ -262,6 +262,12 @@ class XbbConfigChecker(object):
                 print("plot region:", plotRegion)
                 print("  ->", cutName)
                 print("    ->", cutString)
+
+                if cutString.count('(') != cutString.count(')'):
+                    raise Exception("CutStringUnbalancedRoundBrackets")
+                if cutString.count('[') != cutString.count(']'):
+                    raise Exception("CutStringUnbalancedSquareBrackets")
+
             except Exception as e:
                 self.addError('Plot region', plotRegion + ' ' + repr(e))
 

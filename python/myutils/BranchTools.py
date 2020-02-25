@@ -215,10 +215,14 @@ class Collection(object):
 class AddCollectionsModule(object):
 
     def __init__(self):
+        self.version = 0
         self.lastEntry = -1
         self.branches = []
         self.branchBuffers = {}
         self.collections = {}
+
+    def getVersion(self):
+        return self.version
 
     def addCollection(self, collection):
         if collection.name not in self.collections:

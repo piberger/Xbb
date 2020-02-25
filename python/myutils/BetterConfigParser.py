@@ -18,9 +18,10 @@ class BetterConfigParser(ConfigParser.SafeConfigParser):
         self.recursiveReplace = recursiveReplace
         ConfigParser.SafeConfigParser.__init__(self, os.environ)
 
-    def get(self, section, option):
+    def get(self, section, option, raw=False):
         result = ConfigParser.SafeConfigParser.get(self, section, option, raw=False)
-        result = self.__replaceSectionwideTemplates(result, section=section)
+        if not raw:
+            result = self.__replaceSectionwideTemplates(result, section=section)
         return result
 
     def optionxform(self, optionstr):
