@@ -109,6 +109,8 @@ class XbbConfigTools(object):
         configSection = trainingRegion
         if self.has_option(configSection, 'Cut'):
             return self.get(configSection, 'Cut')
+        elif self.has_option(configSection, 'treeCut'):
+            return self.get(configSection, 'treeCut')
         else:
             return trainingRegion
 
