@@ -18,7 +18,7 @@ import itertools
 import math
 
 class Datacard(object):
-    def __init__(self, config, region, verbose=True, fileLocator=None, systematics=[]):
+    def __init__(self, config, region, verbose=True, fileLocator=None, systematics=None):
         self.reshapeBins = True
         self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
