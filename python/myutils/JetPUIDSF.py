@@ -16,11 +16,12 @@ import root_numpy
 # adds the weight from General->weightF as a new branch
 class JetPUIDSF(AddCollectionsModule):
 
-    def __init__(self, branchName='weightJetPUID', year=2017, workingPoint="tight", ptCut=30.0, etaCut=2.5, fName_sf="data/jetPUID/2020_01_22/h2_eff_sf_2017_T.root", hName_sf="h2_eff_sf2017_T", fName_mcEff="data/jetPUID/2020_01_22/h2_eff_mc_2017_T.root", hName_mcEff="h2_eff_mc2017_T"):
+    def __init__(self, branchName='weightJetPUID', year=2017, workingPoint="tight", ptCut=30.0, etaCut=2.5, jetIdCut=4, fName_sf="data/jetPUID/2020_01_22/h2_eff_sf_2017_T.root", hName_sf="h2_eff_sf2017_T", fName_mcEff="data/jetPUID/2020_01_22/h2_eff_mc_2017_T.root", hName_mcEff="h2_eff_mc2017_T"):
         super(JetPUIDSF, self).__init__()
 
         self.ptCut = ptCut
         self.etaCut = etaCut
+        self.jetIdCut = jetIdCut
         self.puidCut = {"loose":0, "medium":4, "tight":6}[workingPoint]
 
         # add new branch
@@ -60,7 +61,7 @@ class JetPUIDSF(AddCollectionsModule):
     def getEventSF(self, tree, var=0.0):
         eventSF = 1.0
         for i in range(tree.nJet):
-            if tree.Jet_lepFilter[i] and (tree.Jet_Pt[i] > self.ptCut and tree.Jet_Pt[i] < 50.0) and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_jetId[i] > 4:
+            if tree.Jet_lepFilter[i] and (tree.Jet_Pt[i] > self.ptCut and tree.Jet_Pt[i] < 50.0) and abs(tree.Jet_eta[i]) < self.etaCut and tree.Jet_jetId[i] > self.jetIdCut:
                 # sf is eff(data)/eff(MC)
                 sf = max(self.getJetPUIDSF(tree.Jet_Pt[i], tree.Jet_eta[i]) + var, 0.0)
                 if tree.Jet_puId[i] > self.puidCut:
