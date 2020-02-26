@@ -67,7 +67,19 @@ if reweightType == "Vpt":
 
 elif reweightType == "deltaEta":
     applyVptNLOweight    = True
-    nloWeightVersionName = "nlo_deltaEtaJJnoVpt"
+    nloWeightVersionName = "nlo_deltaEtaJJ"
+    reweightVar = 'abs(GenJet_eta[0]-GenJet_eta[1])'
+
+    reweightVarNbins = 60
+    reweightVarMin   = 0.0
+    reweightVarMax   = 6.0
+    fitRangeMin = 0.0
+    fitRangeMax = 6.0
+
+    fitModel = "[0]+[1]*x+[2]*x**2+[3]*x**3"
+elif reweightType == "deltaEtaStandalone":
+    applyVptNLOweight    = False
+    nloWeightVersionName = "nlo_deltaEtaJJstandalone"
     reweightVar = 'abs(GenJet_eta[0]-GenJet_eta[1])'
 
     reweightVarNbins = 60
@@ -110,7 +122,7 @@ if sample == "WJets":
             }
 elif sample == "ZJets":
     NLOsampleName = "Z*JetsToNuNu_M-50_LHEZpT_*_TuneCP5_13TeV-amcnloFXFX-pythia8"
-    globalCut = "(LHE_HT>100&&LHE_Vpt>50&&LHE_Vpt<400)"
+    globalCut = "(LHE_HT>100&&LHE_Vpt>100&&LHE_Vpt<400)"
     sampleTable = {
             'NLO': [
                 ['/Z1JetsToNuNu_M-50_LHEZpT_50-150_TuneCP5_13TeV-amcnloFXFX-pythia8/RunIIFall17NanoAODv5-PU2017_12Apr2018_Nano1June2019_102X_mc2017_realistic_v7-v1/NANOAODSIM' , 596.4],
@@ -135,7 +147,7 @@ elif sample == "ZJets":
     if applyVptNLOweight:
 
         # remove range  Vpt < 100
-        globalCut = "((" + globalCut + ")&&LHE_Vpt>100)"
+        #globalCut = "((" + globalCut + ")&&LHE_Vpt>100)"
 
         # apply Vpt weight to LO samples
         if sys.argv[3] == '2b':
