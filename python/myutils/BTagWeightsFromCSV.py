@@ -24,6 +24,7 @@ class BTagWeights(AddCollectionsModule):
         self.jetPtBranchName = jetPtBranchName
         self.method = method
         self.calibName = calibName
+        self.calibFile = calibFile
         self.decorrelatePtEta = decorrelatePtEta
         self.branchBaseName = branchName if branchName else "bTagWeight"+calibName
         self.jetBtagBranchName = jetBtagBranchName
@@ -62,13 +63,15 @@ class BTagWeights(AddCollectionsModule):
         self.systList = ["JES", "LF", "HF", "LFStats1", "LFStats2", "HFStats1", "HFStats2", "cErr1", "cErr2"]
         self.systVars = ["Up", "Down"]
         self.systematics = ["central", "up_jes", "down_jes", "up_lf", "down_lf", "up_hf", "down_hf", "up_hfstats1", "down_hfstats1", "up_hfstats2", "down_hfstats2", "up_lfstats1", "down_lfstats1", "up_lfstats2", "down_lfstats2", "up_cferr1", "down_cferr1", "up_cferr2", "down_cferr2"]
+        self.btagCalibratorFileName = "../interface/BTagCalibrationStandalone_cpp.so"
+
+    def customInit(self, initVars):
 
         v_sys = getattr(ROOT, 'vector<string>')()
         for syst in self.systematics:
             v_sys.push_back(syst)
 
         print 'load BTagCalibrationStandalone...'
-        self.btagCalibratorFileName = "../interface/BTagCalibrationStandalone_cpp.so"
         if os.path.isfile(self.btagCalibratorFileName):
             ROOT.gSystem.Load(self.btagCalibratorFileName)
         else:
@@ -76,7 +79,7 @@ class BTagWeights(AddCollectionsModule):
             raise Exception("BTagCalibrationStandaloneNotFound")
 
         print 'load bTag CSV files...'
-        calib = ROOT.BTagCalibration(calibName, calibFile)
+        calib = ROOT.BTagCalibration(self.calibName, self.calibFile)
         self.btag_calibrators = {}
         print "[btagSF]: Loading calibrator for algo:", self.calibName
         self.btag_calibrators[self.calibName+"_iterative"] = ROOT.BTagCalibrationReader(3, "central", v_sys)
@@ -85,8 +88,6 @@ class BTagWeights(AddCollectionsModule):
 
         print 'INFO: bTag initialization done.'
 
-
-    def customInit(self, initVars):
         sample = initVars['sample']
         self.isData = sample.type == 'DATA'
         if not self.isData:

@@ -18,7 +18,7 @@ import itertools
 import math
 
 class Datacard(object):
-    def __init__(self, config, region, verbose=True, fileLocator=None):
+    def __init__(self, config, region, verbose=True, fileLocator=None, systematics=[]):
         self.reshapeBins = True
         self.debug = 'XBBDEBUG' in os.environ 
         self.verbose = verbose
@@ -137,6 +137,11 @@ class Datacard(object):
         else:
             print ("\x1b[31mEXIT: please specify if your datacards are BDT, Mjj or cr.\x1b[0m")
             raise Exception("InvalidDatacardSystematicsType")
+
+        if systematics is not None:
+            if self.debug:
+                print("DEBUG: overwrite systematics list to:", systematics)
+            self.systematics = systematics
 
         self.sysOptions = {}
         # define the options read directly from the config
@@ -577,7 +582,8 @@ class Datacard(object):
     def getAllSamples(self):
         return sum([y for x, y in self.samples.iteritems()], []) 
 
-    def getNumberOfCachedFiles(self, useSampleIdentifiers=None):
+    # if checkExistenc=False, returns number of files which should be present, if checkExistenc=True counts how many of them actually exist
+    def getNumberOfCachedFiles(self, useSampleIdentifiers=None, checkExistence=True):
         nFiles = -1
         allSamples = self.getAllSamples()
         if type(useSampleIdentifiers) == str:
@@ -598,19 +604,24 @@ class Datacard(object):
                     debug=self.debug,
                     fileLocator=self.fileLocator
                 )
-            # check if fiels are complete
-            if not tc.isCached():
-                return -1
-            if nFiles == -1:
-                nFiles = len(tc.cachedFileNames)
-            else:
-                # if one of the subsamples has a different number of files, this indicates an error
-                if nFiles != len(tc.cachedFileNames):
-                    print("nF:", nFiles)
-                    print("nC:", len(tc.cachedFileNames))
-                    print("C:", tc.cachedFileNames)
-                    print('ERROR: subsample incomplete, this should not happen!!')
+
+            if checkExistence:
+                # check if fiels are complete
+                if not tc.isCached():
                     return -1
+                if nFiles == -1:
+                    nFiles = len(tc.cachedFileNames)
+                else:
+                    # if one of the subsamples has a different number of files, this indicates an error
+                    if nFiles != len(tc.cachedFileNames):
+                        print("nF:", nFiles)
+                        print("nC:", len(tc.cachedFileNames))
+                        print("C:", tc.cachedFileNames)
+                        print('ERROR: subsample incomplete, this should not happen!!')
+                        return -1
+            else:
+                # return number of files whether they exist or not
+                return tc.getTotalNumberOfOutputFiles()
 
         return nFiles 
 
@@ -880,12 +891,12 @@ class Datacard(object):
             return int(self.config.get(sampleIdentifier, 'dcChunkSize')) if self.config.has_option(sampleIdentifier, 'dcChunkSize') else -1
 
     # number of chunks, -1 if split into chunks is disabled
-    def getNumberOfChunks(self, sampleIdentifier):
+    def getNumberOfChunks(self, sampleIdentifier, checkExistence=True):
         chunkSize = self.getChunkSize(sampleIdentifier)
         if chunkSize < 1:
             nChunks = -1
         else:
-            nFiles = self.getNumberOfCachedFiles(sampleIdentifier)
+            nFiles = self.getNumberOfCachedFiles(sampleIdentifier, checkExistence=checkExistence)
             nChunks = int(math.ceil(1.0*nFiles/chunkSize))
         return nChunks 
 

@@ -22,6 +22,7 @@ from myutils.copytreePSI import filelist
 from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
 from myutils.BranchList import BranchList
+from myutils.XbbTools import XbbTools
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -80,6 +81,7 @@ parser.add_option("--unfinished", dest="unfinished", action="store_true", defaul
 parser.add_option("--verify", dest="verify", action="store_true", default=False, help="verify integrity of root files (header bits, no zombie etc)")
 parser.add_option("--files", dest="files", default=None)
 parser.add_option("--dependencies", "--depends", "--depends-on", dest="depends", default=None)
+parser.add_option("--no-version", dest="no_version", action="store_true", default=False, help="disables versioning")
 
 (opts, args) = parser.parse_args(sys.argv)
 
@@ -475,6 +477,66 @@ def getCachingChunkSize(sample, config):
         print "\x1b[31mINFO: chunk size overwritten with -N parameter!\x1b[0m"
     return chunkSize
 
+def printInputOutputInfo(inputPathName, outputPathName, config=None, opts=None):
+    print "#"*160
+    print "-"*160
+    if opts is not None:
+        print " TASK:   \x1b[33m{task}\x1b[0m".format(task=opts.task)
+    if inputPathName is not None:
+        if config is not None and config.has_option('Directories', inputPathName):
+            print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+            print " ------> \x1b[32m{input}\x1b[0m".format(input=config.get('Directories', inputPathName))
+        elif config is not None:
+            optionKeys = []
+            for k in config.options('Directories'): 
+                try:
+                    if config.has_option('Directories',k) and config.get('Directories',k).strip()==inputPathName.strip():
+                        optionKeys.append(k)
+                except:
+                    pass
+            if len(optionKeys) > 0:
+                print " INPUT:  \x1b[32m{input}\x1b[0m".format(input='/'.join(optionKeys))
+                print " ------> \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+            else:
+                print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+        else:
+            print " INPUT:  \x1b[32m{input}\x1b[0m".format(input=inputPathName)
+
+    if outputPathName is not None:
+        if config is not None and config.has_option('Directories', outputPathName):
+            print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+            if config is not None and config.has_option('Directories', outputPathName):
+                print " ------> \x1b[35m{output}\x1b[0m".format(output=config.get('Directories', outputPathName))
+        elif config is not None:
+            optionKeys = []
+            for k in config.options('Directories'): 
+                try:
+                    if config.has_option('Directories',k) and config.get('Directories',k).strip()==outputPathName.strip():
+                        optionKeys.append(k)
+                except:
+                    pass
+            if len(optionKeys) > 0:
+                print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output='/'.join(optionKeys))
+                print " ------> \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+            else:
+                print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+        else:
+            print " OUTPUT: \x1b[35m{output}\x1b[0m".format(output=outputPathName)
+
+    if config is not None and config.has_option('General','trackedOptions'):
+        trackedOptions = eval(config.get('General','trackedOptions'))
+        print " OPTIONS:"
+        for sectionName,optionName in trackedOptions:
+            try:
+                if config.has_option(sectionName,optionName):
+                    print "  - {sectionName}.\x1b[34m{optionName}\x1b[0m = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName,value=config.get(sectionName,optionName))
+                elif optionName.endswith('(raw)') and config.has_option(sectionName,optionName[:-5]):
+                    print "  - {sectionName}.\x1b[35m{optionName}\x1b[0m(raw) = \x1b[32m{value}\x1b[0m".format(sectionName=sectionName,optionName=optionName[:-5],value=config.get(sectionName,optionName[:-5],True))
+            except Exception as e:
+                print " > exception in tracked options:", e
+    print "-"*160
+    print "#"*160
+
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 #                              process commands
@@ -719,7 +781,7 @@ if opts.task == 'hadd':
 if opts.task == 'count':
 
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
-    pathIN = config.get("Directories", opts.input if opts.input else "SYSin")
+    pathIN = config.get("Directories", opts.input if opts.input else "HADDin")
     samplefiles = config.get('Directories','samplefiles')
     info = ParseInfo(samples_path=pathIN, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
@@ -782,11 +844,57 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     info              = ParseInfo(samples_path=path, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
+    printInputOutputInfo(inputDir, outputDir, config=config, opts=opts)
+
     # check for empty list of collections to add
     addCollections = opts.addCollections
     if not addCollections or len(addCollections.strip())<1:
         print "\x1b[31mWARNING: No collections specified, using the default \x1b[32m'Sys.all'\x1b[31m instead, to force adding nothing, use \x1b[32m--addCollections None\x1b[31m!\x1b[0m"
         addCollections = 'Sys.all'
+
+    # module version table
+    print "INFO: module:version"
+    moduleVersionDict = {}
+    for collection in addCollections.split(','):
+        modulesInfo       = XbbTools.getModuleInfo(collection, config=config)
+        modulesInfoString = ", ".join(["\x1b[32m{m}\x1b[0m:\x1b[35m{v}\x1b[0m".format(m=moduleName,v=version) for moduleObject, moduleName, version in modulesInfo])
+        print " > {c} ---> {m}".format(c=collection.ljust(32),m=modulesInfoString)
+        for moduleObject, moduleName, version in modulesInfo:
+            if moduleName not in moduleVersionDict:
+                moduleVersionDict[moduleName] = -99
+            if version > moduleVersionDict[moduleName]:
+                moduleVersionDict[moduleName] = version
+
+    # module version bookkeeping
+    if not opts.no_version:
+        try:
+            moduleVersionFileName = "xbb_info.root"
+            moduleVersionTreeName = "moduleVersions"
+            inputModuleVersions = {}
+            # read version tree from input directory
+            infoFileName = path + "/" + moduleVersionFileName
+            if fileLocator.exists(infoFileName):
+                inputModuleVersions = XbbTools.readDictFromRootFile(infoFileName, moduleVersionTreeName, "name", "version")
+
+            # compare to what will be written
+            for moduleName, version in inputModuleVersions.items():
+                if moduleName not in moduleVersionDict:
+                    # this is unchanged and transfered to new dict
+                    moduleVersionDict[moduleName] = version
+                else:
+                    if moduleVersionDict[moduleName] > inputModuleVersions[moduleName]:
+                        print "\x1b[32mINFO: UPGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
+                    elif moduleVersionDict[moduleName] < inputModuleVersions[moduleName]:
+                        print "\x1b[31mWARNING: DOWNGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
+
+            # write version tree into output directory
+            infoFileName = pathOUT + "/" + moduleVersionFileName
+            XbbTools.writeDictToRootFile(infoFileName, moduleVersionTreeName, "module version numbers", "name", "version", moduleVersionDict, fileLocator)
+            if 'XBBDEBUG' in os.environ:
+                print "DEBUG: version info file created:", infoFileName
+            print "-"*160
+        except Exception as e:
+            print "ERROR: could not write version information:", e
 
     # for checksysnew step: dic contains missing number of files for each sample
     missingFiles = {}
@@ -952,7 +1060,9 @@ if opts.task.startswith('cachetraining'):
             print " >", sampleName
     
     # get samples info
-    info = ParseInfo(samples_path=config.get('Directories', 'MVAin'), config=config)
+    inputPath = config.get('Directories', 'MVAin')
+    tmpPath   = config.get('Directories', 'tmpSamples')
+    info = ParseInfo(samples_path=inputPath, config=config)
     samples = info.get_samples(allBackgrounds + allSignals + allData)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
@@ -960,7 +1070,9 @@ if opts.task.startswith('cachetraining'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sorted(sampleIdentifiers):
         print " >", sampleIdentifier
-    
+  
+    printInputOutputInfo(inputPath, tmpPath, config=config, opts=opts)
+
     # per job parallelization parameter can split regions into several job
     if opts.parallel:
         regionChunkSize = int(opts.parallel)
@@ -974,7 +1086,7 @@ if opts.task.startswith('cachetraining'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier==sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': config.get('Directories', 'MVAin')}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
         
         # submit all the single chunks for one sample
@@ -1006,6 +1118,9 @@ if opts.task.startswith('cachetraining'):
 # EXPORT HDF5: export training regions to HDF5 format for DNN training 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
+    
+    printInputOutputInfo(config.get('Directories', 'MVAin'), None, config=config, opts=opts)
+
     trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
     if opts.regions:
         enabledTrainingRegions = opts.regions.strip().split(',')
@@ -1070,8 +1185,10 @@ if opts.task.startswith('cacheplot'):
     dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
     # get samples info
-    info = ParseInfo(samples_path=config.get('Directories', 'plottingSamples'), config=config)
+    inputPath = config.get('Directories', 'plottingSamples')
+    info = ParseInfo(samples_path=inputPath, config=config)
     samples = info.get_samples(sampleNames + dataSampleNames)
+    printInputOutputInfo(inputPath, None, config=config, opts=opts)
 
     # find all sample identifiers that have to be cached, if given list is empty, run it on all
     sampleIdentifiers = filterSampleList(sorted(list(set([sample.identifier for sample in samples]))), samplesList)
@@ -1129,6 +1246,9 @@ if opts.task.startswith('cacheplot'):
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
+    
+    printInputOutputInfo(config.get('Directories', 'plottingSamples'), 'logpath', config=config, opts=opts)
+
     # if only a subset of samples is plotted
     if len(opts.samples.strip()) > 0:
         # get samples info
@@ -1148,6 +1268,7 @@ if opts.task.startswith('runplot'):
         plotVars = opts.vars.strip().split(',')
     else:
         plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+    plotVars = list(set(plotVars))
 
     # split list of variables to plot for multiple jobs
     if opts.parallel:
@@ -1275,6 +1396,8 @@ if opts.task.startswith('cachedc'):
     else:
         # default is all at once
         regionChunks = [regions]
+    
+    printInputOutputInfo(sampleFolder, config.get('Directories', 'tmpSamples'), config=config, opts=opts)
 
     # submit jobs, 1 to n separate jobs per sample
     for sampleIdentifier in sampleIdentifiers:
@@ -1353,6 +1476,8 @@ if opts.task.startswith('rundc'):
             raise Exception("NotCached")
 
     fileLocator = FileLocator(config=config, useDirectoryListingCache=True)
+    
+    printInputOutputInfo(config.get('Directories', 'dcSamples'), config.get('Directories', 'logpath') + '/Limits', config=config, opts=opts)
 
     # submit all the DC regions as separate jobs
     for region in regions:
@@ -1364,7 +1489,7 @@ if opts.task.startswith('rundc'):
                 datacard = None
                 # check if shape files exist already and skip
                 if opts.skipExisting:
-                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator)
+                    datacard = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator, systematics=[])
                     shapeFileExists = [os.path.isfile(x) for x in datacard.getShapeFileNames(sampleIdentifier)]
                     # skip if all files exist or no shapes needed for this region/sample
                     if all(shapeFileExists) or len(shapeFileExists) == 0:
@@ -1374,10 +1499,10 @@ if opts.task.startswith('rundc'):
 
                 # large samples can be split further
                 if config.has_option(sampleIdentifier, 'dcChunkSize'):
-                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator) if datacard is None else datacard
-                    chunkSize = datacard.getChunkSize(sampleIdentifier) 
-                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier)
-                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier)
+                    datacard  = Datacard(config=config, region=region, verbose=False, fileLocator=fileLocator, systematics=[]) if datacard is None else datacard
+                    chunkSize = datacard.getChunkSize(sampleIdentifier)
+                    nFiles    = datacard.getNumberOfCachedFiles(sampleIdentifier, checkExistence=opts.checkCached)
+                    nJobs     = datacard.getNumberOfChunks(sampleIdentifier, checkExistence=opts.checkCached)
 
                     if debugPrintOUts:
                         print('INFO: chunk size is ', chunkSize)
@@ -1424,6 +1549,8 @@ if opts.task.startswith('rundc'):
 # -----------------------------------------------------------------------------
 if opts.task.startswith('mergedc'):
     regions = Datacard.getRegions(config=config)
+    
+    printInputOutputInfo(config.get('Directories', 'logpath') + '/Limits/*/*', config.get('Directories', 'logpath') + '/Limits', config=config, opts=opts)
 
     # submit all the DC regions as separate jobs
     for region in regions:
@@ -1900,6 +2027,8 @@ if opts.task.startswith('submissions'):
                     status = 110
                 elif job['id'] in runningJobs:
                     status = 1
+                    if 'XBBDEBUG' in os.environ:
+                         print("LOGFILE:", job['log'])
                 elif job['id'] in pendingJobs:
                     status = 2
                 elif os.path.isfile(job['log']):

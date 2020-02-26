@@ -109,6 +109,8 @@ class XbbConfigTools(object):
         configSection = trainingRegion
         if self.has_option(configSection, 'Cut'):
             return self.get(configSection, 'Cut')
+        elif self.has_option(configSection, 'treeCut'):
+            return self.get(configSection, 'treeCut')
         else:
             return trainingRegion
 
@@ -262,6 +264,12 @@ class XbbConfigChecker(object):
                 print("plot region:", plotRegion)
                 print("  ->", cutName)
                 print("    ->", cutString)
+
+                if cutString.count('(') != cutString.count(')'):
+                    raise Exception("CutStringUnbalancedRoundBrackets")
+                if cutString.count('[') != cutString.count(']'):
+                    raise Exception("CutStringUnbalancedSquareBrackets")
+
             except Exception as e:
                 self.addError('Plot region', plotRegion + ' ' + repr(e))
 

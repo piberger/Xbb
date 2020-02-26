@@ -8,6 +8,7 @@ from BranchTools import AddCollectionsModule
 import sys
 import os
 import json
+from myutils.XbbTools import XbbTools
 from myutils.XbbTools import XbbMvaInputsList
 
 # tfZllDNN repository has to be cloned inside the python folder
@@ -20,13 +21,11 @@ from tfVHbbDNN.tfDNNevaluator import TensorflowDNNEvaluator
 # needs: tensorflow >=1.4
 class tensorflowEvaluator(AddCollectionsModule):
 
-    def __init__(self, mvaName, nano=False, condition=None, defaultForNegativeJetIndices=True):
+    def __init__(self, mvaName, nano=False, condition=None):
         self.mvaName = mvaName
         self.nano = nano
         self.debug = False
         self.condition = condition
-        # this avoids evaluating negative jet indices
-        self.defaultForNegativeJetIndices = defaultForNegativeJetIndices
         super(tensorflowEvaluator, self).__init__()
 
     def customInit(self, initVars):
@@ -80,10 +79,15 @@ class tensorflowEvaluator(AddCollectionsModule):
             try:
                 self.nClasses = eval(self.config.get(self.mvaName, 'nClasses'))
             except Exception as e:
-                self.nClasses = 1
+                self.nClasses = len(self.info["labels"].keys())
+        if self.nClasses < 3:
+            self.nClasses = 1
+        if self.nClasses > 1:
+            print("INFO: multi-class checkpoint found! number of classes =", self.nClasses)
+        else:
+            print("INFO: binary-classifier found!")
 
         # FEATURES
-
         self.featuresConfig = None
         self.featuresCheckpoint = None
         try:
@@ -142,7 +146,7 @@ class tensorflowEvaluator(AddCollectionsModule):
         print("INFO: number of classes:", self.nClasses if self.nClasses > 1 else 2)
 
         # systematics
-        self.systematics = self.config.get('systematics', 'systematics').split(' ')
+        self.systematics = self.config.get(self.mvaName, 'systematics').split(' ') if self.config.has_option(self.mvaName, 'systematics') else self.config.get('systematics', 'systematics').split(' ')
 
         # create output branches
         self.dnnCollections = []
@@ -156,18 +160,10 @@ class tensorflowEvaluator(AddCollectionsModule):
         # create formulas for input variables
         self.inputVariables = {}
         for syst in self.systematics:
-            if syst.lower() == 'nominal' or self.sample.isData():
-                systBase = None
-                UD = None
-            else:
-                systBase = '_'.join(syst.split('_')[:-1])
-                UD = syst.split('_')[-1]
-            self.inputVariables[syst] = [self.featureList.get(i, syst=systBase, UD=UD) for i in range(self.nFeatures)]
+            systBase, UD              = XbbTools.splitSystVariation(syst, sample=self.sample)
+            self.inputVariables[syst] = [XbbTools.sanitizeExpression(self.featureList.get(i, syst=systBase, UD=UD), self.config, debug=self.debug) for i in range(self.nFeatures)]
             for var in self.inputVariables[syst]:
-                if self.defaultForNegativeJetIndices:
-                    self.sampleTree.addFormula(var,var.replace("{hJidx}[0]".format(hJidx=self.hJidx),"(max({hJidx}[0],0))".format(hJidx=self.hJidx)).replace("{hJidx}[1]".format(hJidx=self.hJidx),"(max({hJidx}[1],0))".format(hJidx=self.hJidx)))
-                else:
-                    self.sampleTree.addFormula(var)
+                self.sampleTree.addFormula(var)
 
         # additional pre-computed values for multi-classifiers
         if self.nClasses > 1:

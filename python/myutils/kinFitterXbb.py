@@ -58,7 +58,7 @@ def fit_lepton(v, ptErr):
 # https://github.com/capalmer85/AnalysisTools/blob/master/python/kinfitter.py
 class kinFitterXbb(AddCollectionsModule):
 
-    def __init__(self, year, branchName="kinFit", useMZconstraint=True):
+    def __init__(self, year, branchName="kinFit", useMZconstraint=True, recoilPtThreshold=20.0):
         self.branchName = branchName
         self.useMZconstraint = useMZconstraint
         self.debug = False
@@ -68,6 +68,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.LLVV_PXY_VAR = 8.0**2 
         self.Z_MASS = 91.0
         self.Z_WIDTH = 1.7*3
+        self.recoilPtThreshold = recoilPtThreshold
         self.systematics = None
         super(kinFitterXbb, self).__init__()
         
@@ -123,7 +124,7 @@ class kinFitterXbb(AddCollectionsModule):
         self.enabled = False
 
     def cart_cov(self, v, rho):
-        jme_res = self.jetResolution.eval(v.Eta(), rho, v.Pt())
+        jme_res = self.jetResolution.eval(v.Eta(), rho, v.Pt()) * v.Pt()
         cos_phi = np.cos(v.Phi())
         sin_phi = np.sin(v.Phi())
         cov = ROOT.TMatrixD(4, 4)
@@ -235,7 +236,7 @@ class kinFitterXbb(AddCollectionsModule):
                 # recoil jets
                 recoil_jets = []
                 for i in range(tree.nJet):
-                    if i not in hJidx and i not in fsrJidx and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and tree.Jet_lepFilter[i] > 0 and pt[i] > 20:
+                    if i not in hJidx and i not in fsrJidx and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50) and tree.Jet_jetId[i] > 4 and tree.Jet_lepFilter[i] > 0 and pt[i] > self.recoilPtThreshold:
                         recoil_jets.append(fourvector(pt[i], eta[i], phi[i], mass[i]))
                 recoil_sum = sum(recoil_jets, ROOT.TLorentzVector())
 
@@ -314,7 +315,7 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['V_phi_fit'])[0]         = fit_result_V.Phi()
                     self._b(self.bDict[syst]['V_mass_fit'])[0]        = fit_result_V.M()
 
-                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(fit_result_H.Phi() - fit_result_V.Phi())
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(ROOT.TVector2.Phi_mpi_pi(fit_result_H.Phi() - fit_result_V.Phi()))
                     self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = fit_result_H.Pt()/fit_result_V.Pt()
                     self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = fit_result_j1.Pt()
                     self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = fit_result_j2.Pt()
@@ -353,7 +354,7 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['V_eta_fit'])[0]         = tree.V_eta
                     self._b(self.bDict[syst]['V_phi_fit'])[0]         = tree.V_phi
                     self._b(self.bDict[syst]['V_mass_fit'])[0]        = tree.V_mass
-                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(tree.H_phi - tree.V_phi)
+                    self._b(self.bDict[syst]['HVdPhi_fit'])[0]        = abs(ROOT.TVector2.Phi_mpi_pi(tree.H_phi - tree.V_phi))
                     self._b(self.bDict[syst]['jjVPtRatio_fit'])[0]    = tree.H_pt/tree.V_pt
                     self._b(self.bDict[syst]['hJets_pt_0_fit'])[0]    = pt_reg[hJidx[0]] 
                     self._b(self.bDict[syst]['hJets_pt_1_fit'])[0]    = pt_reg[hJidx[1]]
