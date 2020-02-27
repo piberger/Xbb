@@ -24,16 +24,17 @@ class HeppyStyleGen(AddCollectionsModule):
             self.branchBuffers['VtypeSim'] = array.array('i', [0])
             self.branches.append({'name': 'VtypeSim', 'formula': self.getBranch, 'arguments': 'VtypeSim', 'type': 'i'})
 
-            self.addCollection(Collection('GenBs',['pt','eta','phi','genPartIdx'], maxSize=10))
+            self.addCollection(Collection('GenBs',['pt','eta','phi','genPartIdx'], maxSize=15))
             self.addVectorBranch("GenJetAK8_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons[nGenJetAK8]/i")
             self.addVectorBranch("GenJetAK8_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons2p4[nGenJetAK8]/i")
             self.addVectorBranch("GenJet_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons[nGenJet]/i")
             self.addVectorBranch("GenJet_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons2p4[nGenJet]/i")
     
     def processEvent(self, tree):
+
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-
+            
             if not self.isData:
                 higgsParticles = []
                 vParticles = []
