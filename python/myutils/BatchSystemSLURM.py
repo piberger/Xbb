@@ -16,6 +16,7 @@ class BatchSystemSLURM(BatchSystem):
         self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} --open-mode=append {extraOptions} {runscript}"
         self.cancelJobTemplate = "scancel {jobId}"
         self.submissionDelay = eval(self.config.get('SLURM', 'submissionDelay')) if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'submissionDelay') else 0.2
+        self.resubmitToDifferentNode = eval(self.config.get('SLURM', 'resubmitToDifferentNode')) if self.config.has_option('SLURM', 'resubmitToDifferentNode') else False
 
 
     def getJobNames(self, includeDeleted=True):
@@ -57,6 +58,14 @@ class BatchSystemSLURM(BatchSystem):
         return jobId
 
     def resubmit(self, job):
+        if self.resubmitToDifferentNode and 'host' in job and job['host'] is not None:
+            if "--exclude" in job['submitCommand']:
+                parts = job['submitCommand'].split('--exclude=')
+                parts2 = parts[1].split(' ')
+                parts2[0] = job['host']
+                job['submitCommand'] = parts[0] + '--exclude=' + ' '.join(parts2)
+            else:
+                job['submitCommand'] = job['submitCommand'].replace('sbatch','sbatch --exclude=%s '%job['host'])
         print("RESUBMIT:", job['submitCommand'])
         stdOutput = subprocess.check_output([job['submitCommand']], shell=True)
         job['id'] = self.getJobIDfromOutput(stdOutput)

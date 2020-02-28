@@ -71,6 +71,7 @@ parser.add_option("-T", "--tag", dest="tag", default="default",
                       help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--different-node", dest="different_node", action="store_true", default=False, help="with --resubmit option: resubmits the job to a different node")
 parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
                       help="unblind")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
@@ -2065,6 +2066,13 @@ if opts.task.startswith('submissions'):
 
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
         print "\x1b[34m", submissionLog, "\x1b[0m of type \x1b[35m", jobType, "\x1b[0m log files saved to -> \x1b[34m", logfileDirectory, "\x1b[0m"
+
+        # try to use a different node if batch system supports it
+        try:
+            if opts.different_node and hasattr(batchSystem, "resubmitToDifferentNode"):
+                batchSystem.resubmitToDifferentNode = True
+        except:
+            pass
 
         # resubmit jobs
         if opts.resubmit:
