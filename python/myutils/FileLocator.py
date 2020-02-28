@@ -492,3 +492,19 @@ class FileLocator(object):
             return fileList
         else:
             return glob.glob(path)
+
+    def get_numbered_file_list(self, mask, start, end):
+        if mask.count('*') != 1:
+            raise Exception("NotImplemented")
+        existingFiles = []
+        for i in range(start, end+1):
+            fileName = mask.replace('*','%d'%i)
+            if self.exists(fileName):
+                existingFiles.append(fileName)
+        return existingFiles
+
+
+
+
+
+
