@@ -17,6 +17,7 @@ import BetterConfigParser
 from sample_parser import ParseInfo
 import hashlib
 import subprocess
+from copytreePSI import filelist
 
 # ------------------------------------------------------------------------------
 # sample tree class
@@ -53,6 +54,10 @@ class SampleTree(object):
             self.outputTreeBasketSize = eval(self.config.get('Configuration', 'outputTreeBasketSize'))
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
+        if self.config is not None:
+            self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
+        else:
+            self.requireAllInputTrees = False
         self.samples = samples
         self.tree = None
         self.nonEmptyTrees = []
@@ -423,61 +428,45 @@ class SampleTree(object):
         # if no argument is given, use default files
         if not samples:
             samples = self.samples
-        #print('samples', samples)
-        #print('type(samples)', type(samples))
-        #samples {'sample': <samplesclass.Sample instance at 0x7f9aa43f4bd8>, 'folder': 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may'}
-        #type(samples) <type 'dict'>
 
         # given argument is list -> this is already the list of root file names
         if type(samples) == list:
             sampleFileNames = samples
         # given argument is name and folder -> glob
         elif type(samples) == dict:
+            isData = False
             if 'sample' in samples:
                 sampleName = samples['sample'].identifier
-                #print('sampleName', sampleName) #ZZ_TuneCP5_13TeV-pythia8           
                 if samples['sample'].subsample:
                     self.subcut = samples['sample'].subcut
+                isData = isData or samples['sample'].isData()
             else:
                 sampleName = samples['name']
             self.sampleIdentifier = sampleName
-
             sampleFolder = samples['folder']
-            samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
-            #print('samplesMask', samplesMask) #/pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Zll/VHbbPostNano2018/sys_5may/ZZ_TuneCP5_13TeV-pythia8/*.root
-            redirector = self.fileLocator.getRedirector(sampleFolder)
-            #print('redirector', redirector)   #root://t3dcachedb03.psi.ch:1094
-            if self.verbose:
-                print ("INFO: use ", samplesMask)
 
-            nfsAvailable = True
-            ## DIRTY WORKAROUND
-            ## don't use glob since nfs mount on T3 worker nodes fails too often...
-            #try:
-            #    nfsAvailable = 'ui' in subprocess.check_output(["uname -n"], shell=True)
-            #except Exception as e:
-            #    print(e)
+            # this requires all the trees from the original /store input to be still present (not needed for MC) 
+            if self.requireAllInputTrees or isData:
+                # get list of original filenames at /store/...
+                samplefiles    = self.config.get('Directories', 'samplefiles')
+                sampleFileList = filelist(samplefiles, self.sampleIdentifier)
 
-            if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
-                sampleFileNames = glob.glob(samplesMask)
+                # get list of filenames 
+                sampleFileNames = ["{path}/{sample}/{fileName}".format(path=sampleFolder, sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in sampleFileList]  
+
             else:
-                print("INFO: using fallback method to get directory listing for storage element directory")
-                sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
+                samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
+                redirector = self.fileLocator.getRedirector(sampleFolder)
+                if self.verbose:
+                    print ("INFO: use ", samplesMask)
 
-            if sampleFileNames is None or len(sampleFileNames) < 1:
-
-                # try again:
-                if nfsAvailable and os.path.isdir('/'.join(samplesMask.split('/')[:-1])):
-                    sampleFileNames = glob.glob(samplesMask)
-                else:
-                    print("INFO: using fallback method to get directory listing for storage element directory")
-                    sampleFileNames = self.fileLocator.lsRemote(self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/')
-
+                sampleFileNames = self.fileLocator.glob_with_fallback(samplesMask)
                 if sampleFileNames is None or len(sampleFileNames) < 1:
                     print("\x1b[31mERROR: no tree files found for this sample in",sampleFolder + "/\x1b[35m" + sampleName + "\x1b[31m !\x1b[0m")
                     raise Exception("FilesMissing")
 
-            sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
+                sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
+
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
                 if self.debug:
@@ -814,21 +803,36 @@ class SampleTree(object):
     # multiple times which can lead to a slowdown for larger trees
     # ------------------------------------------------------------------------------
     def process(self):
-        if self.sequentialProcessing:
-            print("\x1b[31mINFO: sequential processing of trees is enabled!\x1b[0m")
+        try: 
+            if self.sequentialProcessing:
+                print("\x1b[31mINFO: sequential processing of trees is enabled!\x1b[0m")
 
-            # backup full list of trees
-            allTrees = self.outputTrees
+                # backup full list of trees
+                allTrees = self.outputTrees
 
-            # process output files sequentially
-            for singleTree in allTrees:
-                self.outputTrees = [singleTree]
+                # process output files sequentially
+                for singleTree in allTrees:
+                    self.outputTrees = [singleTree]
+                    self.process_do()
+
+                # restore
+                self.outputTrees = allTrees
+            else:
                 self.process_do()
 
-            # restore
-            self.outputTrees = allTrees
-        else:
-            self.process_do()
+        # handling of exceptions during the event loop
+        except Exception as e:
+            print("\x1b[41m\x1b[37mERROR: exception during event loop\x1b[0m")
+            try:
+                print("DEBUG: sampleTree:")
+                print("DEBUG:  - GetEntries() =", self.tree.GetEntries())
+                print("DEBUG:  - GetReadEntry() =", self.tree.GetReadEntry())
+                for x in ['run', 'event', 'evt']:
+                    if hasattr(self.tree, x):
+                        print("DEBUG:  - %s ="%x, getattr(self.tree, x))
+            except Exception as e2:
+                print("ERROR: an exception occurred while handling an exception:", e2)
+            raise e
 
     # ------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the

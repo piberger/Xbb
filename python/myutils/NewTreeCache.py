@@ -142,7 +142,10 @@ class TreeCache:
         #self.cachedFileNames = glob.glob(cachedFilesMask)
 
         # workaround: use xrootd for directory listing 
-        self.cachedFileNames = self.fileLocator.glob(cachedFilesMaskRaw)
+        #self.cachedFileNames = self.fileLocator.glob_with_fallback(cachedFilesMaskRaw)
+
+        # this solution uses a loop over all possible files and uses xrdfs stat instead of xrdfs ls
+        self.cachedFileNames = self.fileLocator.get_numbered_file_list(cachedFilesMaskRaw, 1, self.splitFilesChunks)
 
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)
