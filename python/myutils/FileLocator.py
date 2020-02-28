@@ -353,6 +353,7 @@ class FileLocator(object):
             if listing is None:
                 return None 
             fileList = sorted([(x.name if x.name.startswith('/') else path + '/' + x.name) for x in listing])
+            #print('fileList ',fileList)
         else:
             # fallback for the fallback...
             serverName = self.xrootdRedirectors[0].replace('root://','').split(':')[0].strip()
@@ -385,7 +386,9 @@ class FileLocator(object):
     # like glob but allows wildcards only in the last level
     def globLightRemote(self, path):
         path = self.removeRedirector(path.strip())
+        #print('path',path)
         basePath = '/'.join(path.split('/')[:-1])
+        #print('basePath',basePath)
         if '*' in basePath:
             raise Exception("NotImplemented")
         dirListing = self.lsRemote(basePath)
