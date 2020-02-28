@@ -18,7 +18,7 @@ from BranchTools import AddCollectionsModule
 
 class GetTopMass(AddCollectionsModule):
 
-    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass', addBoostSystematics=False, addMinMax=False):
+    def __init__(self, sample=None, nano=False, propagateJES = False, METmethod = 2, useHJets = 0, minbTag = 0.5, branchName='top_mass', addBoostSystematics=False, addMinMax=False, jetIdCut=4):
         super(GetTopMass, self).__init__()
         self.nano = nano
         self.lastEntry = -1
@@ -38,6 +38,8 @@ class GetTopMass(AddCollectionsModule):
         self.addBranch('top_mass_reco_neutrino_pz')
         self.addBranch('top_mass_reco_neutrino_E')
         self.addIntegerBranch('top_mass_reco_neutrino_solver_branch')
+
+        self.jetIdCut = jetIdCut
 
     def customInit(self, initVars):
         self.sample = initVars['sample']
@@ -505,7 +507,7 @@ class GetTopMass(AddCollectionsModule):
 
            #if temPt < 30 or tembTag < self.minbTag or not (tree.Jet_lepFilter): continue
 
-           if jetPts[i] >= 30 and jetBtags[i] >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > 4 and (tree.Jet_puId[i]>6 or jetPtsNoReg[i] >50.0):
+           if jetPts[i] >= 30 and jetBtags[i] >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > self.jetIdCut and (tree.Jet_puId[i]>6 or jetPtsNoReg[i] >50.0):
 
                tempJet = TLorentzVector()
                tempJet.SetPtEtaPhiM(jetPts[i],tree.Jet_eta[i],tree.Jet_phi[i], jetMasses[i])
