@@ -54,7 +54,10 @@ class SampleTree(object):
             self.outputTreeBasketSize = eval(self.config.get('Configuration', 'outputTreeBasketSize'))
         self.monitorPerformance = True
         self.disableBranchesInOutput = True
-        self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
+        if self.config is not None:
+            self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
+        else:
+            self.requireAllInputTrees = False
         self.samples = samples
         self.tree = None
         self.nonEmptyTrees = []
