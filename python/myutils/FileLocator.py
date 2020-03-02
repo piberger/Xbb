@@ -494,8 +494,14 @@ class FileLocator(object):
             return glob.glob(path)
 
     def get_numbered_file_list(self, mask, start, end):
-        if mask.count('*') != 1:
+        if mask.count('*') > 1:
+            print("INFO: filename mask contains more than one *!")
             raise Exception("NotImplemented")
+        elif mask.count('*') < 1:
+            print("WARNING: filename mask does not contain any * => use exists() instead!")
+            # since there is only 1-file, check only once
+            start = 1
+            end = 1
         existingFiles = []
         for i in range(start, end+1):
             fileName = mask.replace('*','%d'%i)
