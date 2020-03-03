@@ -10,7 +10,7 @@ from BranchTools import AddCollectionsModule
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(AddCollectionsModule):
     
-    def __init__(self, addSystematics=True, prefix="H", addBoostSystematics=False, addMinMax=False):
+    def __init__(self, addSystematics=True, prefix="H", addBoostSystematics=False, addMinMax=False, puIdCut=6, jetIdCut=4):
         super(HiggsCandidateSystematics, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.lastEntry = -1
@@ -20,6 +20,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.addMinMax = addMinMax
         self.prefix = prefix
         self.addBoostSystematics = addBoostSystematics
+        self.puIdCut = puIdCut
+        self.jetIdCut = jetIdCut
 
         self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
         #self.jetSystematics = ['jerReg','jesAbsoluteStat']
@@ -213,7 +215,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
 
                 # FSR recovery
                 for i in range(len(treeJet_PtReg)):
-                    if i not in [hJidx0, hJidx1] and treeJet_Pt[i]>20 and abs(tree.Jet_eta[i])<3.0 and (tree.Jet_puId[i]>6 or tree.Jet_Pt[i]>50.0) and tree.Jet_lepFilter[i] > 0 and tree.Jet_jetId[i] > 4:
+                    if i not in [hJidx0, hJidx1] and treeJet_Pt[i]>20 and abs(tree.Jet_eta[i])<3.0 and (tree.Jet_puId[i]>self.puIdCut or tree.Jet_Pt[i]>50.0) and tree.Jet_lepFilter[i] > 0 and tree.Jet_jetId[i] > self.jetIdCut:
                         FSR = ROOT.TLorentzVector()
                         FSR.SetPtEtaPhiM(treeJet_Pt[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass_nom[i])
                         deltaR0 = FSR.DeltaR(hJ0)
