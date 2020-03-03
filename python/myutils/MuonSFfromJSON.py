@@ -17,23 +17,70 @@ class MuonSFfromJSON(AddCollectionsModule):
         self.branchName = branchName
 
         self.year = year
-        tablenames = {2017:{'Zll':{'idSf':'NUM_LooseID_DEN_genTracks','isoSf':'NUM_LooseRelIso_DEN_LooseID','eff_IsoMu8_mc':'Mu8LegMC','eff_IsoMu17_mc':'Mu17LegMC','eff_IsoMu8_data':'Mu8Leg','eff_IsoMu17_data':'Mu17Leg'},'Wlv':{'idSf':'NUM_TightID_DEN_genTracks','isoSf':'NUM_UltraTightIso4_DEN_TightIDandIPCut','triggerSf':'NUM_IsoMu27_DEN_empty'}},2018:{'Zll':{'idSf':'NUM_LooseID_DEN_TrackerMuons2018','isoSf':'NUM_LooseRelIso_DEN_LooseID2018','eff_IsoMu8_mc':'Mu8LegMC','eff_IsoMu17_mc':'Mu17LegMC','eff_IsoMu8_data':'Mu8Leg','eff_IsoMu17_data':'Mu17Leg'},'Wlv':{'idSf':'TightID','isoSf':'TightISO','triggerSf':'TRGIsoMu24'}}}
+        self.tablenames = {
+        2016:  {'Zll':{ 
+                    'idSf':'SF_MuIDTightBCDEF',
+                    'isoSf':'NUM_LooseRelIso_DEN_LooseID',
+                    'eff_IsoMu8_mc':'Mu8LegMC',
+                    'eff_IsoMu17_mc':'Mu17LegMC',
+                    'eff_IsoMu8_data':'Mu8Leg',
+                    'eff_IsoMu17_data':'Mu17Leg'
+                    },
+                'Wlv':{
+                    'idSf':'SF_MuIDTight', # important to add BCDEF / GH for Run dependent lumi
+                    'isoSf':'SF_MuIsoTight',
+                    'triggerSf':'SF_MuTrigger'},
+                'lumi':{
+                    'BCDEF': 20.1/36.4,
+                    'GH': 16.3/36.4}
+                },
+        2017:  {'Zll':{
+                    'idSf':'NUM_LooseID_DEN_genTracks',
+                    'isoSf':'NUM_LooseRelIso_DEN_LooseID',
+                    'eff_IsoMu8_mc':'Mu8LegMC',
+                    'eff_IsoMu17_mc':'Mu17LegMC',
+                    'eff_IsoMu8_data':'Mu8Leg',
+                    'eff_IsoMu17_data':'Mu17Leg'
+                    },
+                'Wlv':{
+                    'idSf':'NUM_TightID_DEN_genTracks',
+                    'isoSf':'NUM_UltraTightIso4_DEN_TightIDandIPCut',
+                    'triggerSf':'NUM_IsoMu27_DEN_empty'}
+                },
+        2018:   {'Zll':{
+                    'idSf':'NUM_LooseID_DEN_TrackerMuons2018',
+                    'isoSf':'NUM_LooseRelIso_DEN_LooseID2018',
+                    'eff_IsoMu8_mc':'Mu8LegMC',
+                    'eff_IsoMu17_mc':'Mu17LegMC',
+                    'eff_IsoMu8_data':'Mu8Leg',
+                    'eff_IsoMu17_data':'Mu17Leg'},
+                'Wlv':{
+                    'idSf':'TightID',
+                    'isoSf':'TightISO',
+                    'triggerSf':'TRGIsoMu24'}
+                }
+        }
 
         # load JOSN files
         self.jsonTable = JsonTable(jsonFiles)
         self.channel = channel 
         if self.channel== 'Zll':
-            self.idSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['idSf'], 'abseta_pt')
-            self.isoSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['isoSf'], 'abseta_pt')
-            self.eff_IsoMu8_mc = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu8_mc'], 'abseta_pt') 
-            self.eff_IsoMu17_mc = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu17_mc'], 'abseta_pt') 
-            self.eff_IsoMu8_data = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu8_data'], 'abseta_pt') 
-            self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu17_data'], 'abseta_pt') 
+            self.idSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['idSf'], 'abseta_pt')
+            self.isoSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['isoSf'], 'abseta_pt')
+            self.eff_IsoMu8_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_mc'], 'abseta_pt') 
+            self.eff_IsoMu17_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_mc'], 'abseta_pt') 
+            self.eff_IsoMu8_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_data'], 'abseta_pt') 
+            self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_data'], 'abseta_pt') 
             #self.triggerSf = ; not implemented yet
         elif self.channel == 'Wlv':
-            self.idSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['idSf'], 'abseta_pt')
-            self.isoSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['isoSf'], 'abseta_pt')
-            self.triggerSf = [self.jsonTable.getEtaPtTable(tablenames[year][channel]['triggerSf'], 'abseta_pt')]
+            if self.year == 2016:
+                for corr in self.tablenames[self.year][self.channel].keys():
+                    for lumi_sec in self.tablenames[self.year]['lumi'].keys():
+                        setattr(self, corr+lumi_sec, self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel][corr]+lumi_sec, 'abseta_pt')) 
+            else:
+                for corr in self.tablenames[self.year][self.channel].keys():
+                    setattr(self, corr, self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel][corr], 'abseta_pt'))
+
         else: 
             print "Channel not defined!"
             raise Exception("ChannelNotDefined")
@@ -90,17 +137,33 @@ class MuonSFfromJSON(AddCollectionsModule):
         # require two electrons
 
         if lep_n == 1 or lep_n == 2:
-            #Calculating the trigger and IdIso weights and Down/Up variations
+        #Calculating the trigger and IdIso weights and Down/Up variations
             for i, syst in enumerate(self.systVariations):
-               weight_trigg[i] = self.getTriggerSf(lep_eta, lep_pt, lep_n, syst=syst)
-               weight_Id[i] = self.getIdSf(lep_eta, lep_pt, lep_n)
-               weight_Iso[i] = self.getIsoSf(lep_eta, lep_pt, lep_n)
-               weight_SF[i] = weight_trigg[i] * weight_Id[i] * weight_Iso[i]
+                if self.year == 2016:
+                    weight_trigg[i] = 0.0
+                    weight_Id[i] = 0.0
+                    weight_Iso[i] = 0.0
 
-#               print "trigg", weight_trigg[i] 
-#               print "Id", weight_Id[i]
-#               print "Iso", weight_Iso[i]
-#               print "SF", weight_SF[i]
+                    for corr in self.tablenames[self.year][self.channel].keys():
+                        for lumi_sec in self.tablenames[self.year]['lumi'].keys():
+                            w = self.getSf(corr+lumi_sec, lep_eta, lep_pt, lep_n, syst=syst)
+                            if corr.startswith("triggerSf"):
+                                weight_trigg[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
+                            if corr.startswith("idSf"):
+                                weight_Id[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
+                            if corr.startswith("isoSf"):
+                                weight_Iso[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
+
+                else:
+                    weight_trigg[i] = self.getTriggerSf(lep_eta, lep_pt, lep_n, syst=syst)
+                    weight_Id[i] = self.getSf("idSf", lep_eta, lep_pt, lep_n)
+                    weight_Iso[i] = self.getSf("isoSf", lep_eta, lep_pt, lep_n)
+                weight_SF[i] = weight_trigg[i] * weight_Id[i] * weight_Iso[i]
+
+            #print "trigg", weight_trigg
+            #print "Id", weight_Id
+            #print "Iso", weight_Iso
+            #print "SF", weight_SF
 
         #This is when an event has 0 or more than 2 lepton
         else:
@@ -110,21 +173,13 @@ class MuonSFfromJSON(AddCollectionsModule):
                 weight_Iso[i] = 1.
                 weight_SF[i] = 1.
 
-    def getIdSf(self, eta, pt, len_n, syst=None):
-        idSF = 1.
-        if self.idSf:
-            for i in range(len_n):
-                idSF = idSF * self.jsonTable.find(self.idSf, eta[i], pt[i], syst=syst)
-        return idSF
-
-
-    def getIsoSf(self, eta, pt, len_n, syst=None):
-        isoSF = 1.
+    def getSf(self, corr, eta, pt, len_n, syst=None):
+        SF = 1.
         for i in range(len_n):
-            isoSF = isoSF * self.jsonTable.find(self.isoSf, eta=eta[i], pt=pt[i], syst=syst)
-        return isoSF
-          
-  
+            SF = SF * self.jsonTable.find(getattr(self, corr), eta[i], pt[i], syst=syst)
+        return SF
+
+
 #    def getTriggerSf(self, eta1, pt1, eta2, pt2, syst=None):
 #        leg1 = 1.0 #not implemented yet
 #        leg2 = 1.0 
