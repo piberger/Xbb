@@ -823,6 +823,7 @@ class SampleTree(object):
         # handling of exceptions during the event loop
         except Exception as e:
             print("\x1b[41m\x1b[37mERROR: exception during event loop\x1b[0m")
+            print("->", e)
             try:
                 print("DEBUG: sampleTree:")
                 print("DEBUG:  - GetEntries() =", self.tree.GetEntries())
@@ -832,7 +833,7 @@ class SampleTree(object):
                         print("DEBUG:  - %s ="%x, getattr(self.tree, x))
             except Exception as e2:
                 print("ERROR: an exception occurred while handling an exception:", e2)
-            raise e
+            raise
 
     # ------------------------------------------------------------------------------
     # loop over all entries in the TChain and copy events to output trees, if the
