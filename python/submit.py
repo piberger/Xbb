@@ -727,7 +727,7 @@ if opts.task == 'hadd':
                 # only give good files to hadd
                 fileNames = []
                 for fileName in splitFilesChunk:
-                    fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
+                    fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=inputPath, sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
                     #if fileLocator.isValidRootFile(fileNameAfterPrep):
                     if fileLocator.exists(fileNameAfterPrep):
                         fileNames.append(fileName)
@@ -738,7 +738,7 @@ if opts.task == 'hadd':
 
                 if len(fileNames) > 0:
                     # 'fake' filenames to write into text file for merged files
-                    partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+                    partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier, inputDir=inputDir,outputDir=outputDir)
                     mergedFileName = partialFileMerger.getMergedFakeFileName()
                     mergedFileNames.append(mergedFileName)
 
@@ -761,6 +761,8 @@ if opts.task == 'hadd':
                             jobDict['arguments']['force'] = ''
                         jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
                         submit(jobName, jobDict)
+                    else:
+                        print "output file exists:", outputFileName
                 else:
                     print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
 
