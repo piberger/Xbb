@@ -1173,6 +1173,9 @@ class SampleTree(object):
             else:
                 if not countHistogram:
                     countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else 'genEventSumw'
+                # NANOAODv6 workaround
+                if countHistogram not in self.totalNanoTreeCounts and countHistogram + '_' in self.totalNanoTreeCounts:
+                    countHistogram = countHistogram + '_'
                 count = self.totalNanoTreeCounts[countHistogram]
                 #print('count', count)  #1978776.76904
         else:
