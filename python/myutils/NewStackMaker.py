@@ -127,6 +127,7 @@ class NewStackMaker:
                     'draw': 'draw',
                     'binList': 'binList',
                     'plotEqualSize': 'plotEqualSize',
+                    'rebinFlat': 'rebinFlat',
                     'visualizeBlindCutThreshold': 'visualizeBlindCutThreshold',
                     'min': ['min', 'minX'],
                     'max': ['max', 'maxX'],
@@ -143,7 +144,7 @@ class NewStackMaker:
                     'fractions': 'fractions',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
-        evalOptions = ['binList', 'plotEqualSize','fractions']
+        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -946,12 +947,18 @@ class NewStackMaker:
                         self.drawRatioPlot(dataHistogram, mcHistogram, ratioRange=ratioRange)
 
                 self.pads['oben'].cd()
-                theErrorGraph = ROOT.TGraphErrors(mcHistogram)
-                theErrorGraph.SetFillColor(ROOT.kGray+3)
-                theErrorGraph.SetFillStyle(3013)
-                theErrorGraph.Draw('SAME2')
             else:
                 print("INFO: no DATA available")
+
+            # draw MC error
+            mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+            theErrorGraph = ROOT.TGraphErrors(mcHistogram)
+            theErrorGraph.SetFillColor(ROOT.kGray+3)
+            theErrorGraph.SetFillStyle(3013)
+            theErrorGraph.Draw('SAME2')
+            #    self.garbage.append(mcHistogramClone)
+            #    self.garbage.append(theErrorGraph)
+
         elif normalize and not self.is2D and self.drawMCErrorForNormalizedPlots:
             # draw error bands for all individual groups
             self.errorGraphs = []
