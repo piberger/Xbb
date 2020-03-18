@@ -159,6 +159,7 @@ class XbbTools(object):
             else:
                 modulesInfo.append([None, "unknown", -1])
         except Exception as e:
+            print("\x1b[31mEXCEPTION: An exception occured while getting the module meta information (version etc) this might be due to an error in the module or config!\x1b[0m")
             print("\x1b[31mEXCEPTION:", e, "\x1b[0m")
             modulesInfo.append([None, "unknown", -2])
         return modulesInfo
