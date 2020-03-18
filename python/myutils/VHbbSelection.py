@@ -5,26 +5,54 @@ from BranchTools import AddCollectionsModule
 import array
 import os
 
+from vLeptons import vLeptonSelector
+
 # do jet/lepton selection and skimming
 class VHbbSelection(AddCollectionsModule):
 
     # original 2017: puIdCut=0, jetIdCut=-1
     # now:           puIdCut=6, jetIdCut=4
-    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[]):
+    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], estimateQCD=False, isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False):
         self.debug = debug or 'XBBDEBUG' in os.environ
+        self.stats = {}
         self.year = year
         self.channels = channels
         self.debugEvents = debugEvents
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
+        self.isoWen = isoWen
+        self.isoWmn = isoWmn
+        self.isoZee = isoZee
+        self.isoZmm = isoZmm
+        self.recomputeVtype = recomputeVtype
         # only use puId below this pT:
         self.puIdMaxPt = 50.0
+        # run QCD estimation analysis with inverted isolation cuts (CAREFUL!)
+        self.estimateQCD = estimateQCD
+        if self.estimateQCD:
+            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[41m\x1b[37m QCD estimation analysis, all isolation cuts are inverted!\x1b[0m")
+            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
+        if self.recomputeVtype:
+            print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[45m\x1b[37m RECOMPUTE Vtype, custom definitions might be used!\x1b[0m") 
+            print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
+            print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
         super(VHbbSelection, self).__init__()
+
+    def count(self, quantity, increment=1.0):
+        if quantity not in self.stats:
+            self.stats[quantity] = 0 if type(increment) == int else 0.0
+        self.stats[quantity] += increment
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.isData = initVars['sample'].isData()
         self.sample = initVars['sample']
+        self.config = initVars['config']
 
         # settings
         # originally Electron_mvaFall17V1Iso_WP80 was used for 2017, which was called Electron_mvaFall17Iso_WP80
@@ -178,7 +206,8 @@ class VHbbSelection(AddCollectionsModule):
         indices = []
         for i in range(tree.nElectron):
             passEleIDCut = getattr(tree, self.electronID[1 if isOneLepton else 2][self.year])[i]
-            if abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt and tree.Electron_pfRelIso03_all[i] < max_rel_iso and passEleIDCut:
+            passIso = (self.estimateQCD and tree.Electron_pfRelIso03_all[i] >= max_rel_iso) or (not self.estimateQCD and tree.Electron_pfRelIso03_all[i] < max_rel_iso)
+            if abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt and passIso and passEleIDCut:
                 if len(indices) < 1:
                     indices.append(i)
                     if isOneLepton:
@@ -192,7 +221,8 @@ class VHbbSelection(AddCollectionsModule):
     def HighestPtGoodMuonsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton):
         indices = []
         for i in range(tree.nMuon):
-            if abs(tree.Muon_eta[i]) < etacut and tree.Muon_pt[i] > min_pt and tree.Muon_pfRelIso04_all[i] < max_rel_iso and (not isOneLepton or tree.Muon_tightId[i] > 0):
+            passIso = (self.estimateQCD and tree.Muon_pfRelIso04_all[i] >= max_rel_iso) or (not self.estimateQCD and tree.Muon_pfRelIso04_all[i] < max_rel_iso)
+            if abs(tree.Muon_eta[i]) < etacut and tree.Muon_pt[i] > min_pt and passIso and (not isOneLepton or tree.Muon_tightId[i] > 0):
                 if len(indices) < 1:
                     indices.append(i)
                     if isOneLepton:
@@ -280,9 +310,20 @@ class VHbbSelection(AddCollectionsModule):
             if debugEvent:
                 print "triggers:", triggerPassed
 
-            isZnn = tree.Vtype == 4 and triggerPassed['Znn']
-            isWln = tree.Vtype in [2,3] and triggerPassed['Wln']
-            isZll = tree.Vtype in [0,1] and triggerPassed['Zll']
+            Vtype = tree.Vtype
+            if self.recomputeVtype:
+                leptonSelector = vLeptonSelector(tree, config=self.config, isoZmm=self.isoZmm, isoZee=self.isoZee, isoWmn=self.isoWmn, isoWen=self.isoWen)
+                customVtype = leptonSelector.getVtype()
+                if customVtype != Vtype:
+                    self.count("recomputeVtype_mismatch")
+                else:
+                    self.count("recomputeVtype_match")
+                self.count("recomputeVtype_Vtype%d"%customVtype)
+                Vtype = customVtype
+
+            isZnn = Vtype == 4 and triggerPassed['Znn']
+            isWln = Vtype in [2,3] and triggerPassed['Wln']
+            isZll = Vtype in [0,1] and triggerPassed['Zll']
 
             if not any([isZll, isWln, isZnn]):
                 return False
@@ -290,8 +331,8 @@ class VHbbSelection(AddCollectionsModule):
             #print(self.cutFlow[1], ': cutFlow[1]')
 
             # LEPTONS
-            if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == tree.Vtype:
-                if tree.Vtype == 0:
+            if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == Vtype:
+                if Vtype == 0:
                     good_muons_2lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=20.0, max_rel_iso=0.25, idcut=None, etacut=2.4, isOneLepton=False)
                     if len(good_muons_2lep) > 1:
                         self._b("isZmm")[0] = 1
@@ -299,7 +340,7 @@ class VHbbSelection(AddCollectionsModule):
                         self._b("vLidx")[1] = good_muons_2lep[1]
                     elif debugEvent:
                         print "DEBUG-EVENT: 2 mu event, but less than 2 good muons -> discard"
-                elif tree.Vtype == 1:
+                elif Vtype == 1:
                     good_elecs_2lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=20.0, max_rel_iso=0.15, idcut=1, etacut=2.5, isOneLepton=False)
                     if len(good_elecs_2lep) > 1:
                         self._b("isZee")[0] = 1
@@ -307,23 +348,23 @@ class VHbbSelection(AddCollectionsModule):
                         self._b("vLidx")[1] = good_elecs_2lep[1]
                     elif debugEvent:
                         print "DEBUG-EVENT: 2 e event, but less than 2 good electrons -> discard"
-                elif tree.Vtype == 2:
-                    good_muons_1lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=25.0, max_rel_iso=0.06, idcut=None, etacut=2.4, isOneLepton=True)
+                elif Vtype == 2:
+                    good_muons_1lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=25.0, max_rel_iso=self.isoWmn, idcut=None, etacut=2.4, isOneLepton=True)
                     if len(good_muons_1lep) > 0:
                         self._b("isWmunu")[0] = 1
                         self._b("vLidx")[0] = good_muons_1lep[0]
                         self._b("vLidx")[1] = -1
                     elif debugEvent:
                         print "DEBUG-EVENT: 1 mu event, but no good muon found"
-                elif tree.Vtype == 3:
-                    good_elecs_1lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=30.0, max_rel_iso=0.06, idcut=1, etacut=2.5, isOneLepton=True)
+                elif Vtype == 3:
+                    good_elecs_1lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=30.0, max_rel_iso=self.isoWen, idcut=1, etacut=2.5, isOneLepton=True)
                     if len(good_elecs_1lep) > 0:
                         self._b("isWenu")[0] = 1
                         self._b("vLidx")[0] = good_elecs_1lep[0]
                         self._b("vLidx")[1] = -1
                     elif debugEvent:
                         print "DEBUG-EVENT: 1 e event, but no good electron found"
-                elif tree.Vtype == 4:
+                elif Vtype == 4:
                         passMetFilters = all([getattr(tree, x) for x in self.metFilters]) 
                         if tree.MET_Pt > 170.0 and passMetFilters:
                             self._b("isZnn")[0] = 1
@@ -479,7 +520,8 @@ class VHbbSelection(AddCollectionsModule):
 
             #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
 
-            boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
+            boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_Pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
+            self.count("boosted_pass" if boostedPass else "boosted_nopass")
 
             # discard event if none of the jet selections finds two Higgs candidate jets
             if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
@@ -517,3 +559,8 @@ class VHbbSelection(AddCollectionsModule):
         print "efficiency:", 1.0*self.cutFlow[7]/self.cutFlow[0]
 
         print "jet selections:", self.jetDefinitions
+
+        print "other statistics:"
+        for k in sorted(self.stats.keys()):
+            print " ",k,": ", self.stats[k]
+

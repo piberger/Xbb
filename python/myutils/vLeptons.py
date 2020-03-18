@@ -11,7 +11,7 @@ class lepton(object):
 
 class vLeptonSelector(object):
 
-    def __init__(self, tree, config):
+    def __init__(self, tree, config, isoZmm=0.25, isoZee=0.15, isoWmn=0.06, isoWen=0.06):
 
         self.electronMVA = config.get('General', 'electronMVA') if config.has_option('General', 'electronMVA') else 'Electron_mvaSpring16GP_WP90' 
         self.electronMVA_80 = config.get('General', 'electronMVA80') if config.has_option('General', 'electronMVA80') else self.electronMVA
@@ -26,20 +26,20 @@ class vLeptonSelector(object):
         self.vMuonIdx = []
         self.vElectronIdx = []
         for i in range(tree.nMuon):
-            if tree.Muon_pt[i]>20 and tree.Muon_pfRelIso04_all[i]<0.25 and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
+            if tree.Muon_pt[i]>20 and tree.Muon_pfRelIso04_all[i]<isoZmm and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
                 zMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA_90)[i] and tree.Electron_pfRelIso03_all[i]<0.15:
+            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA_90)[i] and tree.Electron_pfRelIso03_all[i]<isoZee:
                 zElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
 
         for i in range(tree.nMuon):
-            if tree.Muon_pt[i]>25 and tree.Muon_tightId[i] >= 1 and tree.Muon_pfRelIso04_all[i]<0.15 and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
+            if tree.Muon_pt[i]>25 and tree.Muon_tightId[i] >= 1 and tree.Muon_pfRelIso04_all[i]<isoWmn and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
                 wMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA_80)[i] and tree.Electron_pfRelIso03_all[i]<0.12:
+            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA_80)[i] and tree.Electron_pfRelIso03_all[i]<isoWen:
                 wElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
 
