@@ -393,8 +393,8 @@ class NewStackMaker:
                 convertedDataHistogram.SetDrawOption("EP")
             dataHistogram = convertedDataHistogram
 
-        # draw ratio plot
-        self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
+            # draw ratio plot
+            self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
 
         ksScore = dataHistogram.KolmogorovTest(mcHistogram)
         chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
@@ -837,8 +837,9 @@ class NewStackMaker:
                 ROOT.gPad.SetLogy(0)
             allStack.SetMaximum(Ymax)
         if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
-            allStack.GetXaxis().SetLabelOffset(999)
-            allStack.GetXaxis().SetLabelSize(0)
+            if allStack and allStack.GetXaxis():
+                allStack.GetXaxis().SetLabelOffset(999)
+                allStack.GetXaxis().SetLabelSize(0)
         else:
             allStack.GetXaxis().SetTitle(self.xAxis)
 
