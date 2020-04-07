@@ -12,8 +12,10 @@ class VHbbSelection(AddCollectionsModule):
 
     # original 2017: puIdCut=0, jetIdCut=-1
     # now:           puIdCut=6, jetIdCut=4
-    def __init__(self, debug=False, year="2018", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], estimateQCD=False, isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False):
+    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1):
+        super(VHbbSelection, self).__init__()
         self.debug = debug or 'XBBDEBUG' in os.environ
+        self.version = 3
         self.stats = {}
         self.year = year
         self.channels = channels
@@ -24,24 +26,25 @@ class VHbbSelection(AddCollectionsModule):
         self.isoWmn = isoWmn
         self.isoZee = isoZee
         self.isoZmm = isoZmm
+        self.idWmn    = idWmn
+        self.idWmnCut = idWmnCut
+        self.idWen    = idWen
+        self.idWenCut = idWenCut
+        self.idZmm    = idZmm
+        self.idZmmCut = idZmmCut
+        self.idZee    = idZee
+        self.idZeeCut = idZeeCut
         self.recomputeVtype = recomputeVtype
+        self.btagMaxCut = btagMaxCut
         # only use puId below this pT:
         self.puIdMaxPt = 50.0
         # run QCD estimation analysis with inverted isolation cuts (CAREFUL!)
-        self.estimateQCD = estimateQCD
-        if self.estimateQCD:
-            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
-            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
-            print("\x1b[41m\x1b[37m QCD estimation analysis, all isolation cuts are inverted!\x1b[0m")
-            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
-            print("\x1b[41m\x1b[37m" + "-"*160 + "\x1b[0m")
         if self.recomputeVtype:
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
             print("\x1b[45m\x1b[37m RECOMPUTE Vtype, custom definitions might be used!\x1b[0m") 
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
-        super(VHbbSelection, self).__init__()
 
     def count(self, quantity, increment=1.0):
         if quantity not in self.stats:
@@ -71,6 +74,18 @@ class VHbbSelection(AddCollectionsModule):
                                 "2016": "Electron_mvaFall17V2Iso_WP90",
                             }
                     }
+       
+        # default lepton IDs for backward compatibility
+        if self.idWen == "default":
+            self.idWen = self.electronID[1][self.year]
+        if self.idZee == "default":
+            self.idZee = self.electronID[2][self.year]
+        if self.idWmn == "default":
+            # cut-based muon ID
+            self.idWmn = "Muon_tightId"
+        if self.idZmm == "default":
+            self.idZmm = None 
+
 
         # updated to july 2018 Jet/MET recommendations
         # reference: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2
@@ -162,6 +177,7 @@ class VHbbSelection(AddCollectionsModule):
         else:
             raise Execption("unknown year")
 
+        # Vtype cut on datasets
         self.leptonFlav = {
                 'DoubleMuon': 0,
                 'DoubleEG': 1,
@@ -202,12 +218,13 @@ class VHbbSelection(AddCollectionsModule):
 
         print "DEBUG: sample identifier:", self.sample.identifier, " lep flav", self.leptonFlav, " -> ", self.leptonFlav[self.sample.identifier] if self.sample.identifier in self.leptonFlav else "UNDEFINED LEPTON FLAVOR!!"
 
-    def HighestPtGoodElectronsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton):
+    def HighestPtGoodElectronsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton, electronID=None):
         indices = []
         for i in range(tree.nElectron):
-            passEleIDCut = getattr(tree, self.electronID[1 if isOneLepton else 2][self.year])[i]
-            passIso = (self.estimateQCD and tree.Electron_pfRelIso03_all[i] >= max_rel_iso) or (not self.estimateQCD and tree.Electron_pfRelIso03_all[i] < max_rel_iso)
-            if abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt and passIso and passEleIDCut:
+            passIso        = tree.Electron_pfRelIso03_all[i] < max_rel_iso 
+            passID         = getattr(tree, electronID)[i] >= idcut if electronID is not None else True
+            passAcceptance = abs(tree.Electron_eta[i]) < etacut and tree.Electron_pt[i] > min_pt
+            if passAcceptance and passIso and passID: 
                 if len(indices) < 1:
                     indices.append(i)
                     if isOneLepton:
@@ -218,11 +235,15 @@ class VHbbSelection(AddCollectionsModule):
                         break
         return indices
 
-    def HighestPtGoodMuonsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton):
+    def HighestPtGoodMuonsOppCharge(self, tree, min_pt, max_rel_iso, idcut, etacut, isOneLepton, muonID=None):
         indices = []
         for i in range(tree.nMuon):
-            passIso = (self.estimateQCD and tree.Muon_pfRelIso04_all[i] >= max_rel_iso) or (not self.estimateQCD and tree.Muon_pfRelIso04_all[i] < max_rel_iso)
-            if abs(tree.Muon_eta[i]) < etacut and tree.Muon_pt[i] > min_pt and passIso and (not isOneLepton or tree.Muon_tightId[i] > 0):
+            passIso        = tree.Muon_pfRelIso04_all[i] < max_rel_iso 
+            passID         = getattr(tree, muonID)[i] >= idcut if muonID is not None else True
+
+            passAcceptance = abs(tree.Muon_eta[i]) < etacut and tree.Muon_pt[i] > min_pt
+
+            if passAcceptance and passIso and passID: 
                 if len(indices) < 1:
                     indices.append(i)
                     if isOneLepton:
@@ -328,12 +349,11 @@ class VHbbSelection(AddCollectionsModule):
             if not any([isZll, isWln, isZnn]):
                 return False
             self.cutFlow[1] += 1
-            #print(self.cutFlow[1], ': cutFlow[1]')
 
             # LEPTONS
             if self.sample.identifier not in self.leptonFlav or self.leptonFlav[self.sample.identifier] == Vtype:
                 if Vtype == 0:
-                    good_muons_2lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=20.0, max_rel_iso=0.25, idcut=None, etacut=2.4, isOneLepton=False)
+                    good_muons_2lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=20.0, max_rel_iso=self.isoZmm, idcut=self.idZmmCut, etacut=2.4, isOneLepton=False, muonID=self.idZmm)
                     if len(good_muons_2lep) > 1:
                         self._b("isZmm")[0] = 1
                         self._b("vLidx")[0] = good_muons_2lep[0]
@@ -341,7 +361,7 @@ class VHbbSelection(AddCollectionsModule):
                     elif debugEvent:
                         print "DEBUG-EVENT: 2 mu event, but less than 2 good muons -> discard"
                 elif Vtype == 1:
-                    good_elecs_2lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=20.0, max_rel_iso=0.15, idcut=1, etacut=2.5, isOneLepton=False)
+                    good_elecs_2lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=20.0, max_rel_iso=self.isoZee, idcut=self.idZeeCut, etacut=2.5, isOneLepton=False, electronID=self.idZee)
                     if len(good_elecs_2lep) > 1:
                         self._b("isZee")[0] = 1
                         self._b("vLidx")[0] = good_elecs_2lep[0]
@@ -349,7 +369,7 @@ class VHbbSelection(AddCollectionsModule):
                     elif debugEvent:
                         print "DEBUG-EVENT: 2 e event, but less than 2 good electrons -> discard"
                 elif Vtype == 2:
-                    good_muons_1lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=25.0, max_rel_iso=self.isoWmn, idcut=None, etacut=2.4, isOneLepton=True)
+                    good_muons_1lep = self.HighestPtGoodMuonsOppCharge(tree, min_pt=25.0, max_rel_iso=self.isoWmn, idcut=self.idWmnCut, etacut=2.4, isOneLepton=True, muonID=self.idWmn)
                     if len(good_muons_1lep) > 0:
                         self._b("isWmunu")[0] = 1
                         self._b("vLidx")[0] = good_muons_1lep[0]
@@ -357,7 +377,7 @@ class VHbbSelection(AddCollectionsModule):
                     elif debugEvent:
                         print "DEBUG-EVENT: 1 mu event, but no good muon found"
                 elif Vtype == 3:
-                    good_elecs_1lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=30.0, max_rel_iso=self.isoWen, idcut=1, etacut=2.5, isOneLepton=True)
+                    good_elecs_1lep = self.HighestPtGoodElectronsOppCharge(tree, min_pt=30.0, max_rel_iso=self.isoWen, idcut=self.idWenCut, etacut=2.5, isOneLepton=True, electronID=self.idWen)
                     if len(good_elecs_1lep) > 0:
                         self._b("isWenu")[0] = 1
                         self._b("vLidx")[0] = good_elecs_1lep[0]
@@ -393,20 +413,23 @@ class VHbbSelection(AddCollectionsModule):
                 j1ptCut = 35.0
                 j2ptCut = 35.0
                 j1BtagName = 'loose'
-                j1Btag = self.btagWP[j1BtagName]
             elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
                 j1ptCut = 25.0
                 j2ptCut = 25.0
                 j1BtagName = 'loose'
-                j1Btag = self.btagWP[j1BtagName]
             elif self._b("isZmm")[0] or self._b("isZee")[0]:
                 j1ptCut = 20.0
                 j2ptCut = 20.0
                 j1BtagName = 'none'
-                j1Btag = self.btagWP[j1BtagName]
             else:
                 return False
             j2BtagName = 'none'
+
+            # btagMaxCut can overwrite the default b-tag max cut
+            if self.btagMaxCut is not None and len(self.btagMaxCut) > 0:
+                j1BtagName = self.btagMaxCut
+
+            j1Btag = self.btagWP[j1BtagName]
             j2Btag = self.btagWP[j2BtagName]
 
             # alternative jet selections (-> hJidx_*)
@@ -533,7 +556,7 @@ class VHbbSelection(AddCollectionsModule):
                 return False
             elif self._b("isZnn")[0] and self._b("V_pt")[0] < 150.0:
                 return False
-            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 150.0):
+            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 130.0):
                 return False
 
             self.cutFlow[6] += 1
