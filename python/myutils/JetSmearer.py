@@ -35,26 +35,27 @@ class JetSmearer(AddCollectionsModule):
         self.isData = initVars['sample'].isData()
         self.sample = initVars['sample']
 
-        # resolutions used in post-processor smearing
-        self.unsmearResNom  = 1.1
-        self.unsmearResUp   = 1.2
-        self.unsmearResDown = 1.0
+        if self.sample.isMC():
+            # resolutions used in post-processor smearing
+            self.unsmearResNom  = 1.1
+            self.unsmearResUp   = 1.2
+            self.unsmearResDown = 1.0
 
-        self.maxNjet   = 256
-        self.PtReg     = array.array('f', [0.0]*self.maxNjet)
-        self.PtRegUp   = array.array('f', [0.0]*self.maxNjet)
-        self.PtRegDown = array.array('f', [0.0]*self.maxNjet)
-        self.sampleTree.tree.SetBranchAddress("Jet_PtReg", self.PtReg)
-        self.sampleTree.tree.SetBranchAddress("Jet_PtRegUp", self.PtRegUp)
-        self.sampleTree.tree.SetBranchAddress("Jet_PtRegDown", self.PtRegDown)
+            self.maxNjet   = 256
+            self.PtReg     = array.array('f', [0.0]*self.maxNjet)
+            self.PtRegUp   = array.array('f', [0.0]*self.maxNjet)
+            self.PtRegDown = array.array('f', [0.0]*self.maxNjet)
+            self.sampleTree.tree.SetBranchAddress("Jet_PtReg", self.PtReg)
+            self.sampleTree.tree.SetBranchAddress("Jet_PtRegUp", self.PtRegUp)
+            self.sampleTree.tree.SetBranchAddress("Jet_PtRegDown", self.PtRegDown)
 
-        if self.backupPreviousCorrection:
-            self.addVectorBranch("Jet_PtRegOld",     default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOld[nJet]/F")
-            self.addVectorBranch("Jet_PtRegOldUp",   default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldUp[nJet]/F")
-            self.addVectorBranch("Jet_PtRegOldDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldDown[nJet]/F")
+            if self.backupPreviousCorrection:
+                self.addVectorBranch("Jet_PtRegOld",     default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOld[nJet]/F")
+                self.addVectorBranch("Jet_PtRegOldUp",   default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldUp[nJet]/F")
+                self.addVectorBranch("Jet_PtRegOldDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldDown[nJet]/F")
 
     def processEvent(self, tree):
-        if not self.hasBeenProcessed(tree):
+        if not self.hasBeenProcessed(tree) and self.sample.isMC():
             self.markProcessed(tree)
             
             nJet = tree.nJet
@@ -94,7 +95,7 @@ class JetSmearer(AddCollectionsModule):
                         self.PtRegDown[i] = genJetPt + (self.PtRegDown[i] - genJetPt)/self.unsmearResDown
 
                     # after undoing the smearing, check if up/down variations are the same
-                    assert (max(abs(self.PtReg[i]-self.PtRegUp[i]),abs(self.PtRegUp[i]-self.PtRegDown[i])) < 0.001)
+                    assert (max(abs(self.PtReg[i]-self.PtRegUp[i]),abs(self.PtRegUp[i]-self.PtRegDown[i])) < 0.001 or self.PtReg[i] < 0)
 
             # apply new smearing
             for i in range(nJet):
