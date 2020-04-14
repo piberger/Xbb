@@ -416,6 +416,10 @@ def waitFor(jobNameList):
 
 # ------------------------------------------------------------------------------
 # filter sample list with simple wildcard (*) syntax, used for -S option
+# remove samples by prepending !
+# exmaples:
+#  all W+jets samples: -S 'W*Jets*'
+#  all samples but QCD: -S '*,!QCD*'
 # ------------------------------------------------------------------------------
 def filterSampleList(sampleIdentifiers, samplesList):
     if samplesList and len([x for x in samplesList if x]) > 0:
@@ -423,10 +427,21 @@ def filterSampleList(sampleIdentifiers, samplesList):
         for expr in samplesList:
             if expr in sampleIdentifiers:
                 filteredList.append(expr)
-            elif '*' in expr:
+            elif '*' in expr and not expr.startswith('!'):
                 for sampleIdentifier in sampleIdentifiers:
                     if fnmatch.fnmatch(sampleIdentifier, expr):
                         filteredList.append(sampleIdentifier)
+            elif '*' in expr and expr.startswith('!'):
+                expr = expr[1:]
+                newList = []
+                for x in filteredList:
+                    if not fnmatch.fnmatch(x, expr):
+                        newList.append(x)
+                filteredList = newList
+            elif expr.startswith('!'):
+                expr = expr[1:]
+                filteredList = [x for x in filteredList if x!=expr]
+
         filteredList = list(set(filteredList))
         return filteredList
     else:
@@ -903,6 +918,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     missingFiles = {}
 
     # process all sample identifiers (correspond to folders with ROOT files)
+    print "INFO: going to submit jobs for", len(sampleIdentifiers), "samples."
     for sampleIdentifier in sampleIdentifiers:
         try:
             sampleFileList = filelist(samplefiles, sampleIdentifier)
