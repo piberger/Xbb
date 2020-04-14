@@ -16,7 +16,7 @@ class BatchSystemSLURM(BatchSystem):
         self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} --open-mode=append {extraOptions} {runscript}"
         self.cancelJobTemplate = "scancel {jobId}"
         self.submissionDelay = eval(self.config.get('SLURM', 'submissionDelay')) if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'submissionDelay') else 0.2
-        self.resubmitToDifferentNode = eval(self.config.get('SLURM', 'resubmitToDifferentNode')) if self.config.has_option('SLURM', 'resubmitToDifferentNode') else False
+        self.resubmitToDifferentNode = eval(self.config.get('SLURM', 'resubmitToDifferentNode')) if self.config.has_option('SLURM', 'resubmitToDifferentNode') else True
 
 
     def getJobNames(self, includeDeleted=True):
