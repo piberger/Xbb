@@ -15,7 +15,7 @@ class VHbbSelection(AddCollectionsModule):
     def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1):
         super(VHbbSelection, self).__init__()
         self.debug = debug or 'XBBDEBUG' in os.environ
-        self.version = 3
+        self.version = 5
         self.stats = {}
         self.year = year
         self.channels = channels
@@ -99,14 +99,18 @@ class VHbbSelection(AddCollectionsModule):
         # main tagger (-> hJidx)
         self.taggerName = "Jet_btagDeepB"
 
-        # alternative jet selections to check (->hJidx_*)
+        ## alternative jet selections to check (->hJidx_*)
         self.jetDefinitions = []
 
         # additional jet definitions for DeepJet
         if self.year in ["2016","2017", "2018"]:
             self.jetDefinitions = [
                     {'taggerName': 'Jet_btagDeepB'},
-                    {'taggerName': 'Jet_btagDeepFlavB'},
+                    #{'taggerName': 'Jet_btagDeepFlavB', 'indexName':'DeepFlavB'},
+                    ]
+        else:
+            self.jetDefinitions = [
+                    {'taggerName': 'Jet_btagDeepB'},
                     ]
 
         self.btagWPs = {
@@ -192,6 +196,9 @@ class VHbbSelection(AddCollectionsModule):
             elif "Wlv" in self.channels:
                 self.leptonFlav['EGamma']=3
 
+        self.systematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        self.systematicsBoosted = [x for x in self.systematics if 'jerReg' not in x] + ['jms', 'jmr']
+
         self.cutFlow = [0] * 16
 
         # new branches to write
@@ -201,8 +208,27 @@ class VHbbSelection(AddCollectionsModule):
         self.addIntegerBranch("isWenu")
         self.addIntegerBranch("isZnn")
 
+        # selected lepton indices
         self.addIntegerVectorBranch("vLidx", default=-1, length=2)
-        self.addIntegerVectorBranch("hJidx", default=-1, length=2)
+        
+        # selected jet indices
+        defaultJetDefinitions = [x for x in self.jetDefinitions if 'indexName' not in x or x['indexName']=='']
+        assert (len(defaultJetDefinitions) == 1)
+
+        for jetDefinition in self.jetDefinitions:
+            indexName = jetDefinition['indexName'] if 'indexName' in jetDefinition else '' 
+            self.addIntegerVectorBranch("hJidx{suffix}".format(suffix=indexName), default=-1, length=2)
+            if self.sample.isMC():
+                for syst in self.systematics:
+                    for UD in ['Up','Down']:
+                        self.addIntegerVectorBranch("hJidx{suffix}_{syst}{UD}".format(suffix=indexName, syst=syst, UD=UD), default=-1, length=2)
+
+        # selected fatjet index
+        self.addIntegerBranch("Hbb_fjidx")
+        if self.sample.isMC():
+            for syst in self.systematicsBoosted:
+                for UD in ['Up','Down']:
+                    self.addIntegerBranch("Hbb_fjidx_{syst}{UD}".format(syst=syst, UD=UD))
 
         self.addBranch("lepMetDPhi")
         self.addBranch("V_mt")
@@ -210,11 +236,6 @@ class VHbbSelection(AddCollectionsModule):
         self.addBranch("V_eta")
         self.addBranch("V_phi")
         self.addBranch("V_mass")
-
-        for jetDefinition in self.jetDefinitions:
-            if 'suffix' not in jetDefinition:
-                jetDefinition['suffix'] = jetDefinition['taggerName'].split('_')[-1]
-            self.addIntegerVectorBranch("hJidx_" + jetDefinition['suffix'], default=-1, length=2)
 
         print "DEBUG: sample identifier:", self.sample.identifier, " lep flav", self.leptonFlav, " -> ", self.leptonFlav[self.sample.identifier] if self.sample.identifier in self.leptonFlav else "UNDEFINED LEPTON FLAVOR!!"
 
@@ -254,44 +275,95 @@ class VHbbSelection(AddCollectionsModule):
                         break
         return indices
 
-    def HighestTaggerValueBJets(self, tree, j1ptCut, j2ptCut, taggerName, puIdCut=0, jetIdCut=-1):
+    def HighestTaggetValueFatJet(self, tree, ptCut, msdCut, etaCut, taggerName, syst=None, UD=None):
+        fatJetMaxTagger = -999.0
+        Hbb_fjidx = -1
+        if syst == None:
+            Pt  = tree.FatJet_Pt
+            Msd = tree.FatJet_Msoftdrop
+        elif syst in ['jmr','jms']:
+            Pt  = tree.FatJet_Pt 
+            Msd = getattr(tree, "FatJet_msoftdrop_{syst}{UD}".format(syst=syst, UD=UD))
+        else:
+            Pt_nom    = tree.FatJet_Pt
+            Pt_scale  = getattr(tree, "FatJet_pt_{syst}{UD}".format(syst=syst, UD=UD)) 
+            Pt        = [Pt_nom[i] * Pt_scale[i] for i in range(len(Pt_nom))]
+            Msd_nom   = tree.FatJet_Msoftdrop
+            Msd_scale = getattr(tree, "FatJet_msoftdrop_{syst}{UD}".format(syst=syst, UD=UD)) 
+            Msd       = [Msd_nom[i] * Msd_scale[i] for i in range(len(Msd_nom))]
+
+        eta    = tree.FatJet_eta
+        tagger = getattr(tree, taggerName) 
+
+        for i in range(tree.nFatJet):
+            if Pt[i] > ptCut and abs(eta[i]) < etaCut and Msd[i] > msdCut:
+                if tagger[i] > fatJetMaxTagger:
+                    fatJetMaxTagger = tagger[i]
+                    Hbb_fjidx = i
+        return Hbb_fjidx
+
+    # returns indices of the two second highest b-tagged jets passing the selection, if at least two exist
+    # indices are sorted by b-tagger, descending
+    def HighestTaggerValueBJets(self, tree, j1ptCut, j2ptCut, taggerName, puIdCut=0, jetIdCut=-1, maxJetPtCut=0, syst=None, UD=None):
+        jets = []
         indices = []
-        #print('----------------------event start')
-        #print('len(tree.nJet)', tree.nJet)
-        for i in range(tree.nJet):
-            #print('Jet No.', i)
-            #print('Jet_lepFilter', tree.Jet_lepFilter[i])
-            #print('Jet_puId', tree.Jet_puId[i])
-            #print('Jet_PtReg', tree.Jet_PtReg[i])
-            #print('Jet_eta', abs(tree.Jet_eta[i]))  
-            #print('------------------------')
-            if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j1ptCut and abs(tree.Jet_eta[i]) < 2.5:
+        nJet = tree.nJet
+        if syst is None:
+            # Nominal
+            PtReg = tree.Jet_PtReg
+            Pt    = tree.Jet_Pt
+        elif syst == 'jerReg':
+            # variations from resolution smearing
+            PtReg = tree.Jet_PtRegUp if UD == 'Up' else tree.Jet_PtRegDown
+            Pt    = tree.Jet_Pt
+        else:
+            # JES variations propagated to regressed pT
+            systBranchName = "Jet_pt_{syst}{UD}".format(syst=syst, UD=UD)
+            Pt        = getattr(tree, systBranchName) 
+            Pt_nom    = tree.Jet_Pt
+            PtReg_nom = tree.Jet_PtReg
+            PtReg     = [PtReg_nom[i] * Pt[i] / Pt_nom[i] for i in range(nJet)]
+
+        jetTagger = getattr(tree, taggerName)
+        Eta       = tree.Jet_eta
+        jetId     = tree.Jet_jetId
+        lepFilter = tree.Jet_lepFilter
+        puId      = tree.Jet_puId
+
+        for i in range(nJet):
+            pass_acceptance            = PtReg[i] > j1ptCut and abs(Eta[i]) < 2.5
+            pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
+            if pass_acceptance and pass_jetIDandPUIDlepFilter: 
                 if len(indices) < 1:
                     indices.append(i)
-                    #print('indices',indices)
                 else:
-                    if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[0]]:
+                    if jetTagger[i] > jetTagger[indices[0]]:
                         indices[0] = i
-        #print('indices[0] for event is', indices)
-        #print('-----------------event over')
         if len(indices) > 0:
-            for i in range(tree.nJet):
+            for i in range(nJet):
                 if i == indices[0]:
                     continue
-                if tree.Jet_lepFilter[i] and (tree.Jet_puId[i] > puIdCut or tree.Jet_Pt[i] > self.puIdMaxPt) and tree.Jet_jetId[i] > jetIdCut and tree.Jet_PtReg[i] > j2ptCut and abs(tree.Jet_eta[i]) < 2.5:
+                pass_acceptance            = PtReg[i] > j2ptCut and abs(Eta[i]) < 2.5
+                pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
+
+                if pass_acceptance and pass_jetIDandPUIDlepFilter:
                     if len(indices) < 2:
                         indices.append(i)
                     else:
-                        if getattr(tree, taggerName)[i] > getattr(tree, taggerName)[indices[1]]:
+                        if jetTagger[i] > jetTagger[indices[1]]:
                             indices[1] = i
 
         if len(indices) > 1:
-            if getattr(tree, taggerName)[indices[1]] > getattr(tree, taggerName)[indices[0]]:
+            if jetTagger[indices[1]] > jetTagger[indices[0]]:
                 indices = [indices[1], indices[0]]
+
+        if len(indices) == 2 and max(PtReg[indices[0]],PtReg[indices[1]]) < maxJetPtCut:
+            indices = []
 
         return indices
 
     def processEvent(self, tree):
+
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
 
@@ -398,6 +470,7 @@ class VHbbSelection(AddCollectionsModule):
                 return False
             self.cutFlow[2] += 1
 
+            # CHANNEL
             if (self._b("isZmm")[0] or self._b("isZee")[0]) and not ("Zll" in self.channels):
                 return False
             #elif (self._b("isWmunu")[0] or self._b("isWenu")[0]) and not ("Wln" in self.channels or "Znn" in self.channels):
@@ -407,93 +480,8 @@ class VHbbSelection(AddCollectionsModule):
             elif (self._b("isZnn")[0]) and not ("Znn" in self.channels):
                 return False
             self.cutFlow[3] += 1
-
-            # JETS
-            if self._b("isZnn")[0]:
-                j1ptCut = 35.0
-                j2ptCut = 35.0
-                j1BtagName = 'loose'
-            elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
-                j1ptCut = 25.0
-                j2ptCut = 25.0
-                j1BtagName = 'loose'
-            elif self._b("isZmm")[0] or self._b("isZee")[0]:
-                j1ptCut = 20.0
-                j2ptCut = 20.0
-                j1BtagName = 'none'
-            else:
-                return False
-            j2BtagName = 'none'
-
-            # btagMaxCut can overwrite the default b-tag max cut
-            if self.btagMaxCut is not None and len(self.btagMaxCut) > 0:
-                j1BtagName = self.btagMaxCut
-
-            j1Btag = self.btagWP[j1BtagName]
-            j2Btag = self.btagWP[j2BtagName]
-
-            # alternative jet selections (-> hJidx_*)
-            for jetDefinition in self.jetDefinitions:
-                puIdCut  = jetDefinition['puIdCut']  if 'puIdCut'  in jetDefinition else self.puIdCut
-                jetIdCut = jetDefinition['jetIdCut'] if 'jetIdCut' in jetDefinition else self.jetIdCut
-
-                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, jetDefinition['taggerName'], puIdCut=puIdCut, jetIdCut=jetIdCut)
-                jetDefinition['selectedJets'] = selectedJets
-                jetDefinition['isSelected'] = False
-                if len(selectedJets) == 2:
-                    leadingJetPassed    = getattr(tree, jetDefinition['taggerName'])[selectedJets[0]] >= self.btagWPs[self.year][self.taggerName][j1BtagName]
-                    subleadingJetPassed = getattr(tree, jetDefinition['taggerName'])[selectedJets[1]] >= self.btagWPs[self.year][self.taggerName][j2BtagName]
-
-                    maxPt = max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]])
-                    minPt = min(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]])
-
-                    if 'ptCutMax' in jetDefinition and maxPt < jetDefinition['ptCutMax']:
-                        leadingJetPassed    = False
-                        subleadingJetPassed = False
-                    elif 'ptCutMin' in jetDefinition and minPt < jetDefinition['ptCutMin']:
-                        leadingJetPassed    = False
-                        subleadingJetPassed = False
-
-                    if leadingJetPassed and subleadingJetPassed and not (self._b("isZnn")[0] and maxPt < 60.0):
-                        self._b("hJidx_"+jetDefinition['suffix'])[0] = selectedJets[0]
-                        self._b("hJidx_"+jetDefinition['suffix'])[1] = selectedJets[1]
-                        jetDefinition['isSelected'] = True
-                    else:
-                        self._b("hJidx_"+jetDefinition['suffix'])[0] = -1
-                        self._b("hJidx_"+jetDefinition['suffix'])[1] = -1
-                else:
-                    self._b("hJidx_"+jetDefinition['suffix'])[0] = -1
-                    self._b("hJidx_"+jetDefinition['suffix'])[1] = -1
-
-            # standard jet selection (-> hJidx)
-            selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut)
-            defaultTaggerPassed = False
-            if len(selectedJets) == 2:
-                if getattr(tree, self.taggerName)[selectedJets[0]] < j1Btag:
-                    if debugEvent:
-                        print "DEBUG-EVENT: highest btag < ", j1Btag, " -> discard"
-                    #return False
-                    defaultTaggerPassed = False
-                elif getattr(tree, self.taggerName)[selectedJets[1]] < j2Btag:
-                    if debugEvent:
-                        print "DEBUG-EVENT: second btag < ", j2Btag, " -> discard"
-                    #return False
-                    defaultTaggerPassed = False
-                elif self._b("isZnn")[0] and max(tree.Jet_PtReg[selectedJets[0]], tree.Jet_PtReg[selectedJets[1]]) < 60.0:
-                    if debugEvent:
-                        print "DEBUG-EVENT: max bjet pt < 60 -> discard"
-                    #return False
-                    defaultTaggerPassed = False
-                else:
-                    self._b("hJidx")[0] = selectedJets[0]
-                    self._b("hJidx")[1] = selectedJets[1]
-                    defaultTaggerPassed = True
-
-            if not defaultTaggerPassed:
-                self._b("hJidx")[0] = -1
-                self._b("hJidx")[1] = -1
-
-            # VECTOR
+            
+            # VECTOR BOSON
             if self._b("isZee")[0] or self._b("isZmm")[0]:
                 lep1 = ROOT.TLorentzVector()
                 lep2 = ROOT.TLorentzVector()
@@ -534,32 +522,134 @@ class VHbbSelection(AddCollectionsModule):
                 MET = ROOT.TLorentzVector()
                 MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
                 V = MET
-            self.cutFlow[4] += 1
+            else:
+                self.count("fail_lepton_selection")
+                return False
+
 
             self._b("V_pt")[0] = V.Pt()
             self._b("V_eta")[0] = V.Eta()
             self._b("V_phi")[0] = V.Phi()
             self._b("V_mass")[0] = V.M()
-
-            #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
-
-            boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_Pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
-            self.count("boosted_pass" if boostedPass else "boosted_nopass")
-
-            # discard event if none of the jet selections finds two Higgs candidate jets
-            if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
-                return False
-
-            self.cutFlow[5] += 1
-
+            
             if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 50.0:
                 return False
             elif self._b("isZnn")[0] and self._b("V_pt")[0] < 150.0:
                 return False
             elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 130.0):
                 return False
+            
+            self.cutFlow[4] += 1
+
+
+            # JETS
+            if self._b("isZnn")[0]:
+                j1ptCut = 35.0
+                j2ptCut = 35.0
+                maxJetPtCut = 60.0
+                j1BtagName = 'loose'
+            elif self._b("isWmunu")[0] or self._b("isWenu")[0]:
+                j1ptCut = 25.0
+                j2ptCut = 25.0
+                maxJetPtCut = 0.0
+                j1BtagName = 'loose'
+            elif self._b("isZmm")[0] or self._b("isZee")[0]:
+                j1ptCut = 20.0
+                j2ptCut = 20.0
+                maxJetPtCut = 0.0
+                j1BtagName = 'none'
+            else:
+                return False
+            j2BtagName = 'none'
+
+            # btagMaxCut can overwrite the default b-tag max cut
+            if self.btagMaxCut is not None and len(self.btagMaxCut) > 0:
+                j1BtagName = self.btagMaxCut
+
+
+            any_taggerPassed_syst = False
+            for jetDefinition in self.jetDefinitions:
+
+                indexName  = jetDefinition['indexName'] if 'indexName' in jetDefinition else ''
+                taggerName = jetDefinition['taggerName']
+                j1Btag     = self.btagWPs[self.year][taggerName][j1BtagName]
+                j2Btag     = self.btagWPs[self.year][taggerName][j2BtagName]
+
+                taggerSelection = lambda x: (
+                        len(x) == 2 and 
+                        getattr(tree, taggerName)[x[0]] >= j1Btag and
+                        getattr(tree, taggerName)[x[1]] >= j2Btag 
+                    )
+
+                # -> nominal
+                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut)
+                taggerPassed = taggerSelection(selectedJets) 
+                if taggerPassed:
+                    self._b("hJidx"+indexName)[0] = selectedJets[0]
+                    self._b("hJidx"+indexName)[1] = selectedJets[1]
+                    any_taggerPassed_syst         = True
+                    self.count("pass_tagger_"+taggerName)
+                else:
+                    if debugEvent:
+                        print("DEBUG-EVENT: did not pass jet-selection.")
+                        print("DEBUG-EVENT: selected jets:", selectedJets)
+                        print("DEBUG-EVENT: passed btag cuts:", taggerPassed)
+                    self._b("hJidx"+indexName)[0] = -1
+                    self._b("hJidx"+indexName)[1] = -1
+
+                # -> systematic variations
+                selectedJets_syst            = {}
+                taggerPassed_syst     = {}
+                if self.sample.isMC():
+                    for syst in self.systematics:
+                        for UD in ['Up','Down']:
+                            selectedJets_syst[syst+UD] = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut,  syst=syst, UD=UD)
+                            taggerPassed_syst[syst+UD] = taggerSelection(selectedJets_syst[syst+UD]) 
+                            hJidxName_syst = "hJidx{suffix}_{syst}{UD}".format(suffix=indexName, syst=syst, UD=UD)
+                            if taggerPassed_syst[syst+UD]:
+                                self._b(hJidxName_syst)[0] = selectedJets_syst[syst+UD][0]
+                                self._b(hJidxName_syst)[1] = selectedJets_syst[syst+UD][1]
+                                any_taggerPassed_syst      = True
+                            else:
+                                self._b(hJidxName_syst)[0] = -1
+                                self._b(hJidxName_syst)[1] = -1
+
+            self.cutFlow[5] += 1
+
+            #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
+
+            # BOOSTED JET selection
+            any_boostedJet_syst = False
+
+            # nominal
+            Hbb_fjidx = self.HighestTaggetValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', syst=None, UD=None)
+            self._b("Hbb_fjidx")[0] = Hbb_fjidx
+            if Hbb_fjidx > -1:
+                any_boostedJet_syst = True
+
+            # systematics
+            if self.sample.isMC():
+                for syst in self.systematicsBoosted:
+                    for UD in ['Up','Down']:
+                        fJidxName_syst = "Hbb_fjidx_{syst}{UD}".format(syst=syst, UD=UD)
+                        Hbb_fjidx_syst = self.HighestTaggetValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', syst=syst, UD=UD)
+                        self._b(fJidxName_syst)[0] = Hbb_fjidx_syst
+                        if Hbb_fjidx_syst > -1:
+                            any_boostedJet_syst = True
+
+            #boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_Pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
+            boostedPass = (any_boostedJet_syst and V.Pt()>250)
+
+            if boostedPass:
+                self.count("pass_boosted")
+
+            # discard event if none of the jet selections finds two Higgs candidate jets
+            #if not (boostedPass or defaultTaggerPassed or any([jets['isSelected'] for jets in self.jetDefinitions])):
+            if not (boostedPass or any_taggerPassed_syst): 
+                return False
 
             self.cutFlow[6] += 1
+
 
             # yield in the end
             self.cutFlow[7] += 1
@@ -581,7 +671,7 @@ class VHbbSelection(AddCollectionsModule):
 
         print "efficiency:", 1.0*self.cutFlow[7]/self.cutFlow[0]
 
-        print "jet selections:", self.jetDefinitions
+        #print "jet selections:", self.jetDefinitions
 
         print "other statistics:"
         for k in sorted(self.stats.keys()):
