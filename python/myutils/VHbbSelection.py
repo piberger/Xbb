@@ -4,6 +4,7 @@ from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 import array
 import os
+import itertools
 
 from vLeptons import vLeptonSelector
 
@@ -275,92 +276,123 @@ class VHbbSelection(AddCollectionsModule):
                         break
         return indices
 
-    def HighestTaggetValueFatJet(self, tree, ptCut, msdCut, etaCut, taggerName, syst=None, UD=None):
-        fatJetMaxTagger = -999.0
-        Hbb_fjidx = -1
-        if syst == None:
-            Pt  = tree.FatJet_Pt
-            Msd = tree.FatJet_Msoftdrop
-        elif syst in ['jmr','jms']:
-            Pt  = tree.FatJet_Pt 
-            Msd = getattr(tree, "FatJet_msoftdrop_{syst}{UD}".format(syst=syst, UD=UD))
-        else:
-            Pt_nom    = tree.FatJet_Pt
-            Pt_scale  = getattr(tree, "FatJet_pt_{syst}{UD}".format(syst=syst, UD=UD)) 
-            Pt        = [Pt_nom[i] * Pt_scale[i] for i in range(len(Pt_nom))]
-            Msd_nom   = tree.FatJet_Msoftdrop
-            Msd_scale = getattr(tree, "FatJet_msoftdrop_{syst}{UD}".format(syst=syst, UD=UD)) 
-            Msd       = [Msd_nom[i] * Msd_scale[i] for i in range(len(Msd_nom))]
+    def HighestTaggerValueFatJet(self, tree, ptCut, msdCut, etaCut, taggerName, systList=None):
+        fatJetMaxTagger = []
+        Hbb_fjidx       = []
+        Pt              = []
+        Msd             = []
+        systematics     = systList if systList is not None else [None]
+        nSystematics    = len(systematics)
+            
+        Pt_nom  = tree.FatJet_Pt
+        Msd_nom = tree.FatJet_Msoftdrop
+        eta     = tree.FatJet_eta
+        tagger  = getattr(tree, taggerName) 
 
-        eta    = tree.FatJet_eta
-        tagger = getattr(tree, taggerName) 
+        for syst in systematics: 
+            Hbb_fjidx.append(-1)
+            fatJetMaxTagger.append(-999.9)
+
+            if syst is None:
+                Pt.append(Pt_nom)
+                Msd.append(Msd_nom)
+            elif syst in ['jmrUp','jmrDown','jmsUp','jmsDown']:
+                # for jms,jmr the branches contain the mass itself
+                Pt.append(Pt_nom)
+                Msd.append(getattr(tree, "FatJet_msoftdrop_"+syst))
+            else:
+                # for all other variations, the branches contain a multiplicative factor... duh
+                Pt_scale  = getattr(tree, "FatJet_pt_{syst}".format(syst=syst)) 
+                Pt.append([Pt_nom[i] * Pt_scale[i] for i in range(len(Pt_nom))])
+                Msd_scale = getattr(tree, "FatJet_msoftdrop_{syst}".format(syst=syst)) 
+                Msd.append([Msd_nom[i] * Msd_scale[i] for i in range(len(Msd_nom))])
 
         for i in range(tree.nFatJet):
-            if Pt[i] > ptCut and abs(eta[i]) < etaCut and Msd[i] > msdCut:
-                if tagger[i] > fatJetMaxTagger:
-                    fatJetMaxTagger = tagger[i]
-                    Hbb_fjidx = i
-        return Hbb_fjidx
+            for j in range(nSystematics):
+                if Pt[j][i] > ptCut and abs(eta[i]) < etaCut and Msd[j][i] > msdCut:
+                    if tagger[i] > fatJetMaxTagger[j]:
+                        fatJetMaxTagger[j] = tagger[i]
+                        Hbb_fjidx[j] = i
+
+        # return list for systematic variations given and scalar otherwise
+        if systList is not None:
+            return Hbb_fjidx
+        else:
+            return Hbb_fjidx[0]
 
     # returns indices of the two second highest b-tagged jets passing the selection, if at least two exist
     # indices are sorted by b-tagger, descending
-    def HighestTaggerValueBJets(self, tree, j1ptCut, j2ptCut, taggerName, puIdCut=0, jetIdCut=-1, maxJetPtCut=0, syst=None, UD=None):
+    def HighestTaggerValueBJets(self, tree, j1ptCut, j2ptCut, taggerName, puIdCut=0, jetIdCut=-1, maxJetPtCut=0, systList=None):
         jets = []
         indices = []
         nJet = tree.nJet
-        if syst is None:
-            # Nominal
-            PtReg = tree.Jet_PtReg
-            Pt    = tree.Jet_Pt
-        elif syst == 'jerReg':
-            # variations from resolution smearing
-            PtReg = tree.Jet_PtRegUp if UD == 'Up' else tree.Jet_PtRegDown
-            Pt    = tree.Jet_Pt
-        else:
-            # JES variations propagated to regressed pT
-            systBranchName = "Jet_pt_{syst}{UD}".format(syst=syst, UD=UD)
-            Pt        = getattr(tree, systBranchName) 
-            Pt_nom    = tree.Jet_Pt
-            PtReg_nom = tree.Jet_PtReg
-            PtReg     = [PtReg_nom[i] * Pt[i] / Pt_nom[i] for i in range(nJet)]
+        systematics = systList if systList is not None else [None]
 
         jetTagger = getattr(tree, taggerName)
         Eta       = tree.Jet_eta
         jetId     = tree.Jet_jetId
         lepFilter = tree.Jet_lepFilter
         puId      = tree.Jet_puId
+        PtReg_nom = tree.Jet_PtReg
+        Pt_nom    = tree.Jet_Pt
+
+        # momenta with sys variations applied
+        PtReg = []
+        Pt    = []
+        nSystematics = len(systematics)
+        for syst in systematics:
+            indices.append([])
+            if syst is None:
+                PtReg.append(PtReg_nom)
+                Pt.append(Pt_nom)
+            elif syst == 'jerRegUp':
+                PtReg.append(tree.Jet_PtRegUp)
+                Pt.append(Pt_nom)
+            elif syst == 'jerRegDown':
+                PtReg.append(tree.Jet_PtRegDown)
+                Pt.append(Pt_nom)
+            else:
+                Pt_syst    = getattr(tree, "Jet_pt_"+syst) 
+                PtReg_syst = [PtReg_nom[i] * Pt_syst[i] / Pt_nom[i] for i in range(nJet)]
+                Pt.append(Pt_syst)
+                PtReg.append(PtReg_syst)
 
         for i in range(nJet):
-            pass_acceptance            = PtReg[i] > j1ptCut and abs(Eta[i]) < 2.5
-            pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
-            if pass_acceptance and pass_jetIDandPUIDlepFilter: 
-                if len(indices) < 1:
-                    indices.append(i)
-                else:
-                    if jetTagger[i] > jetTagger[indices[0]]:
-                        indices[0] = i
-        if len(indices) > 0:
-            for i in range(nJet):
-                if i == indices[0]:
+            for j in range(nSystematics):
+                pass_acceptance            = PtReg[j][i] > j1ptCut and abs(Eta[i]) < 2.5
+                pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[j][i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
+                if pass_acceptance and pass_jetIDandPUIDlepFilter: 
+                    if len(indices[j]) < 1:
+                        indices[j].append(i)
+                    else:
+                        if jetTagger[i] > jetTagger[indices[j][0]]:
+                            indices[j][0] = i
+        for i in range(nJet):
+            for j in range(nSystematics):
+                if len(indices[j]) < 1 or i == indices[j][0]:
                     continue
-                pass_acceptance            = PtReg[i] > j2ptCut and abs(Eta[i]) < 2.5
-                pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
+                pass_acceptance            = PtReg[j][i] > j2ptCut and abs(Eta[i]) < 2.5
+                pass_jetIDandPUIDlepFilter = (puId[i] > puIdCut or Pt[j][i] > self.puIdMaxPt) and jetId[i] > jetIdCut and lepFilter[i]
 
                 if pass_acceptance and pass_jetIDandPUIDlepFilter:
-                    if len(indices) < 2:
-                        indices.append(i)
+                    if len(indices[j]) < 2:
+                        indices[j].append(i)
                     else:
-                        if jetTagger[i] > jetTagger[indices[1]]:
-                            indices[1] = i
+                        if jetTagger[i] > jetTagger[indices[j][1]]:
+                            indices[j][1] = i
 
-        if len(indices) > 1:
-            if jetTagger[indices[1]] > jetTagger[indices[0]]:
-                indices = [indices[1], indices[0]]
+        for j in range(nSystematics):
+            if len(indices[j]) > 1:
+                if jetTagger[indices[j][1]] > jetTagger[indices[j][0]]:
+                    indices = [indices[j][1], indices[j][0]]
 
-        if len(indices) == 2 and max(PtReg[indices[0]],PtReg[indices[1]]) < maxJetPtCut:
-            indices = []
+            if len(indices[j]) == 2 and max(PtReg[j][indices[j][0]],PtReg[j][indices[j][1]]) < maxJetPtCut:
+                indices[j] = []
 
-        return indices
+        if systList is not None:
+            return indices
+        else:
+            return indices[0]
 
     def processEvent(self, tree):
 
@@ -566,7 +598,6 @@ class VHbbSelection(AddCollectionsModule):
             if self.btagMaxCut is not None and len(self.btagMaxCut) > 0:
                 j1BtagName = self.btagMaxCut
 
-
             any_taggerPassed_syst = False
             for jetDefinition in self.jetDefinitions:
 
@@ -575,14 +606,15 @@ class VHbbSelection(AddCollectionsModule):
                 j1Btag     = self.btagWPs[self.year][taggerName][j1BtagName]
                 j2Btag     = self.btagWPs[self.year][taggerName][j2BtagName]
 
+                jetTagger  = getattr(tree, taggerName)
                 taggerSelection = lambda x: (
                         len(x) == 2 and 
-                        getattr(tree, taggerName)[x[0]] >= j1Btag and
-                        getattr(tree, taggerName)[x[1]] >= j2Btag 
+                        jetTagger[x[0]] >= j1Btag and
+                        jetTagger[x[1]] >= j2Btag 
                     )
 
                 # -> nominal
-                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut)
+                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut, systList=None)
                 taggerPassed = taggerSelection(selectedJets) 
                 if taggerPassed:
                     self._b("hJidx"+indexName)[0] = selectedJets[0]
@@ -598,21 +630,23 @@ class VHbbSelection(AddCollectionsModule):
                     self._b("hJidx"+indexName)[1] = -1
 
                 # -> systematic variations
-                selectedJets_syst            = {}
-                taggerPassed_syst     = {}
                 if self.sample.isMC():
-                    for syst in self.systematics:
-                        for UD in ['Up','Down']:
-                            selectedJets_syst[syst+UD] = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut,  syst=syst, UD=UD)
-                            taggerPassed_syst[syst+UD] = taggerSelection(selectedJets_syst[syst+UD]) 
-                            hJidxName_syst = "hJidx{suffix}_{syst}{UD}".format(suffix=indexName, syst=syst, UD=UD)
-                            if taggerPassed_syst[syst+UD]:
-                                self._b(hJidxName_syst)[0] = selectedJets_syst[syst+UD][0]
-                                self._b(hJidxName_syst)[1] = selectedJets_syst[syst+UD][1]
-                                any_taggerPassed_syst      = True
-                            else:
-                                self._b(hJidxName_syst)[0] = -1
-                                self._b(hJidxName_syst)[1] = -1
+                    systList     = ["".join(x) for x in itertools.product(self.systematics, ["Up", "Down"])]
+                    nSystematics = len(systList)
+
+                    # this returns a list of lists of jet indices for all systematic variations
+                    selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut,  systList=systList)
+
+                    # apply pre-selection on tagger
+                    for j in range(nSystematics):
+                        hJidxName_syst = "hJidx{suffix}_{syst}".format(suffix=indexName, syst=systList[j])
+                        if taggerSelection(selectedJets[j]):
+                            self._b(hJidxName_syst)[0] = selectedJets[j][0]
+                            self._b(hJidxName_syst)[1] = selectedJets[j][1]
+                            any_taggerPassed_syst      = True
+                        else:
+                            self._b(hJidxName_syst)[0] = -1
+                            self._b(hJidxName_syst)[1] = -1 
 
             self.cutFlow[5] += 1
 
@@ -622,20 +656,23 @@ class VHbbSelection(AddCollectionsModule):
             any_boostedJet_syst = False
 
             # nominal
-            Hbb_fjidx = self.HighestTaggetValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', syst=None, UD=None)
+            Hbb_fjidx = self.HighestTaggerValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', systList=None)
             self._b("Hbb_fjidx")[0] = Hbb_fjidx
             if Hbb_fjidx > -1:
                 any_boostedJet_syst = True
 
             # systematics
             if self.sample.isMC():
-                for syst in self.systematicsBoosted:
-                    for UD in ['Up','Down']:
-                        fJidxName_syst = "Hbb_fjidx_{syst}{UD}".format(syst=syst, UD=UD)
-                        Hbb_fjidx_syst = self.HighestTaggetValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', syst=syst, UD=UD)
-                        self._b(fJidxName_syst)[0] = Hbb_fjidx_syst
-                        if Hbb_fjidx_syst > -1:
-                            any_boostedJet_syst = True
+                systList     = ["".join(x) for x in itertools.product(self.systematicsBoosted, ["Up", "Down"])]
+                nSystematics = len(systList)
+                
+                # return list of jet indices for systematic variations
+                Hbb_fjidx_syst = self.HighestTaggerValueFatJet(tree, ptCut=250.0, msdCut=50.0, etaCut=2.5, taggerName='FatJet_deepTagMD_bbvsLight', systList=systList)
+                for j in range(nSystematics):
+                    fJidxName_syst = "Hbb_fjidx_{syst}".format(syst=systList[j])
+                    self._b(fJidxName_syst)[0] = Hbb_fjidx_syst[j]
+                    if Hbb_fjidx_syst[j] > -1:
+                        any_boostedJet_syst = True
 
             #boostedPass = (tree.Hbb_fjidx>-1 and tree.FatJet_Pt[tree.Hbb_fjidx]>250 and V.Pt()>250)  #AC: selection for boosted analysis
             boostedPass = (any_boostedJet_syst and V.Pt()>250)
