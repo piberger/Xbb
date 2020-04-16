@@ -47,11 +47,6 @@ class VHbbSelection(AddCollectionsModule):
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
             print("\x1b[45m\x1b[37m" + "-"*160 + "\x1b[0m")
 
-    def count(self, quantity, increment=1.0):
-        if quantity not in self.stats:
-            self.stats[quantity] = 0 if type(increment) == int else 0.0
-        self.stats[quantity] += increment
-
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.isData = initVars['sample'].isData()
@@ -696,6 +691,8 @@ class VHbbSelection(AddCollectionsModule):
         return True
 
     def afterProcessing(self):
+        super(VHbbSelection, self).afterProcessing()
+
         print "cut-flow:"
         print "  beginning          ", self.cutFlow[0]
         print "  HLT                ", self.cutFlow[1]
@@ -710,7 +707,4 @@ class VHbbSelection(AddCollectionsModule):
 
         #print "jet selections:", self.jetDefinitions
 
-        print "other statistics:"
-        for k in sorted(self.stats.keys()):
-            print " ",k,": ", self.stats[k]
 

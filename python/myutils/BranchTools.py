@@ -220,6 +220,19 @@ class AddCollectionsModule(object):
         self.branches = []
         self.branchBuffers = {}
         self.collections = {}
+        self.xbbStats = {}
+
+    def count(self, quantity, increment=1.0):
+        if quantity not in self.xbbStats:
+            self.xbbStats[quantity] = 0 if type(increment) == int else 0.0
+        self.xbbStats[quantity] += increment
+   
+    # this is called after the last event has been processed, but before the output files are flushed/closed.
+    def afterProcessing(self):
+        if len(self.xbbStats.keys()) > 0:
+            print "INFO: statistics:"
+            for k in sorted(self.xbbStats.keys()):
+                print " ",k,": ", self.xbbStats[k]
 
     def getVersion(self):
         return self.version
@@ -271,6 +284,18 @@ class AddCollectionsModule(object):
 
     def _b(self, branchName):
         return self.branchBuffers[branchName]
+   
+    def _isnominal(self, syst):
+        return syst is None or syst.lower() == 'nominal'
+
+    def _variations(self, syst=None):
+        return ['Up','Down'] if not self._isnominal(syst) else [None]
+
+    def _v(self, n, syst, UD):
+        if self._isnominal(syst): 
+            return n
+        else:
+            return n + "_{syst}_{UD}".format(syst=syst, UD=UD)
 
     def fillVectorBranch(self, event, arguments=None, destinationArray=None):
         size = 1
