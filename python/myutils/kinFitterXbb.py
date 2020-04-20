@@ -59,6 +59,8 @@ def fit_lepton(v, ptErr):
 class kinFitterXbb(AddCollectionsModule):
 
     def __init__(self, year, branchName="kinFit", useMZconstraint=True, recoilPtThreshold=20.0, hJidx="hJidx"):
+        super(kinFitterXbb, self).__init__()
+        self.version = 2
         self.branchName = branchName
         self.useMZconstraint = useMZconstraint
         self.debug = False
@@ -71,7 +73,6 @@ class kinFitterXbb(AddCollectionsModule):
         self.recoilPtThreshold = recoilPtThreshold
         self.hJidx = hJidx
         self.systematics = None
-        super(kinFitterXbb, self).__init__()
         
         ROOT.gSystem.Load("../HelperClasses/KinFitter/TAbsFitConstraint_cc.so")
         ROOT.gSystem.Load("../HelperClasses/KinFitter/TAbsFitParticle_cc.so")
@@ -101,20 +102,20 @@ class kinFitterXbb(AddCollectionsModule):
         self.config = initVars['config']
         if self.systematics is None:
             if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','systematics') and not self.sample.isData():
-                self.systematics = [(x if x != 'Nominal' else '') for x in self.config.get('KinematicFit','systematics').strip().split(' ')]
+                self.systematics = [(x if x != 'Nominal' else None) for x in self.config.get('KinematicFit','systematics').strip().split(' ')]
             else:
-                self.systematics = ['']
+                self.systematics = [None]
         print("INFO: computing the fit for", len(self.systematics), " variations.")
 
         self.bDict = {}
         for syst in self.systematics:
             self.bDict[syst] = {}
             for n in ['H_mass_fit', 'H_eta_fit', 'H_phi_fit', 'H_pt_fit', 'HVdPhi_fit', 'jjVPtRatio_fit', 'hJets_pt_0_fit', 'hJets_pt_1_fit', 'V_pt_fit', 'V_eta_fit', 'V_phi_fit', 'V_mass_fit', 'H_mass_sigma_fit','H_pt_sigma_fit', 'hJets_pt_0_sigma_fit', 'hJets_pt_1_sigma_fit', 'H_pt_corr_fit', 'llbb_pt_fit', 'llbb_eta_fit', 'llbb_phi_fit', 'llbb_mass_fit', 'llbbr_pt_fit', 'llbbr_eta_fit', 'llbbr_phi_fit', 'llbbr_mass_fit']:
-                branchNameFull = self.branchName + "_" + n + ('_' + syst if len(syst) > 0 else '')
+                branchNameFull = self.branchName + "_" + n + ('_' + syst if not self._isnominal(syst) else '')
                 self.bDict[syst][n] = branchNameFull
                 self.addBranch(branchNameFull)
             for n in ['n_recoil_jets_fit', 'status']:
-                branchNameFull = self.branchName + "_" + n + ('_' + syst if len(syst) > 0 else '')
+                branchNameFull = self.branchName + "_" + n + ('_' + syst if not self._isnominal(syst) else '')
                 self.bDict[syst][n] = branchNameFull
                 self.addIntegerBranch(branchNameFull)
 
@@ -135,7 +136,7 @@ class kinFitterXbb(AddCollectionsModule):
         cov[0][1] = cov[1][0]
         cov[1][1] = (jme_res*sin_phi)**2
         return cov
-    
+
     def getResolvedJetIndicesFromTree(self, tree, syst=None, UD=None):
         indexNameSyst = (self.hJidx + '_' + syst + UD) if not self._isnominal(syst) else self.hJidx
         if hasattr(tree, indexNameSyst):
@@ -143,6 +144,7 @@ class kinFitterXbb(AddCollectionsModule):
             return getattr(tree, indexNameSyst)
         else:
             self.count('_debug_resolved_idx_fallback_nom')
+            self.count('_debug_resolved_idx_fallback_nom_for_'+str(syst))
             return getattr(tree, self.hJidx)
 
     def processEvent(self, tree):
@@ -156,22 +158,27 @@ class kinFitterXbb(AddCollectionsModule):
             fsrJidx = []
 
             for syst in self.systematics:
-                
-                if syst.endswith('Up'):
-                    variation = 'Up'
-                    systBase  = syst[:-2]
-                elif syst.endswith('Down'):
-                    variation = 'Down'
-                    systBase  = syst[:-4]
+
+                if not self._isnominal(syst):
+                    if syst.endswith('Up'):
+                        variation = 'Up'
+                        systBase  = syst[:-2]
+                    elif syst.endswith('Down'):
+                        variation = 'Down'
+                        systBase  = syst[:-4]
+                    else:
+                        variation = None
+                        systBase  = syst
                 else:
                     variation = None
                     systBase  = syst
+
 
                 hJidx = self.getResolvedJetIndicesFromTree(tree, systBase, variation)
 
                 if hJidx[0] > -1 and hJidx[1] > -1:
                     # systematic up/down variation
-                    if len(syst) > 0:
+                    if not self._isnominal(syst):
                         # vary regression
                         if syst == 'jerReg_Up':
                             pt = tree.Jet_Pt
@@ -293,6 +300,7 @@ class kinFitterXbb(AddCollectionsModule):
                     self._b(self.bDict[syst]['status'])[0] = kinfit_fit
 
                     if kinfit_fit == 1 and fit_result_H.M() > 0:
+                        self.count("kinfit_success")
                         self._b(self.bDict[syst]['H_pt_fit'])[0]          = fit_result_H.Pt()
                         self._b(self.bDict[syst]['H_eta_fit'])[0]         = fit_result_H.Eta()
                         self._b(self.bDict[syst]['H_phi_fit'])[0]         = fit_result_H.Phi()
@@ -332,6 +340,11 @@ class kinFitterXbb(AddCollectionsModule):
                         self._b(self.bDict[syst]['llbbr_eta_fit'])[0]         = llbbr.Eta()
                         self._b(self.bDict[syst]['llbbr_mass_fit'])[0]        = llbbr.M()
                     else:
+                        if fit_result_H.M() <= 0:
+                            self.count("kinfit_failure_mass_negative")
+                        else:
+                            self.count("kinfit_failure_convergence")
+
                         # fallback
                         self._b(self.bDict[syst]['H_pt_fit'])[0]          = tree.H_pt
                         self._b(self.bDict[syst]['H_eta_fit'])[0]         = tree.H_eta
