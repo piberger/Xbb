@@ -193,6 +193,7 @@ class VHbbSelection(AddCollectionsModule):
                 self.leptonFlav['EGamma']=3
 
         self.systematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        self.METsystematics = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
         self.systematicsBoosted = [x for x in self.systematics if 'jerReg' not in x] + ['jms', 'jmr']
 
         self.cutFlow = [0] * 16
@@ -509,6 +510,7 @@ class VHbbSelection(AddCollectionsModule):
             self.cutFlow[3] += 1
             
             # VECTOR BOSON
+            any_v_sysvar_passes = False
             if self._b("isZee")[0] or self._b("isZmm")[0]:
                 lep1 = ROOT.TLorentzVector()
                 lep2 = ROOT.TLorentzVector()
@@ -545,6 +547,20 @@ class VHbbSelection(AddCollectionsModule):
                 self._b("V_mt")[0] = ROOT.TMath.Sqrt(2*Lep.Pt()*MET.Pt() * (1 - cosPhi12))
 
                 V = MET + Lep
+
+                if self.sample.isMC():
+                    MET_syst = ROOT.TLorentzVector()
+                    for syst in self.METsystematics:
+                        if any_v_sysvar_passes:
+                            break
+                        for UD in self._variations(syst):
+                            if any_v_sysvar_passes:
+                                break
+                            MET.SetPtEtaPhiM(getattr(tree, 'MET_pt_'+syst+UD), 0.0, getattr(tree, 'MET_phi_'+syst+UD), 0.0)
+                            V_syst = MET_syst + Lep
+                            if V_syst.Pt() > 150.0:
+                                any_v_sysvar_passes = True
+
             elif self._b("isZnn")[0]:
                 MET = ROOT.TLorentzVector()
                 MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
@@ -563,7 +579,7 @@ class VHbbSelection(AddCollectionsModule):
                 return False
             elif self._b("isZnn")[0] and self._b("V_pt")[0] < 150.0:
                 return False
-            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 130.0):
+            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 150.0 and not any_v_sysvar_passes):
                 return False
             
             self.cutFlow[4] += 1
