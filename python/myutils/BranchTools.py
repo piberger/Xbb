@@ -291,7 +291,7 @@ class AddCollectionsModule(object):
     def _variations(self, syst=None):
         return ['Up','Down'] if not self._isnominal(syst) else [None]
 
-    def _v(self, n, syst, UD):
+    def _v(self, n, syst=None, UD=None):
         if self._isnominal(syst): 
             return n
         else:

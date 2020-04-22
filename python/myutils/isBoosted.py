@@ -12,15 +12,10 @@ class isBoosted(AddCollectionsModule):
     def __init__(self, branchName='isBoosted'):
         super(isBoosted, self).__init__()
         self.branchName = branchName
-        self.version = 1
-        self.variations = ['Up','Down']
+        self.version = 2
+        self.variations = self._variations("isBoosted") 
 
-    def getBranchName(self, syst=None, UD=None):
-        if syst is None or len(syst.strip()) < 1:
-            return self.branchName
-        else:
-            return self.branchName + '_' + syst + '_' + UD
-
+    # returns cut string with variables replaced by their systematic variations
     def getSystVarCut(self, cut, syst, UD):
         replacementRulesList = XbbTools.getReplacementRulesList(self.config, syst)
         systVarCut           = XbbTools.getSystematicsVariationTemplate(cut, replacementRulesList)
@@ -45,7 +40,7 @@ class isBoosted(AddCollectionsModule):
         if self.sample.isMC():
             for syst in self.systematics:
                 for UD in self.variations: 
-                    systVarBranchName = self.getBranchName(syst=syst, UD=UD)
+                    systVarBranchName = self._v(self.branchName, syst, UD)
                     self.addIntegerBranch(systVarBranchName)
                     self.systVarCuts[systVarBranchName] = self.getSystVarCut(self.boostedCut, syst=syst, UD=UD)
                     self.sampleTree.addFormula(self.systVarCuts[systVarBranchName])
@@ -57,13 +52,13 @@ class isBoosted(AddCollectionsModule):
 
             # Nominal
             b = int(self.sampleTree.evaluate(self.boostedCut))
-            self._b(self.getBranchName())[0] = 1 if b > 0 else 0 
+            self._b(self._v(self.branchName))[0] = 1 if b > 0 else 0 
 
             # systematic variations
             if self.sample.isMC():
                 for syst in self.systematics:
                     for UD in self.variations: 
-                        systVarBranchName = self.getBranchName(syst=syst, UD=UD)
+                        systVarBranchName = self._v(self.branchName, syst, UD)
                         b = int(self.sampleTree.evaluate(self.systVarCuts[systVarBranchName]))
                         self._b(systVarBranchName)[0] = 1 if b > 0 else 0 
 
