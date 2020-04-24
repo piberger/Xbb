@@ -43,7 +43,8 @@ TH1* make_rebinned_ratios(TH1* theHist, TH1* theReference, double maxUncertainty
   for (bool allEmpty = true; allEmpty && --lastBin > 0;)
     for (int i = 0; allEmpty && i < numHistograms; ++i)
       allEmpty         &= (hist[i] == 0 || hist[i]->GetBinContent(lastBin) == 0);
-  if (lastBin <= firstBin)  return theHist;     // no content
+  // line below would break histograms with 1 populated bin only
+  //if (lastBin <= firstBin)  return theHist;     // no content
 
 
   // Partition bins in range
