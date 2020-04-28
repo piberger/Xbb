@@ -12,28 +12,70 @@ class MuonSFfromJSON(AddCollectionsModule):
 
     def __init__(self, jsonFiles=None, branchName='muonSF', channel='None', year=None):
         super(MuonSFfromJSON, self).__init__()
+        self.version = 2
         self.jsonFiles = jsonFiles
         self.debug = 'XBBDEBUG' in os.environ
         self.branchName = branchName
+        if year is None:
+            print "\x1b[31mERROR: year must be defined for MuonSFfromJSON\x1b[0m"
+            raise Exception("YearUndefined")
 
         self.year = year
-        tablenames = {2017:{'Zll':{'idSf':'NUM_LooseID_DEN_genTracks','isoSf':'NUM_LooseRelIso_DEN_LooseID','eff_IsoMu8_mc':'Mu8LegMC','eff_IsoMu17_mc':'Mu17LegMC','eff_IsoMu8_data':'Mu8Leg','eff_IsoMu17_data':'Mu17Leg'},'Wlv':{'idSf':'NUM_TightID_DEN_genTracks','isoSf':'NUM_UltraTightIso4_DEN_TightIDandIPCut','triggerSf':'NUM_IsoMu27_DEN_empty'}},2018:{'Zll':{'idSf':'NUM_LooseID_DEN_TrackerMuons2018','isoSf':'NUM_LooseRelIso_DEN_LooseID2018','eff_IsoMu8_mc':'Mu8LegMC','eff_IsoMu17_mc':'Mu17LegMC','eff_IsoMu8_data':'Mu8Leg','eff_IsoMu17_data':'Mu17Leg'},'Wlv':{'idSf':'TightID','isoSf':'TightISO','triggerSf':'TRGIsoMu24'}}}
+        tablenames = {
+                2017:{
+                    'Zll':{
+                        'idSf':'NUM_LooseID_DEN_genTracks',
+                        'isoSf':'NUM_LooseRelIso_DEN_LooseID',
+                        #'eff_IsoMu8_mc':'Mu8LegMC',
+                        #'eff_IsoMu17_mc':'Mu17LegMC',
+                        #'eff_IsoMu8_data':'Mu8Leg',
+                        #'eff_IsoMu17_data':'Mu17Leg',
+                        'eff_IsoMu8_mc':'Mu8LegTRG2017MC',
+                        'eff_IsoMu17_mc':'Mu17LegTRG2017MC',
+                        'eff_IsoMu8_data':'Mu8LegTRG2017Data',
+                        'eff_IsoMu17_data':'Mu17LegTRG2017Data',
+                        },
+                    'Wlv':{
+                        'idSf':'NUM_TightID_DEN_genTracks',
+                        'isoSf':'NUM_UltraTightIso4_DEN_TightIDandIPCut',
+                        'triggerSf':'NUM_IsoMu27_DEN_empty'
+                        }
+                    },
+                2018:{
+                    'Zll':{
+                        'idSf':'NUM_LooseID_DEN_TrackerMuons2018',
+                        'isoSf':'NUM_LooseRelIso_DEN_LooseID2018',
+                        'eff_IsoMu8_mc':'Mu8LegMC',
+                        'eff_IsoMu17_mc':'Mu17LegMC',
+                        'eff_IsoMu8_data':'Mu8Leg',
+                        'eff_IsoMu17_data':'Mu17Leg'
+                        },
+                    'Wlv':{
+                        'idSf':'TightID',
+                        'isoSf':'TightISO',
+                        'triggerSf':'TRGIsoMu24'
+                        }
+                    }
+                }
 
         # load JOSN files
         self.jsonTable = JsonTable(jsonFiles)
-        self.channel = channel 
+        self.channel = channel
+
+        tables = tablenames[year][channel]
         if self.channel== 'Zll':
-            self.idSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['idSf'], 'abseta_pt')
-            self.isoSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['isoSf'], 'abseta_pt')
-            self.eff_IsoMu8_mc = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu8_mc'], 'abseta_pt') 
-            self.eff_IsoMu17_mc = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu17_mc'], 'abseta_pt') 
-            self.eff_IsoMu8_data = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu8_data'], 'abseta_pt') 
-            self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(tablenames[year][channel]['eff_IsoMu17_data'], 'abseta_pt') 
-            #self.triggerSf = ; not implemented yet
+            self.idSf             = self.jsonTable.getEtaPtTable(tables['idSf'], 'abseta_pt')
+            self.isoSf            = self.jsonTable.getEtaPtTable(tables['isoSf'], 'abseta_pt')
+            
+            self.eff_IsoMu8_mc    = self.jsonTable.getEtaPtTable(tables['eff_IsoMu8_mc'], 'abseta_pt') 
+            self.eff_IsoMu17_mc   = self.jsonTable.getEtaPtTable(tables['eff_IsoMu17_mc'], 'abseta_pt')
+            self.eff_IsoMu8_data  = self.jsonTable.getEtaPtTable(tables['eff_IsoMu8_data'], 'abseta_pt')
+            self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(tables['eff_IsoMu17_data'], 'abseta_pt')
+
         elif self.channel == 'Wlv':
-            self.idSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['idSf'], 'abseta_pt')
-            self.isoSf = self.jsonTable.getEtaPtTable(tablenames[year][channel]['isoSf'], 'abseta_pt')
-            self.triggerSf = [self.jsonTable.getEtaPtTable(tablenames[year][channel]['triggerSf'], 'abseta_pt')]
+            self.idSf = self.jsonTable.getEtaPtTable(tables['idSf'], 'abseta_pt')
+            self.isoSf = self.jsonTable.getEtaPtTable(tables['isoSf'], 'abseta_pt')
+            self.triggerSf = [self.jsonTable.getEtaPtTable(tables['triggerSf'], 'abseta_pt')]
         else: 
             print "Channel not defined!"
             raise Exception("ChannelNotDefined")
@@ -92,10 +134,12 @@ class MuonSFfromJSON(AddCollectionsModule):
         if lep_n == 1 or lep_n == 2:
             #Calculating the trigger and IdIso weights and Down/Up variations
             for i, syst in enumerate(self.systVariations):
+
                weight_trigg[i] = self.getTriggerSf(lep_eta, lep_pt, lep_n, syst=syst)
-               weight_Id[i] = self.getIdSf(lep_eta, lep_pt, lep_n)
-               weight_Iso[i] = self.getIsoSf(lep_eta, lep_pt, lep_n)
-               weight_SF[i] = weight_trigg[i] * weight_Id[i] * weight_Iso[i]
+               weight_Id[i]    = self.getIdSf(lep_eta, lep_pt, lep_n)
+               weight_Iso[i]   = self.getIsoSf(lep_eta, lep_pt, lep_n)
+
+               weight_SF[i]    = weight_trigg[i] * weight_Id[i] * weight_Iso[i]
 
 #               print "trigg", weight_trigg[i] 
 #               print "Id", weight_Id[i]
@@ -139,7 +183,7 @@ class MuonSFfromJSON(AddCollectionsModule):
 #        #    print "-->", leg1*leg2
 #        return leg1*leg2
 
-    def computeEventSF_fromleg(self, eff_mu8_l1, eff_mu17_l1, eff_mu8_l2, eff_mu17_l2):
+    def computeEfficiency_fromleg(self, eff_mu8_l1, eff_mu17_l1, eff_mu8_l2, eff_mu17_l2):
         #returns event efficiency and relative uncertainty
         eff_event = [1.,0.]
         eff_event[0] = ((eff_mu8_l1[0]**2 * eff_mu17_l2[0] + eff_mu8_l2[0]**2 * eff_mu17_l1[0])/(eff_mu8_l1[0] + eff_mu8_l2[0]))
@@ -157,22 +201,22 @@ class MuonSFfromJSON(AddCollectionsModule):
         triggSF = 1.
         if self.channel == 'Zll':
             if len_n==2:
-                eff_mu8_l1_mc  = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[0], pt[0], self.systVariations)
-                eff_mu17_l1_mc  = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[0], pt[0], self.systVariations)
-                eff_mu8_l1_data = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[0], pt[0], self.systVariations)
+                eff_mu8_l1_mc    = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[0], pt[0], self.systVariations)
+                eff_mu17_l1_mc   = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[0], pt[0], self.systVariations)
+                eff_mu8_l1_data  = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[0], pt[0], self.systVariations)
                 eff_mu17_l1_data = self.jsonTable.findvalerr(self.eff_IsoMu17_data, eta[0], pt[0], self.systVariations)
 
-                eff_mu8_l2_mc  = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[1], pt[1], self.systVariations)
-                eff_mu17_l2_mc  = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[1], pt[1], self.systVariations)
-                eff_mu8_l2_data = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[1], pt[1], self.systVariations)
+                eff_mu8_l2_mc    = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[1], pt[1], self.systVariations)
+                eff_mu17_l2_mc   = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[1], pt[1], self.systVariations)
+                eff_mu8_l2_data  = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[1], pt[1], self.systVariations)
                 eff_mu17_l2_data = self.jsonTable.findvalerr(self.eff_IsoMu17_data, eta[1], pt[1], self.systVariations)
                 #print("new event triggerSf")
                 #print(eta[0], pt[0])
                 #print(eff_mu8_l1_mc)
                 #print(eff_mu8_l1_data)
 
-                EffData = self.computeEventSF_fromleg(eff_mu8_l1_data,eff_mu17_l1_data,eff_mu8_l2_data,eff_mu17_l2_data)
-                EffMC = self.computeEventSF_fromleg(eff_mu8_l1_mc,eff_mu17_l1_mc,eff_mu8_l2_mc,eff_mu17_l2_mc)
+                EffData = self.computeEfficiency_fromleg(eff_mu8_l1_data,eff_mu17_l1_data,eff_mu8_l2_data,eff_mu17_l2_data)
+                EffMC   = self.computeEfficiency_fromleg(eff_mu8_l1_mc,  eff_mu17_l1_mc,  eff_mu8_l2_mc,  eff_mu17_l2_mc)
 
                 #print(EffData)
                 #print(EffMC)
@@ -194,20 +238,26 @@ class MuonSFfromJSON(AddCollectionsModule):
 
 if __name__ == "__main__":
     sfObject = MuonSFfromJSON([
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/RunBCDEF_SF_ID.json',
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/RunBCDEF_SF_ISO.json',
-        ],channel="Wlv",year=2017)
-    #print sfObject.getIdSf([0.5],[121] ,1)
+            'data/Zll/Muons/RunBCDEF_SF_ID.json',
+            'data/Zll/Muons/RunBCDEF_SF_ISO.json',
+            'data/Run2MuonSF/vhbb_SingleMuon_EfficienciesAndSFMu17LegTRG_2017MC.json',
+            'data/Run2MuonSF/vhbb_SingleMuon_EfficienciesAndSFMu17LegTRG_2017Data.json',
+            'data/Run2MuonSF/vhbb_SingleMuon_EfficienciesAndSFMu8LegTRG_2017MC.json',
+            'data/Run2MuonSF/vhbb_SingleMuon_EfficienciesAndSFMu8LegTRG_2017Data.json',
+        ],channel="Zll",year=2017)
+    for eta in [0.1,1.0,2.3]:
+        for pt in [10,20,50,100,200]:
+            print eta, pt, sfObject.getIdSf([eta, eta+0.4],[pt, pt+20.0], 2), sfObject.getTriggerSf([eta, eta+0.4],[pt, pt+20.0],2, None)
     #print sfObject.getIdSf(-0.5, 42)
     #print sfObject.getIsoSf(1.5, 21)
     #print sfObject.getIsoSf(-1.5, 21)
 
     sfObject = MuonSFfromJSON([
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/Eff_IsoMu17Cut_NUM_IsoMu17leg_DEN_LooseRelIso_PAR_newpt_etaMC2018.json',
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/Eff_IsoMu17Cut_NUM_IsoMu17leg_DEN_LooseRelIso_PAR_newpt_eta_DATA2018.json',
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/Eff_IsoMu8Cut_NUM_IsoMu8leg_DEN_LooseRelIso_PAR_newpt_etaMC2018.json',
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/Eff_IsoMu8Cut_NUM_IsoMu8leg_DEN_LooseRelIso_PAR_newpt_eta_DATA2018.json',
-            '/work/krgedia/CMSSW_10_1_0/src/Xbb/python/data/Zll/Muons/RunABCD2018_SF_ID.json'
+            'data/Zll/Muons/Eff_IsoMu17Cut_NUM_IsoMu17leg_DEN_LooseRelIso_PAR_newpt_etaMC2018.json',
+            'data/Zll/Muons/Eff_IsoMu17Cut_NUM_IsoMu17leg_DEN_LooseRelIso_PAR_newpt_eta_DATA2018.json',
+            'data/Zll/Muons/Eff_IsoMu8Cut_NUM_IsoMu8leg_DEN_LooseRelIso_PAR_newpt_etaMC2018.json',
+            'data/Zll/Muons/Eff_IsoMu8Cut_NUM_IsoMu8leg_DEN_LooseRelIso_PAR_newpt_eta_DATA2018.json',
+            'data/Zll/Muons/RunABCD2018_SF_ID.json'
         ],channel="Zll",year=2018)
 
     #print sfObject.getIdSf([-1.86865234375,-1.86865234375],[121.0,65.0] , 2, None)

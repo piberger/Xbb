@@ -71,6 +71,7 @@ parser.add_option("-T", "--tag", dest="tag", default="default",
                       help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--different-node", dest="different_node", action="store_true", default=False, help="with --resubmit option: resubmits the job to a different node")
 parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
                       help="unblind")
 parser.add_option("-V", "--verbose", dest="verbose", action="store_true", default=False,
@@ -415,6 +416,10 @@ def waitFor(jobNameList):
 
 # ------------------------------------------------------------------------------
 # filter sample list with simple wildcard (*) syntax, used for -S option
+# remove samples by prepending !
+# exmaples:
+#  all W+jets samples: -S 'W*Jets*'
+#  all samples but QCD: -S '*,!QCD*'
 # ------------------------------------------------------------------------------
 def filterSampleList(sampleIdentifiers, samplesList):
     if samplesList and len([x for x in samplesList if x]) > 0:
@@ -422,10 +427,21 @@ def filterSampleList(sampleIdentifiers, samplesList):
         for expr in samplesList:
             if expr in sampleIdentifiers:
                 filteredList.append(expr)
-            elif '*' in expr:
+            elif '*' in expr and not expr.startswith('!'):
                 for sampleIdentifier in sampleIdentifiers:
                     if fnmatch.fnmatch(sampleIdentifier, expr):
                         filteredList.append(sampleIdentifier)
+            elif '*' in expr and expr.startswith('!'):
+                expr = expr[1:]
+                newList = []
+                for x in filteredList:
+                    if not fnmatch.fnmatch(x, expr):
+                        newList.append(x)
+                filteredList = newList
+            elif expr.startswith('!'):
+                expr = expr[1:]
+                filteredList = [x for x in filteredList if x!=expr]
+
         filteredList = list(set(filteredList))
         return filteredList
     else:
@@ -726,7 +742,7 @@ if opts.task == 'hadd':
                 # only give good files to hadd
                 fileNames = []
                 for fileName in splitFilesChunk:
-                    fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=config.get('Directories','HADDin'), sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
+                    fileNameAfterPrep = "{path}/{sample}/{fileName}".format(path=inputPath, sample=sampleIdentifier, fileName=fileLocator.getFilenameAfterPrep(fileName))
                     #if fileLocator.isValidRootFile(fileNameAfterPrep):
                     if fileLocator.exists(fileNameAfterPrep):
                         fileNames.append(fileName)
@@ -737,7 +753,7 @@ if opts.task == 'hadd':
 
                 if len(fileNames) > 0:
                     # 'fake' filenames to write into text file for merged files
-                    partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier)
+                    partialFileMerger = PartialFileMerger(fileNames, i, config=config, sampleIdentifier=sampleIdentifier, inputDir=inputDir,outputDir=outputDir)
                     mergedFileName = partialFileMerger.getMergedFakeFileName()
                     mergedFileNames.append(mergedFileName)
 
@@ -760,6 +776,8 @@ if opts.task == 'hadd':
                             jobDict['arguments']['force'] = ''
                         jobName = 'hadd_{sample}_part{part}'.format(sample=sampleIdentifier, part=i)
                         submit(jobName, jobDict)
+                    else:
+                        print "output file exists:", outputFileName
                 else:
                     print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
 
@@ -900,6 +918,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
     missingFiles = {}
 
     # process all sample identifiers (correspond to folders with ROOT files)
+    print "INFO: going to submit jobs for", len(sampleIdentifiers), "samples."
     for sampleIdentifier in sampleIdentifiers:
         try:
             sampleFileList = filelist(samplefiles, sampleIdentifier)
@@ -2065,6 +2084,13 @@ if opts.task.startswith('submissions'):
 
         jobType = '/'.join(list(set([str(job['repDict']['task']) for job in lastSubmission])))
         print "\x1b[34m", submissionLog, "\x1b[0m of type \x1b[35m", jobType, "\x1b[0m log files saved to -> \x1b[34m", logfileDirectory, "\x1b[0m"
+
+        # try to use a different node if batch system supports it
+        try:
+            if opts.different_node and hasattr(batchSystem, "resubmitToDifferentNode"):
+                batchSystem.resubmitToDifferentNode = True
+        except:
+            pass
 
         # resubmit jobs
         if opts.resubmit:

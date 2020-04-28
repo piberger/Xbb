@@ -12,10 +12,11 @@ class LOtoNLOweight(AddCollectionsModule):
         super(LOtoNLOweight, self).__init__()
         self.branchName = branchName
         self.year = int(year)
+        self.version = 5
 
         self.addV3 = addV3
         self.addV4 = addV4
-            
+
         self.ZjetsToNuNuNLOweightNjet2017 = [
                 [0,0,1.228032,0.006932,-0.001342,0.000038],
                 [0,1,0.918723,0.009699,-0.000621,0.000052],
@@ -129,6 +130,13 @@ class LOtoNLOweight(AddCollectionsModule):
             self.addBranch(self.branchName + '_LHEVptV2b_p1_Up')
             self.addBranch(self.branchName + '_LHEVptV2b_p1_Down')
 
+            self.addBranch(self.branchName + '_LHEVptV5')
+            self.addBranch(self.branchName + '_LHEVptV5_p0_Up')
+            self.addBranch(self.branchName + '_LHEVptV5_p0_Down')
+            self.addBranch(self.branchName + '_LHEVptV5_p1_Up')
+            self.addBranch(self.branchName + '_LHEVptV5_p1_Down')
+
+            # those are TESTS only
             if self.addV3:
                 self.addBranch(self.branchName + '_LHEVptV3')
                 for njet in [0,1,2,3,4,5]:
@@ -136,7 +144,6 @@ class LOtoNLOweight(AddCollectionsModule):
                     self.addBranch(self.branchName + '_LHEVptV3_njet%d_p0_Down'%njet)
                     self.addBranch(self.branchName + '_LHEVptV3_njet%d_p1_Up'%njet)
                     self.addBranch(self.branchName + '_LHEVptV3_njet%d_p1_Down'%njet)
-
             if self.addV4:
                 self.addBranch(self.branchName + '_LHEVptV4')
                 for deltaEtaBin in [0,1,2,3,4,5,6,7,8,9,10]:
@@ -148,29 +155,38 @@ class LOtoNLOweight(AddCollectionsModule):
             self.addBranch(self.branchName + '_2016')
 
             self.sampleTree = initVars['sampleTree']
-            self.nAddJetsFormula = "Sum$(GenJet_pt>30&&abs(GenJet_eta)<2.4)-2"
-            self.deltaEtaFormula = "min(int(abs(GenJet_eta[0]-GenJet_eta[1])/0.5),10)" 
+            self.nAddJetsFormula       = "Sum$(GenJet_pt>30&&abs(GenJet_eta)<2.4)-2"
+            self.deltaEtaFormula       = "min(int(abs(GenJet_eta[0]-GenJet_eta[1])/0.5),10)" 
+            self.absGenDeltaEtaFormula = "abs(GenJet_eta[0]-GenJet_eta[1])"
+            self.nGenBJetsFormula      = "Sum$(GenJet_pt>25 && abs(GenJet_eta)<2.4 && GenJet_hadronFlavour==5)"
             self.sampleTree.addFormula(self.nAddJetsFormula)
             self.sampleTree.addFormula(self.deltaEtaFormula)
+            self.sampleTree.addFormula(self.absGenDeltaEtaFormula)
+            self.sampleTree.addFormula(self.nGenBJetsFormula)
 
     def processEvent(self, tree):
         # if current entry has not been processed yet
         if not self.sample.isData() and not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-            self._b(self.branchName)[0]                       = 1.0
+            self._b(self.branchName)[0]                        = 1.0
             self._b(self.branchName + '_LHEVptV2b')[0]         = 1.0
             self._b(self.branchName + '_LHEVptV2b_p0_Up')[0]   = 1.0
             self._b(self.branchName + '_LHEVptV2b_p0_Down')[0] = 1.0
             self._b(self.branchName + '_LHEVptV2b_p1_Up')[0]   = 1.0
             self._b(self.branchName + '_LHEVptV2b_p1_Down')[0] = 1.0
-            self._b(self.branchName + '_2016')[0]             = 1.0
+            self._b(self.branchName + '_LHEVptV5')[0]          = 1.0
+            self._b(self.branchName + '_LHEVptV5_p0_Up')[0]    = 1.0
+            self._b(self.branchName + '_LHEVptV5_p0_Down')[0]  = 1.0
+            self._b(self.branchName + '_LHEVptV5_p1_Up')[0]    = 1.0
+            self._b(self.branchName + '_LHEVptV5_p1_Down')[0]  = 1.0
+            self._b(self.branchName + '_2016')[0]              = 1.0
 
+            # SFs below are tests only
             if self.addV3:
                 self._b(self.branchName + '_LHEVptV3')[0]         = 1.0
                 for njet in [0,1,2,3,4,5]:
                     for v in ['p0_Up', 'p0_Down', 'p1_Up', 'p1_Down']:
                         self._b(self.branchName + '_LHEVptV3_njet%d_%s'%(njet, v))[0] = 1.0
-
             if self.addV4: 
                 self._b(self.branchName + '_LHEVptV4')[0]         = 1.0
                 for n in [0,1,2,3,4,5,6,7,8,9,10]:
@@ -178,6 +194,22 @@ class LOtoNLOweight(AddCollectionsModule):
                         self._b(self.branchName + '_LHEVptV4_deta%d_%s'%(n, v))[0] = 1.0
 
             if self.applies(tree):
+
+                # V5
+                # only derived for 2017 so far, can probably be applied to 2018 (but NOT to 2016)
+                #LOtoNLOweight2017V5(self, vpt, nb, deltaEta, sampleIdentifier, var0=0.0, var1=0.0):
+                
+                vpt         = tree.LHE_Vpt
+                nb          = self.sampleTree.evaluate(self.nGenBJetsFormula)
+                gendeltaeta = self.sampleTree.evaluate(self.absGenDeltaEtaFormula)
+
+                self._b(self.branchName + '_LHEVptV5')[0]         = self.LOtoNLOweight2017V5(vpt, nb, gendeltaeta, self.sample.identifier)
+                self._b(self.branchName + '_LHEVptV5_p0_Up')[0]   = self.LOtoNLOweight2017V5(vpt, nb, gendeltaeta, self.sample.identifier, var0=1.0) 
+                self._b(self.branchName + '_LHEVptV5_p0_Down')[0] = self.LOtoNLOweight2017V5(vpt, nb, gendeltaeta, self.sample.identifier, var0=-1.0)
+                self._b(self.branchName + '_LHEVptV5_p1_Up')[0]   = self.LOtoNLOweight2017V5(vpt, nb, gendeltaeta, self.sample.identifier, var1=1.0)
+                self._b(self.branchName + '_LHEVptV5_p1_Down')[0] = self.LOtoNLOweight2017V5(vpt, nb, gendeltaeta, self.sample.identifier, var1=-1.0)
+
+                # <V5
                 if tree.hJidx[0] > -1 and tree.hJidx[1] > -1:
                     etabb = abs(tree.Jet_eta[tree.hJidx[0]]-tree.Jet_eta[tree.hJidx[1]])
                 else:
@@ -412,3 +444,95 @@ class LOtoNLOweight(AddCollectionsModule):
             if SF < 0.01:
                 SF = 0.01
         return SF
+
+
+    # LOtoNLOweight2017V5
+    #
+    # 1) LHE_Vpt correction, normalization changing from LO(pdfwgt=True) to NLO
+    #    important: LO samples with pdfwgt=False need an additional correction 
+    # 2) residual deltaEta correction, normalization preserving. Only for ZJetsToNuNu, flat for other samples
+    #
+    # INPUTS:
+    # vpt:              LHE_Vpt
+    # nb:               Sum$(GenJet_pt>25 && abs(GenJet_eta)<2.4 && GenJet_hadronFlavour==5) 
+    # deltaEta:         abs(GenJet_eta[0]-GenJet_eta[1]) 
+    # sampleIdentifier: sampleIdentifier
+    # var0/1:           0.0 for nominal, 1.0 for up, -1.0 for down
+    #
+    # OUTPUT:
+    # MC SF to be applied to LO(pdfwgt=True) V+jets samples
+    def LOtoNLOweight2017V5(self, vpt, nb, deltaEta, sampleIdentifier, var0=0.0, var1=0.0):
+        SF = 1.0
+
+        if any([x in sampleIdentifier for x in ['ZJets', 'ZBJets']]):
+            vpt = max(min(vpt,400.0),0.0)
+
+            if nb < 1:
+                SF = (1.688e+00 + var0*1.727e-03)+(-1.785e-03 + var1*7.239e-06)*vpt
+            elif nb == 1:
+                SF = (1.575e+00 + var0*6.579e-03)+(-1.754e-03 + var1*2.721e-05)*vpt
+            else:
+                SF = (1.424e+00 + var0*1.035e-02)+(-1.539e-03 + var1*4.161e-05)*vpt
+
+            x = max(min(abs(deltaEta),4.0),0.0) 
+            if nb < 1:
+                if vpt>=150.0 and vpt<170.0:
+                    SF *= (8.902e-01)+(1.171e-01)*x+(-4.028e-02)*x**2+(5.413e-03)*x**3
+                elif vpt>=170.0 and vpt<200.0:
+                    SF *= (8.960e-01)+(1.125e-01)*x+(-4.521e-02)*x**2+(6.914e-03)*x**3
+                elif vpt>=200.0 and vpt<250.0:
+                    SF *= (9.055e-01)+(1.016e-01)*x+(-4.262e-02)*x**2+(6.732e-03)*x**3
+                elif vpt>=250.0 and vpt<300.0:
+                    SF *= (9.258e-01)+(6.067e-02)*x+(-2.653e-02)*x**2+(4.067e-03)*x**3
+                elif vpt>=300.0 and vpt<400.0:
+                    SF *= (9.446e-01)+(8.139e-02)*x+(-4.740e-02)*x**2+(8.163e-03)*x**3
+            elif nb == 1:
+                if vpt>=150.0 and vpt<170.0:
+                    SF *= (9.509e-01)+(4.284e-02)*x+(-2.355e-02)*x**2+(6.062e-03)*x**3 
+                elif vpt>=170.0 and vpt<200.0:
+                    SF *= (9.476e-01)+(6.023e-02)*x+(-4.144e-02)*x**2+(9.121e-03)*x**3
+                elif vpt>=200.0 and vpt<250.0:
+                    SF *= (9.424e-01)+(8.237e-02)*x+(-4.904e-02)*x**2+(9.142e-03)*x**3
+                elif vpt>=250.0 and vpt<300.0:
+                    SF *= (9.838e-01)+(-5.520e-03)*x+(-1.425e-02)*x**2+(4.843e-03)*x**3
+                elif vpt>=300.0 and vpt<400.0:
+                    SF *= (1.012e+00)+(5.707e-03)*x+(-3.566e-02)*x**2+(1.008e-02)*x**3
+            else:
+                if vpt>=150.0 and vpt<170.0:
+                    SF *= (8.635e-01)+(4.481e-02)*x+(8.009e-02)*x**2+(-1.883e-02)*x**3
+                elif vpt>=170.0 and vpt<200.0:
+                    SF *= (8.942e-01)+(6.551e-02)*x+(2.721e-02)*x**2+(-7.706e-03)*x**3
+                elif vpt>=200.0 and vpt<250.0:
+                    SF *= (8.709e-01)+(8.808e-02)*x+(1.561e-02)*x**2+(-6.648e-03)*x**3
+                elif vpt>=250.0 and vpt<300.0:
+                    SF *= (9.174e-01)+(2.229e-02)*x+(4.194e-02)*x**2+(-1.010e-02)*x**3
+                elif vpt>=300.0 and vpt<400.0:
+                    SF *= (9.712e-01)+(-1.882e-02)*x+(5.351e-02)*x**2+(-1.159e-02)*x**3
+
+        elif any([x in sampleIdentifier for x in ['WJets', 'WBJets']]):
+            vpt = max(min(vpt, 500.0), 100.0)
+
+            # LHE_Vpt correction, normalization changing from LO(pdfwgt=True) to NLO
+            # LO samples with pdfwgt=False need an additional correction before this one can be applied
+            if nb < 1:
+                SF = (1.628e+00 + var0*4.637e-03)+(-1.339e-03 + var1*2.052e-05)*vpt
+            elif nb == 1:
+                SF = (1.586e+00 + var0*2.657e-02)+(-1.531e-03 + var1*1.118e-04)*vpt
+            else:
+                SF = (1.440e+00 + var0*4.865e-02)+(-9.250e-04 + var1*2.034e-04)*vpt
+
+        elif any([x in sampleIdentifier for x in ['DYJets', 'DYBJets']]):
+            vpt = max(min(vpt, 500.0), 50.0)
+
+            # LHE_Vpt correction, normalization changing from LO(pdfwgt=True) to NLO
+            # LO samples with pdfwgt=False need an additional correction before this one can be applied
+            if nb < 1:
+                SF = (1.650e+00 + var0*2.112e-03)+(-1.707e-03 + var1*1.960e-05)*vpt  
+            elif nb == 1:
+                SF = (1.534e+00 + var0*9.535e-03)+(-1.485e-03 + var1*8.048e-05)*vpt
+            else:
+                SF = (1.519e+00 + var0*1.868e-02)+(-1.916e-03 + var1*1.396e-04)*vpt
+        
+        return SF
+
+
