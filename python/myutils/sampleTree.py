@@ -1171,7 +1171,7 @@ class SampleTree(object):
                 countHistogram = "autoPU.GetEntries()"
             else:
                 if not countHistogram:
-                    countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else 'genEventSumw'
+                    countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else 'genEventSumw_'
                 count = self.totalNanoTreeCounts[countHistogram]
                 #print('count', count)  #1978776.76904
         else:
