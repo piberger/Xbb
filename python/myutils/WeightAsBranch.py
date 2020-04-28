@@ -68,8 +68,8 @@ if __name__ == '__main__':
 
     ## this is what the XbbConfigReader module is doing:
     pathconfig = BetterConfigParser.BetterConfigParser()
-    pathconfig.read('/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Zvv2017config/paths.ini')
-    configFiles = pathconfig.get('Configuration', 'List').split(' ')
+    pathconfig.read('/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Zvv2017config/paths.ini') #parent class 'ConfigParser' method
+    configFiles = pathconfig.get('Configuration', 'List').split(' ') 
     config = BetterConfigParser.BetterConfigParser()
     for configFile in configFiles:
         print(configFile)
@@ -83,9 +83,10 @@ if __name__ == '__main__':
     samplefiles = '../samples/VHbbPostNano2017_V5/merged_Zvv2017/' 
     samplesinfo = 'Zvv2017config/samples_nosplit.ini' 
     info = ParseInfo(samples_path=path, config=config)
+    print('_samplelist ',info._samplelist)
     
     sample = [x for x in info if x.identifier == 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
-    print(sample)
+    print('sample ',sample)
     
     # read sample
     sampleTree = SampleTree([inputFile], config=config)
