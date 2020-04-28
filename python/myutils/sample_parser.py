@@ -31,6 +31,7 @@ class ParseInfo:
         self.__fileslist = []
 
         configSamples = [x for x in config.sections() if config.has_option(x, 'sampleName')]
+        #configSamples = ['WminusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ZZ_TuneCP5_13TeV-pythia8', 'ZZTo2L2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WZ_TuneCP5_13TeV-pythia8', 'WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WW_TuneCP5_13TeV-pythia8', 'WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8',.....]
         if self.debug:
             print "DEBUG:", len(configSamples), " samples found."
             
@@ -62,9 +63,12 @@ class ParseInfo:
 
             # add and fill all the subsamples
             if config.has_option(sample,'subsamples') and eval(config.get(sample,'subsamples')):
+                #print('sample ',sample)
+                #print('eval((config.get(sample,"sampleGroup")))', eval((config.get(sample,'sampleGroup')))) 
                 subgroups = eval((config.get(sample,'sampleGroup')))
                 try:
                     subnames = eval((config.get(sample, 'subnames')))
+                    #print 'hiii', subnames
                 except:
                     # create subnames automatically based on subgroup name to avoid duplication
                     try:
@@ -72,6 +76,7 @@ class ParseInfo:
                     except:
                         # use full name if no short name given
                         shortname = sampleName
+                        #print 'shortname', shortname
                     subnames = [shortname + '_' + x for x in subgroups]
                 subcuts = eval((config.get(sample, 'subcuts')))
 
@@ -81,7 +86,10 @@ class ParseInfo:
                         newsample.xsec = [subxsecs[0]]
                     else:
                         print "\x1b[31mWARNING: different cross sections for the sub-samples of", sampleName, " are you sure you want to do this?\x1b[0m"
+                    #print 'subsfs', [1.0]*len(subxsecs) 
+                    #print config.get(sample, 'SF')
                     subsfs = eval((config.get(sample, 'SF'))) if config.has_option(sample, 'SF') else [1.0]*len(subxsecs)
+                    #print 'subsfs', subsfs
                 try:
                     subspecialweights = eval((config.get(sample, 'specialweight')))
                     #print 'specialweights=', subspecialweights
@@ -112,6 +120,7 @@ class ParseInfo:
 
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
+                #print('doneee')
             else:
                 if sampleType != 'DATA':
                     newsample.xsec = eval((config.get(sample,'xSec')))    
@@ -221,4 +230,36 @@ class ParseInfo:
                             return False
             else:
                     return False
+
     
+if __name__ == '__main__':
+
+    # read config
+
+    ## this is what the XbbConfigReader module is doing:
+    pathconfig = BetterConfigParser()
+    pathconfig.read('/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Wlv2018config/paths.ini') #parent class 'ConfigParser' method
+    configFiles = pathconfig.get('Configuration', 'List').split(' ') 
+    config = BetterConfigParser()
+    print ('configFiles parsed', configFiles)
+    for configFile in configFiles:
+        config.read('Wlv2017config/' + configFile)
+
+    #print(config.get('Weights','weightF'))
+    #config = XbbConfigReader.read('Zvv2017')
+
+    #inputFile = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/berger_p2/VHbb/VHbbPostNano2017/V5/Zvv/rerun/v4j/eval/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/tree_aa5e971734ef4e885512748d534e6937ff03dc61feed21b6772ba943_000000_000000_0000_9_a6c5a52b56e5e0c7ad5aec31429c8926bf32cf39adbe087f05cfb323.root'
+    path = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Wlv/VHbbPostNano2018/mva/17jan20v4' 
+    #samplefiles = '../samples/VHbbPostNano2017_V5/merged_Zvv2017/' 
+    #samplesinfo = 'Zvv2017config/samples_nosplit.ini' 
+    info = ParseInfo(samples_path=path, config=config)
+    
+    #print('_samplelist ',info._samplelist)
+    
+    #sample = [x for x in info if x.identifier == 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
+    #print('sample ',sample)
+    
+    # read sample
+    #sampleTree = SampleTree([inputFile], config=config)
+    #print 'sampleTree', sampleTree
+
