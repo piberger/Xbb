@@ -6,6 +6,8 @@
 
 
 namespace VHbb {
+    
+#include "XYMETCorrection.h"
 
     double LUT5(int n, float n0, float n1, float n2, float n3, float n4, float n5) {
         if (n < 1)
@@ -1273,6 +1275,30 @@ double LOtoNLOWeightBjetSplitEtabb2017v2(double etabb, int njets){
     return SF;
 }
 
+// residual deltaEta correction after Vpt reweighting is applied
+// etabb = abs(GenJet_eta[0]-GenJet_eta[1])
+//2b: 8.967e-01 + 7.218e-02 * etabb + 4.231e-02 * etabb*etabb - 1.092e-02 * etabb*etabb*etabb
+//1b: 9.596e-01 + 1.806e-02 * etabb + 4.633e-03 * etabb*etabb - 8.210e-05 * etabb*etabb*etabb
+//0b: 9.096e-01 + 8.609e-02 * etabb - 1.938e-02 * etabb*etabb + 2.080e-03 * etabb*etabb*etabb
+
+// VHbb::LOtoNLOWeightBjetSplitEtabb2017ZJetsResidual(abs(GenJet_eta[0]-GenJet_eta[1]), Sum$(GenJet_pt>25 && abs(GenJet_eta)<2.4 && GenJet_hadronFlavour==5))
+
+double LOtoNLOWeightBjetSplitEtabb2017ZJetsResidual(double etabb, int njets){
+    double SF = 1.;
+    if (etabb > 5.0) etabb = 5.0;
+    if(njets < 1){
+        //0b jets
+        SF = 9.096e-01 + 8.609e-02 * etabb - 1.938e-02 * etabb*etabb + 2.080e-03 * etabb*etabb*etabb;
+    } else if(njets == 1){
+        //1b jets
+        SF = 9.596e-01 + 1.806e-02 * etabb + 4.633e-03 * etabb*etabb - 8.210e-05 * etabb*etabb*etabb; 
+    } else if(njets >=2){
+        //2b jets
+        SF = 8.967e-01 + 7.218e-02 * etabb + 4.231e-02 * etabb*etabb - 1.092e-02 * etabb*etabb*etabb; 
+    }
+    return SF;
+}
+
 double LOtoNLOWeightBjetSplitVpt2017(double lhevpt, int nbjets) {
     if (lhevpt<100.0) lhevpt=100.0;
     if (lhevpt>500.0) lhevpt=500.0;
@@ -1545,6 +1571,25 @@ float MaxdRDoubleSingleBtag(double FatJet_eta, double FatJet_phi, double Jet1_et
 
 }
 
+double m_inv2(double pt1, double eta1, double phi1, double m1, double pt2, double eta2, double phi2, double m2) {
+    TLorentzVector v1;
+    TLorentzVector v2;
+    v1.SetPtEtaPhiM(pt1,eta1,phi1,m1);
+    v2.SetPtEtaPhiM(pt2,eta2,phi2,m2);
+    return (v1+v2).M();
+}
+
+double m_inv3(double pt1, double eta1, double phi1, double m1, double pt2, double eta2, double phi2, double m2, double pt3, double eta3, double phi3, double m3) {
+    TLorentzVector v1;
+    TLorentzVector v2;
+    TLorentzVector v3;
+    v1.SetPtEtaPhiM(pt1,eta1,phi1,m1);
+    v2.SetPtEtaPhiM(pt2,eta2,phi2,m2);
+    v3.SetPtEtaPhiM(pt3,eta3,phi3,m3);
+    TLorentzVector r;
+    r = v1 + v2 + v3;
+    return r.M();
+}
 
 }
 
