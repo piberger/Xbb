@@ -23,8 +23,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
 
-        self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
-        #self.jetSystematics = ['jerReg','jesAbsoluteStat']
+        #self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        self.jetSystematics = ['jerReg']
 
         # corrected dijet (Higgs candidate) properties
         self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass','pt_noFSR','eta_noFSR','phi_noFSR','mass_noFSR']]
@@ -42,8 +42,8 @@ class HiggsCandidateSystematics(AddCollectionsModule):
 
         #jerReg systematics not included in nanoAOD v4 for 2016 dataset.
         self.dataset = self.config.get('General', 'dataset')
-        if self.dataset == '2016':
-            self.jetSystematics.remove('jerReg')
+        #if self.dataset == '2016':
+        #    self.jetSystematics.remove('jerReg')
 
         if self.addBoostSystematics:
             self.boosttagidx = 'Hbb_fjidx'
