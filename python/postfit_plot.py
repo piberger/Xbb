@@ -89,6 +89,9 @@ class PostfitPlotter(object):
 
         shapesFileName = self.config.get('Fit', 'FitDiagnosticsDump')
         self.shapesFile = ROOT.TFile.Open(shapesFileName, "READ")
+        if self.shapesFile is None or self.shapesFile.IsZombie() or self.shapesFile.TestBit(ROOT.TFile.kRecovered):
+            print("FILENAME:", shapesFileName)
+            raise Exception("FileError")
         print("DEBUG: reverse dict:", self.reverseDcDict)
 
     # process is datacard name convention, convert it back to Xbb process convention if necessary
@@ -120,6 +123,7 @@ class PostfitPlotter(object):
         histograms = []
         histogramBins = []
         for x in self.dcRegion:
+            print("REGION:", x, histogramNameTemplate.format(dcRegion=x), " FROM ", self.shapesFile)
             histograms.append(self.shapesFile.Get(histogramNameTemplate.format(dcRegion=x)))
             r = self.reverseRegionDict[x] 
             if self.config.has_section('Fit:'+r) and self.config.has_option('Fit:'+r, 'nBins'):
@@ -177,6 +181,9 @@ class PostfitPlotter(object):
             newHistogram.SetBinError(i+1, histogram.GetBinError(i+1))
         return newHistogram
 
+    def getDcProcessName(self, process):
+        return self.dcDict[process] if process in self.dcDict else process
+
     def run(self):
 
         # if variable definition not given explicitly
@@ -185,7 +192,7 @@ class PostfitPlotter(object):
             self.varSection = "plotDef:" + self.var
             if not self.config.has_section(self.varSection):
                 self.config.add_section(self.varSection)
-            nBins = next( (self.getShape(self.dcDict[process]).GetXaxis().GetNbins() for process in self.setup), 15)
+            nBins = next( (self.getShape(self.getDcProcessName(process)).GetXaxis().GetNbins() for process in self.setup), 15)
             self.config.set(self.varSection, 'nBins', '%d'%nBins)
             self.config.set(self.varSection, 'min', '0')
             self.config.set(self.varSection, 'max', '%d'%nBins) 
@@ -195,13 +202,13 @@ class PostfitPlotter(object):
         # add MC
         print("INFO: setup = \x1b[31m", self.setup, "\x1b[0m")
         for process in self.setup:
-            histogram_raw = self.getShape(self.dcDict[process])
+            histogram_raw = self.getShape(self.getDcProcessName(process))
             varSection = "plotDef:" + self.var
             #nBins    = eval(self.config.get(varSection, "nBins")) if self.config.has_section(varSection) and self.config.has_option(varSection, "nBins") else histogram_raw.GetXaxis().GetNbins()
             nBins    = eval(self.config.get(varSection, "nBins")) if self.config.has_section(varSection) and self.config.has_option(varSection, "nBins") else None
             rangeMin = eval(self.config.get(varSection, "min")) if self.config.has_section(varSection) and self.config.has_option(varSection, "min") else None
             rangeMax = eval(self.config.get(varSection, "max")) if self.config.has_section(varSection) and self.config.has_option(varSection, "max") else None
-            print("DEBUG:", varSection, ": process=", process, "->", self.dcDict[process])
+            print("DEBUG:", varSection, ": process=", process, "->", self.getDcProcessName(process))
             if histogram_raw:
                 if rangeMin is not None and rangeMax is not None and nBins is not None:
                     histogram = self.setBinRange(histogram_raw, nBins, rangeMin, rangeMax) 
@@ -239,15 +246,16 @@ class PostfitPlotter(object):
         sum_s = 0.0
         sum_b = 0.0
         sum_med_z_a = 0.0
-        for i in range(shapeS.GetXaxis().GetNbins()):
-            s = shapeS.GetBinContent(1+i)
-            b = shapeB.GetBinContent(1+i)
-            print( ("%d"%i).ljust(5), ("%1.2f"%s).ljust(8), ("%1.2f"%b).ljust(8))
+        if shapeS is not None:
+            for i in range(shapeS.GetXaxis().GetNbins()):
+                s = shapeS.GetBinContent(1+i)
+                b = shapeB.GetBinContent(1+i)
+                print( ("%d"%i).ljust(5), ("%1.2f"%s).ljust(8), ("%1.2f"%b).ljust(8))
 
-            sum_s_over_sqrtb += s*s/b if b>0 else 0
-            sum_s += s
-            sum_b += b
-            sum_med_z_a += 2.0* ( (s+b) * math.log(1.0 + s/b) - s) if s > 0 else 0.0
+                sum_s_over_sqrtb += s*s/b if b>0 else 0
+                sum_s += s
+                sum_b += b
+                sum_med_z_a += 2.0* ( (s+b) * math.log(1.0 + s/b) - s) if s > 0 else 0.0
         sum_s_over_sqrtb = math.sqrt(sum_s_over_sqrtb)
         sum_med_z_a = math.sqrt(sum_med_z_a)
         print("TOTAL: s/sqrt(b):", "%1.3f"%sum_s_over_sqrtb, " s:",sum_s, " b:",sum_b, " med[Z]=sqrt(q_A)=", sum_med_z_a)

@@ -45,7 +45,7 @@ class MvaTrainingHelper(object):
             'SIG': self.samplesInfo.get_samples(signalSampleNames),
         }
 
-        self.treeCutName = config.get(mvaName, 'treeCut')
+        self.treeCutName = config.get(mvaName, 'treeCut') if config.has_option(mvaName, 'treeCut') else mvaName
         self.treeCut = config.get('Cuts', self.treeCutName)
 
         self.TrainCut = config.get('Cuts', 'TrainCut') 

@@ -11,7 +11,7 @@ class HeppyStyleGen(AddCollectionsModule):
     def __init__(self, debug=False):
         super(HeppyStyleGen, self).__init__()
         self.debug = debug
-        self.version = 3
+        self.version = 4
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
@@ -29,6 +29,10 @@ class HeppyStyleGen(AddCollectionsModule):
             self.addVectorBranch("GenJetAK8_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons2p4[nGenJetAK8]/i")
             self.addVectorBranch("GenJet_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons[nGenJet]/i")
             self.addVectorBranch("GenJet_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons2p4[nGenJet]/i")
+
+            #Sum$(GenBs_pt>25&&abs(GenBs_eta)<2.6)
+            self.addIntegerBranch("nGenBpt25eta2p6")
+            self.addIntegerBranch("nGenBpt20eta2p6")
     
     def processEvent(self, tree):
 
@@ -163,7 +167,8 @@ class HeppyStyleGen(AddCollectionsModule):
                     self._b("GenJet_nBhadrons")[i] = nB
                     self._b("GenJet_nBhadrons2p4")[i] = nB2p4
 
-
+                self._b("nGenBpt25eta2p6")[0] = len([x for x in bHadrons if x['pt']>25 and abs(x['eta'])<2.6])
+                self._b("nGenBpt20eta2p6")[0] = len([x for x in bHadrons if x['pt']>20 and abs(x['eta'])<2.6])
 
         return True
 
