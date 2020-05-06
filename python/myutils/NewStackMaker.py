@@ -692,7 +692,45 @@ class NewStackMaker:
         self.outputFolder = outputFolder
         self.prefix = prefix
 
+        # MC histograms, defined in setup
         dataGroupName = self.dataGroupName
+        mcHistogramGroups          = list(set([histogram['group'] for histogram in self.histograms if histogram['group']!=dataGroupName]))
+        mcHistogramGroupsToPlot    = sorted(mcHistogramGroups, key=lambda x: self.setup.index(x) if x in self.setup else 9999)
+        mcHistogramGroupsUndefined = [x for x in mcHistogramGroups if x not in self.setup]
+        if len(mcHistogramGroupsUndefined) > 0:
+            print("\x1b[97m\x1b[41mWARNING: some MC samples are not defined in 'setup' definition for plots: \x1b[0m")
+            for hiddenGroup in mcHistogramGroupsUndefined:
+                print(" > ", hiddenGroup, " is not defined in setup")
+        if dataGroupName in mcHistogramGroupsToPlot:
+            raise Exception("DATA contained in MC groups!")
+
+
+        # rebinning
+        rebinMethod = self.config.get(self.plotVarSection, 'rebinMethod') if self.config.has_option(self.plotVarSection, 'rebinMethod') else 'none'
+        print("DEBUG: rebin method:", rebinMethod)
+        if rebinMethod == 'flatSignal':
+            signalHistograms = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']]
+            signalSum = NewStackMaker.sumHistograms(histograms=signalHistograms, outputName="signalHistogramsSum")
+            signalIntegral = signalSum.Integral()
+
+            cumulatedSignal = 0.0
+            nBinsTarget = 15
+            newBinBoundaries = [float(self.histogramOptions['min'])]
+            for i in range(self.histogramOptions['nBins']):
+                cumulatedSignal += signalSum.GetBinContent(1+i)
+                if cumulatedSignal >= (len(newBinBoundaries))*(signalIntegral/nBinsTarget):
+                    newBinBoundaries.append(signalSum.GetXaxis().GetBinUpEdge(1+i))
+            if len(newBinBoundaries) < nBinsTarget + 1:
+                newBinBoundaries.append(float(self.histogramOptions['max']))
+            else:
+                newBinBoundaries[nBinsTarget] = float(self.histogramOptions['max'])
+            print("INFO: new bin boundaries have been computed, to be put to [plotDef:...] binList=")
+            print("INFO: ", "[" + ", ".join(["%1.5f"%x for x in newBinBoundaries]) + "]") 
+            print("INFO: plotting is skipped for this variable, please change binList in the config and rerun")
+            print("INFO: to ensure correct MC errors in the histograms.")
+            return
+
+
         # group ("sum") MC+DATA histograms 
         groupedHistograms = {}
         histogramGroups = list(set([histogram['group'] for histogram in self.histograms]))
@@ -703,17 +741,6 @@ class NewStackMaker:
                 groupedHistograms[histogramGroup].SetStats(0)
             except:
                 pass
-
-        # MC histograms, defined in setup
-        mcHistogramGroups = list(set([histogram['group'] for histogram in self.histograms if histogram['group']!=dataGroupName]))
-        mcHistogramGroupsToPlot = sorted(mcHistogramGroups, key=lambda x: self.setup.index(x) if x in self.setup else 9999)
-        mcHistogramGroupsUndefined = [x for x in mcHistogramGroups if x not in self.setup]
-        if len(mcHistogramGroupsUndefined) > 0:
-            print("\x1b[97m\x1b[41mWARNING: some MC samples are not defined in 'setup' definition for plots: \x1b[0m")
-            for hiddenGroup in mcHistogramGroupsUndefined:
-                print(" > ", hiddenGroup, " is not defined in setup")
-        if dataGroupName in mcHistogramGroupsToPlot:
-            raise Exception("DATA contained in MC groups!")
 
         # [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot]
 
@@ -892,15 +919,18 @@ class NewStackMaker:
         # draw total entry number
         if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
             mcHistogram0 = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms0')
-            mcHistogram0.SetLineColor(ROOT.kBlack)
-            mcHistogram0.SetMarkerColor(ROOT.kBlack)
-            mcHistogram0.SetMarkerStyle(1)
-            #mcHistogram0.SetMarkerSize(0.001)
-            mcHistogram0.SetStats(0)
-            mcHistogram0.Draw("SAME TEXT0")
-            print("drawn total entry histogram!!!")
-            binContents = ["%1.4f"%mcHistogram0.GetBinContent(1+j) for j in range(mcHistogram0.GetXaxis().GetNbins())]
-            print("bin contents:", ", ".join(binContents))
+            try:
+                mcHistogram0.SetLineColor(ROOT.kBlack)
+                mcHistogram0.SetMarkerColor(ROOT.kBlack)
+                mcHistogram0.SetMarkerStyle(1)
+                #mcHistogram0.SetMarkerSize(0.001)
+                mcHistogram0.SetStats(0)
+                mcHistogram0.Draw("SAME TEXT0")
+                print("drawn total entry histogram!!!")
+                binContents = ["%1.4f"%mcHistogram0.GetBinContent(1+j) for j in range(mcHistogram0.GetXaxis().GetNbins())]
+                print("bin contents:", ", ".join(binContents))
+            except:
+                pass
 
         # draw ratio plot
         theErrorGraph = None
@@ -1044,7 +1074,8 @@ class NewStackMaker:
                     histogram['histogram'].SetDirectory(shapesFile)
 
                 try:
-                    signals = self.config.get('Plot_general','allSIG') 
+                    signals = self.readConfig(self.configSection, 'Signal', self.config.get('Plot_general','allSIG'))
+                    signals = eval("["+signals+"]")
                     backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] not in signals], outputName='summedBackgroundHistograms')
                     signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
                     backgroundHistogram.SetDirectory(shapesFile)
