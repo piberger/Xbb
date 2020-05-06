@@ -306,6 +306,7 @@ class TreeCache:
             copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
             if not copySuccessful:
                 print("WARNING: first copy attempt failed! retry once!")
+                self.fileLocator.debug = True
                 copySuccessful = self.fileLocator.cp(tmpFileName, outputFileName)
                 if not copySuccessful:
                     success = False

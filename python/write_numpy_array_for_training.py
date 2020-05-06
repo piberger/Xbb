@@ -27,7 +27,7 @@ class SampleTreesToNumpyConverter(object):
         self.includeData = includeData
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
         ROOT.gSystem.Load(VHbbNameSpace)
-        self.dataFormatVersion = 3
+        self.dataFormatVersion = 4
         self.sampleTrees = []
         self.config = config
         self.testRun = testRun
@@ -41,7 +41,7 @@ class SampleTreesToNumpyConverter(object):
         # split in train/eval sets
         self.trainCut = config.get('Cuts', 'TrainCut') 
         self.evalCut = config.get('Cuts', 'EvalCut')
-        
+
         # rescale MC by 2 because of train/eval split
         self.globalRescale = 2.0
 
@@ -132,6 +132,7 @@ class SampleTreesToNumpyConverter(object):
         #arrayLists_sys = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in systematics}
         weightLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
         targetLists = {datasetName:[] for datasetName in datasetParts.iterkeys()}
+        sampleIndexList = {datasetName:[] for datasetName in datasetParts.iterkeys()}
 
         weightListsSYS = {x: {datasetName:[] for datasetName in datasetParts.iterkeys()} for x in self.weightSYS} 
         
@@ -177,6 +178,8 @@ class SampleTreesToNumpyConverter(object):
                         inputData = np.zeros((nSamples, nFeatures), dtype=np.float32)
                         #inputData_sys = {x: np.zeros((nSamples, nFeatures), dtype=np.float32) for x in systematics}
 
+                        sampleIndex = sample.index
+
                         # initialize formulas for ROOT tree
                         for feature in features:
                             sampleTree.addFormula(feature)
@@ -206,6 +209,7 @@ class SampleTreesToNumpyConverter(object):
                             totalWeight = treeScale * eventWeight * specialWeight 
                             weightLists[datasetName].append(totalWeight)
                             targetLists[datasetName].append(categories.index(category))
+                            sampleIndexList[datasetName].append(sampleIndex)
                             sumOfWeights += totalWeight
                             nMCevents    += 1
                             
@@ -299,12 +303,14 @@ class SampleTreesToNumpyConverter(object):
                     'y': np.array(targetLists['train'], dtype=np.float32),
                     'sample_weight': np.array(weightLists['train'], dtype=np.float32),
                     'sample_weight_error': np.array(weightListSYStotal['train'], dtype=np.float32),
+                    'sample_index': np.array(sampleIndexList['train'], dtype=np.int32)
                     },
                 'test': {
                     'X': np.concatenate(arrayLists['test'], axis=0), 
                     'y': np.array(targetLists['test'], dtype=np.float32), 
                     'sample_weight': np.array(weightLists['test'], dtype=np.float32),
                     'sample_weight_error': np.array(weightListSYStotal['test'], dtype=np.float32),
+                    'sample_index': np.array(sampleIndexList['test'], dtype=np.int32)
                     },
                 'category_labels': {idx: label for idx, label in enumerate(categories)},
                 'meta': {
