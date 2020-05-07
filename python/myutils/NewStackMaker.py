@@ -1075,7 +1075,7 @@ class NewStackMaker:
 
                 try:
                     signals = self.readConfig(self.configSection, 'Signal', self.config.get('Plot_general','allSIG'))
-                    signals = eval("["+signals+"]")
+                    print("INFO: signals=", signals) 
                     backgroundHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] not in signals], outputName='summedBackgroundHistograms')
                     signalHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['name'] in signals], outputName='summedSignalHistograms')
                     backgroundHistogram.SetDirectory(shapesFile)
