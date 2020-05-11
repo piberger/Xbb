@@ -9,10 +9,11 @@ from XbbTools import XbbTools
 
 class isBoosted(AddCollectionsModule):
 
-    def __init__(self, branchName='isBoosted'):
+    def __init__(self, branchName='isBoosted', cutName='all_BOOST'):
         super(isBoosted, self).__init__()
         self.branchName = branchName
-        self.version = 2
+        self.cutName = cutName
+        self.version = 3
         self.variations = self._variations("isBoosted") 
 
     # returns cut string with variables replaced by their systematic variations
@@ -27,7 +28,7 @@ class isBoosted(AddCollectionsModule):
         self.sampleTree = initVars['sampleTree']
         self.config     = initVars['config']
 
-        self.boostedCut = self.config.get('Cuts', 'all_BOOST') 
+        self.boostedCut = self.config.get('Cuts', self.cutName)
         self.systVarCuts = {}
 
         self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
