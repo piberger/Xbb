@@ -15,6 +15,7 @@ class VReco(AddCollectionsModule):
         self.puIdCut = puIdCut 
         self.jetIdCut = jetIdCut
         super(VReco, self).__init__()
+        self.version = 2
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
@@ -42,7 +43,7 @@ class VReco(AddCollectionsModule):
         self.addBranch("selLeptonWln_mass")
 
     def addVsystematics(self, syst):
-        if syst.lower() == 'nominal':
+        if self._isnominal(syst): 
             # replace values from post-processor / selection
             if self.replaceNominal:
                 self.addBranch("V_pt")
@@ -53,7 +54,7 @@ class VReco(AddCollectionsModule):
             self.addBranch("MET_sig30")
             self.addBranch("MET_sig30puid")
         else:
-            for UD in ['Up','Down']:
+            for UD in self._variations(syst):
                 self.addBranch(self._v("V_mt", syst, UD))
                 self.addBranch(self._v("V_pt", syst, UD))
                 self.addBranch(self._v("V_eta", syst, UD))
@@ -62,12 +63,6 @@ class VReco(AddCollectionsModule):
                 if syst not in ['jerReg']:
                     self.addBranch(self._v("MET_sig30", syst, UD))
                     self.addBranch(self._v("MET_sig30puid", syst, UD))
-
-    def _v(self, n, syst, UD):
-        if syst.lower() == 'nominal':
-            return n
-        else:
-            return n + "_{syst}_{UD}".format(syst=syst, UD=UD)
 
     def processEvent(self, tree):
         if not self.hasBeenProcessed(tree):
@@ -79,7 +74,7 @@ class VReco(AddCollectionsModule):
 
             for syst in self.allVariations:
                 directions = [''] if syst.lower() == 'nominal' else ['Up','Down']
-                for UD in directions:
+                for UD in self._variations(syst):
                     self._b(self._v("V_mt", syst, UD))[0] = -1.0
 
                     if tree.Vtype == 0 or tree.Vtype == 1:
@@ -119,7 +114,7 @@ class VReco(AddCollectionsModule):
 
                         V = MET + Lep
 
-                        if syst.lower() == 'nominal':
+                        if self._isnominal(syst):
                             self._b("selLeptonWln_pt")[0] = Lep.Pt()
                             self._b("selLeptonWln_eta")[0] = Lep.Eta()
                             self._b("selLeptonWln_phi")[0] = Lep.Phi()
@@ -133,14 +128,14 @@ class VReco(AddCollectionsModule):
                         V = MET
                     else:
                         V = None
-                        if syst != 'Nominal' or self.replaceNominal:
+                        if (not self._isnominal(syst)) or self.replaceNominal:
                             self._b(self._v("V_pt", syst, UD))[0] = -1.0
                             self._b(self._v("V_eta", syst, UD))[0] = -1.0
                             self._b(self._v("V_phi", syst, UD))[0] = -1.0
                             self._b(self._v("V_mass", syst, UD))[0] = -1.0
 
                     if V is not None:
-                        if syst != 'Nominal' or self.replaceNominal:
+                        if (not self._isnominal(syst)) or self.replaceNominal:
                             self._b(self._v("V_pt", syst, UD))[0] = V.Pt()
                             self._b(self._v("V_eta", syst, UD))[0] = V.Eta()
                             self._b(self._v("V_phi", syst, UD))[0] = V.Phi()

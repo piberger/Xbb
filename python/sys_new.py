@@ -157,6 +157,7 @@ class XbbRun:
                 # Vtype = VtypeCorrector.VtypeCorrector(channel='Zll')
                 # (instead of passing the tree in the constructor, the setTree method can be used)
                 pyModules = []
+                versionTable = []
                 for collection in self.collections:
                     if '.' in collection:
                         section = collection.split('.')[0]
@@ -203,9 +204,14 @@ class XbbRun:
                             sampleTree.addOutputBranches(wObject.getBranches())
 
                         pyModules.append(wObject)
+
+                        versionTable.append([moduleName, wObject.getVersion() if hasattr(wObject, "getVersion") else 0])
                     else:
                         print "\x1b[31mERROR: config option not found:", collection, " the format should be: [Section].[Option]\x1b[0m"
                         raise Exception("ConfigError")
+
+                for moduleName, moduleVersion in versionTable:
+                    print " > {m}:{v}".format(m=moduleName, v=moduleVersion)
 
                 # DEPRECATED, do not use anymore ---> use BranchTools.TreeFormulas()
                 if 'addbranches' in self.collections:

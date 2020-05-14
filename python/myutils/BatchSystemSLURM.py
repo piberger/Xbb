@@ -6,6 +6,7 @@ import hashlib
 import json
 from BatchSystem import BatchSystem
 from time import sleep
+import shlex
 
 class BatchSystemSLURM(BatchSystem):
 
@@ -16,6 +17,7 @@ class BatchSystemSLURM(BatchSystem):
         self.submitScriptTemplate = "sbatch --job-name={jobName} --mem={memory} --time={time} --output={output} --open-mode=append {extraOptions} {runscript}"
         self.cancelJobTemplate = "scancel {jobId}"
         self.submissionDelay = eval(self.config.get('SLURM', 'submissionDelay')) if self.config.has_section('SLURM') and self.config.has_option('SLURM', 'submissionDelay') else 0.2
+        self.resubmitToDifferentNode = eval(self.config.get('SLURM', 'resubmitToDifferentNode')) if self.config.has_option('SLURM', 'resubmitToDifferentNode') else True
 
 
     def getJobNames(self, includeDeleted=True):
@@ -56,7 +58,35 @@ class BatchSystemSLURM(BatchSystem):
         print("JOB ID was", jobId)
         return jobId
 
+    def getOption(self, command, option, value=None):
+        commandParts = shlex.split(command, posix=False)
+        matches = [i for i,x in enumerate(commandParts) if x.startswith('--'+option+'=')]
+        if len(matches) == 1:
+            return commandParts[matches[0]].split('=')[1].strip()
+        else:
+            return value
+
+    def changeOption(self, command, option, value):
+        commandParts = shlex.split(command, posix=False)
+        matches = [i for i,x in enumerate(commandParts) if x.startswith('--'+option+'=')]
+        if len(matches) == 1:
+            commandParts[matches[0]] = '--'+option+'='+value
+        elif len(matches) < 1:
+            commandParts = [commandParts[0]] + ['--'+option+'='+value] + commandParts[1:]
+        else:
+            print("ERROR: multiple match:", command, option, value)
+            raise Exception("BatchSystemSLURMError")
+        return " ".join(commandParts)
+
     def resubmit(self, job):
+        if self.resubmitToDifferentNode and 'host' in job and job['host'] is not None:
+            # add WN of failed job to exclude list
+            excludeList = (",".join([job['host']] + self.getOption(job['submitCommand'], "exclude", "").split(','))).strip(',')
+            job['submitCommand'] = self.changeOption(job['submitCommand'], "exclude", excludeList)
+           
+            timeLimit = self.getOption(job['submitCommand'], "time")
+            if timeLimit.startswith("0-10:"):
+                job['submitCommand'] = self.changeOption(job['submitCommand'], "time", "0-20:00") 
         print("RESUBMIT:", job['submitCommand'])
         stdOutput = subprocess.check_output([job['submitCommand']], shell=True)
         job['id'] = self.getJobIDfromOutput(stdOutput)

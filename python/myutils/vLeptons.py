@@ -11,12 +11,19 @@ class lepton(object):
 
 class vLeptonSelector(object):
 
-    def __init__(self, tree, config):
+    def __init__(self, tree, config, isoZmm=0.25, isoZee=0.15, isoWmn=0.06, isoWen=0.06, muonID=None, muonIDcut=None):
 
         self.electronMVA = config.get('General', 'electronMVA') if config.has_option('General', 'electronMVA') else 'Electron_mvaSpring16GP_WP90' 
         self.electronMVA_80 = config.get('General', 'electronMVA80') if config.has_option('General', 'electronMVA80') else self.electronMVA
         self.electronMVA_90 = config.get('General', 'electronMVA90') if config.has_option('General', 'electronMVA90') else self.electronMVA
 
+        self.muonID = config.get('General', 'muonMVA') if config.has_option('General', 'muonMVA') else "Muon_tightId"
+        self.muonIDcut = config.get('General', 'muonMVAcut') if config.has_option('General', 'muonMVAcut') else 1
+
+        if muonID is not None:
+            self.muonID = muonID
+        if muonIDcut is not None:
+            self.muonIDcut = muonIDcut
 
         zMuons = []
         zElectrons = []
@@ -26,20 +33,20 @@ class vLeptonSelector(object):
         self.vMuonIdx = []
         self.vElectronIdx = []
         for i in range(tree.nMuon):
-            if tree.Muon_pt[i]>20 and tree.Muon_pfRelIso04_all[i]<0.25 and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
+            if tree.Muon_pt[i]>20 and tree.Muon_pfRelIso04_all[i]<isoZmm and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
                 zMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA_90)[i] and tree.Electron_pfRelIso03_all[i]<0.15:
+            if tree.Electron_pt[i]>20 and getattr(tree, self.electronMVA_90)[i] and tree.Electron_pfRelIso03_all[i]<isoZee:
                 zElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
 
         for i in range(tree.nMuon):
-            if tree.Muon_pt[i]>25 and tree.Muon_tightId[i] >= 1 and tree.Muon_pfRelIso04_all[i]<0.15 and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
+            if tree.Muon_pt[i]>25 and getattr(tree, self.muonID)[i] >= self.muonIDcut and tree.Muon_pfRelIso04_all[i]<isoWmn and tree.Muon_dxy[i]<0.05 and tree.Muon_dz[i]<0.2:
                 wMuons.append(lepton(pt=tree.Muon_pt[i], eta=tree.Muon_eta[i], phi=tree.Muon_phi[i], mass=tree.Muon_mass[i], charge=tree.Muon_charge[i]))
                 self.vMuonIdx.append(i)
         for i in range(tree.nElectron):
-            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA_80)[i] and tree.Electron_pfRelIso03_all[i]<0.12:
+            if tree.Electron_pt[i]>25 and getattr(tree, self.electronMVA_80)[i] and tree.Electron_pfRelIso03_all[i]<isoWen:
                 wElectrons.append(lepton(pt=tree.Electron_pt[i], eta=tree.Electron_eta[i], phi=tree.Electron_phi[i], mass=tree.Electron_mass[i], charge=tree.Electron_charge[i]))
                 self.vElectronIdx.append(i)
 
@@ -121,8 +128,16 @@ class vLeptonSelector(object):
         return self.wMuons
 
 class vLeptons(object):
-    def __init__(self):
+    def __init__(self, recomputeVtype=False, isoZmm=0.25, isoZee=0.15, isoWmn=0.06, isoWen=0.06):
+        self.recomputeVtype = recomputeVtype
+        self.version = 2
+        self.isoZmm = isoZmm
+        self.isoZee = isoZee
+        self.isoWmn = isoWmn
+        self.isoWen = isoWen
         self.lastEntry = -1
+
+        # TODO: rewrite with new fucntions to add branches
         self.branches = []
         self.branchBuffers = {}
 
@@ -141,6 +156,10 @@ class vLeptons(object):
         self.branches.append({'name': 'nVetoLeptons', 'formula': self.getBranch, 'arguments': 'nVetoLeptons', 'type': 'i'})
         self.branches.append({'name': 'nAddLeptons', 'formula': self.getBranch, 'arguments': 'nAddLeptons', 'type': 'i'})
 
+        if self.recomputeVtype:
+            self.branchBuffers['Vtype'] = array.array('i', [0])
+            self.branches.append({'name': 'Vtype', 'formula': self.getBranch, 'arguments': 'Vtype', 'type': 'i'})
+
         self.selector = None
 
     def customInit(self, initVars):
@@ -154,7 +173,7 @@ class vLeptons(object):
         # if current entry has not been processed yet
         if currentEntry != self.lastEntry:
             self.lastEntry = currentEntry
-            self.selector = vLeptonSelector(tree, config=self.config)
+            self.selector = vLeptonSelector(tree, config=self.config, isoZmm=self.isoZmm, isoZee=self.isoZee, isoWmn=self.isoWmn, isoWen=self.isoWen)
 
             self.branchBuffers['VMuonIdx'][0] = self.selector.vMuonIdx[0] if len(self.selector.vMuonIdx) > 0 else -2 
             self.branchBuffers['VMuonIdx'][1] = self.selector.vMuonIdx[1] if len(self.selector.vMuonIdx) > 1 else -2 
@@ -164,6 +183,10 @@ class vLeptons(object):
             self.branchBuffers['nVElectronIdx'][0] = min(len(self.selector.vElectronIdx),2)
             self.branchBuffers['nVetoLeptons'][0] = self.selector.nVetoLeptons
             self.branchBuffers['nAddLeptons'][0] = self.selector.nAddLeptons
+
+            if self.recomputeVtype:
+                self.branchBuffers['Vtype'][0] = self.selector.getVtype()
+
 
         return True
 

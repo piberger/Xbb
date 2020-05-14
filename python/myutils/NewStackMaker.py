@@ -3,6 +3,7 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 import TdrStyles
 import os
+import sys
 import array
 import time
 import subprocess
@@ -127,6 +128,7 @@ class NewStackMaker:
                     'draw': 'draw',
                     'binList': 'binList',
                     'plotEqualSize': 'plotEqualSize',
+                    'rebinFlat': 'rebinFlat',
                     'visualizeBlindCutThreshold': 'visualizeBlindCutThreshold',
                     'min': ['min', 'minX'],
                     'max': ['max', 'maxX'],
@@ -143,7 +145,7 @@ class NewStackMaker:
                     'fractions': 'fractions',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
-        evalOptions = ['binList', 'plotEqualSize','fractions']
+        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -368,6 +370,9 @@ class NewStackMaker:
     # ------------------------------------------------------------------------------
     def drawRatioPlot(self, dataHistogram, mcHistogram, yAxisTitle="Data/MC", same=False, ratioRange=[0.5,1.75], mcHistogram_Up=None, mcHistogram_Down=None):
 
+        if not self.useSplitCanvas or 'unten' not in self.pads:
+            return
+
         self.pads['unten'].cd()
         ROOT.gPad.SetTicks(1,1)
 
@@ -393,10 +398,18 @@ class NewStackMaker:
             dataHistogram = convertedDataHistogram
 
         # draw ratio plot
-        self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
+        try:
+            self.ratioPlot, error = getRatio(dataHistogram, reference=mcHistogram, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
+        except:
+             self.ratioPlot = None
+             error = None
 
-        ksScore = dataHistogram.KolmogorovTest(mcHistogram)
-        chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
+        if mcHistogram is not None and self.ratioPlot is not None:
+            ksScore = dataHistogram.KolmogorovTest(mcHistogram)
+            chiScore = dataHistogram.Chi2Test(mcHistogram, "UWCHI2/NDF")
+        else:
+            ksScore = -1
+            chiScore = -1
         print ("INFO: data/MC ratio, KS test:", ksScore, " chi2:", chiScore)
         try:
             self.ratioPlot.SetStats(0)
@@ -498,7 +511,7 @@ class NewStackMaker:
                         except:
                             pass
 
-            if isSimpleCut:
+            if isSimpleCut and self.ratioPlot is not None:
                 if blindingCutThreshold >= self.ratioPlot.GetXaxis().GetXmin() and blindingCutThreshold<=self.ratioPlot.GetXaxis().GetXmax():
 
                     # get list of bin boundaries of ratio histogram, those might be different from the ones from the main histogram and are provided by the external ratio.C code.
@@ -525,19 +538,20 @@ class NewStackMaker:
                     blindedRegion.Draw("SAME E2")
                     self.addObject(blindedRegion)
 
-        self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
-        self.m_one_line.SetLineStyle(ROOT.kSolid)
-        self.m_one_line.Draw("Same")
+        if self.ratioPlot is not None:
+            self.m_one_line = ROOT.TLine(self.histogramOptions['minX'], 1, self.histogramOptions['maxX'], 1)
+            self.m_one_line.SetLineStyle(ROOT.kSolid)
+            self.m_one_line.Draw("Same")
 
-        self.legends['ratio'].AddEntry(self.ratioError, self.mcUncertaintyLegend,"f")
-        self.legends['ratio'].Draw() 
-        if not self.blind:
-            self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
-            t0 = ROOT.TText()
-            t0.SetTextSize(ROOT.gStyle.GetLabelSize()*2.4)
-            t0.SetTextFont(ROOT.gStyle.GetLabelFont())
-            if not self.log:
-                t0.DrawTextNDC(0.1059, 0.96, "0")
+            self.legends['ratio'].AddEntry(self.ratioError, self.mcUncertaintyLegend,"f")
+            self.legends['ratio'].Draw() 
+            if not self.blind:
+                self.addObject(self.myText("#chi^{2}_{ }#lower[0.1]{/^{}#it{dof} = %.2f}"%(chiScore), self.plotTextMarginLeft, 0.895, 1.55))
+                t0 = ROOT.TText()
+                t0.SetTextSize(ROOT.gStyle.GetLabelSize()*2.4)
+                t0.SetTextFont(ROOT.gStyle.GetLabelFont())
+                if not self.log:
+                    t0.DrawTextNDC(0.1059, 0.96, "0")
 
     def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
@@ -701,7 +715,12 @@ class NewStackMaker:
         if dataGroupName in mcHistogramGroupsToPlot:
             raise Exception("DATA contained in MC groups!")
 
-        c = self.initializeCanvas() if (normalize or self.is2D or dataGroupName not in histogramGroups) else self.initializeSplitCanvas()
+        # [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot]
+
+        mcHistogramList = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot]
+
+        self.useSplitCanvas = not (normalize or self.is2D or dataGroupName not in histogramGroups or len(mcHistogramList) < 1)
+        c = self.initializeSplitCanvas() if self.useSplitCanvas else self.initializeCanvas()
 
         # add summed MC histograms to stack
         allStack = ROOT.THStack(self.var, '')
@@ -818,8 +837,9 @@ class NewStackMaker:
                             yTitle += ' GeV'
             except:
                 yTitle = "Entries"
+        self.yTitle = yTitle
         if allStack and allStack.GetXaxis():
-            allStack.GetYaxis().SetTitle(yTitle if yTitle else '-')
+            allStack.GetYaxis().SetTitle(self.yTitle if self.yTitle else '-')
             allStack.GetXaxis().SetRangeUser(self.histogramOptions['minX'], self.histogramOptions['maxX'])
             if not self.is2D:
                 allStack.GetYaxis().SetRangeUser(0,20000)
@@ -836,8 +856,9 @@ class NewStackMaker:
                 ROOT.gPad.SetLogy(0)
             allStack.SetMaximum(Ymax)
         if (not normalize and dataGroupName in groupedHistograms) and not self.is2D:
-            allStack.GetXaxis().SetLabelOffset(999)
-            allStack.GetXaxis().SetLabelSize(0)
+            if allStack and allStack.GetXaxis():
+                allStack.GetXaxis().SetLabelOffset(999)
+                allStack.GetXaxis().SetLabelSize(0)
         else:
             allStack.GetXaxis().SetTitle(self.xAxis)
 
@@ -861,6 +882,12 @@ class NewStackMaker:
             if normalize and dataHistogram.Integral() > 0:
                 dataHistogram.Scale(1./dataHistogram.Integral())
             dataHistogram.Draw(drawOption)
+
+            # adjust axis range to data if MC not present and put axis labels to data histogram
+            if len(mcHistogramList) < 1:
+                dataHistogram.GetYaxis().SetRangeUser(0, dataHistogram.GetBinContent(dataHistogram.GetMaximumBin()) * 1.5)
+                dataHistogram.GetXaxis().SetTitle(self.xAxis)
+                dataHistogram.GetYaxis().SetTitle(self.yTitle)
 
         # draw total entry number
         if not self.is2D and 'drawOption' in self.histogramOptions and 'TEXT' in self.histogramOptions['drawOption'].upper():
@@ -896,7 +923,7 @@ class NewStackMaker:
                     mcHistogram         = backgroundHistogram.Clone()
                     mcHistogram.Add(signalHistogram)
 
-                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG',ratioRange=ratioRange)
+                    self.drawRatioPlot(dataHistogram, backgroundHistogram, yAxisTitle='Data/BKG', ratioRange=ratioRange)
 
                     # draw blue line for (S+B)/B expectation
                     expectedRatio = mcHistogram.Clone()
@@ -945,13 +972,21 @@ class NewStackMaker:
                     else:
                         self.drawRatioPlot(dataHistogram, mcHistogram, ratioRange=ratioRange)
 
-                self.pads['oben'].cd()
+                if 'oben' in self.pads:
+                    self.pads['oben'].cd()
+            else:
+                print("INFO: no DATA available")
+
+            # draw MC error
+            if len(mcHistogramList) > 0:
+                mcHistogram = NewStackMaker.sumHistograms(histograms=mcHistogramList, outputName='summedMcHistograms')
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
                 theErrorGraph.SetFillColor(ROOT.kGray+3)
                 theErrorGraph.SetFillStyle(3013)
                 theErrorGraph.Draw('SAME2')
-            else:
-                print("INFO: no DATA available")
+                #    self.garbage.append(mcHistogramClone)
+                #    self.garbage.append(theErrorGraph)
+
         elif normalize and not self.is2D and self.drawMCErrorForNormalizedPlots:
             # draw error bands for all individual groups
             self.errorGraphs = []
@@ -975,6 +1010,8 @@ class NewStackMaker:
 
         # save to file
         for ext in self.outputFileFormats:
+            print("INFO: save as ", ext)
+            sys.stdout.flush()
             outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
             c.SaveAs(outputFileName)
             if os.path.isfile(outputFileName):

@@ -20,6 +20,13 @@ class FileLocator(object):
         self.timeBetweenAttempts = 1
         self.useDirectoryListingCache = useDirectoryListingCache
         self.dirListingCache = {}
+        self.failureCounters = {'pyxrd': 0, 'xrdfs': 0}
+
+        self.disableXrootdForDirlist = False
+        if self.config is not None:
+            if self.config.has_option('Configuration', 'disableXrootdForDirlist'):
+                self.disableXrootdForDirlist = eval(self.config.get('Configuration', 'disableXrootdForDirlist'))
+
         try:
             self.xrootdRedirectors = [x.strip() for x in self.config.get('Configuration', 'xrootdRedirectors').split(',') if len(x.strip())>0]
             #print('self.xrootdRedirectors', self.xrootdRedirectors) #['root://t3dcachedb03.psi.ch:1094/']
@@ -147,6 +154,9 @@ class FileLocator(object):
         else:
             redirector = None
         return redirector
+
+    def getHostnameFromRedirector(self, redirector):
+        return redirector.replace('root://','').split(':')[0].strip()
 
     def remoteDirectoryExists(self, path):
         statCommand = self.remoteStatDirectory.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
@@ -383,24 +393,124 @@ class FileLocator(object):
         return fileList
 
     # like glob but allows wildcards only in the last level
-    def globLightRemote(self, path):
+    def glob_XrootdPyBindings(self, path):
         path = self.removeRedirector(path.strip())
         basePath = '/'.join(path.split('/')[:-1])
         if '*' in basePath:
             raise Exception("NotImplemented")
-        dirListing = self.lsRemote(basePath)
-        if dirListing is None:
-            print("\x1b[31mERROR: directory listing failed for:", basePath, ", retrying once ...\x1b[0m")
-            dirListing = self.lsRemote(basePath)
-            if dirListing is None:
-                print("\x1b[31mERROR: directory listing still failing.\x1b[0m")
+        status, fileList = self.client.dirlist(basePath)
+        if "ERROR" in str(status):
+            print("\x1b[31mERROR: directory listing with python xrootd bindings failed:", status, "\x1b[0m")
+            self.failureCounters['pyxrd'] += 1
+            raise Exception("DirectoryListingFailed")
 
-        fileList = fnmatch.filter(dirListing, path)
+        if not path.startswith('/'):
+            fileList = sorted(fnmatch.filter(fileList, path))
+        fileList = [basePath + '/' + x if not x.startswith('/') else x for x in fileList]
+        if path.startswith('/'):
+            fileList = sorted(fnmatch.filter(fileList, path))
+
+        return fileList
+
+    def glob_Xrdfs(self, path):
+        redirector = self.getRedirector(path)
+        if redirector is None:
+            redirector = self.xrootdRedirectors[0]
+        path = self.removeRedirector(path.strip())
+        basePath = '/'.join(path.split('/')[:-1])
+        if '*' in basePath:
+            raise Exception("NotImplemented")
+        serverName = self.getHostnameFromRedirector(redirector)
+        lsRemoteCommand = ["xrdfs {serverName} ls {path}".format(serverName=serverName, path=basePath)]
+        print("DEBUG: dirlist fallback #1: command=", lsRemoteCommand)
+        try:
+            out = subprocess.check_output(
+                lsRemoteCommand, stderr=subprocess.STDOUT, shell=True,
+                universal_newlines=True)
+            success = True
+
+            fileList = out.strip("\n").split("\n")
+            if not path.startswith('/'):
+                fileList = sorted(fnmatch.filter(fileList, path))
+            fileList = [basePath + '/' + x if not x.startswith('/') else x for x in fileList]
+            if path.startswith('/'):
+                fileList = sorted(fnmatch.filter(fileList, path))
+
+        except Exception as exc:
+            print("\x1b[31mERROR: dirlist fallback #1 (xrdfs ls) failed:", exc.returncode, exc.output, "\x1b[0m")
+            self.failureCounters['xrdfs'] += 1
+            raise exc
+
         return fileList
 
     def glob(self, path):
         if self.isRemotePath(path):
-            return self.globLightRemote(path)
+            if self.client:
+                return self.glob_XrootdPyBindings(path)
+            else:
+                return self.glob_Xrdfs(path)
         else:
             return glob.glob(path)
+
+    def glob_with_fallback(self, path):
+        if self.isRemotePath(path):
+            success = False
+
+            # try xrootd bindings first
+            if self.client and self.failureCounters['pyxrd'] < 3 and not self.disableXrootdForDirlist:
+                try:
+                    fileList = self.glob_XrootdPyBindings(path)
+                    success  = True
+                except Exception as e:
+                    print("ERROR:", e)
+
+            # try xrdfs .. ls
+            if not success and self.failureCounters['xrdfs'] < 3 and not self.disableXrootdForDirlist:
+                try:
+                    fileList = self.glob_Xrdfs(path)
+                    success = True
+                except Exception as e:
+                    print("ERROR:", e)
+
+            # try ls on local fs
+            if not success:
+                path = self.removeRedirector(path)
+                basePath = '/'.join(path.split('/')[:-1])
+                if os.path.isdir(basePath):
+                    try:
+                        fileList = glob.glob(path)
+                        success = True
+                    except Exception as e:
+                        print("\x1b[31mERROR: dirlist fallback #2 (local glob) failed:", e, "\x1b[0m")
+                else:
+                    print("\x1b[31mERROR: dirlist fallback #2 (local glob) failed: not a directory:", basePath, "\x1b[0m")
+
+            if not success:
+                print("\x1b[31mERROR: none of the methods to obtain the directory listing succeeded.\x1b[0m")
+                raise Exception("DirectoryListingFailed")
+
+            return fileList
+        else:
+            return glob.glob(path)
+
+    def get_numbered_file_list(self, mask, start, end):
+        if mask.count('*') > 1:
+            print("INFO: filename mask contains more than one *!")
+            raise Exception("NotImplemented")
+        elif mask.count('*') < 1:
+            print("WARNING: filename mask does not contain any * => use exists() instead!")
+            # since there is only 1-file, check only once
+            start = 1
+            end = 1
+        existingFiles = []
+        for i in range(start, end+1):
+            fileName = mask.replace('*','%d'%i)
+            if self.exists(fileName):
+                existingFiles.append(fileName)
+        return existingFiles
+
+
+
+
+
 

@@ -10,13 +10,13 @@ from kinFitterXbb import kinFitterXbb
 class readKinFitFriendTree(AddCollectionsModule):
     def __init__(self, directory, name='Events_f', systematics='Nominal'):
         self.directory = directory
-        self.systematics = [(x if x != 'Nominal' else '') for x in systematics.strip().split(' ')]
-        self.systematicsData = ['Nominal']
+        self.systematics = [(x if not self._isnominal(x) else None) for x in systematics.strip().split(' ')]
+        self.systematicsData = [None]
         self.name = name
         super(readKinFitFriendTree, self).__init__()
         self.first = True
         self.enabled = True
-        self.hash = '%d'%hash(','.join(self.systematics)) 
+        self.hash = '%d'%hash(','.join([str(y) for y in self.systematics])) 
 
     def customInit(self, initVars):
         self.tree = initVars['tree']
@@ -24,7 +24,7 @@ class readKinFitFriendTree(AddCollectionsModule):
         self.sample = initVars['sample']
 
         if self.sample.isData():
-            self.systematics = [x for x in self.systematics if x in self.systematicsData or x == '']
+            self.systematics = [x for x in self.systematics if x in self.systematicsData or self._isnominal(x)]
 
         if len(self.systematics) < 1:
             self.enabled = False
@@ -36,7 +36,7 @@ class readKinFitFriendTree(AddCollectionsModule):
 
         # unfortunately friend trees are not copied by CloneTree and getattr() also doesn't work in pyROOT :-(
         # pretty ugly hack
-        self.kinFitter = kinFitterXbb(year=2017)
+        self.kinFitter = kinFitterXbb(year=2016, jetIdCut=2, puIdCut=6)
         self.kinFitter.systematics = self.systematics
         self.kinFitter.customInit(initVars)
         self.branches = self.kinFitter.branches
