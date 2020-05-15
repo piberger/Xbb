@@ -26,10 +26,7 @@ class METXY(AddCollectionsModule):
 
         # load METXYCorr_Met_MetPhi from VHbb namespace
         VHbbNameSpace = self.config.get('VHbbNameSpace', 'library')
-        import pdb
-        pdb.set_trace()
         ROOT.gSystem.Load(VHbbNameSpace)
-        pdb.set_trace()
 
         self.MET_Pt     = array.array('f', [0.0])
         self.MET_Phi    = array.array('f', [0.0])
