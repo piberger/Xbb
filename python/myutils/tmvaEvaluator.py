@@ -67,6 +67,12 @@ class tmvaEvaluator(AddCollectionsModule):
             print("WARNING: could not load MVA info file:", e, " trying to use default naming convention for XML file")
             weightFileName = MVAdir+'/python/weights/MVA_' + self.mvaName + '.weights.xml' 
 
+        # weight file explicitly specified in config
+        if self.config.has_option(self.mvaName, 'xml'):
+            if self.debug:
+                print("DEBUG: default location", weightFileName, "of weights file is overwritten by", self.config.get(self.mvaName, 'xml'))
+            weightFileName = self.config.get(self.mvaName, 'xml')
+
         # TMVA weights
         print("INFO: loading TMVA weights from: \x1b[32m", weightFileName, "\x1b[0m")
 

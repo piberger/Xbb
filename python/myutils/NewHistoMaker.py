@@ -21,13 +21,16 @@ class NewHistoMaker:
         self.histogramOptions = histogramOptions
         self.histogram = None
         self.EvalCut = config.get('Cuts', 'EvalCut')
+        self.originalBins = []
         TdrStyles.tdrStyle()
 
     def create1Dhistogram(self, histogramName, histogramOptions):
         if 'binList' in histogramOptions:
+            print("DEBUG: creating histogram with variable bins:", histogramOptions['binList'])
             binArray = array.array('d', histogramOptions['binList']) 
             return ROOT.TH1F(histogramName, histogramName, len(histogramOptions['binList']) - 1, binArray)
         else:
+            print("DEBUG: creating histogram with equidistant bins:", histogramOptions['nBinsX'], histogramOptions['minX'], histogramOptions['maxX'])
             return ROOT.TH1F(histogramName, histogramName, histogramOptions['nBinsX'], histogramOptions['minX'], histogramOptions['maxX'])
 
     def create2Dhistogram(self, histogramName, histogramOptions):
@@ -140,11 +143,11 @@ class NewHistoMaker:
             self.histogram.SetBinError(self.histogram.GetNbinsX(),oFlowErr)
 
 
-        if 'plotEqualSize' in self.histogramOptions:
+        if 'plotEqualSize' in self.histogramOptions and 'binList' in self.histogramOptions:
             self.histogramOptionsEqualBins = self.histogramOptions.copy()
             self.histogramOptionsEqualBins['nBinsX'] = len(self.histogramOptionsEqualBins['binList']) - 1
             del self.histogramOptionsEqualBins['binList']
-            
+
             equalHistogram = self.create1Dhistogram(self.histogramName+'_eqBins', self.histogramOptionsEqualBins)
             nBinsSource = self.histogram.GetXaxis().GetNbins()
             nBinsDest = equalHistogram.GetXaxis().GetNbins()
@@ -152,6 +155,7 @@ class NewHistoMaker:
                 print("ERROR: bin list not compatiable!!", nBinsSource, nBinsDest)
                 raise Exception("HistogramDefinitionError")
             for i in range(1, nBinsSource+1):
+                self.originalBins.append([self.histogram.GetXaxis().GetBinLowEdge(i), self.histogram.GetXaxis().GetBinUpEdge(i)])
                 equalHistogram.SetBinContent(i, self.histogram.GetBinContent(i))
                 equalHistogram.SetBinError(i, self.histogram.GetBinError(i))
             self.histogram = equalHistogram
