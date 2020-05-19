@@ -92,5 +92,6 @@ class PUweight(object):
             PUweight = self.puWeightLUT[arguments['sys']][self.puWeightLUTmax]
         else:
             PUweight = self.puWeightLUT[arguments['sys']][int(pu)]
+        print('new_weight', PUweight)
         return PUweight
 
