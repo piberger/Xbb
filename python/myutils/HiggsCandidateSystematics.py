@@ -215,7 +215,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
 
                 # FSR recovery
                 for i in range(len(treeJet_PtReg)):
-                    if i not in [hJidx0, hJidx1] and tree.Jet_Pt[i]>20 and abs(tree.Jet_eta[i])<3.0 and (tree.Jet_puId[i]>self.puIdCut or tree.Jet_Pt[i]>50.0) and tree.Jet_lepFilter[i] > 0 and tree.Jet_jetId[i] > self.jetIdCut:
+                    if i not in [hJidx0, hJidx1] and treeJet_Pt[i]>20 and abs(tree.Jet_eta[i])<3.0 and (tree.Jet_puId[i]>self.puIdCut or tree.Jet_Pt[i]>50.0) and tree.Jet_lepFilter[i] > 0 and tree.Jet_jetId[i] > self.jetIdCut:
                         FSR = ROOT.TLorentzVector()
                         FSR.SetPtEtaPhiM(treeJet_Pt[i],treeJet_eta[i],treeJet_phi[i],treeJet_mass_nom[i])
                         deltaR0 = FSR.DeltaR(hJ0)
