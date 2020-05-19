@@ -72,7 +72,13 @@ class ParseInfo:
                     except:
                         # use full name if no short name given
                         shortname = sampleName
-                    subnames = [shortname + '_' + x for x in subgroups]
+                    # if suffixes explicitly given use them
+                    if config.has_option(sample, 'suffixes'):
+                        suffixes = eval(config.get(sample, 'suffixes'))
+                        subnames = [shortname + '_' + x for x in suffixes]
+                    # otherwise use sample group as suffix
+                    else:
+                        subnames = [shortname + '_' + x for x in subgroups]
                 subcuts = eval((config.get(sample, 'subcuts')))
 
                 if sampleType != 'DATA':
