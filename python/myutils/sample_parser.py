@@ -31,7 +31,6 @@ class ParseInfo:
         self.__fileslist = []
 
         configSamples = [x for x in config.sections() if config.has_option(x, 'sampleName')]
-        #configSamples = ['WminusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ZZ_TuneCP5_13TeV-pythia8', 'ZZTo2L2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WZ_TuneCP5_13TeV-pythia8', 'WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WW_TuneCP5_13TeV-pythia8', 'WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8',.....]
         if self.debug:
             print "DEBUG:", len(configSamples), " samples found."
             
@@ -63,12 +62,9 @@ class ParseInfo:
 
             # add and fill all the subsamples
             if config.has_option(sample,'subsamples') and eval(config.get(sample,'subsamples')):
-                #print('sample ',sample)
-                #print('eval((config.get(sample,"sampleGroup")))', eval((config.get(sample,'sampleGroup')))) 
                 subgroups = eval((config.get(sample,'sampleGroup')))
                 try:
                     subnames = eval((config.get(sample, 'subnames')))
-                    #print 'hiii', subnames
                 except:
                     # create subnames automatically based on subgroup name to avoid duplication
                     try:
@@ -76,7 +72,6 @@ class ParseInfo:
                     except:
                         # use full name if no short name given
                         shortname = sampleName
-                        #print 'shortname', shortname
                     subnames = [shortname + '_' + x for x in subgroups]
                 subcuts = eval((config.get(sample, 'subcuts')))
 
@@ -86,13 +81,9 @@ class ParseInfo:
                         newsample.xsec = [subxsecs[0]]
                     else:
                         print "\x1b[31mWARNING: different cross sections for the sub-samples of", sampleName, " are you sure you want to do this?\x1b[0m"
-                    #print 'subsfs', [1.0]*len(subxsecs) 
-                    #print config.get(sample, 'SF')
                     subsfs = eval((config.get(sample, 'SF'))) if config.has_option(sample, 'SF') else [1.0]*len(subxsecs)
-                    #print 'subsfs', subsfs
                 try:
                     subspecialweights = eval((config.get(sample, 'specialweight')))
-                    #print 'specialweights=', subspecialweights
                     if len(subspecialweights) < 2:
                         subspecialweights = []
                         print "\x1b[31mWARNING: specialweight not defined for subsamples but for full sample only!\x1b[0m"
@@ -120,7 +111,6 @@ class ParseInfo:
 
                 self._samplelist.extend(newsamples)
                 self._samplelist.append(newsample)
-                #print('doneee')
             else:
                 if sampleType != 'DATA':
                     newsample.xsec = eval((config.get(sample,'xSec')))    
@@ -165,11 +155,8 @@ class ParseInfo:
             for samplename in samplenames:
                 found = False
                 for sample in self._samplelist:
-                    # print "get_samples sample is", sample ,'samplename',samplename
                     if sample.name == samplename:
                         found = True
-                        # print 'matched sample.name',sample.name
-                        #if (sample.subsample): continue #avoid multiple submissions from subsamples
                         samples.append(sample)
                         thenames.append(sample.name)
                 if not found:
@@ -236,6 +223,7 @@ if __name__ == '__main__':
 
     # read config
 
+    #configSamples = ['WminusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ZZ_TuneCP5_13TeV-pythia8', 'ZZTo2L2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WZ_TuneCP5_13TeV-pythia8', 'WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WW_TuneCP5_13TeV-pythia8', 'WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8',.....]
     ## this is what the XbbConfigReader module is doing:
     pathconfig = BetterConfigParser()
     pathconfig.read('/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Wlv2018config/paths.ini') #parent class 'ConfigParser' method
