@@ -83,14 +83,11 @@ if __name__ == '__main__':
     samplefiles = '../samples/VHbbPostNano2017_V5/merged_Zvv2017/' 
     samplesinfo = 'Zvv2017config/samples_nosplit.ini' 
     info = ParseInfo(samples_path=path, config=config)
-    print('_samplelist ',info._samplelist)
     
     sample = [x for x in info if x.identifier == 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
-    print('sample ',sample)
     
     # read sample
     sampleTree = SampleTree([inputFile], config=config)
-    print 'sampleTree', sampleTree
 
     # initialize module
     w = WeightAsBranch()
