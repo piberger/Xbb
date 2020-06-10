@@ -308,7 +308,8 @@ class VHbbSelection(AddCollectionsModule):
         for i in range(tree.nFatJet):
             for j in range(nSystematics):
                 selectedVphi = Vphi_syst[systematics[j]] if (Vphi_syst is not None and systematics[j] in Vphi_syst) else Vphi
-                if Pt[j][i] > ptCut and abs(eta[i]) < etaCut and Msd[j][i] > msdCut and lepFilter[i]:
+                #if Pt[j][i] > ptCut and abs(eta[i]) < etaCut and Msd[j][i] > msdCut and lepFilter[i]:
+                if Pt[j][i] > ptCut and abs(eta[i]) < etaCut and Msd[j][i] > msdCut:
                     if selectedVphi is None or abs(ROOT.TVector2.Phi_mpi_pi(selectedVphi-phi[i]))>1.57:
                         if tagger[i] > fatJetMaxTagger[j]:
                             fatJetMaxTagger[j] = tagger[i]
