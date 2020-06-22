@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8/ed95a0f6809d84c6eaddc56453a4dbf6447ab61d8f4295f95a94a8fc/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8/c8058f53e2a8f3290fda622cb09ab58d25467b5af70b36aa531c182f/000000_000000/0000/tree_1.root
