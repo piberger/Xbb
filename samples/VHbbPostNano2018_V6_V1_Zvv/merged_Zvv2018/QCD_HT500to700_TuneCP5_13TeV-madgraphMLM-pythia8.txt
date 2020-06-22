@@ -1,1 +1,0 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/QCD_HT500to700_TuneCP5_13TeV-madgraphMLM-pythia8/1a60bf60e047949f3430c3c8c69c3781666555b3577eda11f5530631/000000_000000/0000/tree_0.root
