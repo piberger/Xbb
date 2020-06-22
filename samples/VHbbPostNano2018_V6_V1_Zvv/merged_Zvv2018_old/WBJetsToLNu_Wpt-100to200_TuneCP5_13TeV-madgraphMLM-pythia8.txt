@@ -1,6 +1,0 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/eebf0e6eb0eca394577bf585eb8717526aa42ab679bd1557d385ea14/000000_000000/0000/tree_0.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/30a84b16202e5111ba31d87bd6d6648000226084d6689d8b2b67fddc/000000_000000/0000/tree_1.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/dfb6d581f55d3c53b230aa38f3aeede7384b3a57d7bc7f24676ecce7/000000_000000/0000/tree_2.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/ae6122aca0a28865ae3efc44c98121e5607284ebed088c11dd664788/000000_000000/0000/tree_3.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/6822336ac4242fa2832b7295b3894b78425548ff05249cc0332e7c6a/000000_000000/0000/tree_4.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/569c984d31e21f16b58431c7976a7ccc9ee2fe2296f3deb9fd374248/000000_000000/0000/tree_5.root

@@ -1,2 +1,0 @@
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-200toInf_TuneCP5_13TeV-madgraphMLM-pythia8/88542fb51392f7ce7ec994460f6571d7b2e33ddd3ca20e2fbe6b0fd7/000000_000000/0000/tree_0.root
-/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/WBJetsToLNu_Wpt-200toInf_TuneCP5_13TeV-madgraphMLM-pythia8/e92a987c3a225120cc0b3931fdf2136d9adeeafec4f0154817c163a9/000000_000000/0000/tree_1.root
