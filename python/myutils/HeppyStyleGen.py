@@ -9,8 +9,8 @@ import numpy as np
 class HeppyStyleGen(AddCollectionsModule):
 
     def __init__(self, debug=False):
-        super(HeppyStyleGen, self).__init__()
         self.debug = debug
+        super(HeppyStyleGen, self).__init__()
         self.version = 4
 
     def customInit(self, initVars):

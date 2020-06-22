@@ -90,7 +90,6 @@ class ParseInfo:
                     subsfs = eval((config.get(sample, 'SF'))) if config.has_option(sample, 'SF') else [1.0]*len(subxsecs)
                 try:
                     subspecialweights = eval((config.get(sample, 'specialweight')))
-                    #print 'specialweights=', subspecialweights
                     if len(subspecialweights) < 2:
                         subspecialweights = []
                         print "\x1b[31mWARNING: specialweight not defined for subsamples but for full sample only!\x1b[0m"
@@ -162,11 +161,8 @@ class ParseInfo:
             for samplename in samplenames:
                 found = False
                 for sample in self._samplelist:
-                    # print "get_samples sample is", sample ,'samplename',samplename
                     if sample.name == samplename:
                         found = True
-                        # print 'matched sample.name',sample.name
-                        #if (sample.subsample): continue #avoid multiple submissions from subsamples
                         samples.append(sample)
                         thenames.append(sample.name)
                 if not found:
@@ -227,4 +223,37 @@ class ParseInfo:
                             return False
             else:
                     return False
+
     
+if __name__ == '__main__':
+
+    # read config
+
+    #configSamples = ['WminusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8', 'ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8', 'ZZ_TuneCP5_13TeV-pythia8', 'ZZTo2L2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WZ_TuneCP5_13TeV-pythia8', 'WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8', 'WW_TuneCP5_13TeV-pythia8', 'WWTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8',.....]
+    ## this is what the XbbConfigReader module is doing:
+    pathconfig = BetterConfigParser()
+    pathconfig.read('/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Wlv2018config/paths.ini') #parent class 'ConfigParser' method
+    configFiles = pathconfig.get('Configuration', 'List').split(' ') 
+    config = BetterConfigParser()
+    print ('configFiles parsed', configFiles)
+    for configFile in configFiles:
+        config.read('Wlv2017config/' + configFile)
+
+    #print(config.get('Weights','weightF'))
+    #config = XbbConfigReader.read('Zvv2017')
+
+    #inputFile = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/berger_p2/VHbb/VHbbPostNano2017/V5/Zvv/rerun/v4j/eval/ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/tree_aa5e971734ef4e885512748d534e6937ff03dc61feed21b6772ba943_000000_000000_0000_9_a6c5a52b56e5e0c7ad5aec31429c8926bf32cf39adbe087f05cfb323.root'
+    path = 'root://t3dcachedb03.psi.ch:1094//pnfs/psi.ch/cms/trivcat/store/user/krgedia/VHbb/Wlv/VHbbPostNano2018/mva/17jan20v4' 
+    #samplefiles = '../samples/VHbbPostNano2017_V5/merged_Zvv2017/' 
+    #samplesinfo = 'Zvv2017config/samples_nosplit.ini' 
+    info = ParseInfo(samples_path=path, config=config)
+    
+    #print('_samplelist ',info._samplelist)
+    
+    #sample = [x for x in info if x.identifier == 'ggZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
+    #print('sample ',sample)
+    
+    # read sample
+    #sampleTree = SampleTree([inputFile], config=config)
+    #print 'sampleTree', sampleTree
+
