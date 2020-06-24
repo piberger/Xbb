@@ -1144,7 +1144,14 @@ class NewStackMaker:
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
                 if dataGroupName and dataGroupName in groupedHistograms:
                     groupedHistograms[dataGroupName].SetDirectory(shapesFile)
+                    ratioHistogram = groupedHistograms[dataGroupName].Clone()
+                    ratioHistogram.SetName("ratio")
+                    ratioHistogram.SetTitle("ratio")
+                    ratioHistogram.Sumw2()
+                    ratioHistogram.Divide(mcHistogram)
+                    ratioHistogram.SetDirectory(shapesFile)
                 mcHistogram.SetDirectory(shapesFile)
+
                 for histogram in self.histograms:
                     histogram['histogram'].SetDirectory(shapesFile)
 
