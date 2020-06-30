@@ -516,9 +516,8 @@ class NewStackMaker:
                         binUpEdgeValue = self.histoMaker.originalBins[i][1] - 1e-6
                     else:
                         # otherwise, take bins directly from histogram
-                        binLowEdgeValue = self.ratioPlot.GetXaxis().GetBinLowEdge(1+i) + 1e-6
-                        binUpEdgeValue = self.ratioPlot.GetXaxis().GetBinUpEdge(1+i) - 1e-6
-                    
+                        binLowEdgeValue = dataHistogram.GetXaxis().GetBinLowEdge(1+i) + 1e-6
+                        binUpEdgeValue = dataHistogram.GetXaxis().GetBinUpEdge(1+i) - 1e-6
                     try:
                         exprLow = ROOT.gInterpreter.ProcessLine(blindCutExpr.replace('{var}',str(binLowEdgeValue)))
                         exprUp  = ROOT.gInterpreter.ProcessLine(blindCutExpr.replace('{var}',str(binUpEdgeValue))) 
@@ -534,6 +533,8 @@ class NewStackMaker:
                         error = 0.0
                     blindedRegion.SetBinContent(1+i, value)
                     blindedRegion.SetBinError(1+i, error)
+                    if self.debug:
+                        print("DEBUG:", i, binLowEdgeValue, binUpEdgeValue, error) 
                 blindedRegion.SetFillColor(ROOT.kRed)
                 blindedRegion.SetFillStyle(3018)
                 blindedRegion.SetMarkerSize(0)
