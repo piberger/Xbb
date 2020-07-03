@@ -3,6 +3,7 @@ from __future__ import print_function
 from optparse import OptionParser
 import ROOT
 ROOT.gROOT.SetBatch(True)
+ROOT.v5.TFormula.SetMaxima(10000)
 
 from myutils import NewTreeCache as TreeCache
 from myutils.sampleTree import SampleTree as SampleTree
