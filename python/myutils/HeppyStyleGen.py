@@ -26,6 +26,7 @@ class HeppyStyleGen(AddCollectionsModule):
 
             self.addCollection(Collection('GenBs',['pt','eta','phi','genPartIdx'], maxSize=32))
             self.addCollection(Collection('GenDs',['pt','eta','phi','genPartIdx'], maxSize=32))
+            
             self.addVectorBranch("GenJetAK8_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons[nGenJetAK8]/i")
             self.addVectorBranch("GenJetAK8_nBhadrons2p4", default=0, branchType='i', length=100, leaflist="GenJetAK8_nBhadrons2p4[nGenJetAK8]/i")
             self.addVectorBranch("GenJet_nBhadrons", default=0, branchType='i', length=100, leaflist="GenJet_nBhadrons[nGenJet]/i")
@@ -38,9 +39,10 @@ class HeppyStyleGen(AddCollectionsModule):
             self.addIntegerBranch("nGenDpt20eta2p6")
     
     def processEvent(self, tree):
+
         if not self.hasBeenProcessed(tree):
             self.markProcessed(tree)
-
+            
             if not self.isData:
                 higgsParticles = []
                 vParticles = []
