@@ -41,10 +41,11 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.sample = initVars['sample']
         self.config = initVars['config']
 
-        #jerReg systematics not included in nanoAOD v4 for 2016 dataset.
         self.dataset = self.config.get('General', 'dataset')
-        #if self.dataset == '2016':
-        #    self.jetSystematics.remove('jerReg')
+        if self.dataset == '2016':
+            self.jetIdCut = 2 
+        else:
+            self.jetIdCut = 4
 
 #        if self.addBoostSystematics:
 #            self.boosttagidx = 'Hbb_fjidx'
@@ -196,7 +197,9 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                         # FSR recovery
                         for i in range(nJet):
                             if i not in [hJidx0, hJidx1]:
-                                if Jet_Pt[i] > 20.0 and abs(Jet_eta[i]) < 3.0 and (Jet_puId[i] > self.puIdCut or Jet_Pt[i] > 50.0) and Jet_lepFilter[i] > 0 and tree.Jet_jetId[i] > self.jetIdCut:
+                              
+                                if Jet_Pt[i] > 20.0 and abs(Jet_eta[i]) < 3.0 and (Jet_puId[i] > self.puIdCut or Jet_Pt[i] > 50.0) and Jet_lepFilter[i] > 0 and Jet_jetId[i] > self.jetIdCut:
+
 
                                     # b-jet regression is not applied to FSR jets
                                     FSR = ROOT.TLorentzVector()

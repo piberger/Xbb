@@ -1,0 +1,5 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/251d7cfe4abaf4e8919266b23cf68de9db09b36ac5abcf5ae8b36823/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/e3b7425473d0a818f0379a4c0f0286f699c747b414a010904fb20548/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/e7128c6e0f1c0f94b199d830cbb91ccab489312763733c925172b076/000000_000000/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/895d7844018a69d473f5e1138ad84354e634b05d407479edd5e57a5f/000000_000000/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V12/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/5f95fbf2949f7540e3af2cba0160e28c9e56d4bff762f28227e94707/000000_000000/0000/tree_4.root
