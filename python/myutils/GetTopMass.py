@@ -443,7 +443,7 @@ class GetTopMass(AddCollectionsModule):
         for i in range(nJet):
            #if temPt < 30 or tembTag < self.minbTag or not (tree.Jet_lepFilter): continue
 
-           if jetPts[i] >= 30 and jetBtags[i] >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > self.jetIdCut and (tree.Jet_puId[i]>self.puIdCut or jetPtsNoReg[i] >50.0):
+           if Jet_PtReg[i] >= 30 and jetBtags[i] >= self.minbTag and tree.Jet_lepFilter[i] and tree.Jet_jetId[i] > self.jetIdCut and (tree.Jet_puId[i]>self.puIdCut or Jet_Pt[i] >50.0):
 
                tempJet = TLorentzVector()
                tempJet.SetPtEtaPhiM(Jet_PtReg[i],tree.Jet_eta[i],tree.Jet_phi[i], Jet_MassReg[i])
