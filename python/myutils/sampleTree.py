@@ -58,6 +58,8 @@ class SampleTree(object):
             self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
         else:
             self.requireAllInputTrees = False
+        self.maxCutStringLength = int(self.config.get('Configuration', 'maxCutStringLength')) if self.config.has_option('Configuration', 'maxCutStringLength') else 5000
+
         self.samples = samples
         self.tree = None
         self.nonEmptyTrees = []
@@ -524,7 +526,7 @@ class SampleTree(object):
             formula = formulaName
 
         # there might be an undocumented limit on the length of cutstrings in ROOT...
-        if len(formula) > 1023:
+        if len(formula) > self.maxCutStringLength:
             print("\x1b[41m\x1b[97m------------------------------------------------------------------------------")
             print(" WARNING !!! ROOT.TTreeFormula of length %d, this might cause problems !!"%len(formula))
             print(" reduce length of formulas if problems occur, e.g. by passing lists of cut formulas!")
