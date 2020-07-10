@@ -163,11 +163,16 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
-       
+      
+        # rebinning is done in the end, ensure number of bins to start with is large enough
         if self.config.has_section('plotDef:%s'%var) and self.config.has_option('plotDef:%s'%var, 'rebinMethod'):
             if 'binList' in self.histogramOptions:
                 del self.histogramOptions['binList']
                 print("DEBUG: rebinMethod present, ignoring any bin lists given.")
+            if self.histogramOptions['nBins'] < 100000:
+                self.histogramOptions['nBins'] = max(100000,self.histogramOptions['nBins'])
+                self.histogramOptions['nBinsX'] = self.histogramOptions['nBins'] 
+                print("INFO: bin boundary calculation is done, set nbins_start to:", self.histogramOptions['nBins'])
 
         # evaluate options given as python code
         for evalOption in evalOptions: 
@@ -752,10 +757,17 @@ class NewStackMaker:
                 newBinBoundaries[nBinsTarget] = float(self.histogramOptions['max'])
             print("INFO: new bin boundaries have been computed, to be put to [plotDef:...] binList=")
             print("INFO: ", "[" + ", ".join(["%1.5f"%x for x in newBinBoundaries]) + "]") 
+            print("INFO: " + self.plotVarSection + ".binList=[" + ", ".join(["%1.5f"%x for x in newBinBoundaries]) + "]") 
             print("INFO: plotting is skipped for this variable, please change binList in the config and rerun")
             print("INFO: to ensure correct MC errors in the histograms.")
             return
         elif rebinMethod != 'none':
+            
+            signalHistograms = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']]
+            signalSum = NewStackMaker.sumHistograms(histograms=signalHistograms, outputName="signalHistogramsSum")
+            signalIntegral = signalSum.Integral()
+            print("DEBUG: number of signal events:", signalIntegral)
+
             if rebinMethod == 'arctansignal':
                 # Round[Table[(Pi/2 + ArcTan[x])/Pi, {x, -3, 11}], 0.0001]
                 fractions = np.array([0.1024, 0.1476, 0.25, 0.5, 0.75, 0.8524, 0.8976, 0.922, 0.9372, 0.9474, 0.9548, 0.9604, 0.9648, 0.9683, 0.9711])
@@ -764,18 +776,18 @@ class NewStackMaker:
                 fractions = np.array([0.0043, 0.0116, 0.0282, 0.0622, 0.1241, 0.2245, 0.3679, 0.5461, 0.7344, 0.8948, 0.9877, 0.9877, 0.8948, 0.7344, 0.5461])
             elif rebinMethod.strip().startswith('['):
                 fractions = np.array(eval(rebinMethod))
+            elif rebinMethod == 'ospb':
+                nBins = max(2,int(signalIntegral))
+                fractions = np.array([1.0]*nBins)
             else:
                 print("ERROR: not valid:", rebinMethod)
                 raise Exception("RebinMethodError")
             cumulativeFractions = np.cumsum(fractions/np.sum(fractions))
+            print("DEBUG: number of output bins:", len(fractions))
             print("DEBUG: c=", cumulativeFractions)
 
-            signalHistograms = [histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and histogram['signal']]
-            signalSum = NewStackMaker.sumHistograms(histograms=signalHistograms, outputName="signalHistogramsSum")
-            signalIntegral = signalSum.Integral()
-
             cumulatedSignal = 0.0
-            nBinsTarget = 15
+            nBinsTarget = len(fractions)
             newBinBoundaries = [float(self.histogramOptions['min'])]
             for i in range(self.histogramOptions['nBins']):
                 cumulatedSignal += signalSum.GetBinContent(1+i)/signalIntegral
@@ -785,8 +797,13 @@ class NewStackMaker:
                 newBinBoundaries.append(float(self.histogramOptions['max']))
             else:
                 newBinBoundaries[nBinsTarget] = float(self.histogramOptions['max'])
+
+            # avoid events in overflow bin
+            newBinBoundaries[-1] += 0.00001
+
             print("INFO: new bin boundaries have been computed, to be put to [plotDef:...] binList=")
             print("INFO: ", "[" + ", ".join(["%1.5f"%x for x in newBinBoundaries]) + "]") 
+            print("INFO: " + self.plotVarSection + ".binList=[" + ", ".join(["%1.5f"%x for x in newBinBoundaries]) + "]") 
             print("INFO: plotting is skipped for this variable, please change binList in the config and rerun")
             print("INFO: to ensure correct MC errors in the histograms.")
             return
