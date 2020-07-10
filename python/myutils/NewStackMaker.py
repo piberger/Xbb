@@ -169,7 +169,11 @@ class NewStackMaker:
             if 'binList' in self.histogramOptions:
                 del self.histogramOptions['binList']
                 print("DEBUG: rebinMethod present, ignoring any bin lists given.")
-            if self.histogramOptions['nBins'] < 100000:
+            if 'nBins' not in self.histogramOptions:
+                self.histogramOptions['nBins'] = 100000 
+                self.histogramOptions['nBinsX'] = 100000
+                print("INFO: bin boundary calculation is done, set nbins_start to:", self.histogramOptions['nBins'])
+            elif self.histogramOptions['nBins'] < 100000:
                 self.histogramOptions['nBins'] = max(100000,self.histogramOptions['nBins'])
                 self.histogramOptions['nBinsX'] = self.histogramOptions['nBins'] 
                 print("INFO: bin boundary calculation is done, set nbins_start to:", self.histogramOptions['nBins'])
@@ -774,10 +778,30 @@ class NewStackMaker:
             elif rebinMethod == 'gausssignal':
                 # Table[Exp[-(x - 0.7)^2/0.3^2], {x, 0, 0.99, 1/15}]
                 fractions = np.array([0.0043, 0.0116, 0.0282, 0.0622, 0.1241, 0.2245, 0.3679, 0.5461, 0.7344, 0.8948, 0.9877, 0.9877, 0.8948, 0.7344, 0.5461])
+            # fractions of signal distribution given explicitly
             elif rebinMethod.strip().startswith('['):
                 fractions = np.array(eval(rebinMethod))
+            # flat signal with as many bins as signal events
             elif rebinMethod == 'ospb':
                 nBins = max(2,int(signalIntegral))
+                fractions = np.array([1.0]*nBins)
+            # arctan with as many bins as signal events,
+            elif rebinMethod.startswith('arctan('):
+                #[(np.pi/2+np.arctan(14*x-3))/np.pi-0.09 for x in np.linspace(0.0,1.0,nb)]
+                #Table[(Pi/2 + ArcTan[x - 3])/Pi - 0.09, {x, 0, 14}]
+                nBins = max(2,int(rebinMethod.split('(')[1].split(')')[0]))
+                fractions = [(np.pi/2+np.arctan(14*x-3))/np.pi-0.09 for x in np.linspace(0.0,1.0, nBins)]
+            # arctan with as many bins as signal events, max. n bins
+            elif rebinMethod.startswith('arctans('):
+                nBins = min(max(2,int(signalIntegral)),int(rebinMethod.split('(')[1].split(')')[0]))
+                fractions = [(np.pi/2+np.arctan(14*x-3))/np.pi-0.09 for x in np.linspace(0.0,1.0, nBins)]
+            # flat signal n bins
+            elif rebinMethod.startswith('flat('):
+                nBins = max(2,int(rebinMethod.split('(')[1].split(')')[0]))
+                fractions = np.array([1.0]*nBins)
+            # flat signal with as many bins as signal events, max. n bins
+            elif rebinMethod.startswith('flats('):
+                nBins = min(max(2,int(signalIntegral)),int(rebinMethod.split('(')[1].split(')')[0]))
                 fractions = np.array([1.0]*nBins)
             else:
                 print("ERROR: not valid:", rebinMethod)
