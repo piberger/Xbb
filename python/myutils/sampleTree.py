@@ -58,7 +58,7 @@ class SampleTree(object):
             self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
         else:
             self.requireAllInputTrees = False
-        self.maxCutStringLength = int(self.config.get('Configuration', 'maxCutStringLength')) if self.config.has_option('Configuration', 'maxCutStringLength') else 5000
+        self.maxCutStringLength = int(self.config.get('Configuration', 'maxCutStringLength')) if self.config and self.config.has_option('Configuration', 'maxCutStringLength') else 5000
 
         self.samples = samples
         self.tree = None
