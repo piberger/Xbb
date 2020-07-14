@@ -801,7 +801,11 @@ class NewStackMaker:
                 fractions = np.array([1.0]*nBins)
             # flat signal with as many bins as signal events, max. n bins
             elif rebinMethod.startswith('flats('):
-                nBins = min(max(2,int(signalIntegral)),int(rebinMethod.split('(')[1].split(')')[0]))
+                binArgument = rebinMethod.split('(')[1].split(')')[0]
+                if "," in binArgument:
+                    nBins = min(max(int(binArgument.split(",")[0]),int(signalIntegral)),int(binArgument.split(",")[1]))
+                else:
+                    nBins = min(max(2,int(signalIntegral)),int(binArgument))
                 fractions = np.array([1.0]*nBins)
             else:
                 print("ERROR: not valid:", rebinMethod)
