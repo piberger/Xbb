@@ -1062,7 +1062,13 @@ if opts.task == 'efficiency':
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cachetraining'):
-    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    trainingRegions = XbbTools.parseList(config.get('MVALists','List_for_submitscript'), separator=',')
+    if opts.regions:
+        defaultRegions = trainingRegions
+        if len(opts.regions.strip()) > 0:
+            trainingRegions = opts.regions.split(',')
+        if '*' in opts.regions:
+            trainingRegions = XbbTools.filterList(defaultRegions, trainingRegions)
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
     allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions if config.has_option(trainingRegion, 'data')], [])))
@@ -1093,7 +1099,7 @@ if opts.task.startswith('cachetraining'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sorted(sampleIdentifiers):
         print " >", sampleIdentifier
-  
+
     printInputOutputInfo(inputPath, tmpPath, config=config, opts=opts)
 
     # per job parallelization parameter can split regions into several job
@@ -1141,14 +1147,17 @@ if opts.task.startswith('cachetraining'):
 # EXPORT HDF5: export training regions to HDF5 format for DNN training 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
-    
+
     printInputOutputInfo(config.get('Directories', 'MVAin'), None, config=config, opts=opts)
 
-    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    trainingRegions = XbbTools.parseList(config.get('MVALists','List_for_submitscript'), separator=',')
     if opts.regions:
-        enabledTrainingRegions = opts.regions.strip().split(',')
-        if len(enabledTrainingRegions) > 0:
-            trainingRegions = [x for x in trainingRegions if x in enabledTrainingRegions]
+        defaultRegions = trainingRegions
+        if len(opts.regions.strip()) > 0:
+            trainingRegions = opts.regions.split(',')
+        if '*' in opts.regions:
+            trainingRegions = XbbTools.filterList(defaultRegions, trainingRegions)
+
     for region in trainingRegions:
         jobDict = repDict.copy()
         jobDict.update({
