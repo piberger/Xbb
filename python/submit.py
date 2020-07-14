@@ -1062,7 +1062,13 @@ if opts.task == 'efficiency':
 # CACHETRAINING: prepare skimmed trees including the training/eval cuts 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cachetraining'):
-    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    trainingRegions = XbbTools.parseList(config.get('MVALists','List_for_submitscript'), separator=',')
+    if opts.regions:
+        defaultRegions = trainingRegions
+        if len(opts.regions.strip()) > 0:
+            trainingRegions = opts.regions.split(',')
+        if '*' in opts.regions:
+            trainingRegions = XbbTools.filterList(defaultRegions, trainingRegions)
     allBackgrounds = list(set(sum([eval(config.get(trainingRegion, 'backgrounds')) for trainingRegion in trainingRegions], [])))
     allSignals = list(set(sum([eval(config.get(trainingRegion, 'signals')) for trainingRegion in trainingRegions], [])))
     allData = list(set(sum([eval(config.get(trainingRegion, 'data')) for trainingRegion in trainingRegions if config.has_option(trainingRegion, 'data')], [])))
@@ -1077,8 +1083,12 @@ if opts.task.startswith('cachetraining'):
         print "data:"
         for sampleName in sorted(allData):
             print " >", sampleName
-    
+
     # get samples info
+    if config.has_option('Directories', 'trainingSamples'):
+        inputPath = config.get('Directories', 'trainingSamples')
+    else:
+        inputPath = config.get('Directories', 'MVAin')
     inputPath = config.get('Directories', 'MVAin')
     tmpPath   = config.get('Directories', 'tmpSamples')
     info = ParseInfo(samples_path=inputPath, config=config)
@@ -1089,7 +1099,7 @@ if opts.task.startswith('cachetraining'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sorted(sampleIdentifiers):
         print " >", sampleIdentifier
-  
+
     printInputOutputInfo(inputPath, tmpPath, config=config, opts=opts)
 
     # per job parallelization parameter can split regions into several job
@@ -1137,14 +1147,17 @@ if opts.task.startswith('cachetraining'):
 # EXPORT HDF5: export training regions to HDF5 format for DNN training 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('export_h5') or opts.task.startswith('export_hdf5'):
-    
+
     printInputOutputInfo(config.get('Directories', 'MVAin'), None, config=config, opts=opts)
 
-    trainingRegions = [x.strip() for x in (config.get('MVALists','List_for_submitscript')).split(',')]
+    trainingRegions = XbbTools.parseList(config.get('MVALists','List_for_submitscript'), separator=',')
     if opts.regions:
-        enabledTrainingRegions = opts.regions.strip().split(',')
-        if len(enabledTrainingRegions) > 0:
-            trainingRegions = [x for x in trainingRegions if x in enabledTrainingRegions]
+        defaultRegions = trainingRegions
+        if len(opts.regions.strip()) > 0:
+            trainingRegions = opts.regions.split(',')
+        if '*' in opts.regions:
+            trainingRegions = XbbTools.filterList(defaultRegions, trainingRegions)
+
     for region in trainingRegions:
         jobDict = repDict.copy()
         jobDict.update({
@@ -1196,10 +1209,14 @@ if opts.task.startswith('dnn'):
 # CACHEPLOT: prepare skimmed trees with cuts for the CR/SR
 # -----------------------------------------------------------------------------
 if opts.task.startswith('cacheplot'):
-    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    regions = XbbTools.parseList(config.get('Plot_general', 'List'), separator=',')
     if opts.regions:
+        defaultRegions = regions
         if len(opts.regions.strip()) > 0:
             regions = opts.regions.split(',')
+        if '*' in opts.regions:
+            regions = XbbTools.filterList(defaultRegions, regions)
+
     sampleNames = list(eval(config.get('Plot_general', 'samples')))
     dataSampleNames = list(eval(config.get('Plot_general', 'Data')))
 
@@ -1265,7 +1282,7 @@ if opts.task.startswith('cacheplot'):
 # RUNPLOT: make CR/SR plots. Needs cacheplot before. 
 # -----------------------------------------------------------------------------
 if opts.task.startswith('runplot'):
-    
+
     printInputOutputInfo(config.get('Directories', 'plottingSamples'), 'logpath', config=config, opts=opts)
 
     # if only a subset of samples is plotted
@@ -1279,7 +1296,14 @@ if opts.task.startswith('runplot'):
     else:
         sampleIdentifiers = None
 
-    regions = [x.strip() for x in (config.get('Plot_general', 'List')).split(',')]
+    regions = XbbTools.parseList(config.get('Plot_general', 'List'), separator=',')
+    if opts.regions:
+        defaultRegions = regions
+        if len(opts.regions.strip()) > 0:
+            regions = opts.regions.split(',')
+        if '*' in opts.regions:
+            regions = XbbTools.filterList(defaultRegions, regions)
+
     if opts.regions and len(opts.regions.strip()) > 0:
         regions = opts.regions.split(',')
 
@@ -1380,7 +1404,14 @@ if opts.task.startswith('dcyields') or opts.task == 'yields':
 if opts.task.startswith('cachedc'):
     # get list of all sample names used in DC step
     sampleNames = []
-    regions = [x.strip() for x in config.get('LimitGeneral', 'List').split(',') if len(x.strip()) > 0]
+    regions = XbbTools.parseList(config.get('LimitGeneral', 'List'), separator=',')
+    if opts.regions:
+        defaultRegions = regions
+        if len(opts.regions.strip()) > 0:
+            regions = opts.regions.split(',')
+        if '*' in opts.regions:
+            regions = XbbTools.filterList(defaultRegions, regions)
+
     if config.has_option('LimitGeneral', 'addSample_sys'):
         addSample_sys = eval(config.get('LimitGeneral', 'addSample_sys'))
         sampleNames += [addSample_sys[key] for key in addSample_sys]

@@ -83,6 +83,22 @@ class XbbTools(object):
         else:
             return sampleIdentifiers
 
+    # this takes all elements from inputFilters and if they contain a *, replaces them with all matching elements from inputList, removing duplicates
+    @staticmethod
+    def filterList(inputList, inputFilters):
+        if not type(inputFilters) == list:
+            inputFilters = [inputFilters]
+        matchingWildscard  = [x for x in inputList if any([fnmatch.fnmatch(x, y) for y in inputFilters])]
+        nonWildcardFilters = [x for x in inputFilters if '*' not in x]
+        return list(set(matchingWildscard + nonWildcardFilters))
+
+    @staticmethod
+    def filterListStrict(inputList, inputFilters):
+        if not type(inputFilters) == list:
+            inputFilters = [inputFilters]
+        return [x for x in inputList if any([fnmatch.fnmatch(x, y) for y in inputFilters])]
+
+
     @staticmethod
     def parseSamplesList(samplesListString):
         return XbbTools.parseList(samplesListString, separator=',')
