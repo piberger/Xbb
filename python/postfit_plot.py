@@ -356,9 +356,12 @@ if __name__ == "__main__":
     plotCommands = []
     for region in regions:
         print("INFO: region:", region)
-        plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType, blind=not opts.unblind)
-        plotter.prepare()
-        plotter.run()
+        try:
+            plotter = PostfitPlotter(config=config, region=region, directory=opts.fitType, blind=not opts.unblind)
+            plotter.prepare()
+            plotter.run()
+        except:
+            pass
 
 
         # COMPUTE effective scale factors
@@ -389,6 +392,7 @@ if __name__ == "__main__":
                     histogram_postfit.Rebin(nBins_postfit)
                     histogram_prefit.Rebin(nBins_prefit)
                     
+                    print("\x1b[35m", region, process, histogram_prefit.GetBinContent(1), histogram_postfit.GetBinContent(1), "\x1b[0m")
                     histogram_postfit.Divide(histogram_prefit)
 
                     scaleFactorTable.append("{region} {process} prefit/postfit = {scale:.2f} +/- {error:.2f}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
@@ -399,7 +403,7 @@ if __name__ == "__main__":
             # VHbb specific plot commands for simplifity
             try:
                 regionFormatted = ",".join(region) if type(region) == list else region
-                plotCommand = "./submit.py -J runplot --parallel=8 --regions '{region}' --set='General.SF_TT={SF[TT]};General.SF_ZJets=[{SF[ZJets_0b]},{SF[ZJets_1b]},{SF[ZJets_2b]}];General.SF_WJets=[{SF[WJets_0b]},{SF[WJets_1b]},{SF[WJets_2b]}]'".format(region=regionFormatted, SF=regionSF)
+                plotCommand = "./submit.py -J runplot --parallel=8 --regions '{region}' --set='General.SF_TT={SF[TT]};General.SF_ZJets=[{SF[ZJets_0b_udsg]},{SF[ZJets_0b_c]},{SF[ZJets_1b]},{SF[ZJets_2b]}];General.SF_WJets=[{SF[WJets_0b_udsg]},{SF[WJets_0b_c]},{SF[WJets_1b]},{SF[WJets_2b]}]'".format(region=regionFormatted, SF=regionSF)
                 plotCommands.append(plotCommand)
             except Exception as e:
                 print("WARNING:", e)
