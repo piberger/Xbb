@@ -555,6 +555,8 @@ class SampleTree(object):
 
         for b in self.newBranches:
             if b['name'] == branchName:
+                print("DEBUG: existing:", b)
+                print("DEBUG: new:", branchName, formula, branchType)
                 raise Exception("DuplicateBranch")
 
         # this is needed to overwrite the branch if it already exists in the input file
