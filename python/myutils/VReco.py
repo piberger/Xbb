@@ -50,7 +50,7 @@ class VReco(AddCollectionsModule):
                 self.addBranch("V_eta")
                 self.addBranch("V_phi")
                 self.addBranch("V_mass")
-            self.addBranch("V_mt")
+                self.addBranch("V_mt")
             self.addBranch("MET_sig30")
             self.addBranch("MET_sig30puid")
         else:
