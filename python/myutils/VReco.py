@@ -75,7 +75,8 @@ class VReco(AddCollectionsModule):
             for syst in self.allVariations:
                 directions = [''] if syst.lower() == 'nominal' else ['Up','Down']
                 for UD in self._variations(syst):
-                    self._b(self._v("V_mt", syst, UD))[0] = -1.0
+                    if not self._isnominal(syst) or self.replaceNominal:
+                        self._b(self._v("V_mt", syst, UD))[0] = -1.0
 
                     if tree.Vtype == 0 or tree.Vtype == 1:
                         lep1 = ROOT.TLorentzVector()
@@ -110,7 +111,8 @@ class VReco(AddCollectionsModule):
                             MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)
                         Lep.SetPtEtaPhiM(sel_lepton_pt, sel_lepton_eta, sel_lepton_phi, sel_lepton_mass)
                         cosPhi12 = (Lep.Px()*MET.Px() + Lep.Py()*MET.Py()) / (Lep.Pt() * MET.Pt())
-                        self._b(self._v("V_mt", syst,UD))[0] = ROOT.TMath.Sqrt(2*Lep.Pt()*MET.Pt() * (1 - cosPhi12))
+                        if not self._isnominal(syst) or self.replaceNominal:
+                            self._b(self._v("V_mt", syst,UD))[0] = ROOT.TMath.Sqrt(2*Lep.Pt()*MET.Pt() * (1 - cosPhi12))
 
                         V = MET + Lep
 
