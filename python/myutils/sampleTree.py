@@ -552,7 +552,12 @@ class SampleTree(object):
     # add a new branch
     # ------------------------------------------------------------------------------
     def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None, arrayStyle=False):
-        # this is needed to overwrite the branch if it already exists!
+
+        for b in self.newBranches:
+            if b['name'] == branchName:
+                raise Exception("DuplicateBranch")
+
+        # this is needed to overwrite the branch if it already exists in the input file
         self.addBranchToBlacklist(branchName)
 
         # function

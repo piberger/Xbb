@@ -145,6 +145,7 @@ class NewStackMaker:
                     'nBinsX': ['nBinsX', 'nBins'],
                     'nBinsY': ['nBinsY', 'nBins'],
                     'fractions': 'fractions',
+                    'postproc': 'postproc',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
         evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat']
@@ -564,6 +565,14 @@ class NewStackMaker:
                 t0.SetTextFont(ROOT.gStyle.GetLabelFont())
                 if not self.log:
                     t0.DrawTextNDC(0.1059, 0.96, "0")
+
+        #post-proc
+        if 'postproc' in self.histogramOptions:
+            try:
+                print("EVAL:", self.histogramOptions['postproc'])
+                exec(self.histogramOptions['postproc'])
+            except Exception as e:
+                print("EXCEPTION during plot post-proc:", e)
 
     def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
