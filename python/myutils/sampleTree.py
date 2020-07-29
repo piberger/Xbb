@@ -1179,8 +1179,8 @@ class SampleTree(object):
         try:
             if self.sampleIdentifier and self.config.has_section('EventCounts') and self.config.has_option('EventCounts', self.sampleIdentifier): #not there
                 countNew = eval(self.config.get('EventCounts', self.sampleIdentifier))
-                count = countNew 
                 print("\x1b[97m\x1b[41mINFO: overwrite event counts with values from config!!!\n value from file if present is", count, "\n value from config:", countNew," <--- will be used!\x1b[0m")
+                count = countNew 
         except Exception as e:
             print("\x1b[31mException:",e," -> overwriting of event counts has been disabled\x1b[0m")
          
