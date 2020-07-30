@@ -20,7 +20,7 @@ class JetSmearer(AddCollectionsModule):
 
         self.year = year if type(year) == str else str(year)
         self.smear_params = {
-                 #'2016': [1.0, 0.0, 0.0, 0.0],
+                 '2016': [1.013, 0.014, 0.029, 0.047], #already updated numbers for v7 nanoAOD production
                  '2017': [1.0029846959, 0.0212893588055, 0.030684, 0.052497],
                  '2018': [0.98667384694, 0.0197153848807, 0.038481, 0.053924],
                  }
