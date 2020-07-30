@@ -164,7 +164,7 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
-      
+
         # rebinning is done in the end, ensure number of bins to start with is large enough
         if self.config.has_section('plotDef:%s'%var) and self.config.has_option('plotDef:%s'%var, 'rebinMethod'):
             if 'binList' in self.histogramOptions:
@@ -183,6 +183,13 @@ class NewStackMaker:
         for evalOption in evalOptions: 
             if evalOption in self.histogramOptions and type(evalOption) == str:
                 self.histogramOptions[evalOption] = eval(self.histogramOptions[evalOption])
+
+        if 'minX' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['minX'] = self.histogramOptions['binList'][0]
+        if 'maxX' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['maxX'] = self.histogramOptions['binList'][-1]
+        if 'nBins' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['nBins'] = len(self.histogramOptions['binList'])-1
 
         # region/variable specific blinding cut
         if self.config.has_option(self.configSection, 'blindCuts'):
@@ -258,6 +265,15 @@ class NewStackMaker:
 
         self.histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = self.histoMaker.getHistogram(cut)
+
+        if self.config.has_option('Plot_general', '__test_normalizePerBinWidth') and eval(self.config.get('Plot_general', '__test_normalizePerBinWidth')):
+            binWidth = [histogramOptions['binList'][i+1]-histogramOptions['binList'][i] for i in range(len(histogramOptions['binList'])-1)]
+            minBinWidth = min(binWidth)
+            print("B:", binWidth, "m:", minBinWidth)
+            for i in range(len(histogramOptions['binList'])-1):
+                sampleHistogram.SetBinContent(i+1,sampleHistogram.GetBinContent(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
+                sampleHistogram.SetBinError(i+1,sampleHistogram.GetBinError(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
+
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
