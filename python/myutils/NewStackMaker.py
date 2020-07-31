@@ -121,6 +121,7 @@ class NewStackMaker:
             self.histogramOptions['weight'] = None
 
         optionNames = {
+                    'ratioRange': 'ratioRange',
                     'treeVar': 'relPath',
                     'rebin': 'rebin',
                     'xAxis': 'xAxis',
@@ -148,7 +149,7 @@ class NewStackMaker:
                     'postproc': 'postproc',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
-        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat']
+        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat','ratioRange']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -202,6 +203,7 @@ class NewStackMaker:
 
         self.groups = {}
         self.histograms = []
+        self.totalErrorHistogram = None
         self.legends = {}
         self.plotTexts = {}
         self.collectedObjects = []
@@ -747,6 +749,8 @@ class NewStackMaker:
                 print("INFO: using custom range for ratio plot:", ratioRange)
             else:
                 ratioRange = [0.5,1.75]
+            if 'ratioRange' in self.histogramOptions:
+                ratioRange = self.histogramOptions['ratioRange']
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
         self.outputFolder = outputFolder
@@ -1141,11 +1145,16 @@ class NewStackMaker:
 
                 else:
                     mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+
+
                     if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
                         mcHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Up')
                         mcHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Down')
                         self.drawRatioPlot(dataHistogram, mcHistogram, mcHistogram_Up=mcHistogram_Up, mcHistogram_Down=mcHistogram_Down, ratioRange=ratioRange)
                     else:
+                        if self.totalErrorHistogram is not None:
+                            mcHistogram = self.totalErrorHistogram
+                            print("INFO: total MC histogram (with errors) given explicitly:", self.totalErrorHistogram)
                         self.drawRatioPlot(dataHistogram, mcHistogram, ratioRange=ratioRange)
 
                 if 'oben' in self.pads:
@@ -1155,7 +1164,10 @@ class NewStackMaker:
 
             # draw MC error
             if len(mcHistogramList) > 0:
-                mcHistogram = NewStackMaker.sumHistograms(histograms=mcHistogramList, outputName='summedMcHistograms')
+                if self.totalErrorHistogram is not None:
+                    mcHistogram = self.totalErrorHistogram
+                else:
+                    mcHistogram = NewStackMaker.sumHistograms(histograms=mcHistogramList, outputName='summedMcHistograms')
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
                 theErrorGraph.SetFillColor(ROOT.kGray+3)
                 theErrorGraph.SetFillStyle(3013)
@@ -1316,4 +1328,7 @@ class NewStackMaker:
                 dataOutputFile.Write()
                 dataOutputFile.Close()
         print("INFO: stack created.")
+
+    def setTotalError(self, h):
+        self.totalErrorHistogram = h.Clone()
 

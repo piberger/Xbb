@@ -34,7 +34,7 @@ class PostfitPlotter(object):
 
         # plot Data/B and (S+B)/B instead of Data/(S+B)
         self.dataOverBackground = self.config.has_option('Fit', 'plotDataOverBackground') and eval(self.config.get('Fit', 'plotDataOverBackground'))
-        self.ratioRange = [0.5, 1.75]
+        self.ratioRange = None 
 
         if self.config.has_section('Fit:'+self.region[0]):
             if self.config.has_option('Fit:'+self.region[0], 'var'):
@@ -106,15 +106,16 @@ class PostfitPlotter(object):
     def getProcesses(self):
         return self.setup
 
-    def getHistogramName(self, process):
+    def getHistogramNames(self, process):
         processName = self.getNameFromDcname(process) 
         
         # use pre-fit signal strength for plotting if blind
         if self.blind and processName in self.setupSignals:
             print("INFO: \x1b[31mBLIND: prefit shapes are plotted for signal!\x1b[0m")
-            histogramName = 'shapes_prefit/{dcRegion}/' + process
+            histogramName = ['shapes_prefit/{dcRegion}/' + process, '{dcRegion}_prefit/' + process]
         else:
-            histogramName = self.directory + '/{dcRegion}/' + process
+            fitType = 'postfit' if 'fit_s' in self.directory else 'prefit'
+            histogramName = [self.directory + '/{dcRegion}/' + process, '{dcRegion}_' + fitType + '/' + process]
 
         print("DEBUG: get shape ", histogramName)
         return histogramName
@@ -137,12 +138,23 @@ class PostfitPlotter(object):
 
     def getShape(self, process):
 
-        histogramNameTemplate = self.getHistogramName(process)
+        histogramNameTemplates = self.getHistogramNames(process)
         histograms = []
         histogramBins = []
         for x in self.dcRegion:
-            print("REGION:", x, histogramNameTemplate.format(dcRegion=x), " FROM ", self.shapesFile)
-            histograms.append(self.shapesFile.Get(histogramNameTemplate.format(dcRegion=x)))
+            found = False
+            for histogramNameTemplate in histogramNameTemplates:
+                print("REGION:", x, histogramNameTemplate.format(dcRegion=x), " FROM ", self.shapesFile)
+                histogram = self.shapesFile.Get(histogramNameTemplate.format(dcRegion=x))
+                print("H:", histogramNameTemplate, histogram)
+                if isinstance(histogram, ROOT.TGraphAsymmErrors) or isinstance(histogram, ROOT.TH1) or isinstance(histogram, ROOT.TH1D) or isinstance(histogram, ROOT.TH1F):
+                    print("->OK")
+                    found = True
+                    break
+            if not found:
+                return None
+
+            histograms.append(histogram)
             region = self.reverseRegionDict[x] 
             bins   = self.getBins(region)
             print("BINS:", bins, type(bins)) 
@@ -293,15 +305,25 @@ class PostfitPlotter(object):
         
         # add DATA
         dataHistogram = self.getShape("data") 
+        print("DEBUG: \x1b[32m data histogram=", dataHistogram, dataHistogram == None, "\x1b[0m")
+        if dataHistogram == None:
+            print("-> data histogram not found, trying alternative names")
+            dataHistogram = self.getShape("data_obs") 
 
         # blind last few bins
         dataIntegral = 0
         try:
-            for i in range(dataHistogram.GetN()):
-                dataHistogram.GetPoint(i, pointX, pointY)
-                dataIntegral += pointY[0]
-                if int(pointX[0]+1) in self.blindBins:
-                    dataHistogram.SetPoint(i, -100, -100)
+            if isinstance(dataHistogram, ROOT.TGraphAsymmErrors) or isinstance(dataHistogram, ROOT.TGraphErrors):
+                for i in range(dataHistogram.GetN()):
+                    dataHistogram.GetPoint(i, pointX, pointY)
+                    dataIntegral += pointY[0]
+                    if int(pointX[0]+1) in self.blindBins:
+                        dataHistogram.SetPoint(i, -100, -100)
+            else:
+                dataIntegral = dataHistogram.Integral()
+                for i in self.blindBins:
+                    dataHistogram.SetBinContent(1+i,0)
+                    dataHistogram.SetBinError(1+i,0)
         except Exception as e:
             print("ERROR: BlindDataHistogram",e)
 
@@ -316,6 +338,13 @@ class PostfitPlotter(object):
                 'histogram': dataHistogram,
                 'group': 'DATA'
             })
+
+        try:
+            totalError = dataHistogram = self.getShape("TotalProcs")
+            if totalError != None:
+                self.stack.setTotalError(totalError)
+        except:
+            pass
 
         # draw
         self.stack.Draw(outputFolder=self.plotPath, prefix='{region}__{var}_'.format(region=self.region[0], var=self.directory), dataOverBackground=self.dataOverBackground, ratioRange=self.ratioRange)
