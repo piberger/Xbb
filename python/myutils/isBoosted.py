@@ -9,12 +9,13 @@ from XbbTools import XbbTools
 
 class isBoosted(AddCollectionsModule):
 
-    def __init__(self, branchName='isBoosted', cutName='all_BOOST', useFlags=False):
+    def __init__(self, branchName='isBoosted', cutName='all_BOOST', useFlags=False, flags=None):
         super(isBoosted, self).__init__()
         self.branchName = branchName
         self.cutName = cutName
         self.version = 4
         self.useFlags = useFlags
+        self.flags    = ['resolvedCR','resolvedSR','boostedCR','boostedSR'] if flags is None else flags
         self.variations = self._variations("isBoosted") 
 
     # returns cut string with variables replaced by their systematic variations
@@ -49,7 +50,6 @@ class isBoosted(AddCollectionsModule):
 
         if self.useFlags:
             # CR/SR flags
-            self.flags    = ['resolvedCR','resolvedSR','boostedCR','boostedSR']
             self.flagCuts = {k: XbbTools.sanitizeExpression(self.config.get('Cuts', k), config=self.config) for k in self.flags} 
             self.systVarFlagCuts = {k:{} for k in self.flags}
 
