@@ -121,6 +121,7 @@ class NewStackMaker:
             self.histogramOptions['weight'] = None
 
         optionNames = {
+                    'ratioRange': 'ratioRange',
                     'treeVar': 'relPath',
                     'rebin': 'rebin',
                     'xAxis': 'xAxis',
@@ -145,9 +146,10 @@ class NewStackMaker:
                     'nBinsX': ['nBinsX', 'nBins'],
                     'nBinsY': ['nBinsY', 'nBins'],
                     'fractions': 'fractions',
+                    'postproc': 'postproc',
                 }
         numericOptions = ['rebin', 'min', 'minX', 'minY', 'maxX', 'maxY', 'nBins', 'nBinsX', 'nBinsY', 'minZ', 'maxZ']
-        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat']
+        evalOptions = ['binList', 'plotEqualSize','fractions','rebinFlat','ratioRange']
         for optionName, configKeys in optionNames.iteritems():
             # use the first available option from the config, first look in region definition, afterwards in plot definition
             configKeysList = configKeys if type(configKeys) == list else [configKeys]
@@ -163,7 +165,7 @@ class NewStackMaker:
             # convert numeric options to float/int
             if optionName in numericOptions and optionName in self.histogramOptions and type(self.histogramOptions[optionName]) == str:
                 self.histogramOptions[optionName] = float(self.histogramOptions[optionName]) if ('.' in self.histogramOptions[optionName] or 'e' in self.histogramOptions[optionName]) else int(self.histogramOptions[optionName])
-      
+
         # rebinning is done in the end, ensure number of bins to start with is large enough
         if self.config.has_section('plotDef:%s'%var) and self.config.has_option('plotDef:%s'%var, 'rebinMethod'):
             if 'binList' in self.histogramOptions:
@@ -183,6 +185,13 @@ class NewStackMaker:
             if evalOption in self.histogramOptions and type(evalOption) == str:
                 self.histogramOptions[evalOption] = eval(self.histogramOptions[evalOption])
 
+        if 'minX' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['minX'] = self.histogramOptions['binList'][0]
+        if 'maxX' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['maxX'] = self.histogramOptions['binList'][-1]
+        if 'nBins' not in self.histogramOptions and 'binList' in self.histogramOptions:
+            self.histogramOptions['nBins'] = len(self.histogramOptions['binList'])-1
+
         # region/variable specific blinding cut
         if self.config.has_option(self.configSection, 'blindCuts'):
             blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
@@ -194,6 +203,7 @@ class NewStackMaker:
 
         self.groups = {}
         self.histograms = []
+        self.totalErrorHistogram = None
         self.legends = {}
         self.plotTexts = {}
         self.collectedObjects = []
@@ -257,6 +267,15 @@ class NewStackMaker:
 
         self.histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = self.histoMaker.getHistogram(cut)
+
+        if self.config.has_option('Plot_general', '__test_normalizePerBinWidth') and eval(self.config.get('Plot_general', '__test_normalizePerBinWidth')):
+            binWidth = [histogramOptions['binList'][i+1]-histogramOptions['binList'][i] for i in range(len(histogramOptions['binList'])-1)]
+            minBinWidth = min(binWidth)
+            print("B:", binWidth, "m:", minBinWidth)
+            for i in range(len(histogramOptions['binList'])-1):
+                sampleHistogram.SetBinContent(i+1,sampleHistogram.GetBinContent(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
+                sampleHistogram.SetBinError(i+1,sampleHistogram.GetBinError(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
+
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
@@ -565,6 +584,14 @@ class NewStackMaker:
                 if not self.log:
                     t0.DrawTextNDC(0.1059, 0.96, "0")
 
+        #post-proc
+        if 'postproc' in self.histogramOptions:
+            try:
+                print("EVAL:", self.histogramOptions['postproc'])
+                exec(self.histogramOptions['postproc'])
+            except Exception as e:
+                print("EXCEPTION during plot post-proc:", e)
+
     def drawSampleLegend(self, groupedHistograms, theErrorGraph, normalize=False):
         if 'oben' in self.pads and self.pads['oben']:
             self.pads['oben'].cd()
@@ -722,6 +749,8 @@ class NewStackMaker:
                 print("INFO: using custom range for ratio plot:", ratioRange)
             else:
                 ratioRange = [0.5,1.75]
+            if 'ratioRange' in self.histogramOptions:
+                ratioRange = self.histogramOptions['ratioRange']
 
         self.is2D = any([isinstance(h['histogram'], ROOT.TH2) for h in self.histograms])
         self.outputFolder = outputFolder
@@ -1116,11 +1145,16 @@ class NewStackMaker:
 
                 else:
                     mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+
+
                     if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
                         mcHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Up')
                         mcHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Down')
                         self.drawRatioPlot(dataHistogram, mcHistogram, mcHistogram_Up=mcHistogram_Up, mcHistogram_Down=mcHistogram_Down, ratioRange=ratioRange)
                     else:
+                        if self.totalErrorHistogram is not None:
+                            mcHistogram = self.totalErrorHistogram
+                            print("INFO: total MC histogram (with errors) given explicitly:", self.totalErrorHistogram)
                         self.drawRatioPlot(dataHistogram, mcHistogram, ratioRange=ratioRange)
 
                 if 'oben' in self.pads:
@@ -1130,7 +1164,10 @@ class NewStackMaker:
 
             # draw MC error
             if len(mcHistogramList) > 0:
-                mcHistogram = NewStackMaker.sumHistograms(histograms=mcHistogramList, outputName='summedMcHistograms')
+                if self.totalErrorHistogram is not None:
+                    mcHistogram = self.totalErrorHistogram
+                else:
+                    mcHistogram = NewStackMaker.sumHistograms(histograms=mcHistogramList, outputName='summedMcHistograms')
                 theErrorGraph = ROOT.TGraphErrors(mcHistogram)
                 theErrorGraph.SetFillColor(ROOT.kGray+3)
                 theErrorGraph.SetFillStyle(3013)
@@ -1291,4 +1328,7 @@ class NewStackMaker:
                 dataOutputFile.Write()
                 dataOutputFile.Close()
         print("INFO: stack created.")
+
+    def setTotalError(self, h):
+        self.totalErrorHistogram = h.Clone()
 

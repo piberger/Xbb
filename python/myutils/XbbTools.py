@@ -6,6 +6,7 @@ import fnmatch
 import importlib
 import ROOT
 import array
+import numpy as np
 
 class XbbTools(object):
 
@@ -223,6 +224,19 @@ class XbbTools(object):
             print("\x1b[31mERROR: plot variable", varName, " could not be resolved!\x1b[0m")
             return varName
 
+    @staticmethod
+    def getPlotVariableBins(varName, config):
+        plotDefSection = 'plotDef:' + XbbTools.resolvePlotVariable(varName, config)
+        if config.has_section(plotDefSection):
+            if config.has_option(plotDefSection, "binList"):
+                return np.array(eval(config.get(plotDefSection, "binList")))
+            else:
+                binDef = {x:eval(config.get(plotDefSection, x)) for x in ['nBins','min','max']}
+                return np.linspace(binDef['min'], binDef['max'], binDef['nBins']+1)
+
+    @staticmethod
+    def uniformBins(nBins, xMin, xMax):
+        return np.linspace(xMin, xMax, nBins+1)
 
 class XbbMvaInputsList(object):
 

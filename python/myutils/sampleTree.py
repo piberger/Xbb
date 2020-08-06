@@ -58,7 +58,7 @@ class SampleTree(object):
             self.requireAllInputTrees = eval(self.config.get('Configuration', 'requireAllInputTrees')) if self.config.has_option('Configuration', 'requireAllInputTrees') else True
         else:
             self.requireAllInputTrees = False
-        self.maxCutStringLength = int(self.config.get('Configuration', 'maxCutStringLength')) if self.config.has_option('Configuration', 'maxCutStringLength') else 5000
+        self.maxCutStringLength = int(self.config.get('Configuration', 'maxCutStringLength')) if self.config and self.config.has_option('Configuration', 'maxCutStringLength') else 5000
 
         self.samples = samples
         self.tree = None
@@ -519,7 +519,14 @@ class SampleTree(object):
     # add a new branch
     # ------------------------------------------------------------------------------
     def addOutputBranch(self, branchName, formula, branchType='f', length=1, arguments=None, leaflist=None, arrayStyle=False):
-        # this is needed to overwrite the branch if it already exists!
+
+        for b in self.newBranches:
+            if b['name'] == branchName:
+                print("DEBUG: existing:", b)
+                print("DEBUG: new:", branchName, formula, branchType)
+                raise Exception("DuplicateBranch")
+
+        # this is needed to overwrite the branch if it already exists in the input file
         self.addBranchToBlacklist(branchName)
 
         # function
