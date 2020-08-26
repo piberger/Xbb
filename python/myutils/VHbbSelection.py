@@ -5,7 +5,7 @@ from BranchTools import AddCollectionsModule
 import array
 import os
 import itertools
-
+from XbbConfig import XbbConfigTools
 from vLeptons import vLeptonSelector
 
 # do jet/lepton selection and skimming
@@ -52,6 +52,7 @@ class VHbbSelection(AddCollectionsModule):
         self.isData = initVars['sample'].isData()
         self.sample = initVars['sample']
         self.config = initVars['config']
+        self.xbbConfig = XbbConfigTools(self.config)
 
         # settings
         # originally Electron_mvaFall17V1Iso_WP80 was used for 2017, which was called Electron_mvaFall17Iso_WP80
@@ -192,8 +193,8 @@ class VHbbSelection(AddCollectionsModule):
             elif "Wlv" in self.channels:
                 self.leptonFlav['EGamma']=3
 
-        self.systematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
-        self.METsystematics = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
+        self.systematics        = self.xbbConfig.getJECuncertainties(step='Preselection') 
+        self.METsystematics     = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
         self.systematicsBoosted = [x for x in self.systematics if 'jerReg' not in x] + ['jms', 'jmr']
 
         self.cutFlow = [0] * 16

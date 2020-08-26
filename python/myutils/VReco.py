@@ -5,6 +5,7 @@ from BranchTools import AddCollectionsModule
 import array
 import os
 import numpy as np
+from XbbConfig import XbbConfigTools
 
 # do jet/lepton selection and skimming
 class VReco(AddCollectionsModule):
@@ -19,11 +20,12 @@ class VReco(AddCollectionsModule):
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
-        self.isData = initVars['sample'].isData()
-        self.sample = initVars['sample']
+        self.isData     = initVars['sample'].isData()
+        self.sample     = initVars['sample']
+        self.config     = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
 
-        self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
-        self.metSystematics = ['unclustEn']
+        self.systematics = self.xbbConfig.getJECuncertainties(step='VReco') + ['unclustEn']
 
         #if self.replaceNominal:
         self.allVariations = ['Nominal']
@@ -32,7 +34,7 @@ class VReco(AddCollectionsModule):
        
         # jet and MET systematics for MC
         if not self.isData:
-            self.allVariations += self.jetSystematics + self.metSystematics
+            self.allVariations += self.systematics 
 
         for syst in self.allVariations:
             self.addVsystematics(syst)

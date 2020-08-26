@@ -7,6 +7,7 @@ import array
 import os
 import math
 import numpy as np
+from XbbConfig import XbbConfigTools
 
 # MET X/Y correction 
 class METXY(AddCollectionsModule):
@@ -17,12 +18,12 @@ class METXY(AddCollectionsModule):
         self.year  = int(year)
         self.quickloadWarningShown = False
         
-        self.systematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','unclustEn']
-
     def customInit(self, initVars):
-        self.sampleTree = initVars['sampleTree']
-        self.sample     = initVars['sample']
-        self.config     = initVars['config']
+        self.sampleTree  = initVars['sampleTree']
+        self.sample      = initVars['sample']
+        self.config      = initVars['config']
+        self.xbbConfig   = XbbConfigTools(self.config)
+        self.systematics = self.xbbConfig.getJECuncertainties(step='METXY') + ['unclustEn']
 
         # load METXYCorr_Met_MetPhi from VHbb namespace
         VHbbNameSpace = self.config.get('VHbbNameSpace', 'library')

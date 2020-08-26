@@ -6,6 +6,7 @@ import math
 from Jet import Jet
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
+from XbbConfig import XbbConfigTools
 
 # propagate JES/JER systematics from jets to higgs candidate dijet pair 
 class HiggsCandidateSystematics(AddCollectionsModule):
@@ -23,9 +24,13 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
 
-        self.jetSystematicsResolved = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+    def customInit(self, initVars):
+        self.sample = initVars['sample']
+        self.config = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
 
-        self.jetSystematics = self.jetSystematicsResolved[:]
+        self.jetSystematicsResolved = self.xbbConfig.getJECuncertainties(step='Higgs')
+        self.jetSystematics         = self.jetSystematicsResolved[:]
 
         # corrected dijet (Higgs candidate) properties
         self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass','pt_noFSR','eta_noFSR','phi_noFSR','mass_noFSR']]
@@ -36,10 +41,6 @@ class HiggsCandidateSystematics(AddCollectionsModule):
             #self.higgsProperties +=['FatJet_msoftdrop_sys']
             # adding mass scale and resolution systematics
             self.rnd = ROOT.TRandom3(12345)
-
-    def customInit(self, initVars):
-        self.sample = initVars['sample']
-        self.config = initVars['config']
 
         self.dataset = self.config.get('General', 'dataset')
         if self.dataset == '2016':
