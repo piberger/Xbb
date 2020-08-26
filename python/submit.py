@@ -1304,9 +1304,6 @@ if opts.task.startswith('runplot'):
         if '*' in opts.regions:
             regions = XbbTools.filterList(defaultRegions, regions)
 
-    if opts.regions and len(opts.regions.strip()) > 0:
-        regions = opts.regions.split(',')
-
     if len(opts.vars.strip()) > 0:
         plotVars = opts.vars.strip().split(',')
     else:
