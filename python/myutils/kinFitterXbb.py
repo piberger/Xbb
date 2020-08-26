@@ -60,7 +60,7 @@ class kinFitterXbb(AddCollectionsModule):
 
     def __init__(self, year, branchName="kinFit", useMZconstraint=True, recoilPtThreshold=20.0, jetIdCut=4, puIdCut=6, hJidx="hJidx"):
         super(kinFitterXbb, self).__init__()
-        self.version = 2
+        self.version = 3
         self.branchName = branchName
         self.useMZconstraint = useMZconstraint
         self.debug = False
@@ -149,6 +149,13 @@ class kinFitterXbb(AddCollectionsModule):
             self.count('_debug_resolved_idx_fallback_nom_for_'+str(syst))
             return getattr(tree, self.hJidx)
 
+    def getInputSystFormatFromOutputSyst(self, syst):
+        if syst.endswith('_Up'):
+            return syst[:-3] + 'Up'
+        elif syst.endswith('_Down'):
+            return syst[:-5] + 'Down'
+        return syst
+
     def processEvent(self, tree):
         if not self.hasBeenProcessed(tree) and self.enabled:
             self.markProcessed(tree)
@@ -191,10 +198,10 @@ class kinFitterXbb(AddCollectionsModule):
                             mass = tree.Jet_mass_nom
                         # vary JEC
                         else:
-                            pt = getattr(tree, 'Jet_pt_' + syst.replace('_','')) 
+                            pt = getattr(tree, 'Jet_pt_' + self.getInputSystFormatFromOutputSyst(syst)) 
                             # propagate JEC to regressed pt
-                            pt_reg = [tree.Jet_PtReg[i] * getattr(tree, 'Jet_pt_' + syst.replace('_',''))[i] / tree.Jet_Pt[i] for i in range(len(tree.Jet_PtReg))]
-                            mass = getattr(tree, 'Jet_mass_' + syst.replace('_',''))
+                            pt_reg = [tree.Jet_PtReg[i] * getattr(tree, 'Jet_pt_' + self.getInputSystFormatFromOutputSyst(syst))[i] / tree.Jet_Pt[i] for i in range(len(tree.Jet_PtReg))]
+                            mass = getattr(tree, 'Jet_mass_' + self.getInputSystFormatFromOutputSyst(syst))
 
                     # nominal
                     else:
