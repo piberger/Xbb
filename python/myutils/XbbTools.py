@@ -219,7 +219,7 @@ class XbbTools(object):
         else:
             for section in config.sections():
                 if section.startswith('plotDef:'):
-                    if config.get(section, 'relPath').strip() == varName:
+                    if config.has_option(section, 'relPath') and config.get(section, 'relPath').strip() == varName:
                         return section.split('plotDef:')[1]
             print("\x1b[31mERROR: plot variable", varName, " could not be resolved!\x1b[0m")
             return varName

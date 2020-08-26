@@ -192,6 +192,22 @@ class XbbConfigTools(object):
     def getPlotVariableSections(self):
         return [x for x in self.config.sections() if x.startswith('plotDef:')]
 
+    def getJECuncertainties(self, step=None):
+        if step is None:
+            configOption = 'JEC'
+        else:
+            configOption = 'JEC_' + step
+        if self.config.has_option('systematics', configOption):
+            systematics = eval(self.config.get('systematics', configOption))
+        elif  self.config.has_option('systematics', 'JEC'):
+            systematics = eval(self.config.get('systematics', 'JEC'))
+        else:
+            # default
+            systematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
+        systematics = list(set(systematics))
+        systematics.sort()
+        return systematics
+
     def setList(self, setOptions):
         # escaping of semicolon
         semicolonEscapeSequence = '##SEMICOLON##'
