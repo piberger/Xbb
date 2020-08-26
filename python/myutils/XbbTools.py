@@ -66,7 +66,16 @@ class XbbTools(object):
     @staticmethod
     def getReplacementRulesList(config, syst):
         replacementRulesDict = eval(config.get('LimitGeneral', 'sys_cut_suffix'))
-        return replacementRulesDict[syst] if isinstance(replacementRulesDict[syst], list) else [replacementRulesDict[syst]]
+        if syst in replacementRulesDict:
+            if isinstance(replacementRulesDict[syst], list):
+                return replacementRulesDict[syst]
+            else:
+                return [replacementRulesDict[syst]]
+        else:
+            if isinstance(replacementRulesDict['default'], list):
+                return replacementRulesDict['default']
+            else:
+                return [replacementRulesDict['default']]
 
     @staticmethod
     def filterSampleList(sampleIdentifiers, samplesList):

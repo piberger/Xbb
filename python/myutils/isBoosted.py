@@ -6,6 +6,7 @@ import os
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 from XbbTools import XbbTools
+from XbbConfig import XbbConfigTools
 
 class isBoosted(AddCollectionsModule):
 
@@ -29,11 +30,13 @@ class isBoosted(AddCollectionsModule):
         self.sample     = initVars['sample']
         self.sampleTree = initVars['sampleTree']
         self.config     = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
 
         self.boostedCut = XbbTools.sanitizeExpression(self.config.get('Cuts', self.cutName), config=self.config)
         self.systVarCuts = {}
 
-        self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
+        #self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
+        self.systematics = self.xbbConfig.getJECuncertainties(step='BoostedFlags') + ['unclustEn']
 
         # Nominal
         self.addIntegerBranch(self.branchName)
