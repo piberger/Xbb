@@ -845,13 +845,10 @@ class SampleTree(object):
         for outputTree in self.outputTrees:
             if 'branches' in outputTree and outputTree['branches']:
                 listOfBranchesToKeep += outputTree['branches']
-                print("listOfBranchesToKeep   branches ",listOfBranchesToKeep)
             if 'cut' in outputTree and outputTree['cut']:
                 listOfBranchesToKeep += BranchList(outputTree['cut']).getListOfBranches()
-                print("listOfBranchesToKeep   cut ",listOfBranchesToKeep)
             for formula in self.formulaDefinitions:
                 listOfBranchesToKeep += BranchList(formula['formula']).getListOfBranches()
-        print("listOfBranchesToKeep   :",listOfBranchesToKeep)
 
         # keep the branches stated in config, (unless they will be recomputed)
         if self.config:
