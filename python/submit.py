@@ -23,6 +23,7 @@ from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
 from myutils.BranchList import BranchList
 from myutils.XbbTools import XbbTools
+from myutils.XbbConfig import XbbConfigTools
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -422,30 +423,7 @@ def waitFor(jobNameList):
 #  all samples but QCD: -S '*,!QCD*'
 # ------------------------------------------------------------------------------
 def filterSampleList(sampleIdentifiers, samplesList):
-    if samplesList and len([x for x in samplesList if x]) > 0:
-        filteredList = []
-        for expr in samplesList:
-            if expr in sampleIdentifiers:
-                filteredList.append(expr)
-            elif '*' in expr and not expr.startswith('!'):
-                for sampleIdentifier in sampleIdentifiers:
-                    if fnmatch.fnmatch(sampleIdentifier, expr):
-                        filteredList.append(sampleIdentifier)
-            elif '*' in expr and expr.startswith('!'):
-                expr = expr[1:]
-                newList = []
-                for x in filteredList:
-                    if not fnmatch.fnmatch(x, expr):
-                        newList.append(x)
-                filteredList = newList
-            elif expr.startswith('!'):
-                expr = expr[1:]
-                filteredList = [x for x in filteredList if x!=expr]
-
-        filteredList = list(set(filteredList))
-        return filteredList
-    else:
-        return sampleIdentifiers
+    return XbbTools.filterSampleList(sampleIdentifiers, samplesList)
 
 # ------------------------------------------------------------------------------
 # STANDARD WORKFLOW SUBMISSION FUNCTION
@@ -839,6 +817,7 @@ if opts.task == 'count':
     print "add the section below to your config before running the 'hadd' step!"
     print "---"
     print "[Hadd]"
+    chunkSizes.sort(key=lambda x: x[0])
     for sampleIdentifier, chunkSize in chunkSizes:
         print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"
@@ -1780,6 +1759,29 @@ if opts.task == 'summary':
     except:
         print "\x1b[31mERROR: 'weightF' missing in section 'Weights'!\x1b[0m"
 
+# check sample status for various steps
+if opts.task == 'samplestatus':
+    xbb               = XbbConfigTools(config)
+    folders           = XbbTools.parseList(opts.folders, separator=',')
+    sampleIdentifiers = xbb.getSampleIdentifiers(samplesList)
+
+    for sampleIdentifier in sampleIdentifiers:
+        status = xbb.formatSampleName(sampleIdentifier, 80, True) + ' '
+
+        for folder in folders:
+            fileNames     = xbb.getFileNames(sampleIdentifier, folder=folder)
+            filesGood     = all(xbb.fs().exists(fileName) and xbb.fs().isValidRootFile(fileName) for fileName in fileNames)
+            anyFileExists = any(xbb.fs().exists(fileName) and xbb.fs().isValidRootFile(fileName) for fileName in fileNames)
+            if len(fileNames) < 1:
+                status += "\x1b[41m\x1b[97m0\x1b[0m"
+            elif filesGood:
+                status += "\x1b[42m\x1b[97m+\x1b[0m"
+            elif anyFileExists:
+                status += "\x1b[43m\x1b[97m/\x1b[0m"
+            else:
+                status += "\x1b[41m\x1b[97m-\x1b[0m"
+        print status
+
 # checks file status for several steps/folders at once
 if opts.task.replace(':','.').split('.')[0] == 'status':
     fileLocator = FileLocator(config=config)
@@ -1825,13 +1827,16 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
    
     # print the full sample name at the end so can resubmit them using -S sample1,sample2
     missing_samples_list = []
+    good_samples_list = []
     completely_empty_samples_list = []
     nFiles = 0
     nFilesDone = 0
     for folder in foldersToCheck:
         folderStatus = fileStatus[folder]
         print "---",folder,"-"*100
-        for sampleIdentifier, sampleStatus in folderStatus.iteritems():
+        sampleStatusList = folderStatus.items()
+        sampleStatusList.sort(key=lambda x: x[0])
+        for sampleIdentifier, sampleStatus in sampleStatusList:
             sampleShort = (sampleIdentifier if len(sampleIdentifier)<maxPrintoutLen else sampleIdentifier[:maxPrintoutLen]).ljust(maxPrintoutLen+1)
             statusBar = ""
             for x,number in sampleStatus:
@@ -1846,6 +1851,8 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
             nSamplesGood = len([x for x,n in sampleStatus if x])
             if nSamplesGood != len(sampleStatus):
                 missing_samples_list.append(sampleIdentifier)
+            elif nSamplesGood > 0:
+                good_samples_list.append(sampleIdentifier)
             if nSamplesGood == 0:
                 completely_empty_samples_list.append(sampleIdentifier)
             if len(sampleStatus) < 1:
@@ -1857,8 +1864,12 @@ if opts.task.replace(':','.').split('.')[0] == 'status':
             nFilesDone += len([x for x,n in sampleStatus if x])
         print "total: %d/%d"%(nFilesDone, nFiles)
     if len(missing_samples_list) > 0:
+        print 'Good samples:',','.join(good_samples_list)
+        print '-----'
         print 'To submit missing sample only, used option -S', ','.join(missing_samples_list)
     if len(completely_empty_samples_list) > 0:
+        print 'Good samples:',','.join(good_samples_list)
+        print '-----'
         print '\nTo submit empty samples, used option -S', ','.join(completely_empty_samples_list)
     if len(failedJobs) > 0:
         print "-"*20

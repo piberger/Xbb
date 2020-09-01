@@ -84,10 +84,21 @@ class XbbTools(object):
             for expr in samplesList:
                 if expr in sampleIdentifiers:
                     filteredList.append(expr)
-                elif '*' in expr:
+                elif '*' in expr and not expr.startswith('!'):
                     for sampleIdentifier in sampleIdentifiers:
                         if fnmatch.fnmatch(sampleIdentifier, expr):
                             filteredList.append(sampleIdentifier)
+                elif '*' in expr and expr.startswith('!'):
+                    expr = expr[1:]
+                    newList = []
+                    for x in filteredList:
+                        if not fnmatch.fnmatch(x, expr):
+                            newList.append(x)
+                    filteredList = newList
+                elif expr.startswith('!'):
+                    expr = expr[1:]
+                    filteredList = [x for x in filteredList if x!=expr]
+
             filteredList = list(set(filteredList))
             return filteredList
         else:

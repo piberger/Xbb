@@ -8,6 +8,7 @@ from itertools import ifilter
 from copytreePSI import filelist
 from FileLocator import FileLocator
 from sample_parser import ParseInfo
+from XbbTools import XbbTools
 
 # helper class to read full config object
 # use:
@@ -48,10 +49,16 @@ class XbbConfigTools(object):
     def __init__(self, config):
         self.config = config
         self.fileLocator = None
+        self.samplesInfo = None
 
     def initFS(self, force=False): 
         if self.fileLocator is None or force:
             self.fileLocator = FileLocator(config=self.config)
+
+    def fs(self):
+        if self.fileLocator is None:
+            self.initFS()
+        return self.fileLocator
 
     def loadNamespaces(self):
         #default
@@ -68,7 +75,20 @@ class XbbConfigTools(object):
     # list of MC sample names
     def getMC(self):
         return eval(self.config.get('Plot_general', 'samples'))
-    
+
+    def getSamplesInfo(self):
+        if self.samplesInfo is None:
+            self.samplesInfo = ParseInfo(config=self.config)
+        return self.samplesInfo
+
+    # processed sample identifiers (may not be actually USED)
+    def getSampleIdentifiers(self, filterList=None):
+        s = self.getSamplesInfo().getSampleIdentifiers()
+        if filterList is not None:
+            s = XbbTools.filterSampleList(s, filterList)
+        s.sort()
+        return s
+
     # list of all sample names (data + mc)
     def getUsedSamples(self):
         return self.getMC() + self.getData()
@@ -80,7 +100,10 @@ class XbbConfigTools(object):
     # get list of file names (e.g. in SYSout folder)
     def getFileNames(self, sampleIdentifier, folder='SYSout'):
         self.initFS()
-        originalFileNames = self.getOriginalFileNames(sampleIdentifier)
+        try:
+            originalFileNames = self.getOriginalFileNames(sampleIdentifier)
+        except:
+            originalFileNames = []
         samplePath = self.config.get('Directories', folder)
         fileNames = ["{path}/{subfolder}/{filename}".format(path=samplePath, subfolder=sampleIdentifier, filename=self.fileLocator.getFilenameAfterPrep(x)) for x in originalFileNames]
         return fileNames
@@ -255,6 +278,15 @@ class XbbConfigTools(object):
                 else:
                     print("\x1b[31mCONFIG: ADD", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m")
                 self.config.set(configSection, configOption, value)
+
+    def formatSampleName(self, sampleIdentifier, maxlen=80, padding=False):
+        if len(sampleIdentifier) > maxlen:
+            s = sampleIdentifier[:maxlen-7] + '...' + sampleIdentifier[-4:]
+        else:
+            s = sampleIdentifier
+        if padding:
+            s = s.ljust(maxlen)
+        return s
 
 class XbbConfigChecker(object):
     def __init__(self, config):
