@@ -15,14 +15,20 @@ class METXY(AddCollectionsModule):
         super(METXY, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.year  = int(year)
-        self.quickloadWarningShown = False
-        
-        self.systematics = ['jer','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','unclustEn']
+        self.quickloadWarningShown = False        
 
     def customInit(self, initVars):
-        self.sampleTree = initVars['sampleTree']
-        self.sample     = initVars['sample']
-        self.config     = initVars['config']
+        self.sampleTree  = initVars['sampleTree']
+        self.sample      = initVars['sample']
+        self.config      = initVars['config']
+        self.systematics = []
+
+        if self.config.has_section('systematics') and self.config.has_option('systematics','JECResolved'):
+            systematics = self.config.get('systematics','JECResolved')
+            self.systematics = eval(systematics)
+        else:    
+            raise Exception("ConfigError: Specify the JECResolved list in [systematics]") 
+        self.METsystematics = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
 
         # load METXYCorr_Met_MetPhi from VHbb namespace
         VHbbNameSpace = self.config.get('VHbbNameSpace', 'library')
@@ -39,7 +45,7 @@ class METXY(AddCollectionsModule):
         if self.sample.isMC():
             self.MET_Pt_syst  = {}
             self.MET_Phi_syst = {}
-            for syst in self.systematics:
+            for syst in self.METsystematics:
                 self.MET_Pt_syst[syst] = {}
                 self.MET_Phi_syst[syst] = {}
                 for Q in self._variations(syst):
@@ -67,7 +73,7 @@ class METXY(AddCollectionsModule):
             self.MET_Phi[0] = MET_Phi_corrected
 
             if self.sample.isMC():
-                for syst in self.systematics:
+                for syst in self.METsystematics:
                     for Q in self._variations(syst):
                         
                         # backup uncorrected branches

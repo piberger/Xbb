@@ -75,7 +75,13 @@ class GetTopMass(AddCollectionsModule):
         # only defined for nano at the moment
 
         if self.propagateJES and self.nano:
-            self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal','unclustEn'] 
+            self.jetSystematics = []
+            if self.config.has_section('systematics') and self.config.has_option('systematics','JECResolved'):
+                systematics = self.config.get('systematics','JECResolved')
+                self.jetSystematics = eval(systematics)
+            else:    
+                raise Exception("ConfigError: Specify the JECResolved list in [systematics]") 
+            self.jetSystematics = self.jetSystematics.append('unclustEn')
 
             if self.addBoostSystematics:
                 self.jetSystematics+= ['jms']

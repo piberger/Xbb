@@ -23,10 +23,6 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.puIdCut = puIdCut
         self.jetIdCut = jetIdCut
 
-        self.jetSystematicsResolved = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
-
-        self.jetSystematics = self.jetSystematicsResolved[:]
-
         # corrected dijet (Higgs candidate) properties
         self.higgsProperties = [self.prefix + '_' + x for x in ['pt','eta', 'phi', 'mass','pt_noFSR','eta_noFSR','phi_noFSR','mass_noFSR']]
 
@@ -40,6 +36,15 @@ class HiggsCandidateSystematics(AddCollectionsModule):
     def customInit(self, initVars):
         self.sample = initVars['sample']
         self.config = initVars['config']
+        self.jetSystematicsResolved = []
+
+        if self.config.has_section('systematics') and self.config.has_option('systematics','JECResolved'):
+            systematics = self.config.get('systematics','JECResolved')
+            self.jetSystematicsResolved = eval(systematics)
+        else:    
+            raise Exception("ConfigError: Specify the JECResolved list in [systematics]") 
+
+        self.jetSystematics = self.jetSystematicsResolved[:]    
 
         self.dataset = self.config.get('General', 'dataset')
         if self.dataset == '2016':
