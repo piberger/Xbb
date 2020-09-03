@@ -38,11 +38,11 @@ class HiggsCandidateSystematics(AddCollectionsModule):
         self.config = initVars['config']
         self.jetSystematicsResolved = []
 
-        if self.config.has_section('systematics') and self.config.has_option('systematics','JECResolved'):
-            systematics = self.config.get('systematics','JECResolved')
+        if self.config.has_section('systematics') and self.config.has_option('systematics','JEC'):
+            systematics = self.config.get('systematics','JEC')
             self.jetSystematicsResolved = eval(systematics)
         else:    
-            raise Exception("ConfigError: Specify the JECResolved list in [systematics]") 
+            raise Exception("ConfigError: Specify the JEC list in [systematics]") 
 
         self.jetSystematics = self.jetSystematicsResolved[:]    
 

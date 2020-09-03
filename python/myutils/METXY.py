@@ -23,11 +23,11 @@ class METXY(AddCollectionsModule):
         self.config      = initVars['config']
         self.systematics = []
 
-        if self.config.has_section('systematics') and self.config.has_option('systematics','JECResolved'):
-            systematics = self.config.get('systematics','JECResolved')
+        if self.config.has_section('systematics') and self.config.has_option('systematics','JEC'):
+            systematics = self.config.get('systematics','JEC')
             self.systematics = eval(systematics)
         else:    
-            raise Exception("ConfigError: Specify the JECResolved list in [systematics]") 
+            raise Exception("ConfigError: Specify the JEC list in [systematics]") 
         self.METsystematics = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
 
         # load METXYCorr_Met_MetPhi from VHbb namespace
