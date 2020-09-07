@@ -22,8 +22,13 @@ class VReco(AddCollectionsModule):
         self.isData = initVars['sample'].isData()
         self.sample = initVars['sample']
 
-        self.jetSystematics = ['jer','jerReg','jesAbsoluteStat','jesAbsoluteScale','jesAbsoluteFlavMap','jesAbsoluteMPFBias','jesFragmentation','jesSinglePionECAL','jesSinglePionHCAL','jesFlavorQCD','jesRelativeJEREC1','jesRelativeJEREC2','jesRelativeJERHF','jesRelativePtBB','jesRelativePtEC1','jesRelativePtEC2','jesRelativePtHF','jesRelativeBal','jesRelativeFSR','jesRelativeStatFSR','jesRelativeStatEC','jesRelativeStatHF','jesPileUpDataMC','jesPileUpPtRef','jesPileUpPtBB','jesPileUpPtEC1','jesPileUpPtEC2','jesPileUpPtHF','jesPileUpMuZero','jesPileUpEnvelope','jesTotal']
-        self.metSystematics = ['unclustEn']
+        self.jetSystematics = []
+        if self.config.has_section('systematics') and self.config.has_option('systematics','JEC'):
+            systematics = self.config.get('systematics','JEC')
+            self.jetSystematics = eval(systematics)
+        else:    
+            raise Exception("ConfigError: Specify the JEC list in [systematics]") 
+        self.metSystematics = ['unclustEn']    
 
         #if self.replaceNominal:
         self.allVariations = ['Nominal']
