@@ -749,6 +749,8 @@ if opts.task == 'count':
     # process all sample identifiers (correspond to folders with ROOT files)
     eventNumberOffsetDict = {}
     chunkSizes = []
+    numOutputTrees = []
+    badSamples = []
     for sampleIdentifier in sampleIdentifiers:
         try:
             sampleFileList = filelist(samplefiles, sampleIdentifier)
@@ -760,20 +762,27 @@ if opts.task == 'count':
         if sampleIdentifier not in eventNumberOffsetDict:
             eventNumberOffsetDict[sampleIdentifier] = {}
 
-        for fileName in sampleFileList:
-            localFileName = fileLocator.getFilenameAfterPrep(fileName)
-            inputFileName = "{path}/{subfolder}/{filename}".format(path=pathIN, subfolder=sampleIdentifier, filename=localFileName)
-            eventNumberOffsetDict[sampleIdentifier][inputFileName] = offset
+        try:
+            for fileName in sampleFileList:
+                localFileName = fileLocator.getFilenameAfterPrep(fileName)
+                inputFileName = "{path}/{subfolder}/{filename}".format(path=pathIN, subfolder=sampleIdentifier, filename=localFileName)
+                eventNumberOffsetDict[sampleIdentifier][inputFileName] = offset
 
-            sampleTree = SampleTree([inputFileName], config=config)
-            nEvents = sampleTree.tree.GetEntries()
-            print fileName, nEvents
-            offset += nEvents
-        numberOfTrees = len(sampleFileList)
-        totalEvents = offset
-        eventsPerTree = totalEvents*1.0/numberOfTrees
-        chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
-        chunkSizes.append([sampleIdentifier, chunkSize])
+                sampleTree = SampleTree([inputFileName], config=config)
+                nEvents = sampleTree.tree.GetEntries()
+                print fileName, nEvents
+                offset += nEvents
+            numberOfTrees = len(sampleFileList)
+            totalEvents = offset
+            eventsPerTree = totalEvents*1.0/numberOfTrees
+            chunkSize = math.ceil(haddTargetNumEvents/eventsPerTree) if eventsPerTree > 0 else 9999
+            chunkSizes.append([sampleIdentifier, chunkSize])
+            numOutputTrees.append([sampleIdentifier, int(numberOfTrees/chunkSize)])
+        except Exception as e:
+            print "\x1b[31mERROR:",e,"\x1b[0m"
+            badSamples.append(sampleIdentifier)
+    for sampleIdentifier, numTrees in numOutputTrees:
+        print "{s}: {c}".format(s=sampleIdentifier, c=int(numTrees))
     print "---"
     print "add the section below to your config before running the 'hadd' step!"
     print "---"
@@ -782,6 +791,8 @@ if opts.task == 'count':
     for sampleIdentifier, chunkSize in chunkSizes:
         print "{s}: {c}".format(s=sampleIdentifier, c=int(chunkSize))
     print "---"
+    if len(badSamples) > 0:
+        print "FAILED for:", ",".join(badSamples)
     countsFileName = opts.tag + 'config/event_counts.dat'
     with open(countsFileName, 'w') as ofile:
         ofile.write('%r'%eventNumberOffsetDict)
