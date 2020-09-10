@@ -94,21 +94,11 @@ class VHbbSelection(AddCollectionsModule):
             self.metFilters.append("Flag_eeBadScFilter")
 
         # main tagger (-> hJidx)
-        self.taggerName = "Jet_btagDeepB"
+        self.taggerName = self.config.get('General','Jet_btag')
 
-        ## alternative jet selections to check (->hJidx_*)
-        self.jetDefinitions = []
-
-        # additional jet definitions for DeepJet
-        if self.year in ["2016","2017", "2018"]:
-            self.jetDefinitions = [
-                    {'taggerName': 'Jet_btagDeepB'},
-                    #{'taggerName': 'Jet_btagDeepFlavB', 'indexName':'DeepFlavB'},
-                    ]
-        else:
-            self.jetDefinitions = [
-                    {'taggerName': 'Jet_btagDeepB'},
-                    ]
+        self.jetDefinitions = [
+                {'taggerName': self.taggerName},
+                ]
 
         self.btagWPs = {
                        "2018": {
@@ -633,7 +623,7 @@ class VHbbSelection(AddCollectionsModule):
                     )
 
                 # -> nominal
-                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut, systList=None)
+                selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut, systList=None)
                 taggerPassed = taggerSelection(selectedJets) 
                 if taggerPassed:
                     self._b("hJidx"+indexName)[0] = selectedJets[0]
@@ -654,7 +644,7 @@ class VHbbSelection(AddCollectionsModule):
                     nSystematics = len(systList)
 
                     # this returns a list of lists of jet indices for all systematic variations
-                    selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, self.taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut,  systList=systList)
+                    selectedJets = self.HighestTaggerValueBJets(tree, j1ptCut, j2ptCut, taggerName, puIdCut=self.puIdCut, jetIdCut=self.jetIdCut, maxJetPtCut=maxJetPtCut,  systList=systList)
 
                     # apply pre-selection on tagger
                     for j in range(nSystematics):
