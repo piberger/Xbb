@@ -427,6 +427,9 @@ class SampleTree(object):
                 # get list of filenames 
                 sampleFileNames = ["{path}/{sample}/{fileName}".format(path=sampleFolder, sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in sampleFileList]  
 
+                if self.debug:
+                    print("DEBUG: file list from .txt file:", sampleFileList, samplefiles, self.sampleIdentifier)
+
             else:
                 samplesMask = self.fileLocator.getLocalFileName(sampleFolder) + '/' + sampleName + '/*.root'
                 redirector = self.fileLocator.getRedirector(sampleFolder)
@@ -439,6 +442,9 @@ class SampleTree(object):
                     raise Exception("FilesMissing")
 
                 sampleFileNames = [self.fileLocator.addRedirector(redirector, x) for x in sampleFileNames]
+
+                if self.debug:
+                    print("DEBUG: file list from glob:", samplesMask)
 
             if self.verbose:
                 print ("INFO: found ", len(sampleFileNames), " files.")
@@ -845,13 +851,10 @@ class SampleTree(object):
         for outputTree in self.outputTrees:
             if 'branches' in outputTree and outputTree['branches']:
                 listOfBranchesToKeep += outputTree['branches']
-                print("listOfBranchesToKeep   branches ",listOfBranchesToKeep)
             if 'cut' in outputTree and outputTree['cut']:
                 listOfBranchesToKeep += BranchList(outputTree['cut']).getListOfBranches()
-                print("listOfBranchesToKeep   cut ",listOfBranchesToKeep)
             for formula in self.formulaDefinitions:
                 listOfBranchesToKeep += BranchList(formula['formula']).getListOfBranches()
-        print("listOfBranchesToKeep   :",listOfBranchesToKeep)
 
         # keep the branches stated in config, (unless they will be recomputed)
         if self.config:

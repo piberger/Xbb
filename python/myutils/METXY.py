@@ -7,6 +7,7 @@ import array
 import os
 import math
 import numpy as np
+from XbbConfig import XbbConfigTools
 
 # MET X/Y correction 
 class METXY(AddCollectionsModule):
@@ -15,19 +16,14 @@ class METXY(AddCollectionsModule):
         super(METXY, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.year  = int(year)
-        self.quickloadWarningShown = False        
+        self.quickloadWarningShown = False
 
     def customInit(self, initVars):
         self.sampleTree  = initVars['sampleTree']
         self.sample      = initVars['sample']
         self.config      = initVars['config']
-        self.systematics = []
-
-        if self.config.has_section('systematics') and self.config.has_option('systematics','JEC'):
-            systematics = self.config.get('systematics','JEC')
-            self.systematics = eval(systematics)
-        else:    
-            raise Exception("ConfigError: Specify the JEC list in [systematics]") 
+        self.xbbConfig   = XbbConfigTools(self.config)
+        self.systematics = self.xbbConfig.getJECuncertainties(step='METXY')
         self.METsystematics = [x for x in self.systematics if 'jerReg' not in x] + ['unclustEn']
 
         # load METXYCorr_Met_MetPhi from VHbb namespace

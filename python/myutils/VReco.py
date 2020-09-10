@@ -5,6 +5,7 @@ from BranchTools import AddCollectionsModule
 import array
 import os
 import numpy as np
+from XbbConfig import XbbConfigTools
 
 # do jet/lepton selection and skimming
 class VReco(AddCollectionsModule):
@@ -19,16 +20,12 @@ class VReco(AddCollectionsModule):
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
-        self.isData = initVars['sample'].isData()
-        self.sample = initVars['sample']
+        self.isData     = initVars['sample'].isData()
+        self.sample     = initVars['sample']
+        self.config     = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
 
-        self.jetSystematics = []
-        if self.config.has_section('systematics') and self.config.has_option('systematics','JEC'):
-            systematics = self.config.get('systematics','JEC')
-            self.jetSystematics = eval(systematics)
-        else:    
-            raise Exception("ConfigError: Specify the JEC list in [systematics]") 
-        self.metSystematics = ['unclustEn']    
+        self.systematics = self.xbbConfig.getJECuncertainties(step='VReco') + ['unclustEn']
 
         #if self.replaceNominal:
         self.allVariations = ['Nominal']
@@ -37,7 +34,7 @@ class VReco(AddCollectionsModule):
        
         # jet and MET systematics for MC
         if not self.isData:
-            self.allVariations += self.jetSystematics + self.metSystematics
+            self.allVariations += self.systematics 
 
         for syst in self.allVariations:
             self.addVsystematics(syst)

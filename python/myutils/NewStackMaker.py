@@ -196,6 +196,7 @@ class NewStackMaker:
         if self.config.has_option(self.configSection, 'blindCuts'):
             blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
             if self.var in blindCuts:
+                self.blind = True
                 self.histogramOptions['blindCut'] = blindCuts[self.var]
                 if '{var}' in self.histogramOptions['blindCut']:
                     self.histogramOptions['blindCut'] = self.histogramOptions['blindCut'].format(var=self.histogramOptions['treeVar'])
