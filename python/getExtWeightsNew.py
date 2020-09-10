@@ -62,6 +62,7 @@ countDict = {}
 for sampleGroup in sampleGroups:
     count = 0
     for sampleIdentifier in sampleGroup:
+        print "\x1b[32m",sampleIdentifier,"\x1b[0m"
         countDict[sampleIdentifier] = {}
 
         samples_matching = [x for x in mcSamples if x.identifier == sampleIdentifier]
@@ -77,6 +78,9 @@ for sampleGroup in sampleGroups:
                     print "duplicate!!", sampleIdentifier, sampleCut, countDict[sampleIdentifier][sampleCut]
                     raise Exception("duplicate")
                 countDict[sampleIdentifier][sampleCut] = sampleCount
+        else:
+            print sampleIdentifier
+            raise Exception("SampleMissing")
 
 # pruning
 for sampleIdentifier,counts in countDict.iteritems():
