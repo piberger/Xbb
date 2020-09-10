@@ -149,23 +149,16 @@ fi
 echo "Parsing files in ${tag}config..."
 echo
 
-# The job submission environment.
-whereToLaunch=$(
-python - << END
-import myutils
-parser = myutils.BetterConfigParser()
-parser.read('${tag}config/paths.ini')
-print parser.get('Configuration', 'whereToLaunch')
-END
-)
-
 # The configuration file names, formatted as arguments to the task scripts.
 config_filenames=( $(
 python - << END
 import myutils
 parser = myutils.BetterConfigParser()
-parser.read('${tag}config/paths.ini')
-print parser.get('Configuration', 'List')
+if '${tag}'.endswith('.ini'):
+    print '${tag}'
+else:
+    parser.read('${tag}config/paths.ini')
+    print parser.get('Configuration', 'List')
 END
 ) )
 
@@ -173,27 +166,21 @@ echo "Configuration Files: ${config_filenames[@]}"
 echo
 
 for (( i=0; i<${#config_filenames[@]}; i++ )); do
-    config_filenames[$i]="--config ${tag}config/${config_filenames[$i]}"
+    if [[ $tag == *".ini" ]]; then
+        config_filenames[$i]="--config ${config_filenames[$i]}"
+    else
+        config_filenames[$i]="--config ${tag}config/${config_filenames[$i]}"
+    fi
 done
 
 # The log file path.
-logpath=$(
-python - << END
-import myutils
-parser = myutils.BetterConfigParser()
-parser.read('${tag}config/paths.ini')
-try:
-  parser.read('${tag}config/volatile.ini')
-except:
-  pass
-print parser.get('Directories', 'logpath')
-END
-)
+logpath=$( ./config_get.py -T ${tag} -V Directories.logpath | tail -n1 )
 
 if [ ! -d $logpath ]; then
     mkdir -p $logpath
 fi
 
+# DEPRECATED
 # The MVA list, only compute for the eval steps!
 if [[ $task = *"eval"* ]]; then
 MVAList=$(

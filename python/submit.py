@@ -23,7 +23,7 @@ from myutils.FileLocator import FileLocator
 from myutils.BatchSystem import *
 from myutils.BranchList import BranchList
 from myutils.XbbTools import XbbTools
-from myutils.XbbConfig import XbbConfigTools
+from myutils.XbbConfig import XbbConfigTools,XbbConfigReader
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -132,13 +132,8 @@ if debugPrintOUts:
 # ------------------------------------------------------------------------------
 # the LIST OF CONFIG FILES is taken from the path config
 # ------------------------------------------------------------------------------
-pathconfig = BetterConfigParser()
-pathconfig.read('%sconfig/paths.ini'%(opts.tag))
 try:
-    _configs = [x for x in pathconfig.get('Configuration', 'List').split(" ") if len(x.strip()) > 0]
-    if 'volatile.ini' in _configs:
-        _configs.remove('volatile.ini')
-    configs = ['%sconfig/'%(opts.tag) + c for c in _configs]
+    config = XbbConfigReader.read(opts.tag)
 except Exception as e:
     print("\x1b[31mERROR:" + str(e) + "\x1b[0m")
     print("\x1b[31mERROR: configuration file not found. Check config-tag specified with -T and presence of '[Configuration] List' in .ini files.\x1b[0m")
@@ -149,12 +144,8 @@ if opts.ftag == '':
     opts.ftag = opts.task.replace(':','').replace('.','')
 
 if debugPrintOUts:
-    print 'configs', configs
+    print 'configs', opts.tag
     print 'opts.ftag', opts.ftag
-
-# read config
-config = BetterConfigParser()
-config.read(configs)
 
 # ------------------------------------------------------------------------------
 # COPY CONFIG files to log output folder
@@ -162,7 +153,7 @@ config.read(configs)
 # ------------------------------------------------------------------------------
 combinedConfigFileName = None
 if configurationNeeded:
-    tagDir = pathconfig.get('Directories', 'tagDir')
+    tagDir = config.get('Directories', 'tagDir')
     if debugPrintOUts:
         print 'tagDir', tagDir
     DirStruct={
@@ -177,107 +168,72 @@ if configurationNeeded:
     if debugPrintOUts:
         print 'DirStruct', DirStruct
 
+    # create output folders
     for keys in ['tagDir', 'ftagdir', 'logpath', 'plotpath', 'limitpath', 'confpath']:
         try:
             os.stat(DirStruct[keys])
         except:
-            os.mkdir(DirStruct[keys])
+            os.makedirs(DirStruct[keys])
+    config.set('Directories', 'plotpath', DirStruct['plotpath'])
+    config.set('Directories', 'logpath', DirStruct['logpath'])
+    config.set('Directories', 'limits', DirStruct['limitpath'])
 
-    # new behavior: write special .ini file, which is not under version control and is always recreated again
-    with open("{tag}config/volatile.ini".format(tag=opts.tag), "w") as outputFile:
-        vConfig = BetterConfigParser()
-        vConfig.add_section('Directories')
-        vConfig.set('Directories', 'plotpath', DirStruct['plotpath'])
-        vConfig.set('Directories', 'logpath', DirStruct['logpath'])
-        vConfig.set('Directories', 'limits', DirStruct['limitpath'])
+    # command line options used to alter config
+    if opts.setOptions:
+        # allow multiple --set options to be passed
+        setOptions = ';'.join(opts.setOptions)
 
-        # replace arbitrary options with --set command line argument:
-        # e.g. --set='Plot_general.var:=<!Plot_general|vars_reduced!>'
-        # this will set var in [Plot_general] to: <!Plot_general|vars_reduced!>
-        # to set multiple options, use ; to separate, e.g. --set='Plot_general.var:=Hmass;Plot_general.saveDataHistograms:=True'
+        # escaping of semicolon
+        setOptions = setOptions.replace('\;', '##SEMICOLON##')
+        prevSection = None
+        for optValue in setOptions.split(";"):
+            optValue = optValue.replace('##SEMICOLON##', ';').strip()
+            syntaxOk = True
+            try:
+                if ':=' in optValue:
+                    opt = optValue.split(':=')[0]
+                    value = optValue.split(':=')[1]
+                elif '=' in optValue:
+                    splitParts = optValue.split('=')
+                    if len(splitParts) > 2:
+                        print "\x1b[31mWARNING: more than one equal sign found in expression, split at the first one! use ':=' to force split at another position!\x1b[0m"
+                    opt = optValue.split('=')[0]
+                    value = '='.join(optValue.split('=')[1:])
+                elif optValue:
+                    opt = optValue.split(':')[0]
+                    value = optValue.split(':')[1]
+            except Exception as e:
+                print "ERROR:",e
+                print "ERROR: syntax error in:", optValue
+                print "ERROR: use ; to separate options and use \; to escape semicolons in case they are inside the value. Use := for assignment."
+                syntaxOk = False
+                raise
 
-        if opts.setOptions:
-            # allow multiple --set options to be passed
-            setOptions = ';'.join(opts.setOptions)
-            
-            # escaping of semicolon
-            setOptions = setOptions.replace('\;', '##SEMICOLON##')
-            prevSection = None
-            for optValue in setOptions.split(";"):
-                optValue = optValue.replace('##SEMICOLON##', ';').strip()
-                syntaxOk = True
-                try:
-                    if ':=' in optValue:
-                        opt = optValue.split(':=')[0]
-                        value = optValue.split(':=')[1]
-                    elif '=' in optValue:
-                        splitParts = optValue.split('=')
-                        if len(splitParts) > 2:
-                            print "\x1b[31mWARNING: more than one equal sign found in expression, split at the first one! use ':=' to force split at another position!\x1b[0m"
-                        opt = optValue.split('=')[0]
-                        value = '='.join(optValue.split('=')[1:])
-                    elif optValue:
-                        opt = optValue.split(':')[0]
-                        value = optValue.split(':')[1]
-                except Exception as e:
-                    print "ERROR:",e
-                    print "ERROR: syntax error in:", optValue
-                    print "ERROR: use ; to separate options and use \; to escape semicolons in case they are inside the value. Use := for assignment."
-                    syntaxOk = False
-                    raise
+            if syntaxOk:
 
-                if syntaxOk:
+                configSection = opt.split('.')[0]
+                configOption  = opt.split('.')[1]
 
-                    configSection = opt.split('.')[0]
-                    configOption  = opt.split('.')[1]
-
-                    if len(configSection.strip()) < 1:
-                        if prevSection is None:
-                            raise Exception("ConfigSetError")
-                        else:
-                            configSection = prevSection
-                    
-                    prevSection = configSection
-                    if not vConfig.has_section(configSection):
-                        vConfig.add_section(configSection)
-                    if config.has_section(configSection) and config.has_option(configSection, configOption):
-                        print "\x1b[31mCONFIG: SET", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
+                if len(configSection.strip()) < 1:
+                    if prevSection is None:
+                        raise Exception("ConfigSetError")
                     else:
-                        print "\x1b[31mCONFIG: ADD", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
-                    vConfig.set(configSection, configOption, value)
+                        configSection = prevSection
 
+                prevSection = configSection
+                newOption = False
+                if not config.has_section(configSection):
+                    config.add_section(configSection)
+                    newOption = True
+                if not config.has_option(configSection, configOption):
+                    newOption = True
 
-        outputFile.write('# this file has been created automatically and will be overwritten by submit.py!\n')
-        vConfig.write(outputFile)
+                if not newOption:
+                    print "\x1b[31mCONFIG: SET", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
+                else:
+                    print "\x1b[31mCONFIG: ADD", "{s}.{o}".format(s=configSection, o=configOption), "=", value, "\x1b[0m"
+                config.set(configSection, configOption, value)
 
-    config.read("{tag}config/volatile.ini".format(tag=opts.tag))
-
-    # old behavior: overwrite paths.ini (will only be done if one of the paths to modify has been found!)
-    pathfile = open('%sconfig/paths.ini'%opts.tag)
-    buffer = pathfile.readlines()
-    pathfile.close()
-    volatilePathsFound = False
-    for line in buffer:
-        if line.startswith('plotpath') or line.startswith('logpath') or line.startswith('limits'):
-            volatilePathsFound = True
-    if volatilePathsFound:
-        os.rename('%sconfig/paths.ini'%opts.tag,'%sconfig/paths.ini.bkp'%opts.tag)
-        pathfile = open('%sconfig/paths.ini'%opts.tag,'w')
-        for line in buffer:
-            if line.startswith('plotpath'):
-                line = 'plotpath: %s\n'%DirStruct['plotpath']
-            elif line.startswith('logpath'):
-                line = 'logpath: %s\n'%DirStruct['logpath']
-            elif line.startswith('limits'):
-                line = 'limits: %s\n'%DirStruct['limitpath']
-            pathfile.write(line)
-        pathfile.close()
-
-    # copy config files
-    for item in configs:
-        # if relative path to other config folder, just take file name
-        destConfigFileName = item.split('/')[-1]
-        shutil.copyfile(item, '%s/%s'%(DirStruct['confpath'], destConfigFileName))
     # combined config
     combinedConfigFileName = '%s/submission_%s.ini'%(DirStruct['confpath'], submitTimestamp)
     if os.path.isfile(combinedConfigFileName):
@@ -377,7 +333,8 @@ else:
 # CREATE DICTIONARY TO BE USED AT JOB SUBMISSION TIME
 #  ------------------------------------------------------------------------------
 repDict = {
-    'en': opts.tag,
+    'en': opts.tag if not opts.tag.endswith('.ini') else 'file',
+    'config': opts.tag,
     'logpath': logPath,
     'job': '',
     'task': opts.task,
@@ -687,13 +644,14 @@ if opts.task == 'hadd':
     inputDir          = opts.input if opts.input else "HADDin"
     outputDir         = opts.output if opts.output else "HADDout"
     inputPath = config.get("Directories", inputDir)
-    outputPath = config.get("Directories", outputDir) 
+    outputPath = config.get("Directories", outputDir)
 
     samplefiles = config.get('Directories', 'samplefiles')
     info = ParseInfo(samples_path=inputPath, config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
-    samplefilesMerged = samplefiles + '/merged_' + opts.tag + '/'
+    configName = config.get('Directories','Dname').split('_')[-1] 
+    samplefilesMerged = samplefiles + '/merged_' + configName + '/'
     fileLocator.makedirs(samplefilesMerged)
 
     # process all sample identifiers (correspond to folders with ROOT files)
@@ -760,9 +718,12 @@ if opts.task == 'hadd':
                     print "\x1b[31mERROR: no good files for this sample available:",sampleIdentifier,"!\x1b[0m"
 
             # write text file for merged files
-            mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
-            with open(mergedFileListFileName, 'w') as mergedFileListFile:
-                mergedFileListFile.write('\n'.join(mergedFileNames))
+            if len(mergedFileNames) > 0:
+                mergedFileListFileName = '{path}/{sample}.{ext}'.format(path=samplefilesMerged, sample=sampleIdentifier, ext='txt')
+                with open(mergedFileListFileName, 'w') as mergedFileListFile:
+                    mergedFileListFile.write('\n'.join(mergedFileNames))
+            else:
+                print "\x1b[31mERROR: merged file list empty! .txt file has not been written!!\x1b[0m"
 
             print "INFO: hadd {sample}: {a} => {b}".format(sample=sampleIdentifier, a=len(sampleFileList), b=len(splitFilesChunks))
             print "INFO:  > {mergedFileListFileName}".format(mergedFileListFileName=mergedFileListFileName)
@@ -1409,7 +1370,7 @@ if opts.task.startswith('cachedc'):
     print "sample identifiers: (", len(sampleIdentifiers), ")"
     for sampleIdentifier in sampleIdentifiers:
         print " >", sampleIdentifier
-        
+
     # check existence of cached files before job submission, otherwise it will be checked at the beginning of the job
     if opts.skipExisting:
         status = {}
@@ -1418,7 +1379,7 @@ if opts.task.startswith('cachedc'):
             status[region] = dcMaker.getCacheStatus(useSampleIdentifiers=sampleIdentifiers)
             print "INFO: done checking files for region\x1b[34m",region, "\x1b[0m(",i, "of", len(regions),")"
         printSamplesStatus(samples=samples, regions=regions, status=status)
-    
+
     # per job parallelization parameter can split regions into several jobs
     if opts.parallel:
         regionChunkSize = int(opts.parallel)
@@ -1426,7 +1387,7 @@ if opts.task.startswith('cachedc'):
     else:
         # default is all at once
         regionChunks = [regions]
-    
+
     printInputOutputInfo(sampleFolder, config.get('Directories', 'tmpSamples'), config=config, opts=opts)
 
     # submit jobs, 1 to n separate jobs per sample
@@ -1453,7 +1414,7 @@ if opts.task.startswith('cachedc'):
         # use same size for all subsamples for now
         splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier == sampleIdentifier])
         splitFilesChunks = SampleTree({
-                'name': sampleIdentifier, 
+                'name': sampleIdentifier,
                 'folder': sampleFolder
             }, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
         print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
@@ -2237,15 +2198,16 @@ batchSystem.submitQueue()
 
 # dump submitted jobs
 if batchSystem.getNJobsSubmitted() > 0 and not opts.resubmit:
-    fileName = 'submissions/' + opts.tag + '_' + submitTimestamp +  '.json' 
+    submissionName = opts.tag if not opts.tag.endswith('.ini') else 'fromFile'
+    fileName = 'submissions/' + submissionName + '_' + submitTimestamp +  '.json'
     try:
         batchSystem.dumpSubmittedJobs(fileName)
         if not os.path.isdir('submissions'):
             os.makedirs('submissions')
-        for copyName in ['last-submission-' + opts.tag + '.json', 'last-submission-' + opts.tag + '_' + opts.task + '.json']:
+        for copyName in ['last-submission-' + submissionName + '.json', 'last-submission-' + submissionName + '_' + opts.task + '.json']:
             shutil.copyfile(fileName, copyName)
     except Exception as e:
         print "ERROR: coudn't dump submitted jobs to json file ", fileName, "!", e
 
 
-    
+

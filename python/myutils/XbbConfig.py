@@ -28,19 +28,26 @@ class XbbConfigReader(object):
             print("DEBUG: read configuration \x1b[35m", configTag, "\x1b[0m")
 
         # paths.ini contains list of config files to use, relative to configDirectory
-        pathconfig = BetterConfigParser.BetterConfigParser()
-        pathconfig.read(configDirectory + '/paths.ini')
-        configFiles = [x.strip() for x in pathconfig.get('Configuration', 'List').split(' ') if x.strip() != 'volatile.ini']
+        if configTag.endswith('.ini'):
+            config = BetterConfigParser.BetterConfigParser()
+            config.read(configTag)
+            config.set('Configuration','__temporary_config', "{tag}.volatile.ini".format(tag=configTag))
+        else:
+            pathconfig = BetterConfigParser.BetterConfigParser()
+            pathconfig.read(configDirectory + '/paths.ini')
+            configFiles = [x.strip() for x in pathconfig.get('Configuration', 'List').split(' ') if x.strip() != 'volatile.ini']
 
-        # read actual config
-        config = BetterConfigParser.BetterConfigParser()
-        for configFile in configFiles:
-            if debug:
-                print("DEBUG: --> read configFile:", configFile)
-            config.read(configDirectory + configFile)
+            # read actual config
+            config = BetterConfigParser.BetterConfigParser()
+            for configFile in configFiles:
+                if debug:
+                    print("DEBUG: --> read configFile:", configFile)
+                config.read(configDirectory + configFile)
+            config.set('Configuration','__temporary_config', "{tag}config/volatile.ini".format(tag=configTag))
         if debug:
             print('DEBUG: \x1b[35m read', len(config.sections()), 'sections\x1b[0m')
-        config.set('Configuration', '__self', configTag)
+        if not config.has_option('configuration','__self'):
+            config.set('Configuration', '__self', configTag)
 
         return config
 
