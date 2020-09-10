@@ -5,6 +5,7 @@ import numpy as np
 from Jet import Jet
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
+from XbbConfig import XbbConfigTools
 
 from JMEres import JMEres
 
@@ -60,7 +61,7 @@ class kinFitterXbb(AddCollectionsModule):
 
     def __init__(self, year, branchName="kinFit", useMZconstraint=True, recoilPtThreshold=20.0, jetIdCut=4, puIdCut=6, hJidx="hJidx"):
         super(kinFitterXbb, self).__init__()
-        self.version = 3
+        self.version = 4
         self.branchName = branchName
         self.useMZconstraint = useMZconstraint
         self.debug = False
@@ -102,9 +103,11 @@ class kinFitterXbb(AddCollectionsModule):
     def customInit(self, initVars):
         self.sample = initVars['sample']
         self.config = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
         if self.systematics is None:
-            if self.config.has_section('KinematicFit') and self.config.has_option('KinematicFit','systematics') and not self.sample.isData():
-                self.systematics = [(x if x != 'Nominal' else None) for x in self.config.get('KinematicFit','systematics').strip().split(' ')]
+            if not self.sample.isData():
+                jetSystematics= self.xbbConfig.getJECuncertainties(step='KinFit')
+                self.systematics = [None] + [x+'_Up' for x in jetSystematics] + [x+'_Down' for x in jetSystematics] 
             else:
                 self.systematics = [None]
         print("INFO: computing the fit for", len(self.systematics), " variations.")
@@ -145,6 +148,7 @@ class kinFitterXbb(AddCollectionsModule):
             self.count('_debug_resolved_idx_syst_exists')
             return getattr(tree, indexNameSyst)
         else:
+            print("\x1b[31mDOES NOT HAVE INDEX:", indexNameSyst,"\x1b[0m")
             self.count('_debug_resolved_idx_fallback_nom')
             self.count('_debug_resolved_idx_fallback_nom_for_'+str(syst))
             return getattr(tree, self.hJidx)
@@ -170,17 +174,16 @@ class kinFitterXbb(AddCollectionsModule):
                 if not self._isnominal(syst):
                     if syst.endswith('Up'):
                         variation = 'Up'
-                        systBase  = syst[:-2]
+                        systBase  = syst[:-2].strip('_')
                     elif syst.endswith('Down'):
                         variation = 'Down'
-                        systBase  = syst[:-4]
+                        systBase  = syst[:-4].strip('_')
                     else:
                         variation = None
                         systBase  = syst
                 else:
                     variation = None
                     systBase  = syst
-
 
                 hJidx = self.getResolvedJetIndicesFromTree(tree, systBase, variation)
 
