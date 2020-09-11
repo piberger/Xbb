@@ -6,15 +6,17 @@ import os
 from BranchTools import Collection
 from BranchTools import AddCollectionsModule
 from XbbTools import XbbTools
+from XbbConfig import XbbConfigTools
 
 class isBoosted(AddCollectionsModule):
 
-    def __init__(self, branchName='isBoosted', cutName='all_BOOST', useFlags=False):
+    def __init__(self, branchName='isBoosted', cutName='all_BOOST', useFlags=False, flags=None):
         super(isBoosted, self).__init__()
         self.branchName = branchName
         self.cutName = cutName
         self.version = 4
         self.useFlags = useFlags
+        self.flags    = ['resolvedCR','resolvedSR','boostedCR','boostedSR'] if flags is None else flags
         self.variations = self._variations("isBoosted") 
 
     # returns cut string with variables replaced by their systematic variations
@@ -28,11 +30,13 @@ class isBoosted(AddCollectionsModule):
         self.sample     = initVars['sample']
         self.sampleTree = initVars['sampleTree']
         self.config     = initVars['config']
+        self.xbbConfig  = XbbConfigTools(self.config)
 
         self.boostedCut = XbbTools.sanitizeExpression(self.config.get('Cuts', self.cutName), config=self.config)
         self.systVarCuts = {}
 
-        self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
+        #self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
+        self.systematics = self.xbbConfig.getJECuncertainties(step='BoostedFlags') + ['unclustEn']
 
         # Nominal
         self.addIntegerBranch(self.branchName)
@@ -49,7 +53,6 @@ class isBoosted(AddCollectionsModule):
 
         if self.useFlags:
             # CR/SR flags
-            self.flags    = ['resolvedCR','resolvedSR','boostedCR','boostedSR']
             self.flagCuts = {k: XbbTools.sanitizeExpression(self.config.get('Cuts', k), config=self.config) for k in self.flags} 
             self.systVarFlagCuts = {k:{} for k in self.flags}
 

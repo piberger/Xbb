@@ -366,7 +366,7 @@ class SampleTreesToNumpyConverter(object):
             success = True
         except Exception as e:
             print("ERROR: writing HDF5 file failed.", e)
-        
+
         eventNumberStat.sort(key = lambda x: x[0].identifier)
         print("MC stats:")
         for es in eventNumberStat:
@@ -382,6 +382,15 @@ class SampleTreesToNumpyConverter(object):
         print("written to:\x1b[34m", outputFileName, " \x1b[0m")
 
     def saveAsHDF5(self, outputFileName):
+        # check arrays
+        for k in ['train', 'test', 'data']:
+            if k in self.data:
+                lens = len(list(set([len(self.data[k][x]) for x in self.data[k].keys()])))
+                if lens != 1:
+                    print("ERROR: array length mismatch:", k, [[x,len(self.data[k][x])] for x in self.data[k].keys()])
+                    raise Exception("LengthMismatch")
+
+        # save to file
         f = h5py.File(outputFileName, 'w')
         for k in ['meta', 'category_labels']:
             f.attrs[k] = json.dumps(self.data[k].items())
