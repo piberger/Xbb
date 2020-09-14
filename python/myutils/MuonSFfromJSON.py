@@ -170,10 +170,10 @@ class MuonSFfromJSON(AddCollectionsModule):
                     weight_Iso[i] = self.getSf("isoSf", lep_eta, lep_pt, lep_n)
                 weight_SF[i] = weight_trigg[i] * weight_Id[i] * weight_Iso[i]
 
-            print "trigg", weight_trigg
-            print "Id", weight_Id
-            print "Iso", weight_Iso
-            print "SF", weight_SF
+            #print "trigg", weight_trigg
+            #print "Id", weight_Id
+            #print "Iso", weight_Iso
+            #print "SF", weight_SF
 
         #This is when an event has 0 or more than 2 lepton
         else:

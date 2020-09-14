@@ -25,6 +25,11 @@ class JetSmearer(AddCollectionsModule):
                  '2017': [1.017, 0.021, 0.058, 0.066],
                  '2018': [0.985, 0.019, 0.080, 0.073],
                  }
+        self.smear_params = {
+                 '2016': [1.013, 0.014, 0.029, 0.047], #updated numbers for v7 nanoAOD production
+                 '2017': [1.017, 0.021, 0.058, 0.066],
+                 '2018': [0.985, 0.019, 0.080, 0.073],
+                 }
         if self.year not in self.smear_params:
             print("ERROR: smearing for year", self.year, " not available!")
             raise Exception("SmearingError")
