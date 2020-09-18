@@ -24,6 +24,11 @@ class mSD_scale_res_shift(AddCollectionsModule):
 
         self.scale, self.scale_err, self.res, self.res_err = self.scale_params[self.year]
 
+        self.scale_up   = self.scale + self.scale_err 
+        self.scale_down = self.scale - self.scale_err 
+        self.res_up     = self.res + self.res_err 
+        self.res_down   = self.res - self.res_err 
+
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
         self.isData = initVars['sample'].isData()
@@ -69,14 +74,9 @@ class mSD_scale_res_shift(AddCollectionsModule):
 
             for i in range(nJet):
 
-                    scale_up   = self.scale + self.scale_err 
-                    scale_down = self.scale - self.scale_err 
-                    res_up     = self.res + self.res_err 
-                    res_down   = self.res - self.res_err 
-
                     self.FatJet_Msoftdrop[i]         = self.FatJet_Msoftdrop[i]*self.scale
                     self.FatJet_msoftdrop_nom[i]     = self.FatJet_msoftdrop_nom[i]*self.scale
-                    self.FatJet_msoftdrop_jmrUp[i]   = self.FatJet_msoftdrop_jmrUp[i]*self.scale
-                    self.FatJet_msoftdrop_jmrDown[i] = self.FatJet_msoftdrop_jmrDown[i]*self.scale
-                    self.FatJet_msoftdrop_jmsUp[i]   = self.FatJet_msoftdrop_jmsUp[i]*scale_up 
-                    self.FatJet_msoftdrop_jmsDown[i] = self.FatJet_msoftdrop_jmsDown[i]*scale_down
+                    self.FatJet_msoftdrop_jmrUp[i]   = self.FatJet_msoftdrop_jmrUp[i]*self.res
+                    self.FatJet_msoftdrop_jmrDown[i] = self.FatJet_msoftdrop_jmrDown[i]*self.res
+                    self.FatJet_msoftdrop_jmsUp[i]   = self.FatJet_msoftdrop_nom[i]*self.scale_up 
+                    self.FatJet_msoftdrop_jmsDown[i] = self.FatJet_msoftdrop_nom[i]*self.scale_down
