@@ -19,6 +19,8 @@ class mSD_scale_res_shift(AddCollectionsModule):
         self.scale_params = {
                  '2018': [0.9, 0.01, 0.9, 0.01],
                  }
+        if self.year not in self.scale_params.keys():
+            raise Exception('Please specify the year correspoding to the correction!')
 
         self.scale, self.scale_err, self.res, self.res_err = self.scale_params[self.year]
 
