@@ -31,6 +31,7 @@ class JetSmearer(AddCollectionsModule):
                  '2017': [1.017, 0.021, 0.058, 0.066],
                  '2018': [0.985, 0.019, 0.080, 0.073],
                  }
+        self.applyToNtupleVersions = ['V13']
         if self.year not in self.smear_params:
             print("ERROR: smearing for year", self.year, " not available!")
             raise Exception("SmearingError")
@@ -42,8 +43,16 @@ class JetSmearer(AddCollectionsModule):
         self.sampleTree = initVars['sampleTree']
         self.isData = initVars['sample'].isData()
         self.sample = initVars['sample']
+        self.config = initVars['config']
 
-        if self.sample.isMC():
+        if self.config.get('General','nTupleVersion') in self.applyToNtupleVersions:
+            self.active = True
+            print("INFO: regressed jet resolution correction is active!")
+        else:
+            self.active = False
+            print("INFO: regressed jet resolution correction is NOT active!")
+
+        if self.sample.isMC() and self.active:
             # resolutions used in post-processor smearing
             #self.unsmearResNom  = 1.1
             #self.unsmearResUp   = 1.2
@@ -63,7 +72,7 @@ class JetSmearer(AddCollectionsModule):
                 self.addVectorBranch("Jet_PtRegOldDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldDown[nJet]/F")
 
     def processEvent(self, tree):
-        if not self.hasBeenProcessed(tree) and self.sample.isMC():
+        if self.active and not self.hasBeenProcessed(tree) and self.sample.isMC():
             self.markProcessed(tree)
             
             nJet = tree.nJet

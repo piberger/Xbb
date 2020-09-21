@@ -13,7 +13,7 @@ class DoubleBTagWeightsFromCSV(AddCollectionsModule):
 
     def __init__(self, year, branchName="bTagWeightDoubleB", fileName="data/btag/deepak8v2_bbvslight.csv"):
         super(DoubleBTagWeightsFromCSV, self).__init__()
-        self.version    = 3
+        self.version    = 4
         self.year       = year
         self.branchName = branchName
         self.fileName   = fileName
@@ -23,8 +23,10 @@ class DoubleBTagWeightsFromCSV(AddCollectionsModule):
         self.jetPtName  = "FatJet_Pt"
         self.taggerName = "FatJet_deepTagMD_bbvsLight"
 
-        self.applyToSamples         = ['DYJets*','ZJets*','WJets*','DYBJets*','ZBJets*','WBJets*','ZH*','WH*','WplusH*','WminusH*','ZZ*','WZ*','WW*']
-        self.applyToHeavyFlavorOnly = ['DYJets*','ZJets*','WJets*','DYBJets*','ZBJets*','WBJets*','ZZ*','WZ*','WW*'] 
+        #self.applyToSamples         = ['DYJets*','ZJets*','WJets*','DYBJets*','ZBJets*','WBJets*','*ZH*','WH*','WplusH*','WminusH*','ZZ*','WZ*','WW*']
+        #self.applyToHeavyFlavorOnly = ['DYJets*','ZJets*','WJets*','DYBJets*','ZBJets*','WBJets*','ZZ*','WZ*','WW*'] 
+        self.applyToSamples         = ['*ZH*','WH*','WplusH*','WminusH*','ZZ*','WZ*','WW*']
+        self.applyToHeavyFlavorOnly = []
 
         self.isHeavyFlavorProcess = "(nGenBpt25eta2p6>0)" 
 

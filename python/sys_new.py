@@ -300,3 +300,5 @@ if opts.config == "":
 xr = XbbRun(opts)
 xr.run()
 
+print "INFO: max memory used (MB): %1.1f"%(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0)
+
