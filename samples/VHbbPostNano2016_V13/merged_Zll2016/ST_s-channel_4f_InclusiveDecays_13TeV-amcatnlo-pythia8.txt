@@ -1,0 +1,1 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8//624e5c84e387cdf26d69b11c239e29f2226d61a897fd0267033cfbfc/000000_000000/0000/tree_0.root

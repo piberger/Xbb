@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_tW_top_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1//6a62ecc116e11220caeef2c93ddbd4c034bf2fc7d774a77978f30c2a/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_tW_top_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1//3067223af5635f406059a9b08edfe032ed9ff9b5801c4bc998b811f7/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_tW_top_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1//46f02ef12c22e852de75c73d629f5fe87f5bd4085cb36bd78fbd36cc/000000_000000/0000/tree_2.root
