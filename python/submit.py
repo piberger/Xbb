@@ -72,6 +72,7 @@ parser.add_option("-T", "--tag", dest="tag", default="default",
                       help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--resubmitReplaceRules", dest="resubmitReplaceRules", default="")
 parser.add_option("--different-node", dest="different_node", action="store_true", default=False, help="with --resubmit option: resubmits the job to a different node")
 parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
                       help="unblind")
@@ -673,6 +674,7 @@ if opts.task == 'hadd':
             splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
             mergedFileNames = []
+            print "INFO:hadd \x1b[32m",sampleIdentifier," from ", len(sampleFileList), " to ", len(splitFilesChunks),"\x1b[0m"
             for i, splitFilesChunk in enumerate(splitFilesChunks):
 
                 # only give good files to hadd
@@ -917,8 +919,9 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
                 # skip, if all output files exist
                 skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
                 # skip, if all input files do not exist/are broken
-                #allInputFilesMissing = False
-                allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
+                allInputFilesMissing = False
+                if not skipChunk:
+                    allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
             else:
                 skipChunk = False
                 allInputFilesMissing = False
@@ -1066,9 +1069,13 @@ if opts.task.startswith('cachetraining'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier==sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
-        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
-        
+        try:
+            splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+            print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        except Exception as e:
+            splitFilesChunks = []
+            print "\x1b[31mEXCEPTION:",e," => this sample will be skipped!\x1b[0m"
+
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
 
@@ -2112,7 +2119,13 @@ if opts.task.startswith('submissions'):
             for job in lastSubmission:
                 if job['status'] in [-1, 10, 11, 12]:
                     # resubmit
-                    batchSystem.resubmit(job)
+                    if len(opts.resubmitReplaceRules) > 0:
+                        for resubmitReplaceRule in opts.resubmitReplaceRules.split(';'):
+                            job['submitCommand'] = job['submitCommand'].replace(resubmitReplaceRule.split('>')[0], resubmitReplaceRule.split('>')[1])
+                    try:
+                        batchSystem.resubmit(job)
+                    except Exception as e:
+                        print "ERROR: ",e
                     nResubmitted += 1
                     nResubmittedPerFile += 1
                     job['status'] = 100
