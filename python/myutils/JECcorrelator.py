@@ -9,13 +9,6 @@ import math
 import numpy as np
 from XbbConfig import XbbConfigTools
 import time
-from XbbConfig import XbbConfigReader, XbbConfigTools
-from sample_parser import ParseInfo
-from BranchList import BranchList
-from FileLocator import FileLocator
-from ROOT import TCanvas, TFile, TProfile, TNtuple, TH1F, TH2F
-from ROOT import gROOT, gBenchmark, gRandom, gSystem, Double
-from sampleTree import SampleTree
 
 # correlates the JECs according to new JEC correlation scheme (V11 -> V13) 
 class JECcorrelator(AddCollectionsModule):
