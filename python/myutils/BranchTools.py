@@ -298,11 +298,11 @@ class AddCollectionsModule(object):
     def _variations(self, syst=None):
         return ['Up','Down'] if not self._isnominal(syst) else [None]
 
-    def _v(self, n, syst=None, UD=None):
+    def _v(self, n, syst=None, UD=None, separator="_"):
         if self._isnominal(syst): 
             return n
         else:
-            return n + "_{syst}_{UD}".format(syst=syst, UD=UD)
+            return n + "_{syst}".format(syst=syst)+separator+"{UD}".format(UD=UD)
 
     def fillVectorBranch(self, event, arguments=None, destinationArray=None):
         size = 1
