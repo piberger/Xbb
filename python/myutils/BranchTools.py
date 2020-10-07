@@ -222,6 +222,13 @@ class AddCollectionsModule(object):
         self.collections = {}
         self.xbbStats = {}
 
+    def customInit(self, initVars):
+        for k,v in initVars.items():
+            setattr(self, k, v)
+
+    def _r(self, branchName):
+        return self.sampleTree._r(branchName)
+
     def count(self, quantity, increment=1.0):
         if quantity not in self.xbbStats:
             self.xbbStats[quantity] = 0 if type(increment) == int else 0.0

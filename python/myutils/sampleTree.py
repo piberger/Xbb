@@ -121,6 +121,7 @@ class SampleTree(object):
 
         # e.g. for additional branches to be added
         self.newBranches = []
+        self.newBranchesDict = {}
 
         # check existence of sample .txt file which contains list of .root files
         self.sampleTextFileName = ''
@@ -322,6 +323,38 @@ class SampleTree(object):
                 self.tree = None
         except Exception as e:
             print("EXCEPTION: (destructor)", e)
+
+    # this function tries to read first from outputs of other modules
+    # if no module produced that output yet, read from existing input branches
+    def _r(self, branchName):
+        if branchName in self.newBranchesDict:
+            branch = self.newBranchesDict[branchName]
+
+            # branch defined by python callable object
+            if 'function' in branch:
+                # branch is integer/float => return it directly
+                if branch['length'] == 1 and not 'arrayStyle' in branch:
+                    if 'arguments' in branch:
+                        return branch['function'](self.tree, arguments=branch['arguments'])
+                    else:
+                        return branch['function'](self.tree)
+                # branch is array => return pointer
+                else:
+                    tmpBuffer      = array.array(branch['type'], [0]*branch['length'])
+                    branchFucntion = branch['function'](self.tree, arguments=branch['arguments'], destinationArray=tmpBuffer)  
+                    return tmpBuffer
+            # branch defined by TTreeFormula
+            elif 'formula' in branch:
+                if branch['length'] == 1 and not 'arrayStyle' in branch:
+                    return self.evaluate(branch['formula'])
+                else:
+                    tmpBuffer      = array.array(branch['type'], [0]*branch['length'])
+                    self.evaluateArray(branch['formula'], destinationArray=tmpBuffer)
+                    return tmpBuffer
+            else:
+                return getattr(self.tree, branchName)
+        else:
+            return getattr(self.tree, branchName)
 
     def getFriendTreeFileNames(self, directory):
         # get list of files in this chain and make list of friend file names
@@ -549,7 +582,12 @@ class SampleTree(object):
             newBranch['leaflist'] = leaflist
         if arrayStyle:
             newBranch['arrayStyle'] = True
+        if branchName in self.newBranchesDict:
+            print("\x1b[31mERROR: tried to add a duplicate branch:", branchName, "\x1b[0m")
+            print("INFO: branch = ", newBranch)
+            raise Exception("DuplicateBranch")
         self.newBranches.append(newBranch)
+        self.newBranchesDict[branchName] = newBranch
 
     # ------------------------------------------------------------------------------
     # pass a list of dictionaries of branches to add
@@ -1033,7 +1071,6 @@ class SampleTree(object):
                     passedCut = self.evaluateCutDictRecursive(outputTree['cutSequence'])
                 else:
                     raise Exception("InvalidCutSequenceMode")
-                
 
                 # fill event if it passed the selection
                 if passedCut:
