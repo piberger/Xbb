@@ -45,6 +45,7 @@ class BatchSystemSLURM(BatchSystem):
                         'is_deleted': False, 
                         'is_running': lineParts[headerParts.index('STATE')].strip() == 'RUNNING', 
                         'is_pending': lineParts[headerParts.index('STATE')].strip() == 'PENDING', 
+                        'is_waiting_for_dependency': lineParts[headerParts.index('STATE')].strip() == 'PENDING' and "(Dependency)" in lineParts[headerParts.index('NODELIST(REASON)')],
                         }
                 result.append(jobDict)
         return result
@@ -100,7 +101,7 @@ class BatchSystemSLURM(BatchSystem):
         runscript = self.getRunScriptCommand(repDict)
         logPaths = self.getLogPaths(repDict)
 
-        memoryLimit = '6000M'
+        memoryLimit = '3000M'
         partitionAuto = None
         if 'queue' in repDict:
             if repDict['queue'] == 'all.q':
@@ -127,6 +128,9 @@ class BatchSystemSLURM(BatchSystem):
         if partitionAuto is not None and "--partition" not in extraOptions:
             extraOptions += " --partition=%s "%partitionAuto
 
+        if 'dependency' in repDict:
+            extraOptions += " --dependency=afterany:{jobId} ".format(jobId=repDict['dependency'])
+
         command = self.submitScriptTemplate.format(jobName=repDict['name'], memory=memoryLimit, time=timeLimit, runscript=runscript, output=logPaths['out'], extraOptions=extraOptions)
 
         if self.submissionDelay > 0:
@@ -140,3 +144,6 @@ class BatchSystemSLURM(BatchSystem):
         command = self.cancelJobTemplate.format(jobId=jobId)
         commandOutput = self.runShell([command])
         return commandOutput is not None and 'has deleted job' in commandOutput
+    
+    def supportsDependencies(self):
+        return True 

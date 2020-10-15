@@ -29,7 +29,6 @@ class JECcorrelator(AddCollectionsModule):
         self.quickloadWarningShown = False
 
         self.year = year if type(year) == str else str(year)
-
         self.callbacks={}
         self.callbacks['event']=self.eventCheck
 
@@ -173,10 +172,6 @@ class JECcorrelator(AddCollectionsModule):
             sum_1 = nom+np.sqrt(squared_sum_1)
             sum_2 = nom-np.sqrt(squared_sum_2)
         return self.maxmin(Q, sum_1, sum_2)
-            #if Q == "Up":
-            #    return nom+np.sqrt(squared_sum)
-            #if Q == "Down":
-            #    return nom-np.sqrt(squared_sum)
 
     def METPhicorrelator(self,syst,Q,var,attr):
 
@@ -368,7 +363,6 @@ class JECcorrelator(AddCollectionsModule):
                      
             true_attr = copy.deepcopy(attr)         
                         
-
             for syst in self.JEC_reduced:
                 for Q in self._variations(syst):
                    

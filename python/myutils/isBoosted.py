@@ -36,7 +36,7 @@ class isBoosted(AddCollectionsModule):
         self.systVarCuts = {}
 
         #self.systematics = sorted(list(set(sum([eval(self.config.get('LimitGeneral', x)) for x in ['sys_cr', 'sys_BDT', 'sys_Mjj']], []))))
-        self.systematics = self.xbbConfig.getJECuncertainties(step='BoostedFlags') + ['unclustEn']
+        self.systematics = self.xbbConfig.getJECuncertainties(step='BoostedFlags') + ['jms','jmr','unclustEn']
 
         # Nominal
         self.addIntegerBranch(self.branchName)

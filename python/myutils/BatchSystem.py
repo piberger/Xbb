@@ -21,7 +21,10 @@ class BatchJob(object):
 
     def toDict(self):
         return self.data
-
+    
+    def jobID(self):
+        return self.data['id'] if 'id' in self.data else -1
+    
 # batch system base class / factory
 class BatchSystem(object):
     # if command returns 0, batch system is installed
@@ -211,4 +214,6 @@ class BatchSystem(object):
     def cancelJob(self, job):
         print("WARNING: cancel job not implemented for this batch system!")
 
+    def supportsDependencies(self):
+        return False
 

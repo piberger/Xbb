@@ -72,6 +72,7 @@ parser.add_option("-T", "--tag", dest="tag", default="default",
                       help="Tag to run the analysis with, example '8TeV' uses 8TeVconfig to run the analysis")
 parser.add_option("-u","--samplesInfo",dest="samplesInfo", default="", help="path to directory containing the sample .txt files with the sample lists")
 parser.add_option("-U", "--resubmit", dest="resubmit", action="store_true", default=False, help="resubmit failed jobs")
+parser.add_option("--resubmitReplaceRules", dest="resubmitReplaceRules", default="")
 parser.add_option("--different-node", dest="different_node", action="store_true", default=False, help="with --resubmit option: resubmits the job to a different node")
 parser.add_option("--unblind", dest="unblind", action="store_true", default=False,
                       help="unblind")
@@ -386,7 +387,7 @@ def filterSampleList(sampleIdentifiers, samplesList):
 # STANDARD WORKFLOW SUBMISSION FUNCTION
 # ------------------------------------------------------------------------------
 def submit(job, repDict):
-    batchSystem.submit(job, repDict)
+    return batchSystem.submit(job, repDict)
 
 # ------------------------------------------------------------------------------
 # status 
@@ -673,6 +674,7 @@ if opts.task == 'hadd':
             splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
 
             mergedFileNames = []
+            print "INFO:hadd \x1b[32m",sampleIdentifier," from ", len(sampleFileList), " to ", len(splitFilesChunks),"\x1b[0m"
             for i, splitFilesChunk in enumerate(splitFilesChunks):
 
                 # only give good files to hadd
@@ -803,172 +805,210 @@ if opts.task == 'count':
 # -----------------------------------------------------------------------------
 if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
 
+    # check for empty list of collections to add
+    addCollections = opts.addCollections
+    if not addCollections or len(addCollections.strip())<1:
+        print "\x1b[31mERROR: No collections specified, to force adding nothing, use \x1b[32m--modules None\x1b[31m!\x1b[0m"
+        raise Exception('NoModulesSpecified')
+
+    isChained = ';' in addCollections
+    if isChained and not batchSystem.supportsDependencies():
+        print "\x1b[31mERROR: job dependencies are not supported by current batch system.\x1b[0m"
+        raise Exception('NotImplemented')
+
     # need prepout to get list of file processed during the prep. Files missing in both the prepout and the sysout will not be considered as missing during the sys step
     prepOUT           = config.get("Directories", "PREPout")
     inputDir          = opts.input if opts.input else "SYSin"
     outputDir         = opts.output if opts.output else "SYSout"
-    path              = config.get("Directories", inputDir) 
-    pathOUT           = config.get("Directories", outputDir)
     samplefiles       = config.get('Directories','samplefiles')
-    info              = ParseInfo(samples_path=path, config=config)
+    info              = ParseInfo(config=config)
     sampleIdentifiers = filterSampleList(info.getSampleIdentifiers(), samplesList)
 
-    printInputOutputInfo(inputDir, outputDir, config=config, opts=opts)
+    if isChained:
+        numSteps = len(addCollections.split(';'))
+        numInputDirs = len(inputDir.split(';'))
+        numOutputDirs = len(outputDir.split(';'))
+        if numSteps != numInputDirs or numInputDirs != numOutputDirs:
+            print "\x1b[31mERROR: for chained jobs, multiple input and output folders must be given\x1b[0m"
+            raise Exception('ArgumentError')
 
-    # check for empty list of collections to add
-    addCollections = opts.addCollections
-    if not addCollections or len(addCollections.strip())<1:
-        print "\x1b[31mWARNING: No collections specified, using the default \x1b[32m'Sys.all'\x1b[31m instead, to force adding nothing, use \x1b[32m--addCollections None\x1b[31m!\x1b[0m"
-        addCollections = 'Sys.all'
+    jobDependencyDict = {}
 
-    # module version table
-    print "INFO: module:version"
-    moduleVersionDict = {}
-    for collection in addCollections.split(','):
-        modulesInfo       = XbbTools.getModuleInfo(collection, config=config)
-        modulesInfoString = ", ".join(["\x1b[32m{m}\x1b[0m:\x1b[35m{v}\x1b[0m".format(m=moduleName,v=version) for moduleObject, moduleName, version in modulesInfo])
-        print " > {c} ---> {m}".format(c=collection.ljust(32),m=modulesInfoString)
-        for moduleObject, moduleName, version in modulesInfo:
-            if moduleName not in moduleVersionDict:
-                moduleVersionDict[moduleName] = -99
-            if version > moduleVersionDict[moduleName]:
-                moduleVersionDict[moduleName] = version
+    inputDirs  = inputDir.split(';')
+    outputDirs = outputDir.split(';')
+    modules    = addCollections.split(';')
 
-    # module version bookkeeping
-    if not opts.no_version:
-        try:
-            moduleVersionFileName = "xbb_info.root"
-            moduleVersionTreeName = "moduleVersions"
-            inputModuleVersions = {}
-            # read version tree from input directory
-            infoFileName = path + "/" + moduleVersionFileName
-            if fileLocator.exists(infoFileName):
-                inputModuleVersions = XbbTools.readDictFromRootFile(infoFileName, moduleVersionTreeName, "name", "version")
+    for iStep in range(len(modules)):
+        inputDir = inputDirs[iStep]
+        outputDir = outputDirs[iStep]
+        addCollections = modules[iStep]
 
-            # compare to what will be written
-            for moduleName, version in inputModuleVersions.items():
+        path              = config.get("Directories", inputDir)
+        pathOUT           = config.get("Directories", outputDir)
+
+        printInputOutputInfo(inputDir, outputDir, config=config, opts=opts)
+
+        # module version table
+        print "INFO: module:version"
+        moduleVersionDict = {}
+        for collection in addCollections.split(','):
+            modulesInfo       = XbbTools.getModuleInfo(collection, config=config)
+            modulesInfoString = ", ".join(["\x1b[32m{m}\x1b[0m:\x1b[35m{v}\x1b[0m".format(m=moduleName,v=version) for moduleObject, moduleName, version in modulesInfo])
+            print " > {c} ---> {m}".format(c=collection.ljust(32),m=modulesInfoString)
+            for moduleObject, moduleName, version in modulesInfo:
                 if moduleName not in moduleVersionDict:
-                    # this is unchanged and transfered to new dict
+                    moduleVersionDict[moduleName] = -99
+                if version > moduleVersionDict[moduleName]:
                     moduleVersionDict[moduleName] = version
-                else:
-                    if moduleVersionDict[moduleName] > inputModuleVersions[moduleName]:
-                        print "\x1b[32mINFO: UPGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
-                    elif moduleVersionDict[moduleName] < inputModuleVersions[moduleName]:
-                        print "\x1b[31mWARNING: DOWNGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
 
-            # write version tree into output directory
-            infoFileName = pathOUT + "/" + moduleVersionFileName
-            XbbTools.writeDictToRootFile(infoFileName, moduleVersionTreeName, "module version numbers", "name", "version", moduleVersionDict, fileLocator)
-            if 'XBBDEBUG' in os.environ:
-                print "DEBUG: version info file created:", infoFileName
-            print "-"*160
-        except Exception as e:
-            print "ERROR: could not write version information:", e
+        # module version bookkeeping
+        if not opts.no_version:
+            try:
+                moduleVersionFileName = "xbb_info.root"
+                moduleVersionTreeName = "moduleVersions"
+                inputModuleVersions = {}
+                # read version tree from input directory
+                infoFileName = path + "/" + moduleVersionFileName
+                if fileLocator.exists(infoFileName):
+                    inputModuleVersions = XbbTools.readDictFromRootFile(infoFileName, moduleVersionTreeName, "name", "version")
 
-    # for checksysnew step: dic contains missing number of files for each sample
-    missingFiles = {}
+                # compare to what will be written
+                for moduleName, version in inputModuleVersions.items():
+                    if moduleName not in moduleVersionDict:
+                        # this is unchanged and transfered to new dict
+                        moduleVersionDict[moduleName] = version
+                    else:
+                        if moduleVersionDict[moduleName] > inputModuleVersions[moduleName]:
+                            print "\x1b[32mINFO: UPGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
+                        elif moduleVersionDict[moduleName] < inputModuleVersions[moduleName]:
+                            print "\x1b[31mWARNING: DOWNGRADE", moduleName, " from version", inputModuleVersions[moduleName], "to", moduleVersionDict[moduleName], "\x1b[0m"
 
-    # process all sample identifiers (correspond to folders with ROOT files)
-    print "INFO: going to submit jobs for", len(sampleIdentifiers), "samples."
-    for sampleIdentifier in sampleIdentifiers:
-        try:
-            sampleFileList = filelist(samplefiles, sampleIdentifier)
+                # write version tree into output directory
+                infoFileName = pathOUT + "/" + moduleVersionFileName
+                XbbTools.writeDictToRootFile(infoFileName, moduleVersionTreeName, "module version numbers", "name", "version", moduleVersionDict, fileLocator)
+                if 'XBBDEBUG' in os.environ:
+                    print "DEBUG: version info file created:", infoFileName
+                print "-"*160
+            except Exception as e:
+                print "ERROR: could not write version information:", e
 
-            # filter to run only on specific files
-            if opts.files is not None:
-                fileListFilter = opts.files.split(",")
-                sampleFileList = [x for x in sampleFileList if x.strip() in fileListFilter]
-                if len(sampleFileList) < 1:
-                    print "=> no files match the criteria, skip this chunk"
-                    continue
-        except:
-            print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
-            continue
+        # for checksysnew step: dic contains missing number of files for each sample
+        missingFiles = {}
 
-        # specified with -N option
-        chunkSize = 1 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
-
-        # for some samples consisting of many files, force override the -N option!
-        if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
-            minFilesPerJob = int(config.get(sampleIdentifier, 'minFilesPerJob'))
-            if minFilesPerJob > chunkSize:
-                chunkSize = minFilesPerJob
-                print "\x1b[34mINFO: override chunk size given by -N with value from config:", chunkSize, "\x1b[0m"
-
-        # limit numebr of files per sample
-        if opts.limit and len(sampleFileList) > int(opts.limit):
-            sampleFileList = sampleFileList[0:int(opts.limit)]
-
-        splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
-
-        # for checksysnew step: only list of missing files are printed. No jobs are submited
-        if opts.task == 'checksysnew':
-            print "going to check \x1b[36m", len(sampleFileList), "\x1b[0m files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
-            missingFiles[sampleIdentifier] =  PrintProcessedFiles(pathOUT, sampleIdentifier, sampleFileList, prepOUT)
-            continue
-
-        print "going to submit \x1b[36m", len(splitFilesChunks), "\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
-
-        # for sysnew
-        # submit a job for a chunk of N files
-        for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
-
-            if opts.skipExisting:
-                # skip, if all output files exist
-                skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
-                # skip, if all input files do not exist/are broken
-                #allInputFilesMissing = False
-                allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
-            else:
-                skipChunk = False
-                allInputFilesMissing = False
-
-            if (not skipChunk and not allInputFilesMissing) or opts.force:
-                jobDict = repDict.copy()
-                jobDict.update({
-                    'arguments':{
-                        'sampleIdentifier': sampleIdentifier,
-                        'fileList': FileList.compress(splitFilesChunk),
-                        'addCollections': addCollections,
-                        'inputDir': inputDir,
-                        'outputDir': outputDir,
-                    },
-                    'batch': opts.task + '_' + sampleIdentifier,
-                    # allow other jobs to depend on this
-                    'chainable': True,
-                    'chain_sample': sampleIdentifier,
-                    'chain_part': chunkNumber,
-                    'chain_parts': len(splitFilesChunks),
-                    })
-                if opts.force:
-                    jobDict['arguments']['force'] = ''
-                if opts.friend:
-                    jobDict['arguments']['friend'] = ''
-                if opts.join:
-                    jobDict['arguments']['join'] = ''
-
-                filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
-                jobName = '{task}_{sample}_part{part}{files}'.format(task=opts.task, sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
-                submit(jobName, jobDict)
-            else:
-                if allInputFilesMissing:
-                    print "\x1b[31mSKIP: chunk %d, all input files of this chunk are missing!\x1b[0m"%chunkNumber
-                else:
-                    print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
-
-    if opts.task == 'checksysnew':
-        # printing the content of missingFiles
-        print '\n=================='
-        print 'SUMMARY: checksysnew'
-        print '====================\n'
+        # process all sample identifiers (correspond to folders with ROOT files)
+        print "INFO: going to submit jobs for", len(sampleIdentifiers), "samples."
         for sampleIdentifier in sampleIdentifiers:
-            #print 'sampleIdentifier is', sampleIdentifier
-            n_missing_files = missingFiles[sampleIdentifier][0]
-            n_total_files = missingFiles[sampleIdentifier][1]
-            if n_missing_files == 0:
-                print "\x1b[32m All files for \x1b[36m", sampleIdentifier, "\x1b[32m were already produced wrt the current prepOUT path \x1b[0m.."
-            else:
-                print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files wrt the current prepOUT path for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+            try:
+                sampleFileList = filelist(samplefiles, sampleIdentifier)
+
+                # filter to run only on specific files
+                if opts.files is not None:
+                    fileListFilter = opts.files.split(",")
+                    sampleFileList = [x for x in sampleFileList if x.strip() in fileListFilter]
+                    if len(sampleFileList) < 1:
+                        print "=> no files match the criteria, skip this chunk"
+                        continue
+            except:
+                print "\x1b[31mERROR: sample", sampleIdentifier, " does not exist => skip.\x1b[0m"
+                continue
+
+            # specified with -N option
+            chunkSize = 1 if int(opts.nevents_split_nfiles_single) < 1 else int(opts.nevents_split_nfiles_single)
+
+            # for some samples consisting of many files, force override the -N option!
+            if config.has_option(sampleIdentifier, 'minFilesPerJob') and not opts.forceN:
+                minFilesPerJob = int(config.get(sampleIdentifier, 'minFilesPerJob'))
+                if minFilesPerJob > chunkSize:
+                    chunkSize = minFilesPerJob
+                    print "\x1b[34mINFO: override chunk size given by -N with value from config:", chunkSize, "\x1b[0m"
+
+            # limit numebr of files per sample
+            if opts.limit and len(sampleFileList) > int(opts.limit):
+                sampleFileList = sampleFileList[0:int(opts.limit)]
+
+            splitFilesChunks = [sampleFileList[i:i+chunkSize] for i in range(0, len(sampleFileList), chunkSize)]
+
+            # for checksysnew step: only list of missing files are printed. No jobs are submited
+            if opts.task == 'checksysnew':
+                print "going to check \x1b[36m", len(sampleFileList), "\x1b[0m files for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+                missingFiles[sampleIdentifier] =  PrintProcessedFiles(pathOUT, sampleIdentifier, sampleFileList, prepOUT)
+                continue
+
+            print "going to submit \x1b[36m", len(splitFilesChunks), "\x1b[0m jobs for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
+
+            # for sysnew
+            # submit a job for a chunk of N files
+            for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks):
+
+                if opts.skipExisting:
+                    # skip, if all output files exist
+                    skipChunk = all([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=pathOUT, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) for fileName in splitFilesChunk])
+                    # skip, if all input files do not exist/are broken
+                    allInputFilesMissing = False
+                    if not skipChunk:
+                        allInputFilesMissing = not any([fileLocator.isValidRootFile("{path}/{subfolder}/{filename}".format(path=path, subfolder=sampleIdentifier, filename=fileLocator.getFilenameAfterPrep(fileName))) or fileLocator.isValidRootFile("{path}/{filename}".format(path=path, filename=fileName)) for fileName in splitFilesChunk])
+                else:
+                    skipChunk = False
+                    allInputFilesMissing = False
+
+                if (not skipChunk and not allInputFilesMissing) or opts.force:
+                    jobDict = repDict.copy()
+                    jobDict.update({
+                        'arguments':{
+                            'sampleIdentifier': sampleIdentifier,
+                            'fileList': FileList.compress(splitFilesChunk),
+                            'addCollections': addCollections,
+                            'inputDir': inputDir,
+                            'outputDir': outputDir,
+                        },
+                        'batch': opts.task + '_' + sampleIdentifier,
+                        # allow other jobs to depend on this
+                        'chainable': True,
+                        'chain_sample': sampleIdentifier,
+                        'chain_part': chunkNumber,
+                        'chain_parts': len(splitFilesChunks),
+                        })
+                    if opts.force:
+                        jobDict['arguments']['force'] = ''
+                    if opts.friend:
+                        jobDict['arguments']['friend'] = ''
+                    if opts.join:
+                        jobDict['arguments']['join'] = ''
+
+                    filesSpec = '_files{start}to{end}'.format(start=chunkNumber*chunkSize, end=chunkNumber*chunkSize+len(splitFilesChunk)) if len(splitFilesChunk) > 1 else ''
+                    jobName = '{task}_{sample}_part{part}{files}'.format(task=opts.task, sample=sampleIdentifier, part=chunkNumber, files=filesSpec)
+
+                    # check for dependencies
+                    if sampleIdentifier in jobDependencyDict and chunkNumber in jobDependencyDict[sampleIdentifier]:
+                        jobDict['dependency'] = jobDependencyDict[sampleIdentifier][chunkNumber]
+
+                    # submit
+                    batchJob = submit(jobName, jobDict)
+
+                    jobID = batchJob.jobID()
+                    if jobID > -1:
+                        if sampleIdentifier not in jobDependencyDict:
+                            jobDependencyDict[sampleIdentifier] = {}
+                        jobDependencyDict[sampleIdentifier][chunkNumber] = jobID
+                else:
+                    if allInputFilesMissing:
+                        print "\x1b[31mSKIP: chunk %d, all input files of this chunk are missing!\x1b[0m"%chunkNumber
+                    else:
+                        print "SKIP: chunk #%d, all files exist and are valid root files!"%chunkNumber
+
+        if opts.task == 'checksysnew':
+            # printing the content of missingFiles
+            print '\n=================='
+            print 'SUMMARY: checksysnew'
+            print '====================\n'
+            for sampleIdentifier in sampleIdentifiers:
+                #print 'sampleIdentifier is', sampleIdentifier
+                n_missing_files = missingFiles[sampleIdentifier][0]
+                n_total_files = missingFiles[sampleIdentifier][1]
+                if n_missing_files == 0:
+                    print "\x1b[32m All files for \x1b[36m", sampleIdentifier, "\x1b[32m were already produced wrt the current prepOUT path \x1b[0m.."
+                else:
+                    print "\x1b[31m WARNING:", n_missing_files,"/", n_total_files, "missing or broken root files wrt the current prepOUT path for sample \x1b[36m", sampleIdentifier, " \x1b[0m.."
 
 
 # -----------------------------------------------------------------------------
@@ -1066,9 +1106,13 @@ if opts.task.startswith('cachetraining'):
 
         # number of files to process per job 
         splitFilesChunkSize = min([getCachingChunkSize(sample, config) for sample in samples if sample.identifier==sampleIdentifier])
-        splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
-        print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
-        
+        try:
+            splitFilesChunks = SampleTree({'name': sampleIdentifier, 'folder': inputPath}, countOnly=True, splitFilesChunkSize=splitFilesChunkSize, config=config).getSampleFileNameChunks()
+            print "DEBUG: split after ", splitFilesChunkSize, " files => number of parts = ", len(splitFilesChunks)
+        except Exception as e:
+            splitFilesChunks = []
+            print "\x1b[31mEXCEPTION:",e," => this sample will be skipped!\x1b[0m"
+
         # submit all the single chunks for one sample
         for chunkNumber, splitFilesChunk in enumerate(splitFilesChunks, start=1):
 
@@ -1997,12 +2041,12 @@ if opts.task.startswith('checklogs'):
 if opts.task.startswith('submissions'):
     rows, columns = subprocess.check_output(['stty', 'size']).split()
     printWidth = min(int(columns) - 5, 200)
-    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
-    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
+    statusDict = {-1: "\x1b[31mX\x1b[0m", 0: "\x1b[42m \x1b[0m", 1: "\x1b[43mR\x1b[0m", 2: "\x1b[45m\x1b[37mQ\x1b[0m", 3: "\x1b[45m\x1b[37mD\x1b[0m", 10: "\x1b[41m\x1b[37mE\x1b[0m", 11: "\x1b[41m\x1b[37mC\x1b[0m", 12: "\x1b[41m\x1b[37mU\x1b[0m", 100: "\x1b[44m\x1b[37mr\x1b[0m", 101: "\x1b[44m\x1b[37mC\x1b[0m", 110: "\x1b[44m\x1b[32mL\x1b[0m"}
+    statusNamesDict = {-1: "error", 0: "done", 1: "running", 2: "queued", 3:"dependency", 10: "error", 11: "crashed", 12: "unknown", 100: "resubmitted", 101: "cancelled", 110: "not submitted/ran locally"}
     failureCodes = [-1, 10, 11, 12]
     print "*"*printWidth
     print " legend:"
-    for n in [0,1,2,-1,10,11,12,100]:
+    for n in [0,1,2,3,-1,10,11,12,100]:
         print "  ", statusDict[n], "  ", statusNamesDict[n]
     print "*"*printWidth
 
@@ -2030,6 +2074,7 @@ if opts.task.startswith('submissions'):
 
     runningJobs = {int(k['id']): True for k in jobs if k['is_running']}
     pendingJobs = {int(k['id']): True for k in jobs if k['is_pending']}
+    waitingforDependencyJobs = {int(k['id']): True for k in jobs if 'is_waiting_for_dependency' in k and k['is_waiting_for_dependency']}
     nResubmitted = 0
     nCancelled   = 0
     nCancelFailed = 0
@@ -2063,6 +2108,8 @@ if opts.task.startswith('submissions'):
                     status = 1
                     if 'XBBDEBUG' in os.environ:
                          print("LOGFILE:", job['log'])
+                elif job['id'] in waitingforDependencyJobs:
+                    status = 3
                 elif job['id'] in pendingJobs:
                     status = 2
                 elif os.path.isfile(job['log']):
@@ -2112,7 +2159,13 @@ if opts.task.startswith('submissions'):
             for job in lastSubmission:
                 if job['status'] in [-1, 10, 11, 12]:
                     # resubmit
-                    batchSystem.resubmit(job)
+                    if len(opts.resubmitReplaceRules) > 0:
+                        for resubmitReplaceRule in opts.resubmitReplaceRules.split(';'):
+                            job['submitCommand'] = job['submitCommand'].replace(resubmitReplaceRule.split('>')[0], resubmitReplaceRule.split('>')[1])
+                    try:
+                        batchSystem.resubmit(job)
+                    except Exception as e:
+                        print "ERROR: ",e
                     nResubmitted += 1
                     nResubmittedPerFile += 1
                     job['status'] = 100

@@ -436,7 +436,7 @@ if __name__ == "__main__":
                     print("\x1b[35m", region, process, histogram_prefit.GetBinContent(1), histogram_postfit.GetBinContent(1), "\x1b[0m")
                     histogram_postfit.Divide(histogram_prefit)
 
-                    scaleFactorTable.append("{region} {process} prefit/postfit = {scale:.2f} +/- {error:.2f}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
+                    scaleFactorTable.append("{region} {process} postfit/prefit = {scale:.2f} +/- {error:.2f}".format(region=region, process=process, scale=histogram_postfit.GetBinContent(1), error=histogram_postfit.GetBinError(1))) 
                     regionSF[process] = histogram_postfit.GetBinContent(1)
                 except Exception as e:
                     print("WARNING:", e)
