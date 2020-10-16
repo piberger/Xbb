@@ -15,8 +15,9 @@ import BetterConfigParser
 # applies the smearing to MC jet resolution and modifies the Jet_PtReg* branches of the tree
 class JetSmearer(AddCollectionsModule):
 
-    def __init__(self, year, unsmearPreviousCorrection=True, backupPreviousCorrection=True):
+    def __init__(self, year, unsmearPreviousCorrection=True, backupPreviousCorrection=False):
         super(JetSmearer, self).__init__()
+        self.version                   = 2
         self.debug                     = 'XBBDEBUG' in os.environ
         self.unsmearPreviousCorrection = unsmearPreviousCorrection
         self.backupPreviousCorrection  = backupPreviousCorrection
@@ -33,9 +34,9 @@ class JetSmearer(AddCollectionsModule):
         #smearing params
         if self.config.get('General','nTupleVersion') in ['V11','V12']:
             self.smear_params = {
-                     '2016': [1.004, 0.018, 0.000, 0.061],
-                     '2017': [1.011, 0.022, 0.051, 0.068],
-                     '2018': [0.982, 0.019, 0.150, 0.079],
+                     '2016': [1.0, 0.018, -0.044, 0.061],
+                     '2017': [1.0, 0.022,  0.051, 0.068],
+                     '2018': [1.0, 0.019,  0.150, 0.079],
                      }
         elif self.config.get('General','nTupleVersion') == 'V13':
             self.smear_params = {
