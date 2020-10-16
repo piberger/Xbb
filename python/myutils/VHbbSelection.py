@@ -13,7 +13,7 @@ class VHbbSelection(AddCollectionsModule):
 
     # original 2017: puIdCut=0, jetIdCut=-1
     # now:           puIdCut=6, jetIdCut=4
-    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1, skipJetSelection=False):
+    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1, skipJetSelection=False, vpt0lep=150.0, vpt1lep=150.0, vpt2lep=75.0):
         super(VHbbSelection, self).__init__()
         self.debug = debug or 'XBBDEBUG' in os.environ
         self.version = 7
@@ -36,6 +36,9 @@ class VHbbSelection(AddCollectionsModule):
         self.idZmmCut = idZmmCut
         self.idZee    = idZee
         self.idZeeCut = idZeeCut
+        self.vpt0lep = vpt0lep
+        self.vpt1lep = vpt1lep
+        self.vpt2lep = vpt2lep
         self.recomputeVtype = recomputeVtype
         self.btagMaxCut = btagMaxCut
         # only use puId below this pT:
@@ -559,7 +562,7 @@ class VHbbSelection(AddCollectionsModule):
                             MET_syst.SetPtEtaPhiM(self._r('MET_pt_'+syst+UD), 0.0, self._r('MET_phi_'+syst+UD), 0.0)
                             V_syst = MET_syst + Lep
                             Vphi_syst[syst+UD] = V_syst.Phi()
-                            if V_syst.Pt() > 150.0:
+                            if V_syst.Pt() > self.vpt1lep:
                                 any_v_sysvar_passes = True
 
             elif self._b("isZnn")[0]:
@@ -569,6 +572,8 @@ class VHbbSelection(AddCollectionsModule):
                     for syst in self.METsystematics:
                         for UD in self._variations(syst):
                             Vphi_syst[syst+UD] = self._r('MET_phi_'+syst+UD)
+                            if self._r('MET_pt_'+syst+UD) > self.vpt0lep:
+                                any_v_sysvar_passes = True
                 V = MET
             else:
                 self.count("fail_lepton_selection")
@@ -581,11 +586,11 @@ class VHbbSelection(AddCollectionsModule):
             self._b("V_phi")[0] = V.Phi()
             self._b("V_mass")[0] = V.M()
             
-            if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < 50.0:
+            if (self._b("isZee")[0] or self._b("isZmm")[0]) and self._b("V_pt")[0] < self.vpt2lep:
                 return False
-            elif self._b("isZnn")[0] and self._b("V_pt")[0] < 150.0:
+            elif self._b("isZnn")[0] and self._b("V_pt")[0] < self.vpt0lep and not any_v_sysvar_passes:
                 return False
-            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 150.0 and not any_v_sysvar_passes):
+            elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < self.vpt1lep and not any_v_sysvar_passes):
                 return False
             
             self.cutFlow[5] += 1
