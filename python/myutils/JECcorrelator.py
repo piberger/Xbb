@@ -27,8 +27,28 @@ class JECcorrelator(AddCollectionsModule):
         super(JECcorrelator, self).__init__()
         self.debug = 'XBBDEBUG' in os.environ
         self.quickloadWarningShown = False
+        self.existingBranches = {}
 
         self.year = year if type(year) == str else str(year)
+
+    # only add as new branch if they don't exists already
+    def addVectorBranch(self, branchName, default=0, branchType='d', length=1, leaflist=None):
+        if branchName not in self.existingBranches:
+            super(JECcorrelator, self).addVectorBranch(branchName, default, branchType, length, leaflist)
+        else:
+            print("DEBUG: skip adding branch:", branchName)
+    def addBranch(self, branchName, default=0.0):
+        if branchName not in self.existingBranches:
+            super(JECcorrelator, self).addBranch(branchName, default)
+        else:
+            print("DEBUG: skip adding branch:", branchName)
+
+    # can be used to overwrite branch if it already exists
+    def _b(self, branchName):
+        if branchName not in self.existingBranches:
+            return super(JECcorrelator, self)._b(branchName)
+        else:
+            return self.existingBranches[branchName]
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
@@ -56,20 +76,11 @@ class JECcorrelator(AddCollectionsModule):
 
         if self.sample.isMC():
 
-            self.xbbConfig  = XbbConfigTools(self.config)
-            self.JEC_reduced = self.xbbConfig.getJECuncertainties(step='reduced')
-            #self.JEC_reduced = ['jesRelativeSample_2018']
-            # remove JER uncertainties
-            self.JEC_reduced = [x for x in self.JEC_reduced if not x.startswith("jer")]
-            #remove branches with same name to avoid issues due to same naming scheme
-            #self.JEC_reduced = [x for x in self.JEC_reduced if x not in ["jesFlavorQCD","jesRelativeBal"]]
+            self.JEC_reduced = self.correlation_scheme.keys()
+            self.JEC_full    = sum([v for k,v in self.correlation_scheme.items()], [])
+
             if self.debug: 
                 print("JEC_reduced : ",self.JEC_reduced)
-
-            #self.JEC_full = self.xbbConfig.getJECuncertainties()
-            #self.JEC_full = [x for x in self.JEC_full if not x.startswith("jer")]
-            self.JEC_full = ["jesAbsoluteMPFBias","jesAbsoluteScale","jesFragmentation","jesPileUpDataMC","jesPileUpPtRef","jesRelativeFSR","jesSinglePionECAL","jesSinglePionHCAL","jesAbsoluteStat","jesRelativeStatFSR","jesTimePtEta","jesPileUpPtBB","jesPileUpPtEC1","jesRelativePtBB","jesRelativeJEREC1","jesRelativePtEC1","jesRelativeStatEC","jesPileUpPtEC2","jesRelativeJEREC2","jesRelativePtEC2","jesPileUpPtHF","jesRelativeJERHF","jesRelativePtHF","jesRelativeStatHF","jesRelativeBal","jesRelativeSample"]
-            if self.debug: 
                 print("JEC_full : ",self.JEC_full)
 
             self.maxNjet   = 256
@@ -81,35 +92,31 @@ class JECcorrelator(AddCollectionsModule):
                 if syst != "nom": UD = ["Up","Down"]
                 else: UD = [""]
                 for Q in UD:
-                    setattr(self,"jet_pt_"+syst+Q,array.array('f', [0.0]*self.maxNjet))
-                    setattr(self,"jet_mass_"+syst+Q,array.array('f', [0.0]*self.maxNjet))
-                    setattr(self,"met_pt_"+syst+Q,array.array('f', [0.0]))
-                    setattr(self,"met_phi_"+syst+Q,array.array('f', [0.0]))
-                    setattr(self,"fatjet_pt_"+syst+Q,array.array('f', [0.0]*self.maxNfatjet))
-                    setattr(self,"fatjet_msoftdrop_"+syst+Q,array.array('f', [0.0]*self.maxNfatjet))
+                    for v in ["Jet_pt_"+syst+Q, "Jet_mass_"+syst+Q, "MET_pt_"+syst+Q, "MET_phi_"+syst+Q, "FatJet_pt_"+syst+Q, "FatJet_msoftdrop_"+syst+Q]:
+                        if v.startswith('Jet_'):
+                            self.existingBranches[v] = array.array('f', [0.0]*self.maxNjet)
+                        elif v.startswith('FatJet_'):
+                            self.existingBranches[v] = array.array('f', [0.0]*self.maxNfatjet)
+                        else:
+                            self.existingBranches[v] = array.array('f', [0.0])
 
-                    self.sampleTree.tree.SetBranchAddress("Jet_pt_"+syst+Q, getattr(self, "jet_pt_"+syst+Q))
-                    self.sampleTree.tree.SetBranchAddress("Jet_mass_"+syst+Q, getattr(self, "jet_mass_"+syst+Q))
-                    self.sampleTree.tree.SetBranchAddress("MET_pt_"+syst+Q, getattr(self, "met_pt_"+syst+Q))
-                    self.sampleTree.tree.SetBranchAddress("MET_phi_"+syst+Q, getattr(self, "met_phi_"+syst+Q))
-                    self.sampleTree.tree.SetBranchAddress("FatJet_pt_"+syst+Q, getattr(self, "fatjet_pt_"+syst+Q))
-                    self.sampleTree.tree.SetBranchAddress("FatJet_msoftdrop_"+syst+Q, getattr(self, "fatjet_msoftdrop_"+syst+Q))
+                        self.sampleTree.tree.SetBranchAddress(v, self.existingBranches[v])
 
             for var in ["Jet_eta","Jet_phi","Jet_neEmEF","Jet_chEmEF"]:
-                setattr(self,var.lower(),array.array('f', [0.0]*self.maxNjet))
-                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+                self.existingBranches[var] = array.array('f', [0.0]*self.maxNjet)
+                self.sampleTree.tree.SetBranchAddress(var, self.existingBranches[var])
 
             for var in ["Jet_muonIdx1","Jet_muonIdx2"]:
-                setattr(self,var.lower(),array.array('i', [0]*self.maxNjet))
-                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+                self.existingBranches[var] = array.array('i', [0]*self.maxNjet)
+                self.sampleTree.tree.SetBranchAddress(var, self.existingBranches[var])
 
             for var in ["nJet","nMuon"]:
-                setattr(self,var.lower(),array.array('i', [0]))
-                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+                self.existingBranches[var] = array.array('i', [0])
+                self.sampleTree.tree.SetBranchAddress(var, self.existingBranches[var])
 
             for var in ["Muon_pt"]:
-                setattr(self,var.lower(),array.array('f', [0.0]*50))
-                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+                self.existingBranches[var] = array.array('f', [0.0]*50)
+                self.sampleTree.tree.SetBranchAddress(var, self.existingBranches[var])
 
             for syst in self.JEC_reduced:
                 for Q in self._variations(syst):
@@ -278,32 +285,33 @@ class JECcorrelator(AddCollectionsModule):
             attr = {}
             for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
                 attr[var] ={}
-                attr[var]["nom"] = getattr(self,var.lower()+"_nom")
+                attr[var]["nom"] = self.existingBranches[var+"_nom"]
             for var in ["Jet_eta", "Jet_phi", "Jet_neEmEF", "Jet_chEmEF", "Muon_pt","Jet_muonIdx1","Jet_muonIdx2"]:
-                attr[var] = getattr(self,var.lower())
+                attr[var] = self.existingBranches[var]
             attr["nMuon"] = tree.nMuon
             attr["nJet"]  = tree.nJet
             for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
                 for syst in self.JEC_full:
                     attr[var][syst] = {}
                     for Q in self._variations(syst):
-                        attr[var][syst][Q] = getattr(self,var.lower()+"_"+syst+Q)
-
+                        attr[var][syst][Q] = list(self.existingBranches[var+"_"+syst+Q])
             for var in ["Jet_pt", "Jet_mass"]:
-                for syst in self.JEC_reduced.remove("jesFlavorQCD","jesRelativeBal"):
-                    attr[var][syst] = {}
-                    for Q in self._variations(syst):
-                        attr[var][syst][Q] = []
-
+                for syst in self.JEC_reduced:
+                    if syst not in attr[var]:
+                        attr[var][syst] = {}
+                        for Q in self._variations(syst):
+                            attr[var][syst][Q] = []
             for syst in self.JEC_reduced:
                 for Q in self._variations(syst):
                    
                     # update Jet_pt and Jet_mass variations 
                     for i in range(nJet):
-                        self._b(self._v("Jet_pt", syst, Q, ""))[i] = self.correlator(syst,i,Q,"Jet_pt",attr)
-                        self._b(self._v("Jet_mass", syst, Q, ""))[i] = self.correlator(syst,i,Q,"Jet_mass",attr)
-                        attr["Jet_pt"][syst][Q].append(self._b(self._v("Jet_pt", syst, Q, ""))[i]) 
-                        attr["Jet_mass"][syst][Q].append(self._b(self._v("Jet_mass", syst, Q, ""))[i])
+                        pt   = self.correlator(syst,i,Q,"Jet_pt",attr)
+                        mass = self.correlator(syst,i,Q,"Jet_mass",attr)
+                        self._b(self._v("Jet_pt", syst, Q, ""))[i] = pt
+                        self._b(self._v("Jet_mass", syst, Q, ""))[i] = mass
+                        attr["Jet_pt"][syst][Q].append(pt)
+                        attr["Jet_mass"][syst][Q].append(mass)
 
                 for Q in self._variations(syst):
                     # update MET_pt and MET_phi variations

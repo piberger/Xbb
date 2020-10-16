@@ -492,7 +492,7 @@ class VHbbSelection(AddCollectionsModule):
                         print "DEBUG-EVENT: 1 e event, but no good electron found"
                 elif Vtype == 4:
                         passMetFilters = all([getattr(tree, x) for x in self.metFilters]) 
-                        if tree.MET_Pt > 170.0 and passMetFilters:
+                        if tree.MET_Pt > self.vpt0lep and passMetFilters:
                             self._b("isZnn")[0] = 1
                         else:
                             if debugEvent:
