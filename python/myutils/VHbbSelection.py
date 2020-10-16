@@ -13,10 +13,11 @@ class VHbbSelection(AddCollectionsModule):
 
     # original 2017: puIdCut=0, jetIdCut=-1
     # now:           puIdCut=6, jetIdCut=4
-    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1):
+    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1, skipJetSelection=False):
         super(VHbbSelection, self).__init__()
         self.debug = debug or 'XBBDEBUG' in os.environ
-        self.version = 6
+        self.version = 7
+        self.skipJetSelection = skipJetSelection
         self.stats = {}
         self.year = year
         self.channels = channels
@@ -203,20 +204,21 @@ class VHbbSelection(AddCollectionsModule):
         defaultJetDefinitions = [x for x in self.jetDefinitions if 'indexName' not in x or x['indexName']=='']
         assert (len(defaultJetDefinitions) == 1)
 
-        for jetDefinition in self.jetDefinitions:
-            indexName = jetDefinition['indexName'] if 'indexName' in jetDefinition else '' 
-            self.addIntegerVectorBranch("hJidx{suffix}".format(suffix=indexName), default=-1, length=2)
-            if self.sample.isMC():
-                for syst in self.systematics:
-                    for UD in ['Up','Down']:
-                        self.addIntegerVectorBranch("hJidx{suffix}_{syst}{UD}".format(suffix=indexName, syst=syst, UD=UD), default=-1, length=2)
+        if not self.skipJetSelection:
+            for jetDefinition in self.jetDefinitions:
+                indexName = jetDefinition['indexName'] if 'indexName' in jetDefinition else '' 
+                self.addIntegerVectorBranch("hJidx{suffix}".format(suffix=indexName), default=-1, length=2)
+                if self.sample.isMC():
+                    for syst in self.systematics:
+                        for UD in ['Up','Down']:
+                            self.addIntegerVectorBranch("hJidx{suffix}_{syst}{UD}".format(suffix=indexName, syst=syst, UD=UD), default=-1, length=2)
 
-        # selected fatjet index
-        self.addIntegerBranch("Hbb_fjidx")
-        if self.sample.isMC():
-            for syst in self.systematicsBoosted:
-                for UD in ['Up','Down']:
-                    self.addIntegerBranch("Hbb_fjidx_{syst}{UD}".format(syst=syst, UD=UD))
+            # selected fatjet index
+            self.addIntegerBranch("Hbb_fjidx")
+            if self.sample.isMC():
+                for syst in self.systematicsBoosted:
+                    for UD in ['Up','Down']:
+                        self.addIntegerBranch("Hbb_fjidx_{syst}{UD}".format(syst=syst, UD=UD))
 
         self.addBranch("lepMetDPhi")
         self.addBranch("V_mt")
@@ -343,6 +345,9 @@ class VHbbSelection(AddCollectionsModule):
             elif syst == 'jerRegDown':
                 PtReg.append(tree.Jet_PtRegDown)
                 Pt.append(Pt_nom)
+            elif syst in ['jerRegScaleUp', 'jerRegScaleDown', 'jerRegSmearUp', 'jerRegSmearDown']:
+                PtReg.append(self._r('Jet_Pt' + syst[3:]))
+                Pt.append(Pt_nom)
             else:
                 Pt_syst    = getattr(tree, "Jet_pt_"+syst) 
                 PtReg_syst = [PtReg_nom[i] * Pt_syst[i] / Pt_nom[i] for i in range(nJet)]
@@ -399,10 +404,12 @@ class VHbbSelection(AddCollectionsModule):
             self._b("V_eta")[0] = -99.0
             self._b("V_phi")[0] = -99.0
             self._b("V_mass")[0] = -99.0
-            self._b("hJidx")[0] = -1
-            self._b("hJidx")[1] = -1
             self._b("vLidx")[0] = -1
             self._b("vLidx")[1] = -1
+            
+            if not self.skipJetSelection:
+                self._b("hJidx")[0] = -1
+                self._b("hJidx")[1] = -1
 
             self.cutFlow[0] += 1
 
@@ -549,7 +556,7 @@ class VHbbSelection(AddCollectionsModule):
                     MET_syst = ROOT.TLorentzVector()
                     for syst in self.METsystematics:
                         for UD in self._variations(syst):
-                            MET_syst.SetPtEtaPhiM(getattr(tree, 'MET_pt_'+syst+UD), 0.0, getattr(tree, 'MET_phi_'+syst+UD), 0.0)
+                            MET_syst.SetPtEtaPhiM(self._r('MET_pt_'+syst+UD), 0.0, self._r('MET_phi_'+syst+UD), 0.0)
                             V_syst = MET_syst + Lep
                             Vphi_syst[syst+UD] = V_syst.Phi()
                             if V_syst.Pt() > 150.0:
@@ -561,12 +568,13 @@ class VHbbSelection(AddCollectionsModule):
                 if self.sample.isMC():
                     for syst in self.METsystematics:
                         for UD in self._variations(syst):
-                            Vphi_syst[syst+UD] = getattr(tree, 'MET_phi_'+syst+UD)
+                            Vphi_syst[syst+UD] = self._r('MET_phi_'+syst+UD)
                 V = MET
             else:
                 self.count("fail_lepton_selection")
                 return False
 
+            self.cutFlow[4] += 1
 
             self._b("V_pt")[0] = V.Pt()
             self._b("V_eta")[0] = V.Eta()
@@ -580,8 +588,11 @@ class VHbbSelection(AddCollectionsModule):
             elif (self._b("isWenu")[0] or self._b("isWmunu")[0]) and (self._b("V_pt")[0] < 150.0 and not any_v_sysvar_passes):
                 return False
             
-            self.cutFlow[4] += 1
+            self.cutFlow[5] += 1
 
+            if self.skipJetSelection:
+                self.cutFlow[7] += 1
+                return True
 
             # JETS
             if self._b("isZnn")[0]:
@@ -657,8 +668,6 @@ class VHbbSelection(AddCollectionsModule):
                             self._b(hJidxName_syst)[0] = -1
                             self._b(hJidxName_syst)[1] = -1 
 
-            self.cutFlow[5] += 1
-
             #print tree.Hbb_fjidx,tree.FatJet_pt[tree.Hbb_fjidx] if(tree.Hbb_fjidx>-1) else "outside",V.Pt()
 
             # BOOSTED JET selection
@@ -713,8 +722,8 @@ class VHbbSelection(AddCollectionsModule):
         print "  Leptons            ", self.cutFlow[2]
         print "  Channel            ", self.cutFlow[3]
         print "  Vector boson       ", self.cutFlow[4]
-        print "  Jets               ", self.cutFlow[5]
-        print "  Vpt                ", self.cutFlow[6]
+        print "  Vpt                ", self.cutFlow[5]
+        print "  Jets               ", self.cutFlow[6]
         print "  end                ", self.cutFlow[7]
 
         print "efficiency:", (1.0*self.cutFlow[7]/self.cutFlow[0]) if self.cutFlow[0] > 0 else "-"
