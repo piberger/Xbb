@@ -199,6 +199,22 @@ class kinFitterXbb(AddCollectionsModule):
                             pt = tree.Jet_Pt
                             pt_reg = tree.Jet_PtRegDown
                             mass = tree.Jet_mass_nom
+                        elif syst == 'jerRegScale_Down':
+                            pt = tree.Jet_Pt
+                            pt_reg = tree.Jet_PtRegScaleDown
+                            mass = tree.Jet_mass_nom
+                        elif syst == 'jerRegScale_Up':
+                            pt = tree.Jet_Pt
+                            pt_reg = tree.Jet_PtRegScaleUp
+                            mass = tree.Jet_mass_nom
+                        elif syst == 'jerRegSmear_Down':
+                            pt = tree.Jet_Pt
+                            pt_reg = tree.Jet_PtRegSmearDown
+                            mass = tree.Jet_mass_nom
+                        elif syst == 'jerRegSmear_Up':
+                            pt = tree.Jet_Pt
+                            pt_reg = tree.Jet_PtRegSmearUp
+                            mass = tree.Jet_mass_nom
                         # vary JEC
                         else:
                             pt = getattr(tree, 'Jet_pt_' + self.getInputSystFormatFromOutputSyst(syst)) 

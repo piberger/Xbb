@@ -172,9 +172,9 @@ class HiggsCandidateSystematics(AddCollectionsModule):
                             Jet_PtReg   = Jet_PtReg_nom
                             Jet_Mass    = Jet_mass_nom
                             Jet_MassReg = [Jet_Mass[i] * Jet_PtReg_nom[i]/Jet_pt_nom[i] for i in range(nJet)]
-                        elif syst == 'jerReg':
+                        elif 'jerReg' in syst:
                             Jet_Pt      = Jet_pt_nom
-                            Jet_PtReg   = getattr(tree, 'Jet_PtReg'+Q)
+                            Jet_PtReg   = getattr(tree, 'Jet_Pt'+syst[3:]+Q)
                             Jet_Mass    = Jet_mass_nom
                             Jet_MassReg = [Jet_Mass[i] * Jet_PtReg[i]/Jet_pt_nom[i] for i in range(nJet)]
                         else:
