@@ -349,7 +349,7 @@ class JECcorrelator(AddCollectionsModule):
             attr["nJet"]  = tree.nJet
             for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
                 for syst in self.JEC_full:
-                    print("syst :",syst)
+                    #print("syst :",syst)
                     attr[var][syst] = {}
                     for Q in self._variations(syst):
                         attr[var][syst][Q] = getattr(self,var.lower()+"_"+syst+Q)
@@ -434,8 +434,9 @@ if __name__=='__main__':
 
     n=0 
     for event in sampleTree:
-        n=n+1
-        event,run,true_attr, attr = w.processEvent(event)
+        if n < 50000:
+            event,run,true_attr, attr = w.processEvent(event)
+        n += 1
 
     f = TFile("test_2016.root","RECREATE")
 
