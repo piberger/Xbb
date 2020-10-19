@@ -15,30 +15,15 @@ import BetterConfigParser
 # applies the smearing to MC jet resolution and modifies the Jet_PtReg* branches of the tree
 class JetSmearer(AddCollectionsModule):
 
-    def __init__(self, year, unsmearPreviousCorrection=True, backupPreviousCorrection=True):
+    def __init__(self, year, unsmearPreviousCorrection=True, backupPreviousCorrection=False):
         super(JetSmearer, self).__init__()
-        self.debug = 'XBBDEBUG' in os.environ
+        self.version                   = 2
+        self.debug                     = 'XBBDEBUG' in os.environ
         self.unsmearPreviousCorrection = unsmearPreviousCorrection
-        self.backupPreviousCorrection = backupPreviousCorrection
-        self.quickloadWarningShown = False
+        self.backupPreviousCorrection  = backupPreviousCorrection
+        self.quickloadWarningShown     = False
 
         self.year = year if type(year) == str else str(year)
-        # sicne again wrong smearing was used in post-processor, undo that one first
-        self.unsmear_params = {
-                 '2016': [1.013, 0.014, 0.029, 0.047], #updated numbers for v7 nanoAOD production
-                 '2017': [1.017, 0.021, 0.058, 0.066],
-                 '2018': [0.985, 0.019, 0.080, 0.073],
-                 }
-        self.smear_params = {
-                 '2016': [1.013, 0.014, 0.029, 0.047], #updated numbers for v7 nanoAOD production
-                 '2017': [1.017, 0.021, 0.058, 0.066],
-                 '2018': [0.985, 0.019, 0.080, 0.073],
-                 }
-        if self.year not in self.smear_params:
-            print("ERROR: smearing for year", self.year, " not available!")
-            raise Exception("SmearingError")
-
-        self.scale, self.scale_err, self.smear, self.smear_err = self.smear_params[self.year]
 
     def customInit(self, initVars):
         self.sampleTree = initVars['sampleTree']
@@ -49,9 +34,9 @@ class JetSmearer(AddCollectionsModule):
         #smearing params
         if self.config.get('General','nTupleVersion') in ['V11','V12']:
             self.smear_params = {
-                     '2016': [1.0, 0.0, 0.0, 0.0],
-                     '2017': [1.0029846959, 0.0212893588055, 0.030684, 0.052497],
-                     '2018': [0.98667384694, 0.0197153848807, 0.038481, 0.053924],
+                     '2016': [1.0, 0.018, -0.044, 0.061],
+                     '2017': [1.0, 0.022,  0.051, 0.068],
+                     '2018': [1.0, 0.019,  0.150, 0.079],
                      }
         elif self.config.get('General','nTupleVersion') == 'V13':
             self.smear_params = {
@@ -66,6 +51,9 @@ class JetSmearer(AddCollectionsModule):
         if self.year not in self.smear_params:
             print("ERROR: smearing for year", self.year, " not available!")
             raise Exception("SmearingError")
+        
+        self.scale, self.scale_err, self.smear, self.smear_err = self.smear_params[self.year]
+        print("INFO: scale/smear parameters:", self.scale, self.scale_err, self.smear, self.smear_err)
 
         if self.sample.isMC():
 
@@ -81,13 +69,18 @@ class JetSmearer(AddCollectionsModule):
             self.sampleTree.tree.SetBranchAddress("Jet_PtRegUp", self.PtRegUp)
             self.sampleTree.tree.SetBranchAddress("Jet_PtRegDown", self.PtRegDown)
 
+            self.addVectorBranch("Jet_PtRegScaleUp",   default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegScaleUp[nJet]/F")
+            self.addVectorBranch("Jet_PtRegScaleDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegScaleDown[nJet]/F")
+            self.addVectorBranch("Jet_PtRegSmearUp",   default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegSmearUp[nJet]/F")
+            self.addVectorBranch("Jet_PtRegSmearDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegSmearDown[nJet]/F")
+
             if self.backupPreviousCorrection:
                 self.addVectorBranch("Jet_PtRegOld",     default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOld[nJet]/F")
                 self.addVectorBranch("Jet_PtRegOldUp",   default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldUp[nJet]/F")
                 self.addVectorBranch("Jet_PtRegOldDown", default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_PtRegOldDown[nJet]/F")
 
     def processEvent(self, tree):
-        if self.active and not self.hasBeenProcessed(tree) and self.sample.isMC():
+        if not self.hasBeenProcessed(tree) and self.sample.isMC():
             self.markProcessed(tree)
 
             nJet = tree.nJet
@@ -113,15 +106,30 @@ class JetSmearer(AddCollectionsModule):
                     band      = math.sqrt(pow(nominal/self.scale * self.scale_err, 2) + pow(gen_diff * self.scale * self.smear_err, 2))
 
                     down, up  = (max(nominal - band, no_smear), nominal + band) if regressed > gen_pt else (min(nominal + band, no_smear), nominal - band)  
+
+                    smear_up    = max(0.0, (gen_pt + gen_diff * (1.0 + self.smear + self.smear_err)) * self.scale)
+                    smear_down  = max(0.0, (gen_pt + gen_diff * (1.0 + self.smear - self.smear_err)) * self.scale)
+                    scale_up    = max(0.0, (gen_pt + gen_diff * (1.0 + self.smear)) * (self.scale + self.scale_err))
+                    scale_down  = max(0.0, (gen_pt + gen_diff * (1.0 + self.smear)) * (self.scale - self.scale_err))
                 else:
                     regressed = self.Pt[i] * self.bRegCorr[i]
                     nominal   = regressed * self.scale
                     up        = regressed * (self.scale + self.scale_err)
                     down      = regressed * (self.scale - self.scale_err)
 
+                    smear_up    = nominal
+                    smear_down  = nominal
+                    scale_up    = up
+                    scale_down  = down
+
                 self.PtReg[i]     = nominal
                 self.PtRegUp[i]   = up
                 self.PtRegDown[i] = down
+
+                self._b("Jet_PtRegScaleUp")[i]   = scale_up
+                self._b("Jet_PtRegScaleDown")[i] = scale_down
+                self._b("Jet_PtRegSmearUp")[i]   = smear_up
+                self._b("Jet_PtRegSmearDown")[i] = smear_down
 
             # formulas by default reload the branch content when evaluating the first instance of the object!
             # SetQuickLoad(1) turns off this behavior
@@ -138,26 +146,30 @@ class JetSmearer(AddCollectionsModule):
 
 if __name__ == '__main__':
 
-    config = XbbConfigReader.read('Zvv2018')
+    config = XbbConfigReader.read('Wlv2017')
 
     info = ParseInfo(config=config)
     
-    sample = [x for x in info if x.identifier == 'ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8'][0]
+    sample = [x for x in info if x.identifier == 'WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8'][0]
     # read sample
-    sampleTree = SampleTree(['/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2018/V13/ZH_HToBB_ZToNuNu_M125_13TeV_powheg_pythia8/RunIIAutumn18NanoAODv7-Nano02A85/200519_095652/0000/tree_1.root'], treeName='Events', xrootdRedirector="root://eoscms.cern.ch/")
+    sampleTree = SampleTree(['/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11/WplusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8/adewit-crab_nano2017_WplusH_HT81/190606_065851/0000/tree_1.root'], treeName='Events', xrootdRedirector="root://eoscms.cern.ch/")
     # initialize module
-    w = JetSmearer("2018")
-    w.customInit({'sampleTree': sampleTree, 'sample': sample})
+    w = JetSmearer("2017")
+    w.customInit({'sampleTree': sampleTree, 'sample': sample, 'config': config})
     n=0
-    for event in sampleTree:
-        w.processEvent(event)
-        n=n+1
-        if n==3: break
+    #for event in sampleTree:
+    #    w.processEvent(event)
+    #    n=n+1
+    #    if n==3: break
 
-    #sampleTree.addOutputBranches(w.getBranches()) 
+    sampleTree.addOutputBranches(w.getBranches()) 
 
     # output files
-    #sampleTree.addOutputTree('/scratch/krgedia/test.root', cut='MET_Pt>0', branches='*')
+    sampleTree.addOutputTree('/scratch/berger_p2/test.root', cut='1', branches='*')
+    
+    sampleTree.addCallback('event', w.processEvent)
+    sampleTree.addCallback('event', lambda x: False if x.GetReadEntry() > 1000 else True)
 
     # loop over all events!
-    #sampleTree.process()
+    sampleTree.process()
+

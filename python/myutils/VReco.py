@@ -62,7 +62,7 @@ class VReco(AddCollectionsModule):
                 self.addBranch(self._v("V_eta", syst, UD))
                 self.addBranch(self._v("V_phi", syst, UD))
                 self.addBranch(self._v("V_mass", syst, UD))
-                if syst not in ['jerReg']:
+                if 'jerReg' not in syst:
                     self.addBranch(self._v("MET_sig30", syst, UD))
                     self.addBranch(self._v("MET_sig30puid", syst, UD))
 
@@ -107,7 +107,7 @@ class VReco(AddCollectionsModule):
 
                         MET = ROOT.TLorentzVector()
                         Lep = ROOT.TLorentzVector()
-                        if syst.lower()=='nominal' or syst=='jerReg':
+                        if syst.lower()=='nominal' or 'jerReg' in syst:
                             MET.SetPtEtaPhiM(tree.MET_Pt, 0.0, tree.MET_Phi, 0.0)
                         else:
                             MET.SetPtEtaPhiM(getattr(tree, "MET_pt_{syst}{UD}".format(syst=syst, UD=UD)), 0.0, getattr(tree, "MET_phi_{syst}{UD}".format(syst=syst, UD=UD)), 0.0)
@@ -146,7 +146,7 @@ class VReco(AddCollectionsModule):
                             self._b(self._v("V_mass", syst, UD))[0] = V.M()
 
                     # MET significance (approx.)
-                    if syst != 'jerReg':
+                    if 'jerReg' not in syst:
                         HTsum30 = 0
                         HTsum30puid = 0
                         if syst.lower() == 'nominal' or syst == 'unclustEn':

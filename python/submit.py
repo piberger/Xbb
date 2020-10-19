@@ -985,7 +985,7 @@ if opts.task == 'sysnew' or opts.task == 'checksysnew' or opts.task == 'run':
                     # submit
                     batchJob = submit(jobName, jobDict)
 
-                    jobID = batchJob.jobID()
+                    jobID = batchJob.jobID() if batchJob else -1
                     if jobID > -1:
                         if sampleIdentifier not in jobDependencyDict:
                             jobDependencyDict[sampleIdentifier] = {}

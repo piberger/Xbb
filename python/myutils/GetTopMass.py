@@ -365,7 +365,7 @@ class GetTopMass(AddCollectionsModule):
            JetPt      = JetPtReg
            JetMass    = JetMassNom * JetPtReg /JetPtNom
         elif 'jerReg' in syst:
-           JetPtSys   = np.array(getattr(tree,"Jet_PtReg" + UD))
+           JetPtSys   = np.array(getattr(tree,"Jet_Pt" + syst[3:] + UD))
            JetPt      = JetPtSys
            JetMass    = JetMassNom * JetPtSys / JetPtNom
         else:
