@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/DYJetsToLL_M-5to50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//e4a72179f6c3f9aecaf188ab41d2c185dd9ade35a78257e329a88be8/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/DYJetsToLL_M-5to50_HT-600toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//fc288884381323868d3ebdc22d1bc76fa63b04597fc37650f6ca1a08/000000_000000/0000/tree_1.root

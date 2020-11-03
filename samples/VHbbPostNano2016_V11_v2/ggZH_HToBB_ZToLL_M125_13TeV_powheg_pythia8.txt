@@ -1,0 +1,17 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_10.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_11.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB82/190607_053748/0000/tree_9.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB83/190607_053836/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB83/190607_053836/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB84/190607_053924/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB84/190607_053924/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB84/190607_053924/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ggZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//adewit-crab_nano2016_ggZH_HToB84/190607_053924/0000/tree_4.root

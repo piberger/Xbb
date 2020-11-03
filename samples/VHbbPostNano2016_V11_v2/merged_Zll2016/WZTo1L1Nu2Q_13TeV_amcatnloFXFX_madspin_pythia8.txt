@@ -1,0 +1,1 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8//4c77ddefc4da11b537be54f72c7a58a40ab4fc226282977ced6afed5/000000_000000/0000/tree_0.root
