@@ -356,12 +356,12 @@ class JECcorrelator(AddCollectionsModule):
                         self._b(self._v("FatJet_pt", syst, Q, ""))[i] = self.correlator(syst,i,Q,"FatJet_pt",attr)
                         self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i] = self.correlator(syst,i,Q,"FatJet_msoftdrop",attr)
                         if ((getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i]>0) and (getattr(self,"fatjet_pt"+"_"+syst+Q)[i]>0)):
-                            histograms["FatJet_pt"][syst][Q].Fill((getattr(self,"fatjet_pt"+"_"+syst+Q)[i] - self._b(self._v("FatJet_pt", syst, Q, ""))[i])/(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])) 
-                            histograms["FatJet_msoftdrop"][syst][Q].Fill((getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i] - self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i])/(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])) 
+                            #histograms["FatJet_pt"][syst][Q].Fill((getattr(self,"fatjet_pt"+"_"+syst+Q)[i] - self._b(self._v("FatJet_pt", syst, Q, ""))[i])/(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])) 
+                            #histograms["FatJet_msoftdrop"][syst][Q].Fill((getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i] - self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i])/(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])) 
                             attr["FatJet_pt"][syst][Q].append(self._b(self._v("FatJet_pt", syst, Q, ""))[i])
                             attr["FatJet_msoftdrop"][syst][Q].append(self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i])
-                            true_attr["FatJet_pt"][syst][Q].append(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])
-                            true_attr["FatJet_msoftdrop"][syst][Q].append(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])
+                            #true_attr["FatJet_pt"][syst][Q].append(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])
+                            #true_attr["FatJet_msoftdrop"][syst][Q].append(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])
 
             #self.nEvent += 1
             #if self.nEvent % 1000 == 0:
@@ -385,7 +385,7 @@ if __name__=='__main__':
     w.customInit({'sampleTree': sampleTree, 'sample': sample, 'config': config})
     sampleTree.addOutputBranches(w.getBranches())
     histograms={}
-    for jec in w.JEC_reduced:                                                                                                                                       histograms[jec] = {}
+    for jec in w.JEC_reduced:                                                                                                                   histograms[jec] = {}
 
     for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
         histograms[var] = {}

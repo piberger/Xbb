@@ -44,7 +44,7 @@ class HiggsCandidateSystematics(AddCollectionsModule):
 
         self.dataset = self.config.get('General', 'dataset')
         if self.dataset == '2016':
-            self.jetIdCut = 4 
+            self.jetIdCut = 2 
         else:
             self.jetIdCut = 4
 
