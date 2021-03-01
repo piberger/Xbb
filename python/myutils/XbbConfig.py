@@ -9,11 +9,69 @@ from copytreePSI import filelist
 from FileLocator import FileLocator
 from sample_parser import ParseInfo
 from XbbTools import XbbTools
+import numpy as np
+
+class XbbRegion(object):
+
+    def __init__(self, regionType, regionName, config=None):
+        self.regionType = regionType
+        self.regionName = regionName
+        self.signals = []
+        self.backgrounds = []
+        self.data = []
+        self.binningType = None
+        self.binning = []
+        self.type = []
+        self.var = None
+        self.cut = '1'
+
+    def print(self):
+        print('-'*80)
+        print('region:', self.regionName, "(", self.regionType, ")")
+        print('var:', self.var)
+        print('binning:', self.binning, "(", self.binningType, ")")
+        print('-'*80)
+
+    def getConfigSection(self):
+        if self.regionType in ['dc','datacards','shapes','shape']:
+            return 'dc:' + self.regionName
+        elif self.regionType in ['plot']:
+            return 'Plot:' + self.regionName
+        else:
+            return self.regionName
+
+    def readFromConfig(self, config):
+        configSection = self.getConfigSection()
+        if config.has_section(configSection):
+            self.var = config.get(configSection, 'var')
+            self.binningType = config.get(configSection, 'rebin_method') if config.has_option(configSection, 'rebin_method') else 'range'
+            if self.binningType in ['list', 'fixed']:
+                self.binning = np.array(eval(config.get(configSection, 'rebin_list')))
+            elif self.binningType in ['range']:
+                r = config.get(configSection, 'range').strip().split(',')
+                self.binning = np.linspace(float(r[1]),float(r[2]),int(r[0])+1)
+            self.signals     = config.getSamples(eval(config.get(configSection, 'signal')))
+            self.backgrounds = config.getSamples(eval(config.get(configSection, 'background')))
+            self.data        = config.getSamples(eval(config.get(configSection, 'data')))
+            if config.has_option(configSection, 'type'):
+                self.type        = config.get(configSection, 'type')
+            if config.has_option(configSection, 'cut'):
+                self.cut         = config.get(configSection, 'cut')
+            else:
+                self.cut         = self.regionName
+
+    def getMC(self):
+        return self.signals + self.backgrounds
+
+    def getData(self):
+        return self.data
+
+    def getCut(self):
+        return self.cut
 
 # helper class to read full config object
 # use:
 #      config = XbbConfigReader.read('Zll2017')
-
 class XbbConfigReader(object):
 
     def __init__(self):
@@ -67,6 +125,9 @@ class XbbConfigTools(object):
             self.initFS()
         return self.fileLocator
 
+    def init(self):
+        self.loadNamespaces()
+
     def loadNamespaces(self):
         #default
         try:
@@ -95,6 +156,10 @@ class XbbConfigTools(object):
             s = XbbTools.filterSampleList(s, filterList)
         s.sort()
         return s
+    
+    def getSamples(self, samples):
+        self.getSamplesInfo()
+        return self.samplesInfo.get_samples(samples)
 
     # list of all sample names (data + mc)
     def getUsedSamples(self):
