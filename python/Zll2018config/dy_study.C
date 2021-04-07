@@ -65,11 +65,13 @@
 using namespace RooFit;
 using namespace RooStats;
 using namespace std;
+using namespace TMath;
 
 //TH1D* getMC_hist(TString inputfile, TH1D *h1);
 TH1D* getdata_hist(TString mbxsec);
 //void plot_ratio(TH1D* data_pu,TH1D* mc_pu_1, TH1D* mc_pu_2, TH1D* mc_pu_3, TH1D* mc_pu_4, TH1D* data_pu_5, TH1D* data_pu_6, TString s1, TString s2, TString s3, TString s4, TString s5, TString s6);
 void plot_660(TH1D* mc_pu,TH1D* mc_pu_rwt_660, TH1D* data_pu_660);
+void fitf(Double_t *x);
 
 
 TString s1 = "/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src/Xbb/python/Wlv2018config/PU_hist/MyDataPileupHistogram_mbxsec_";
@@ -83,33 +85,55 @@ TString VHF_hpt = "Zll_CRZb_highpt_";
 //TString region = VHF_hpt;
 //TString region = SR_hpt;
 //TString region = IR_F;
-TString region = IR_B;
+TString region = "IR_F_new_1";
+TString regiongt = "IR_F_new_gt1";
 //TString region = IR_FB;
+TString title = "HT/DYF";
 
 void dy_study()
 {   
 
     //TH1D *data_pu_300 = getdata_hist("30000"); 
     //21jun-nob
-    TFile* file1 = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/logs_Zll2018//runplot-18july-nob/Plots/"+ region +"_LHEVpt_FB_.shapes.root");
+    //TFile* file1 = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/logs_Zll2018//runplot-18july-nob/Plots/"+ region +"_LHEVpt_FB_.shapes.root");
     //file2->ls();
 
-    TFile* file2 = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/logs_Zll2018//runplot-18july-withb/Plots/"+region+"_LHEVpt_FB_.shapes.root");
+    //TFile* file2 = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/logs_Zll2018//runplot-18july-withb/Plots/"+region+"_LHEVpt_FB_.shapes.root");
     //TFile* file2 = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/logs_Zll2018//runplot-21jun-withbcorr/Plots/"+ region +"_LHEVpt_FB_.shapes.root");
     //file3->ls();
 
+    TString  logs = "logs_Zll2018";
+    TFile* file_nob = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/"+logs+"/runplot_26mar21_off/Plots/"+ region +"__LHE_Vpt_.shapes.root");
+    file_nob->ls();
+    TFile* file_b = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/"+logs+"/runplot_26mar21_excl/Plots/"+ region +"__LHE_Vpt_.shapes.root");
+    file_b->ls();
+    TFile* file_nob_old = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/"+logs+"/runplot_26mar21_off/Plots/"+ regiongt +"__LHE_Vpt_.shapes.root");
+    file_nob_old->ls();
+    TFile* file_b_old = new TFile("/mnt/t3nfs01/data01/shome/krgedia/CMSSW_10_1_0/src//Xbb/python/"+logs+"/runplot_26mar21_excl/Plots/"+ regiongt +"__LHE_Vpt_.shapes.root");
+    file_b_old->ls();
 
                 //*(&h1) = (TH1D*)file2->Get("pileup");
-    TH1D *h1 = (TH1D*)file1->Get("summedMcHistograms");
-    TH1D *h2 = (TH1D*)file2->Get("summedMcHistograms");
-    TH1D *ratio_1 = new TH1D("ratio","HT/DYB",80,0,800);
+    TH1D *h1 = (TH1D*)file_nob->Get("summedMcHistograms");
+    TH1D *h2 = (TH1D*)file_b->Get("summedMcHistograms");
+    TH1D *h1_old = (TH1D*)file_nob_old->Get("summedMcHistograms");
+    TH1D *h2_old = (TH1D*)file_b_old->Get("summedMcHistograms");
+    TH1D *ratio_1 = new TH1D("ratio",title,60,0,600);
+    TH1D *ratio_1_old = new TH1D("ratio",title,60,0,600);
     //TH1D *ratio_1 = new TH1D("ratio","ratio of corr_with by w/o b-enriched DY samples",80,0,800);
     //TH1D *ratio_2 = new TH1D("ratio","ratio",80,0,800);
     ratio_1->Sumw2();
+    ratio_1_old->Sumw2();
     ratio_1->Divide(h1,h2);
-    ratio_1->GetYaxis()->SetRangeUser(0.0,3.0);
-    TF1 *func = new TF1("func","pol2",100,800);
+    ratio_1_old->Divide(h1_old,h2_old);
+    ratio_1->SetLineColor(kRed);
+    ratio_1_old->SetLineColor(kBlue);
+    ratio_1->GetYaxis()->SetRangeUser(0.0,6.0);
+    TF1 *func = new TF1("func","[0]+[1]*TMath::Min(x,300.0)+[2]*TMath::Min(x,300.0)**2",100,600);
+    func->SetLineColor(kRed);
     ratio_1->Fit(func);
+    TF1 *func_old = new TF1("func_old","[0]+[1]*TMath::Min(x,300.0)+[2]*TMath::Min(x,300.0)**2",100,600);
+    func_old->SetLineColor(kBlue);
+    ratio_1_old->Fit(func_old);
     double bin_width = h1->GetXaxis()->GetBinWidth(0);
     std::ostringstream strs;
     strs << bin_width;
@@ -121,6 +145,16 @@ void dy_study()
     //ratio_1->GetYaxis()->SetTitle("Entries/"+binwidth);
     //ratio_1->Divide(h2,h1);    
     ratio_1->Draw();
+    ratio_1_old->Draw("same");
+    TLegend* la = new TLegend();
+//,NULL,"brNDC");
+    la->AddEntry(ratio_1,"LHE_Nb==1","l");
+    la->AddEntry(ratio_1_old,"LHE_Nb>1","l");
+    la->SetTextFont(12);
+    //la->SetTextSize(0.06237499);
+    la->SetBorderSize(0);
+    la->SetFillColor(0);
+    la->Draw("same");
 
     TAxis *xaxis = h1->GetXaxis();
     TAxis *xaxis2 = h2->GetXaxis();
@@ -158,6 +192,10 @@ void dy_study()
     //plot_ratio(mc_pu, data_pu_600, data_pu_620, data_pu_640, data_pu_660, data_pu_680, data_pu_692, "_60_0", "_62_0", "_64_0", "_66_0", "_68_0", "_69_2");
     //plot_ratio(mc_pu, data_pu_700, data_pu_720, data_pu_740, data_pu_760, data_pu_780, data_pu_800, "_70_0", "_72_0", "_74_0", "_76_0", "_78_0", "_80_0");
 }
+//void fitf(Double_t *x) {
+//      Double_t fitval = [0]+[1]*TMath::Min(x,300.0)+[2]*TMath::Min(x,300.0)**2;
+//      return fitval;
+//   }
 /*
 TH1D* getdata_hist(TString mbxsec)
 {
