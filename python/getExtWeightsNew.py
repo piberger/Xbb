@@ -100,6 +100,23 @@ for sampleIdentifier,counts in countDict.iteritems():
 print "result:"
 print countDict
 print "-"*80
+for i,cut in enumerate(sampleCuts,1):
+    print i, cut
+print "-"*80
+for i,sampleGroup in enumerate(sampleGroups,1):
+    print i,sampleGroup
+print "-"*80
+for sampleGroup in sampleGroups:
+    cutLine = ""
+    for cut in sampleCuts:
+        f = 0.0
+        for sampleIdentifier in sampleGroup:
+            if sampleIdentifier in countDict and cut in countDict[sampleIdentifier]:
+                f += countDict[sampleIdentifier][cut]
+        cutLine += "%1.4f "%f
+    print cutLine
+
+print "-"*80
 
 for sampleIdentifier,counts in countDict.iteritems():
     specialweight = ''

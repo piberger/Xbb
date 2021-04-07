@@ -310,6 +310,12 @@ class Datacard(object):
         # contains all systematicDictionaries, first entry will be nominal
         self.systematicsList = [self.systematicsDictionaryNominal]
 
+        # MC stats
+        mcStatsDict = deepcopy(self.systematicsDictionaryNominal)
+        mcStatsDict['sysType'] = 'unweighted'
+        mcStatsDict['systematicsName'] = 'unweighted'
+        self.systematicsList.append(mcStatsDict)
+
         if self.verbose or self.debug:
             print ('Assign the systematics')
             print ('======================\n')
@@ -838,7 +844,10 @@ class Datacard(object):
                                 weight = sampleTree.evaluate(systematics['weight']) if not sample.isData() else 1.0
                                 treeVar = sampleTree.evaluate(systematics['var'])
                                 specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                                self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
+                                if systematics['sysType'] == 'unweighted':
+                                    self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar)
+                                else:
+                                    self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
 
                 if not sampleTree.checkProcessingComplete():
                     raise Exception('FileReadIncomplete')
@@ -1105,7 +1114,7 @@ class Datacard(object):
                         systematics['histograms'][sampleGroup] = th
                     else:
                         systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
-        
+
         # DEPRECATED! now done by combine harvester!!
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:

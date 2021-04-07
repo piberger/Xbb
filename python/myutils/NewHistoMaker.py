@@ -121,13 +121,26 @@ class NewHistoMaker:
                 print("INFO: ->", weightF)
 
             # add tree cut 
-            selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
-            nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
+            if self.config.has_option('Plot_general', 'drawWeight'):
+                weightF = '({w})*{s}'.format(w=weightF, s=self.sampleTree.getScale(self.sample))
+                weightF_original = weightF
+                if self.config.get('Plot_general', 'drawWeight').startswith('log'):
+                    weightF = 'TMath::Log10(TMath::Abs({w}))'.format(w=weightF)
+                elif self.config.get('Plot_general', 'drawWeight').startswith('ln'):
+                    weightF = 'TMath::Log(TMath::Abs({w}))'.format(w=weightF)
+                if self.config.get('Plot_general', 'drawWeight').endswith('weighted'):
+                    selection = "({weight})*({cut})".format(weight=weightF_original, cut=cut) 
+                    nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=weightF, histogramName=self.histogramName), selection)
+                else:
+                    nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=weightF, histogramName=self.histogramName), cut)
+            else:
+                selection = "({weight})*({cut})".format(weight=weightF, cut=cut) 
+                nEvents = self.sampleTree.tree.Draw('{var}>>{histogramName}'.format(var=self.histogramOptions['treeVar'], histogramName=self.histogramName), selection)
+                self.scaleHistogram()
             if nEvents < 0:
                 print ("\x1b[31mERROR: error in TTree:Draw! returned {nEvents}\x1b[0m".format(nEvents=nEvents))
             if self.debug:
                 print(selection, " => # events:", nEvents, "weighted:", self.histogram.Integral())
-            self.scaleHistogram()
         else:
             print ("ERROR: initialization of histogram failed!")
             raise Exception("HistoMakerInitializationError")

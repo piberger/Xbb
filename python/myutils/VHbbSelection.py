@@ -13,7 +13,7 @@ class VHbbSelection(AddCollectionsModule):
 
     # original 2017: puIdCut=0, jetIdCut=-1
     # now:           puIdCut=6, jetIdCut=4
-    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1, skipJetSelection=False, vpt0lep=150.0, vpt1lep=150.0, vpt2lep=75.0):
+    def __init__(self, debug=False, year="none", channels=["Wln","Zll","Znn"], puIdCut=6, jetIdCut=4, debugEvents=[], isoWen=0.06, isoWmn=0.06, isoZmm=0.25, isoZee=0.15, recomputeVtype=False, btagMaxCut=None, idWmn="default", idWmnCut=1, idWen="default", idWenCut=1, idZmm="default", idZmmCut=1, idZee="default", idZeeCut=1, skipJetSelection=False, vpt0lep=170.0, vpt1lep=150.0, vpt2lep=75.0):
         super(VHbbSelection, self).__init__()
         self.debug = debug or 'XBBDEBUG' in os.environ
         self.version = 7

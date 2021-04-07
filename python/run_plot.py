@@ -119,7 +119,9 @@ class PlotHelper(object):
             
             # cuts
             sampleCuts = [sample.subcut]
-            if self.config.has_option('Cuts', self.region):
+            if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'cut'):
+                sampleCuts.append(self.config.get('Cuts', self.config.get(self.configSection, 'cut')))
+            elif self.config.has_option('Cuts', self.region):
                 sampleCuts.append(self.config.get('Cuts', self.region))
             if self.config.has_option(self.configSection, 'Datacut'):
                 sampleCuts.append(self.config.get(self.configSection, 'Datacut'))
