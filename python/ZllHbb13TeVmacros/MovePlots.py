@@ -28,7 +28,7 @@ parser.add_argument('--no', dest='do_outp', action='store_const',
 parser.add_argument('--ni', dest='do_inp', action='store_const',
                    const=False, default=True,  help='no preparation of folders for each Region')
 parser.add_argument('--nh', dest='ht', action='store_const',
-                   const=False, default=True,  help='no htaccess file is created')
+                   const=False, default=False,  help='no htaccess file is created')
 
 #Move all plots in corresponding subfolders
 
