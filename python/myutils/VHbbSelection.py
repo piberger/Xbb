@@ -297,9 +297,9 @@ class VHbbSelection(AddCollectionsModule):
             else:
                 # for all other variations, the branches contain a multiplicative factor... duh
                 Pt_scale  = getattr(tree, "FatJet_pt_{syst}".format(syst=syst)) 
-                Pt.append([Pt_nom[i] * Pt_scale[i] for i in range(len(Pt_nom))])
+                Pt.append([Pt_scale[i] for i in range(len(Pt_nom))])
                 Msd_scale = getattr(tree, "FatJet_msoftdrop_{syst}".format(syst=syst)) 
-                Msd.append([Msd_nom[i] * Msd_scale[i] for i in range(len(Msd_nom))])
+                Msd.append([Msd_scale[i] for i in range(len(Msd_nom))])
 
         for i in range(tree.nFatJet):
             for j in range(nSystematics):
