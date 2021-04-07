@@ -15,6 +15,7 @@ from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from sampleTree import SampleTree as SampleTree
 from XbbTools import XbbTools
+from PostFitWeight import PostFitWeight
 
 # ------------------------------------------------------------------------------
 # produces histograms from trees with HistoMaker, groups them, and draws a
@@ -49,6 +50,10 @@ class NewStackMaker:
             print("\x1b[31mWARNING: no section '%s' in config, using defaults.\x1b[0m"%('Plot:%s'%region))
             self.configSection = None
             #raise Exception("ConfigError")
+        if self.config.has_option('Plot_general', 'postFit') and eval(self.config.get('Plot_general', 'postFit')):
+            self.postFitWeight = PostFitWeight(self.config, region)
+        else:
+            self.postFitWeight = None
 
         self.plotVarSection = 'plotDef:%s'%var
         self.hasPlotVarSection = self.config.has_section(self.plotVarSection)
@@ -89,26 +94,6 @@ class NewStackMaker:
                 'var': self.var,
                 }
         self.additionalTextLines = [""]
-        if self.config.has_option('Plot_general', 'additionalText'):
-            aText =  eval(self.config.get('Plot_general', 'additionalText'))
-            if type(aText) == list:
-                self.additionalTextLines += aText
-            else:
-                self.additionalTextLines.append(aText)
-        if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
-            aText = eval(self.config.get(self.configSection, 'additionalText'))
-            if type(aText) == list:
-                self.additionalTextLines += aText
-            else:
-                self.additionalTextLines.append(aText)
-        if self.hasPlotVarSection:
-            if self.config.has_option(self.plotVarSection, 'additionalText'):
-                aText = eval(self.config.get(self.plotVarSection, 'additionalText'))
-                if type(aText) == list:
-                    self.additionalTextLines += aText
-                else:
-                    self.additionalTextLines.append(aText)
-
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -266,6 +251,10 @@ class NewStackMaker:
         print ("INFO: var=", self.var, "-> treeVar=\x1b[34m", self.histogramOptions['treeVar'] , "\x1b[0m add sample \x1b[34m", sample,"\x1b[0m from sampleTree \x1b[34m", sampleTree, "\x1b[0m to group \x1b[34m", groupName, "\x1b[0m")
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
+
+        if self.postFitWeight is not None:
+            histogramOptions['weight'] = '(' + histogramOptions['weight'] + ')*(' + self.postFitWeight.getWeight(groupName) + ')'
+            print("\x1b[32mINFO: include post-fit weight:", histogramOptions['weight'], "\x1b[0m")
 
         self.histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = self.histoMaker.getHistogram(cut)
@@ -743,11 +732,12 @@ class NewStackMaker:
         except:
             pass
 
-        try:
-            for j, additionalTextLine in enumerate(self.additionalTextLines):
-                self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
-        except Exception as e:
-            print(e)
+        if not self.is2D:
+            try:
+                for j, additionalTextLine in enumerate(self.additionalTextLines):
+                    self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
+            except Exception as e:
+                print(e)
 
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
@@ -952,6 +942,9 @@ class NewStackMaker:
                 allStack.Sumw2()
                 allStack.Divide(allStackMc)
                 self.plotLabels['topright1']['text'] = 'DATA/MC'
+                allStack.SetMinimum(0.5)
+                allStack.SetMaximum(2.0)
+                ROOT.gStyle.SetPaintTextFormat("1.2f")
                 try:
                     unityPos = 0.33
                     try:
@@ -960,14 +953,40 @@ class NewStackMaker:
                     except:
                         pass
                     stops = array.array('d', [0.0, unityPos, 1.0])
-                    reds = array.array('d', [0.34, 0.63, 1.0])
-                    greens = array.array('d', [0.34, 0.63, 0])
-                    blues = array.array('d', [0.63, 0.63, 0])
-                    nc = 20
+                    reds = array.array('d', [0.14, 1.0, 0.9])
+                    greens = array.array('d', [0.14, 1.0, 0.1])
+                    blues = array.array('d', [0.63, 1.0, 0.1])
+                    nc = 21
                     ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
                     ROOT.gStyle.SetNumberContours(nc)
                 except Exception as e:
                     print("\x1b[31m",e,"\x1b[0m")
+            elif 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip().upper() == 'PULL':
+                allStackData = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                allStackMc = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                allStack = allStackData.Clone('summedRatioHistogram')
+                allStack.Sumw2()
+                allStack.Divide(allStackMc)
+                for i in range(allStack.GetXaxis().GetNbins()):
+                    for j in range(allStack.GetYaxis().GetNbins()):
+                        bc = allStack.GetBinContent(1+i,1+j)
+                        be = allStack.GetBinError(1+i,1+j)
+                        v = (bc-1.0)/be if be > 0 else 0
+                        allStack.SetBinContent(1+i,1+j,v)
+                allStack.SetMinimum(-4.0)
+                allStack.SetMaximum(4.0)
+                try:
+                    stops  = array.array('d', [0.00, 0.25, 0.5, 0.75, 1.00])
+                    reds   = array.array('d', [0.00, 0.4, 1.0, 1.0, 0.40])
+                    greens = array.array('d', [0.20, 1.0, 1.0, 0.40, 0.00])
+                    blues  = array.array('d', [0.00, 0.4, 1.0, 1.0, 0.40])
+                    nc = 22
+                    ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
+                    ROOT.gStyle.SetNumberContours(nc)
+                except Exception as e:
+                    print("\x1b[31m",e,"\x1b[0m")
+                ROOT.gStyle.SetPaintTextFormat("1.1f")
+                self.plotLabels['topright1']['text'] = '(DATA/MC-1)/sigma(DATA/MC)'
             else:
                 allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
                 self.plotLabels['topright1']['text'] = 'MC'
@@ -980,6 +999,7 @@ class NewStackMaker:
             allStackCopy = allStack.Clone() 
             histList = allStackCopy.GetHists()    
             for binNumber in range(self.histogramOptions['nBins']):
+                print(histList)
                 binTotal = sum([h.GetBinContent(1+binNumber) for h in histList])
                 if binTotal > 0:
                     scale = 100.0/binTotal
@@ -1055,6 +1075,7 @@ class NewStackMaker:
             if self.log and not normalize:
                 allStack.SetMinimum(0.1)
                 Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
+                Ymax *= 6.0
                 ROOT.gPad.SetLogy()
             else:
                 ROOT.gPad.SetLogy(0)
@@ -1218,6 +1239,27 @@ class NewStackMaker:
         # draw legend
         if not self.is2D:
             self.drawSampleLegend(groupedHistograms, theErrorGraph, normalize=normalize)
+
+        # plot labels
+        if self.config.has_option('Plot_general', 'additionalText'):
+            aText =  eval(self.config.get('Plot_general', 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
+            aText = eval(self.config.get(self.configSection, 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.hasPlotVarSection:
+            if self.config.has_option(self.plotVarSection, 'additionalText'):
+                aText = eval(self.config.get(self.plotVarSection, 'additionalText'))
+                if type(aText) == list:
+                    self.additionalTextLines += aText
+                else:
+                    self.additionalTextLines.append(aText)
 
         # draw various labels
         if not normalize:

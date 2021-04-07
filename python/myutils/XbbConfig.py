@@ -133,8 +133,10 @@ class XbbConfigTools(object):
         try:
             defaultNamespace = self.get('VHbbNameSpace','library')
             ROOT.gSystem.Load(defaultNamespace)
+            return True
         except Exception as e:
             print(e)
+            return False
 
     # list of DATA sample names
     def getData(self):
