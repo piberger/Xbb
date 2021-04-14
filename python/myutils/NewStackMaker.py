@@ -267,6 +267,16 @@ class NewStackMaker:
                 sampleHistogram.SetBinContent(i+1,sampleHistogram.GetBinContent(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
                 sampleHistogram.SetBinError(i+1,sampleHistogram.GetBinError(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
 
+        # overwrite default definition of signals, e.g.: --set='Plot_general.redefineSignals=<!.|VVSIG!>' for VZ analysis
+        if sample.isMC():
+            if self.config.has_option('Plot_general', 'redefineSignals'):
+                oldType = sample.type
+                signalsList = eval(self.config.get('Plot_general', 'redefineSignals'))
+                sample.type = 'SIG' if sample.name in signalsList else 'BKG'
+
+                if oldType != sample.type:
+                    print("INFO: sample ", sample.name, " type changed from", oldType, " ---> ", sample.type)
+
         self.histograms.append({
             'name': sample.name,
             'histogram': sampleHistogram,
