@@ -1303,21 +1303,25 @@ if opts.task.startswith('runplot'):
         if '*' in opts.regions:
             regions = XbbTools.filterList(defaultRegions, regions)
 
-    if len(opts.vars.strip()) > 0:
-        plotVars = opts.vars.strip().split(',')
-    else:
-        plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
-    plotVars = list(set(plotVars))
-
-    # split list of variables to plot for multiple jobs
-    if opts.parallel:
-        plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
-    else:
-        plotVarChunks = [plotVars]
-
     # submit all the plot regions as separate jobs
     nRegionsMatched = 0
     for region in regions:
+   
+        # get plot vars for this region
+        if len(opts.vars.strip()) > 0:
+            plotVars = opts.vars.strip().split(',')
+        else:
+            if config.has_option('Plot:'+region, 'vars'):
+                plotVars = [x.strip() for x in (config.get('Plot:'+region, 'vars')).split(',')]
+            else:
+                plotVars = [x.strip() for x in (config.get('Plot_general', 'var')).split(',')]
+        plotVars = list(set(plotVars))
+
+        # split list of variables to plot for multiple jobs
+        if opts.parallel:
+            plotVarChunks = [plotVars[i:i + int(opts.parallel)] for i in xrange(0, len(plotVars), int(opts.parallel))]
+        else:
+            plotVarChunks = [plotVars]
 
         # if --regions is given, only plot those regions
         #regionMatched = any([fnmatch.fnmatch(region, enabledRegion) for enabledRegion in opts.regions.split(',')]) if opts.regions else True

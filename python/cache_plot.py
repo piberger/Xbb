@@ -30,7 +30,10 @@ class CachePlot(object):
 
         self.regionsDict = {}
         for region in self.regions:
-            treeCut = config.get('Cuts', region)
+            if self.config.has_section('Plot:'+region) and self.config.has_option('Plot:'+region, 'cut'):
+                treeCut = config.get('Cuts', self.config.get('Plot:'+region, 'cut'))
+            else:
+                treeCut = config.get('Cuts', region)
             self.regionsDict[region] = {'cut': treeCut}
         self.splitFilesChunkSize = splitFilesChunkSize
         self.splitFilesChunks = splitFilesChunks

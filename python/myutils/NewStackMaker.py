@@ -15,6 +15,7 @@ from Ratio import getRatio
 from NewHistoMaker import NewHistoMaker as HistoMaker
 from sampleTree import SampleTree as SampleTree
 from XbbTools import XbbTools
+from PostFitWeight import PostFitWeight
 
 # ------------------------------------------------------------------------------
 # produces histograms from trees with HistoMaker, groups them, and draws a
@@ -40,6 +41,7 @@ class NewStackMaker:
         self.config = config
         self.saveShapes = True
         self.var = var
+        self.varName = var
         self.region = region
         self.outputFolder = '.'
         self.configSectionPrefix = configSectionPrefix
@@ -48,6 +50,10 @@ class NewStackMaker:
             print("\x1b[31mWARNING: no section '%s' in config, using defaults.\x1b[0m"%('Plot:%s'%region))
             self.configSection = None
             #raise Exception("ConfigError")
+        if self.config.has_option('Plot_general', 'postFit') and eval(self.config.get('Plot_general', 'postFit')):
+            self.postFitWeight = PostFitWeight(self.config, region)
+        else:
+            self.postFitWeight = None
 
         self.plotVarSection = 'plotDef:%s'%var
         self.hasPlotVarSection = self.config.has_section(self.plotVarSection)
@@ -88,26 +94,6 @@ class NewStackMaker:
                 'var': self.var,
                 }
         self.additionalTextLines = [""]
-        if self.config.has_option('Plot_general', 'additionalText'):
-            aText =  eval(self.config.get('Plot_general', 'additionalText'))
-            if type(aText) == list:
-                self.additionalTextLines += aText
-            else:
-                self.additionalTextLines.append(aText)
-        if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
-            aText = eval(self.config.get(self.configSection, 'additionalText'))
-            if type(aText) == list:
-                self.additionalTextLines += aText
-            else:
-                self.additionalTextLines.append(aText)
-        if self.hasPlotVarSection:
-            if self.config.has_option(self.plotVarSection, 'additionalText'):
-                aText = eval(self.config.get(self.plotVarSection, 'additionalText'))
-                if type(aText) == list:
-                    self.additionalTextLines += aText
-                else:
-                    self.additionalTextLines.append(aText)
-
 
         # general event by event weight which is applied to all samples
         #  for special plots of weights itself, weightF can be defined in the plot definition
@@ -266,6 +252,10 @@ class NewStackMaker:
         histogramOptions = self.histogramOptions.copy()
         histogramOptions['group'] = groupName
 
+        if self.postFitWeight is not None:
+            histogramOptions['weight'] = '(' + histogramOptions['weight'] + ')*(' + self.postFitWeight.getWeight(groupName) + ')'
+            print("\x1b[32mINFO: include post-fit weight:", histogramOptions['weight'], "\x1b[0m")
+
         self.histoMaker = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions) 
         sampleHistogram = self.histoMaker.getHistogram(cut)
 
@@ -276,6 +266,16 @@ class NewStackMaker:
             for i in range(len(histogramOptions['binList'])-1):
                 sampleHistogram.SetBinContent(i+1,sampleHistogram.GetBinContent(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
                 sampleHistogram.SetBinError(i+1,sampleHistogram.GetBinError(i+1)*minBinWidth/(histogramOptions['binList'][i+1]-histogramOptions['binList'][i]))
+
+        # overwrite default definition of signals, e.g.: --set='Plot_general.redefineSignals=<!.|VVSIG!>' for VZ analysis
+        if sample.isMC():
+            if self.config.has_option('Plot_general', 'redefineSignals'):
+                oldType = sample.type
+                signalsList = eval(self.config.get('Plot_general', 'redefineSignals'))
+                sample.type = 'SIG' if sample.name in signalsList else 'BKG'
+
+                if oldType != sample.type:
+                    print("INFO: sample ", sample.name, " type changed from", oldType, " ---> ", sample.type)
 
         self.histograms.append({
             'name': sample.name,
@@ -288,6 +288,7 @@ class NewStackMaker:
         if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
             histogramOptions_Up   = histogramOptions.copy()
             histogramOptions_Down = histogramOptions.copy()
+
             try:
                 histogramOptions_Up['weight']   = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_UP')
                 histogramOptions_Down['weight'] = self.config.get('Weights', self.config.get('Plot_general', 'drawWeightSystematicError') + '_DOWN')
@@ -305,6 +306,25 @@ class NewStackMaker:
                     self.histograms[-1]['histogram_Up'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Up'].Integral())
                 if self.histograms[-1]['histogram_Down'].Integral() > 0:
                     self.histograms[-1]['histogram_Down'].Scale(self.histograms[-1]['histogram'].Integral()/self.histograms[-1]['histogram_Down'].Integral())
+        elif self.config.has_option('Plot_general', 'drawShapeSystematicError') and groupName != 'DATA':
+            histogramOptions_Up   = histogramOptions.copy()
+            histogramOptions_Down = histogramOptions.copy()
+            
+            syst                  = self.config.get('Plot_general', 'drawShapeSystematicError')
+            replacementRulesList  = XbbTools.getReplacementRulesList(self.config, syst)
+            systTreeVar           = XbbTools.getSystematicsVariationTemplate(histogramOptions['treeVar'], replacementRulesList).replace('{syst}', syst)
+
+            histogramOptions_Up['treeVar']   = systTreeVar.replace('{UD}','Up')
+            histogramOptions_Down['treeVar'] = systTreeVar.replace('{UD}','Down')
+            histoMaker_Up   = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Up)
+            histoMaker_Down = HistoMaker(self.config, sample=sample, sampleTree=sampleTree, histogramOptions=histogramOptions_Down)
+            #self.histograms[-1]['histogram_Up']   = histoMaker_Up.getHistogram(cut)
+            #self.histograms[-1]['histogram_Down'] = histoMaker_Down.getHistogram(cut)
+            cutUp = XbbTools.getSystematicsVariationTemplate(cut, replacementRulesList).replace('{syst}', syst).replace('{UD}','Up')
+            cutDown = XbbTools.getSystematicsVariationTemplate(cut, replacementRulesList).replace('{syst}', syst).replace('{UD}','Up')
+            self.histograms[-1]['histogram_Up']   = histoMaker_Up.getHistogram(cutUp)
+            self.histograms[-1]['histogram_Down'] = histoMaker_Down.getHistogram(cutDown)
+            self.varName += '_' + syst
 
     # add object to collection
     def addObject(self, object):
@@ -463,7 +483,7 @@ class NewStackMaker:
                 print("INFO: DATA/MC ratios:")
                 print("      bin     ratio    error(stat+MCstat)")
                 shapesName = "ratioWithStatsPlusMCstatsError_" + self.config.get('Plot_general', 'suffix') + '.root' if self.config.has_option('Plot_general', 'suffix') else "ratioWithStatsPlusMCstatsError.root"
-                outputFileName = self.outputFileTemplate.format(outputFolder=self.outputFolder, prefix=self.prefix, prefixSeparator='_' if len(self.prefix)>0 else '', var=self.var,  ext=shapesName)
+                outputFileName = self.outputFileTemplate.format(outputFolder=self.outputFolder, prefix=self.prefix, prefixSeparator='_' if len(self.prefix)>0 else '', var=self.varName,  ext=shapesName)
                 print("INFO: \x1b[33mratio with stats+MCstats error\x1b[0m saved to:", outputFileName)
                 ratioShapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
                 #thRatioWithTotalError = ROOT.TH1D("rte", "", self.ratioPlot.GetXaxis().GetNbins(), self.ratioPlot.GetXaxis().GetXmin(), self.ratioPlot.GetXaxis().GetXmax())
@@ -480,7 +500,7 @@ class NewStackMaker:
                 thRatioWithTotalError.Write()
                 ratioShapesFile.Close()
 
-            if self.config.has_option('Plot_general', 'drawWeightSystematicError') and mcHistogram_Up is not None and mcHistogram_Down is not None:
+            if (self.config.has_option('Plot_general', 'drawWeightSystematicError') or self.config.has_option('Plot_general', 'drawShapeSystematicError')) and mcHistogram_Up is not None and mcHistogram_Down is not None:
                 self.ratioPlot_Up, error_Up     = getRatio(dataHistogram, reference=mcHistogram_Up, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
                 self.ratioPlot_Down, error_Down = getRatio(dataHistogram, reference=mcHistogram_Down, min=self.histogramOptions['minX'], max=self.histogramOptions['maxX'], yTitle=yAxisTitle, maxUncertainty=self.maxRatioUncert, restrict=True, yRange=ratioRange)
 
@@ -521,7 +541,10 @@ class NewStackMaker:
                 self.ratioWeightSystematicError.SetFillStyle(3144)
                 self.ratioWeightSystematicError.Draw('SAME2')
                 self.ratioPlot.Draw("E1 SAME")
-                self.legends['ratio'].AddEntry(self.ratioWeightSystematicError, self.config.get('Plot_general', 'drawWeightSystematicError') ,"f")
+                if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+                    self.legends['ratio'].AddEntry(self.ratioWeightSystematicError, self.config.get('Plot_general', 'drawWeightSystematicError') ,"f")
+                if self.config.has_option('Plot_general', 'drawShapeSystematicError'):
+                    self.legends['ratio'].AddEntry(self.ratioWeightSystematicError, self.config.get('Plot_general', 'drawShapeSystematicError') ,"f")
 
         except Exception as e:
             print ("\x1b[31mERROR: with ratio histogram!", e, "\x1b[0m")
@@ -636,7 +659,9 @@ class NewStackMaker:
         for itemPosition, groupName in enumerate(groupNamesOrdered): 
             if groupName != self.dataGroupName and groupName in groupedHistograms:
                 legendEntryName = self.typLegendDict[groupName] if groupName in self.typLegendDict else groupName
-                if itemPosition < numLegendEntries/2.-2:
+                print(itemPosition,groupName,itemPosition < numLegendEntries/2.-2)
+                #if itemPosition < numLegendEntries/2.-2:
+                if nLeft < numLegendEntries/2:
                     self.legends['left'].AddEntry(groupedHistograms[groupName], legendEntryName, 'F')
                     nLeft += 1
                 else:
@@ -718,11 +743,12 @@ class NewStackMaker:
         except:
             pass
 
-        try:
-            for j, additionalTextLine in enumerate(self.additionalTextLines):
-                self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
-        except Exception as e:
-            print(e)
+        if not self.is2D:
+            try:
+                for j, additionalTextLine in enumerate(self.additionalTextLines):
+                    self.addObject(self.myText(additionalTextLine, self.plotTextMarginLeft, 0.73-0.03*j, 0.6))
+            except Exception as e:
+                print(e)
 
         #print 'Add Flag %s' %self.addFlag2
         #if self.addFlag2:
@@ -927,6 +953,9 @@ class NewStackMaker:
                 allStack.Sumw2()
                 allStack.Divide(allStackMc)
                 self.plotLabels['topright1']['text'] = 'DATA/MC'
+                allStack.SetMinimum(0.5)
+                allStack.SetMaximum(2.0)
+                ROOT.gStyle.SetPaintTextFormat("1.2f")
                 try:
                     unityPos = 0.33
                     try:
@@ -935,14 +964,40 @@ class NewStackMaker:
                     except:
                         pass
                     stops = array.array('d', [0.0, unityPos, 1.0])
-                    reds = array.array('d', [0.34, 0.63, 1.0])
-                    greens = array.array('d', [0.34, 0.63, 0])
-                    blues = array.array('d', [0.63, 0.63, 0])
-                    nc = 20
+                    reds = array.array('d', [0.14, 1.0, 0.9])
+                    greens = array.array('d', [0.14, 1.0, 0.1])
+                    blues = array.array('d', [0.63, 1.0, 0.1])
+                    nc = 21
                     ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
                     ROOT.gStyle.SetNumberContours(nc)
                 except Exception as e:
                     print("\x1b[31m",e,"\x1b[0m")
+            elif 'draw' in self.histogramOptions and self.histogramOptions['draw'].strip().upper() == 'PULL':
+                allStackData = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] == self.dataGroupName], outputName='summedDataHistograms')
+                allStackMc = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
+                allStack = allStackData.Clone('summedRatioHistogram')
+                allStack.Sumw2()
+                allStack.Divide(allStackMc)
+                for i in range(allStack.GetXaxis().GetNbins()):
+                    for j in range(allStack.GetYaxis().GetNbins()):
+                        bc = allStack.GetBinContent(1+i,1+j)
+                        be = allStack.GetBinError(1+i,1+j)
+                        v = (bc-1.0)/be if be > 0 else 0
+                        allStack.SetBinContent(1+i,1+j,v)
+                allStack.SetMinimum(-4.0)
+                allStack.SetMaximum(4.0)
+                try:
+                    stops  = array.array('d', [0.00, 0.25, 0.5, 0.75, 1.00])
+                    reds   = array.array('d', [0.00, 0.4, 1.0, 1.0, 0.40])
+                    greens = array.array('d', [0.20, 1.0, 1.0, 0.40, 0.00])
+                    blues  = array.array('d', [0.00, 0.4, 1.0, 1.0, 0.40])
+                    nc = 22
+                    ROOT.TColor.CreateGradientColorTable(len(stops), stops, reds, greens, blues, nc)
+                    ROOT.gStyle.SetNumberContours(nc)
+                except Exception as e:
+                    print("\x1b[31m",e,"\x1b[0m")
+                ROOT.gStyle.SetPaintTextFormat("1.1f")
+                self.plotLabels['topright1']['text'] = '(DATA/MC-1)/sigma(DATA/MC)'
             else:
                 allStack = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
                 self.plotLabels['topright1']['text'] = 'MC'
@@ -955,6 +1010,7 @@ class NewStackMaker:
             allStackCopy = allStack.Clone() 
             histList = allStackCopy.GetHists()    
             for binNumber in range(self.histogramOptions['nBins']):
+                print(histList)
                 binTotal = sum([h.GetBinContent(1+binNumber) for h in histList])
                 if binTotal > 0:
                     scale = 100.0/binTotal
@@ -1030,6 +1086,7 @@ class NewStackMaker:
             if self.log and not normalize:
                 allStack.SetMinimum(0.1)
                 Ymax = Ymax*ROOT.TMath.Power(10,1.2*(ROOT.TMath.Log(1.2*(Ymax/0.2))/ROOT.TMath.Log(10)))*(0.2*0.1)
+                Ymax *= 6.0
                 ROOT.gPad.SetLogy()
             else:
                 ROOT.gPad.SetLogy(0)
@@ -1138,7 +1195,7 @@ class NewStackMaker:
                                 if groupNormalizations['Down'][histogram['group']] > 0:
                                     histogram['histogram_Down'].Scale(groupNormalizations['Nom'][histogram['group']]/groupNormalizations['Down'][histogram['group']])
 
-                    if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicError') or self.config.has_option('Plot_general', 'drawShapeSystematicError'):
                         backgroundHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Up')
                         backgroundHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot and not histogram['signal']], outputName='summedBackgroundHistograms_Down')
                         self.drawRatioPlot(dataHistogram, backgroundHistogram, mcHistogram_Up=backgroundHistogram_Up, mcHistogram_Down=backgroundHistogram_Down, yAxisTitle='Data/BKG', same=True, ratioRange=ratioRange)
@@ -1149,7 +1206,7 @@ class NewStackMaker:
                     mcHistogram = NewStackMaker.sumHistograms(histograms=[histogram['histogram'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms')
 
 
-                    if self.config.has_option('Plot_general', 'drawWeightSystematicError'):
+                    if self.config.has_option('Plot_general', 'drawWeightSystematicError') or self.config.has_option('Plot_general', 'drawShapeSystematicError'):
                         mcHistogram_Up   = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Up'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Up')
                         mcHistogram_Down = NewStackMaker.sumHistograms(histograms=[histogram['histogram_Down'] for histogram in self.histograms if histogram['group'] in mcHistogramGroupsToPlot], outputName='summedMcHistograms_Down')
                         self.drawRatioPlot(dataHistogram, mcHistogram, mcHistogram_Up=mcHistogram_Up, mcHistogram_Down=mcHistogram_Down, ratioRange=ratioRange)
@@ -1194,6 +1251,27 @@ class NewStackMaker:
         if not self.is2D:
             self.drawSampleLegend(groupedHistograms, theErrorGraph, normalize=normalize)
 
+        # plot labels
+        if self.config.has_option('Plot_general', 'additionalText'):
+            aText =  eval(self.config.get('Plot_general', 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.config.has_section(self.configSection) and self.config.has_option(self.configSection, 'additionalText'):
+            aText = eval(self.config.get(self.configSection, 'additionalText'))
+            if type(aText) == list:
+                self.additionalTextLines += aText
+            else:
+                self.additionalTextLines.append(aText)
+        if self.hasPlotVarSection:
+            if self.config.has_option(self.plotVarSection, 'additionalText'):
+                aText = eval(self.config.get(self.plotVarSection, 'additionalText'))
+                if type(aText) == list:
+                    self.additionalTextLines += aText
+                else:
+                    self.additionalTextLines.append(aText)
+
         # draw various labels
         if not normalize:
             self.drawPlotTexts()
@@ -1202,14 +1280,14 @@ class NewStackMaker:
         for ext in self.outputFileFormats:
             print("INFO: save as ", ext)
             sys.stdout.flush()
-            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext=ext)
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.varName, ext=ext)
             c.SaveAs(outputFileName)
             if os.path.isfile(outputFileName):
                 print("INFO: saved as \x1b[34m", outputFileName, "\x1b[0m")
             else:
                 print("\x1b[31mERROR: could not save canvas to the file:", outputFileName, "\x1b[0m")
         if self.outputTeX:
-            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext='tex')
+            outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.varName, ext='tex')
             #ROOT.gPad.Print(outputFileName)
             c.SaveAs(outputFileName)
             print("INFO: saved as \x1b[32mTeX \x1b[34m", outputFileName, "\x1b[0m")
@@ -1224,7 +1302,7 @@ class NewStackMaker:
                 shapesName = "shapes.root"
                 if self.config.has_option('Plot_general', 'suffix'):
                     shapesName = "shapes_" + self.config.get('Plot_general', 'suffix') + '.root'
-                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var,  ext=shapesName)
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix=prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.varName,  ext=shapesName)
                 print("INFO: \x1b[33mshapes\x1b[0m saved to:", outputFileName)
                 shapesFile = ROOT.TFile.Open(outputFileName, "RECREATE")
                 if dataGroupName and dataGroupName in groupedHistograms:
@@ -1324,7 +1402,7 @@ class NewStackMaker:
         # save data histogram
         if self.config.has_option('Plot_general','saveDataHistograms') and eval(self.config.get('Plot_general','saveDataHistograms')):
             if dataGroupName in groupedHistograms:
-                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.var, ext="root")
+                outputFileName = self.outputFileTemplate.format(outputFolder=outputFolder, prefix='DATA_'+prefix, prefixSeparator='_' if len(prefix)>0 else '', var=self.varName, ext="root")
                 dataOutputFile = ROOT.TFile.Open(outputFileName, "recreate")
                 groupedHistograms[dataGroupName].SetDirectory(dataOutputFile)
                 dataOutputFile.Write()

@@ -1,31 +1,14 @@
-# ShibRequireAll On
-# ShibRequireSession On
-# ShibExportAssertion On
-# SSLRequireSSL   # The modules only work using HTTPS
-# AuthType Shibboleth
+<IfVersion >= 2.3>
+AuthType openid-connect
+Require claim cern_roles:default-role
+</IfVersion>
 
-# Require adfs-group "All CMS users" "zh"
-
-
-
-# PerlAuthenHandler NICEAuthentication
-# PerlAuthzHandler NICEAuthorization
-# SSLRequireSSL   # The modules only work using HTTPS
-# AuthName "CERN Authentication required"
-# AuthType Basic
-# Options +Indexes
-
-
-# Require group "All CMS users" "cms-members"
-
-
+<IfVersion < 2.3>
 SSLRequireSSL # The modules only work using HTTPS
 AuthType shibboleth
 ShibRequireSession On
 ShibRequireAll On
 ShibExportAssertion Off
-
-#Require valid-user
-#Require ADFS_GROUP "All CMS users" "cms-members"
 Require valid-user
-Require ADFS_GROUP "cms-higgs-vlephbb"
+Require ADFS_GROUP "All CMS users" "cms-members"
+</IfVersion>

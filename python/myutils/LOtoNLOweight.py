@@ -235,15 +235,19 @@ class LOtoNLOweight(AddCollectionsModule):
         isVJets = False
         sampleCat = self.sampleIndexBase
 
-        # sync with AT: DYJetsToLL_M-4to50 not reweighted
+        isVJets = any([x in self.sample.identifier for x in ['DYJets','DYBJets','WJets','WBJets','ZJets','ZBJets']]) and 'amcatnlo' not in self.sample.identifier and 'M-4to50' not in self.sample.identifier
 
-        # Z+jets normal, W+jets normal, W+jets b-enriched
-        if sampleCat in [4000,4100,4200,4300,4400,4500,4600,4700,5000,5100,5300,5400,11000,11100,11200,11300,11400,11500,11600,11700,15000,15100,15200,15300,15400,15500,15600]:
-            isVJets = True
-        
-        # Z+jets b-enriched
-        if sampleCat in [14000,12000,12100,12200,14100,14200,16000,16100,16200,16300]:
-            isVJets = True
+        #if int(sampleCat/1000) in [4,5,11,12,14,15,16]:
+        #    isVJets = True
+
+
+        ## sync with AT: DYJetsToLL_M-4to50 not reweighted
+        ## Z+jets normal, W+jets normal, W+jets b-enriched
+        #if sampleCat in [4000,4100,4200,4300,4400,4500,4600,4700,5000,5100,5300,5400,11000,11100,11200,11300,11400,11500,11600,11700,15000,15100,15200,15300,15400,15500,15600]:
+        #    isVJets = True
+        ## Z+jets b-enriched
+        #if sampleCat in [14000,12000,12100,12200,14100,14200,16000,16100,16200,16300]:
+        #    isVJets = True
 
         return isVJets
 

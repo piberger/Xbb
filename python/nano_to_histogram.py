@@ -19,9 +19,20 @@ parser.add_argument('--output')
 args = parser.parse_args()
 
 if os.path.isfile(args.output):
-    print("file exists:", args.output)
-    sys.exit(1)
-
+    f1 = ROOT.TFile.Open(args.output, "READ")
+    if f1 is not None:
+        try:
+            isValid = not (f1.IsZombie() or f1.GetNkeys() == 0 or f1.TestBit(ROOT.TFile.kRecovered))
+            if isValid:
+                print("file exists:", args.output)
+                sys.exit(1)
+        except:
+            pass
+    try:
+        f1.Close()
+    except:
+        pass
+print("...")
 outFile =  ROOT.TFile.Open(args.output, "RECREATE")
 genEventSumwHistogram = ROOT.TH1D("genEventSumw","genEventSumw",1,0,1)
 

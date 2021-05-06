@@ -27,6 +27,11 @@ class Datacard(object):
         self.DCtype = 'TH'
         self.histograms = None
         self.histogramCounter = 0
+        self.defaultMcRescaleMVA = 2.0
+        if self.config.has_option('LimitGeneral','mcRescaleMVA'):
+            self.defaultMcRescaleMVA = float(self.config.get('LimitGeneral','mcRescaleMVA'))
+            print("INFO: rescaling MC for MVA regions by:", self.defaultMcRescaleMVA)
+            print("INFO: to compensate for eval cut:", self.config.get('Cuts','EvalCut'))
         self.fileLocator = fileLocator if fileLocator is not None else FileLocator(config=self.config)
         self.DCprocessSeparatorDict = {'WS':':','TH':'/'}
         VHbbNameSpace = config.get('VHbbNameSpace', 'library')
@@ -309,6 +314,18 @@ class Datacard(object):
         
         # contains all systematicDictionaries, first entry will be nominal
         self.systematicsList = [self.systematicsDictionaryNominal]
+
+        # MC stats
+        mcStatsDict = deepcopy(self.systematicsDictionaryNominal)
+        mcStatsDict['sysType'] = 'unweighted'
+        mcStatsDict['systematicsName'] = 'unweighted'
+        self.systematicsList.append(mcStatsDict)
+        
+        # Sumw2
+        mcStatsDict = deepcopy(self.systematicsDictionaryNominal)
+        mcStatsDict['sysType'] = 'sumw2'
+        mcStatsDict['systematicsName'] = 'sumw2'
+        self.systematicsList.append(mcStatsDict)
 
         if self.verbose or self.debug:
             print ('Assign the systematics')
@@ -762,7 +779,7 @@ class Datacard(object):
                     # if BDT variables are plotted (signal region!) exclude samples used for training and rescale by 2
                     if (self.anType.lower() in ['bdt','dnn'] or 'bdt' in systematics['var'].lower() or 'dnn' in systematics['var'].lower()) and not sample.isData():
                         systematics['addCut'] = self.EvalCut
-                        systematics['mcRescale'] = 2.0
+                        systematics['mcRescale'] = self.defaultMcRescaleMVA
                         sampleTree.addFormula(systematics['addCut'], systematics['addCut'])
                         if self.debug and not evalcutInfoShown:
                             print('\x1b[31mDEBUG: using 50% of sample not used in training:', self.EvalCut, '\x1b[0m')
@@ -838,7 +855,12 @@ class Datacard(object):
                                 weight = sampleTree.evaluate(systematics['weight']) if not sample.isData() else 1.0
                                 treeVar = sampleTree.evaluate(systematics['var'])
                                 specialweight = sampleTree.evaluate('specialweight') if useSpecialweight else 1.0
-                                self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
+                                if systematics['sysType'] == 'unweighted':
+                                    self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar)
+                                elif systematics['sysType'] == 'sumw2':
+                                    self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, (weight * specialweight * sampleScaleFactor)**2)
+                                else:
+                                    self.histograms[sampleHistogramName][systematics['systematicsName']].Fill(treeVar, weight * specialweight * sampleScaleFactor)
 
                 if not sampleTree.checkProcessingComplete():
                     raise Exception('FileReadIncomplete')
@@ -912,7 +934,7 @@ class Datacard(object):
 
     # if split into chunks is enabled, file name will end in _#.root with # being the chunk number, # starts from 1
     def getShapeFileNames(self, sampleIdentifier):
-        nChunks = self.getNumberOfChunks(sampleIdentifier)
+        nChunks = self.getNumberOfChunks(sampleIdentifier, False)
         if nChunks > 0:
             rootFileNames = [self.getDatacardBaseName(subPartName=sampleIdentifier, chunkNumber=chunkNumber) + '.root' for chunkNumber in range(1, 1+nChunks)]
         else:
@@ -1105,7 +1127,7 @@ class Datacard(object):
                         systematics['histograms'][sampleGroup] = th
                     else:
                         systematics['histograms'][sampleGroup].SetDirectory(rootFileSubdir)
-        
+
         # DEPRECATED! now done by combine harvester!!
         # write bin-by-bin systematic histograms for sample groups
         if self.sysOptions['binstat'] and not self.sysOptions['ignore_stats']:
