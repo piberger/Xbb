@@ -193,14 +193,14 @@ class NewStackMaker:
             self.histogramOptions['nBins'] = len(self.histogramOptions['binList'])-1
 
         # region/variable specific blinding cut
-        if self.config.has_option(self.configSection, 'blindCuts'):
-            blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
-            if self.var in blindCuts:
-                self.blind = True
-                self.histogramOptions['blindCut'] = blindCuts[self.var]
-                if '{var}' in self.histogramOptions['blindCut']:
-                    self.histogramOptions['blindCut'] = self.histogramOptions['blindCut'].format(var=self.histogramOptions['treeVar'])
-                print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut']))
+        #if self.config.has_option(self.configSection, 'blindCuts'):
+        #    blindCuts = eval(self.config.get(self.configSection, 'blindCuts'))
+        #    if self.var in blindCuts:
+        #        self.blind = True
+        #        self.histogramOptions['blindCut'] = blindCuts[self.var]
+        #        if '{var}' in self.histogramOptions['blindCut']:
+        #            self.histogramOptions['blindCut'] = self.histogramOptions['blindCut'].format(var=self.histogramOptions['treeVar'])
+        #        print("\x1b[31mINFO: for region {region} var {var} using the blinding cut: {cut}\x1b[0m".format(region=self.region, var=self.var, cut=self.histogramOptions['blindCut']))
 
         self.groups = {}
         self.histograms = []
@@ -282,6 +282,7 @@ class NewStackMaker:
             'histogram': sampleHistogram,
             'group': groupName,
             'signal': sample.type=='SIG'
+            #'signal': groupName=='VVHF'
             })
 
         if self.config.has_option('Plot_general', 'drawWeightSystematicError'):

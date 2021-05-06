@@ -164,7 +164,7 @@ class GetTopMass(AddCollectionsModule):
       result = []
 
 
-      print("abcd: ",a,b,c,d)
+      #print("abcd: ",a,b,c,d)
 
       if (a != 0):
 
@@ -175,7 +175,7 @@ class GetTopMass(AddCollectionsModule):
         rho=0.
         theta=0.
 
-        print("Delta: ",Delta)
+        #print("Delta: ",Delta)
 
         if( Delta<=0):
           rho = sqrt(-(q*q*q))
@@ -272,7 +272,7 @@ class GetTopMass(AddCollectionsModule):
         metpx=MET.Px()
         metpy=MET.Py()
 
-        print("ptlep,pxlep,pylep,metpx,metpy",ptlep,pxlep,pylep,metpx,metpy)
+        #print("ptlep,pxlep,pylep,metpx,metpy",ptlep,pxlep,pylep,metpx,metpy)
 
         EquationA = 1.
         EquationB = -3.*pylep*mW/(ptlep)
