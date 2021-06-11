@@ -58,7 +58,7 @@ class TreeCache:
         self.config = config
         self.fileLocator = fileLocator if fileLocator is not None else FileLocator(config=self.config)
         self.debug = debug or ('XBBDEBUG' in os.environ)
-
+     
         # SAMPLE
         if isinstance(sample, Sample):
             # sample passed as Sample object
@@ -103,7 +103,6 @@ class TreeCache:
         self.identifier = '{sample}[{cut}]of{parts}'.format(sample=self.sample, cut=cutUsedForIdentifier, parts=self.splitFilesChunks)
         self.sampleTree = None
         self.isCachedChecked = False
-
         self.createFolders()
 
     # free memory
@@ -145,7 +144,7 @@ class TreeCache:
         #self.cachedFileNames = self.fileLocator.glob_with_fallback(cachedFilesMaskRaw)
 
         # this solution uses a loop over all possible files and uses xrdfs stat instead of xrdfs ls
-        self.cachedFileNames = self.fileLocator.get_numbered_file_list(cachedFilesMaskRaw, 1, self.splitFilesChunks)
+        self.cachedFileNames = self.fileLocator.get_numbered_file_list(cachedFilesMaskRaw, 1, self.splitFilesChunks, method="muontedPath")
 
         if self.debug:
             print ('DEBUG: search files:', cachedFilesMask)
@@ -243,7 +242,7 @@ class TreeCache:
                 fileNames = self.cachedFileNames
             else:
                 raise Exception("InvalidParameters")
-            self.sampleTree = SampleTree(self.cachedFileNames, config=self.config, fileNamesToProcess=fileNames)
+            self.sampleTree = SampleTree(self.cachedFileNames, config=self.config, fileNamesToProcess=fileNames, filesExists=True, noRedirecting=True)
             self.sampleTree.sampleIdentifier = self.sampleIdentifier
 
             # check if even though all files exist, they couldn't be accessed for some reason
