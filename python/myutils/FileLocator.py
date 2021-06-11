@@ -172,6 +172,7 @@ class FileLocator(object):
                 print('DEBUG: remoteFileExists("' + pathOnServer + '")')
                 print('DEBUG: remoteFileExists() returned', response[0])
         else:
+            print("path: ",path," getRemoteFileserver(path) ",self.getRemoteFileserver(path))
             statCommand = self.remoteStatFile.format(server=self.getRemoteFileserver(path), path=self.getLocalFileName(path))
             result = self.runCommand(statCommand)
             existing = result==0
@@ -208,12 +209,15 @@ class FileLocator(object):
 
     # attempts > 1 can be given to check existence of files multiple times
     #  this is to workaround a storage problem where files are randomly reported as not existent
-    def exists(self, path, attempts=1):
+    def exists(self, path, attempts=1, method=None):
         attemptsLeft = attempts
         found = False
         while attemptsLeft > 0:
             attemptsLeft -= 1
-            found = self.remoteFileExists(path) if self.isRemotePath(path) else os.path.exists(path)
+            if method is None:
+                found = self.remoteFileExists(path) if self.isRemotePath(path) else os.path.exists(path)
+            elif (method=="muontedPath"):
+                found = os.path.exists(self.removeRedirector(path))
             if found:
                 return True
             if attemptsLeft > 0:
@@ -493,7 +497,7 @@ class FileLocator(object):
         else:
             return glob.glob(path)
 
-    def get_numbered_file_list(self, mask, start, end):
+    def get_numbered_file_list(self, mask, start, end, method=None):
         if mask.count('*') > 1:
             print("INFO: filename mask contains more than one *!")
             raise Exception("NotImplemented")
@@ -505,7 +509,7 @@ class FileLocator(object):
         existingFiles = []
         for i in range(start, end+1):
             fileName = mask.replace('*','%d'%i)
-            if self.exists(fileName):
+            if self.exists(fileName,method=method):
                 existingFiles.append(fileName)
         return existingFiles
 

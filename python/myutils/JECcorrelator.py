@@ -149,7 +149,7 @@ class JECcorrelator(AddCollectionsModule):
         sum_2 = 0
         if (len(jec_to_correlate)==1):
             j=jec_to_correlate[0]
-            if var=="FatJet_msoftdrop":
+            if var=="FatJet_msoftdrop" and self.year != "2018":
                 squared_sum_1 = (attr[var][j]['Up'][idx])*nom - nom
                 squared_sum_2 = (attr[var][j]['Down'][idx])*nom - nom
             else:    
@@ -159,10 +159,10 @@ class JECcorrelator(AddCollectionsModule):
             sum_2 = nom+(squared_sum_2)
         else:
             for j in jec_to_correlate:
-                if var=="FatJet_msoftdrop":
+                if var=="FatJet_msoftdrop" and self.year != "2018":
                     squared_sum_1 += ((attr[var][j]['Up'][idx])*nom - nom)**2
                     squared_sum_2 += ((attr[var][j]['Down'][idx])*nom - nom)**2   
-                else: 
+                else:
                     squared_sum_1 += (attr[var][j]['Up'][idx] - nom)**2
                     squared_sum_2 += (attr[var][j]['Down'][idx] - nom)**2   
             sum_1 = nom+np.sqrt(squared_sum_1)

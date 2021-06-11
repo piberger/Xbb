@@ -41,7 +41,7 @@ from copytreePSI import filelist
 # ------------------------------------------------------------------------------
 class SampleTree(object):
 
-    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None, fileLocator=None):
+    def __init__(self, samples, treeName=None, limitFiles=-1, splitFilesChunkSize=-1, chunkNumber=1, countOnly=False, verbose=True, config=None, saveMemory=False, xrootdRedirector=None, fileNamesToProcess=None, fileLocator=None, filesExists=False, noRedirecting=False):
         # sequentialProcessing not much tested yet, can maybe be used as workaround for problems with ROOT version 6.12.07. (not needed in 6.10.09)
         self.sequentialProcessing = False
         self.verbose = verbose
@@ -49,6 +49,8 @@ class SampleTree(object):
         self.debugProfiling = 'XBBPROFILING' in os.environ
         self.config = config
         self.saveMemory = saveMemory
+        self.filesExists = filesExists
+        self.noRedirecting = noRedirecting
         self.outputTreeBasketSize = None
         if self.config and self.config.has_option('Configuration', 'outputTreeBasketSize'):
             self.outputTreeBasketSize = eval(self.config.get('Configuration', 'outputTreeBasketSize'))
@@ -140,10 +142,15 @@ class SampleTree(object):
             for rootFileName in self.sampleFileNames:
                 if self.debug:
                     print('DEBUG: next file is:', rootFileName, ", check existence")
-
                 # check root file existence
-                if self.fileLocator.exists(rootFileName, attempts=3):
-                    remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName)
+                if not self.filesExists:
+                    self.filesExists = self.fileLocator.exists(rootFileName, attempts=3)
+                    
+                if self.filesExists:
+                    if self.noRedirecting:
+                        remoteRootFileName = self.fileLocator.removeRedirector(rootFileName)
+                    else: 
+                        remoteRootFileName = self.fileLocator.getRemoteFileName(rootFileName) 
                     input = ROOT.TFile.Open(remoteRootFileName, 'read')
 
                     # check file validity
@@ -183,6 +190,7 @@ class SampleTree(object):
                                         print ("ERROR: histogram object was None!!!")
                                         raise Exception("CountHistogramMissing")
                             else:
+                                #print(" adding? ",histogramName)
                                 #only for first time... autoPU hist only
                                 # add all TH*'s in one single histogram
                                 if obj.IsA().InheritsFrom(ROOT.TH1.Class()):
@@ -191,7 +199,6 @@ class SampleTree(object):
                                 else:
                                     if self.debug:
                                         print("DEBUG: omitting object ", obj, type(obj), " since it is neither TH1 or TTree!")
-
                         input.Close()
 
                         # add file to chain
@@ -434,7 +441,6 @@ class SampleTree(object):
         # if no argument is given, use default files
         if not samples:
             samples = self.samples
-
         # given argument is list -> this is already the list of root file names
         if type(samples) == list:
             sampleFileNames = samples
@@ -458,7 +464,7 @@ class SampleTree(object):
                 sampleFileList = filelist(samplefiles, self.sampleIdentifier)
 
                 # get list of filenames 
-                sampleFileNames = ["{path}/{sample}/{fileName}".format(path=sampleFolder, sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in sampleFileList]  
+                sampleFileNames = ["{path}/{sample}/{fileName}".format(path=sampleFolder, sample=self.sampleIdentifier, fileName=self.fileLocator.getFilenameAfterPrep(fileName)) for fileName in sampleFileList] 
 
                 if self.debug:
                     print("DEBUG: file list from .txt file:", sampleFileList, samplefiles, self.sampleIdentifier)
@@ -1182,7 +1188,10 @@ class SampleTree(object):
             if self.verbose:
                 print("DEBUG: XS = ", sample.xsec, sample, type(sample))
 
-        countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else None
+        if "genWtHist" in self.histograms:
+            countHistogram = "genWtHist"
+        else:    
+            countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else None
         count = None
 
         try:
