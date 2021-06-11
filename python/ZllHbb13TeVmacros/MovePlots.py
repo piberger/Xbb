@@ -20,7 +20,7 @@ parser.add_argument('--name', default = None, help='output folder. default: log 
 
 parser.add_argument('--skipcomp', action='store_const', const=True, default=False,  help='skip comp_ plots')
 
-parser.add_argument('--fext', default = 'png,pdf,root', help='only copy specified file extensions. Default: "png,pdf,root". Use "all" for no restriction')
+parser.add_argument('--fext', default = 'png,pdf', help='only copy specified file extensions. Default: "png,pdf,root". Use "all" for no restriction')
 parser.add_argument('--folders', default = "region", help='how to make subfolders: <none>, <region> (default), <variable>')
 parser.add_argument('--tar', default = False, action='store_const', const=True,  help='use tar compression')
 parser.add_argument('--no', dest='do_outp', action='store_const',

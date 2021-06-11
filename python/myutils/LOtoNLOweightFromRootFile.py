@@ -107,15 +107,15 @@ class LOtoNLOweightFromRootFile(AddCollectionsModule):
                 if thisSampleType not in self.fit[nb]:
                     thisSampleType = self.fallbackSample[thisSampleType]
             
-                for nb in [0,1,2]:
+                for unceratintyNb in [0,1,2]:
                     for sampleType in self.sampleTypes: 
-                        if sampleType in self.fit[nb]:
-                            if sampleType == thisSampleType: 
-                                self._b(self.branchName + '_' + sampleType + '%d'%nb + '_Up')[0]   = self._b(self.branchName + '_Up')[0]
-                                self._b(self.branchName + '_' + sampleType + '%d'%nb + '_Down')[0] = self._b(self.branchName + '_Down')[0]
+                        if sampleType in self.fit[unceratintyNb]:
+                            if sampleType == thisSampleType and unceratintyNb == nb: 
+                                self._b(self.branchName + '_' + sampleType + '%d'%unceratintyNb + '_Up')[0]   = self._b(self.branchName + '_Up')[0]
+                                self._b(self.branchName + '_' + sampleType + '%d'%unceratintyNb + '_Down')[0] = self._b(self.branchName + '_Down')[0]
                             else:
-                                self._b(self.branchName + '_' + sampleType + '%d'%nb + '_Up')[0]   = self._b(self.branchName)[0]
-                                self._b(self.branchName + '_' + sampleType + '%d'%nb + '_Down')[0] = self._b(self.branchName)[0]
+                                self._b(self.branchName + '_' + sampleType + '%d'%unceratintyNb + '_Up')[0]   = self._b(self.branchName)[0]
+                                self._b(self.branchName + '_' + sampleType + '%d'%unceratintyNb + '_Down')[0] = self._b(self.branchName)[0]
 
     
     # select all LO V+jets samples            
