@@ -1182,7 +1182,10 @@ class SampleTree(object):
             if self.verbose:
                 print("DEBUG: XS = ", sample.xsec, sample, type(sample))
 
-        countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else None
+        if "genWtHist" in self.histograms:
+            countHistogram = "genWtHist"
+        else:
+            countHistogram = self.config.get('Configuration', 'countTreeName') if self.config.has_option('Configuration', 'countTreeName') else None
         count = None
 
         try:
