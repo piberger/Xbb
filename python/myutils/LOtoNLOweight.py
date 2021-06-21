@@ -227,8 +227,8 @@ class LOtoNLOweight(AddCollectionsModule):
                     # eta bb derived from 2017 DY
                     self._b(self.branchName)[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb2017(etabb, nb) 
 
-                    # eta bb derived from 2016 DY
-                    self._b(self.branchName + '_2016')[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, nb) 
+                # eta bb derived from 2016 DY
+                self._b(self.branchName + '_2016')[0] = 1.153 * self.LOtoNLOWeightBjetSplitEtabb(etabb, nb) 
 
 
     def applies(self, tree):

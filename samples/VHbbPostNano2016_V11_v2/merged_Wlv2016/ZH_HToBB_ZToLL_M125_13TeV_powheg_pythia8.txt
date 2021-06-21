@@ -1,0 +1,3 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//07e8b593375b24379d21a333b4b4169bfe590e3b405e7690f6c48fe0/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//99532407ef119b16504df4422eac3eb83012ffc5b86ef2ec8ff15412/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZH_HToBB_ZToLL_M125_13TeV_powheg_pythia8//e60fe203fd410cf0896c8e7e6a05fd4411292f0d6abdd82243dfa84b/000000_000000/0000/tree_2.root

@@ -1,0 +1,11 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_12.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_14.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_16.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_19.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_24.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_26.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_30.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_32.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_35.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_36.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2017/V11-NLO/Z2JetsToNuNu_M-50_LHEZpT_250-400_TuneCP5_13TeV-amcnloFXFX-pythia8//RunIIFall17NanoAODv4-PU2017_1282/191121_150142/0000/tree_3.root

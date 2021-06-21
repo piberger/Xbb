@@ -1,0 +1,4 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/QCD_HT1000to1500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//3c57f47620929ecb9464edc54d2cfcb6f7fbcda15ba20608b3510004/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/QCD_HT1000to1500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//9082236a78099410b9482c54dfd3aebe4c613e27bfb50cd76cd1e46c/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/QCD_HT1000to1500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//9e84220edc3e8886b1f1f6ed3f5cc3237eb74f0c0e8e97a8526449cd/000000_000000/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/QCD_HT1000to1500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8//7549512c1dd4f740c4244f6ee266dacffc4d982edfbd1eeaef2d2b31/000000_000000/0000/tree_3.root

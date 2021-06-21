@@ -1,0 +1,4 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZJetsToNuNu_HT-100To200_13TeV-madgraph//03765b5b7f385c1038c0efe5b04b8097c9433268ec13cff2933ef291/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZJetsToNuNu_HT-100To200_13TeV-madgraph//71d277d3ec3ea7318e4a8b1cbd6c8c5615e142da35db44a06134a592/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZJetsToNuNu_HT-100To200_13TeV-madgraph//8a81194b378adcfc226cf800f98c6a90dff8a60651b217361089f5b7/000000_000000/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/ZJetsToNuNu_HT-100To200_13TeV-madgraph//c984ade7279f4162d9bde3873a29c6bbdc115eb90323cf9040bef1f2/000000_000000/0000/tree_3.root

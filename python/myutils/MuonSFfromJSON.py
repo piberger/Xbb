@@ -19,8 +19,8 @@ class MuonSFfromJSON(AddCollectionsModule):
         self.year = year
         self.tablenames = {
         2016:  {'Zll':{ 
-                    'idSf':'SF_MuIDTightBCDEF',
-                    'isoSf':'NUM_LooseRelIso_DEN_LooseID',
+                    'idSf':'SF_MuIDTight',
+                    'isoSf':'SF_MuIsoTight',
                     'eff_IsoMu8_mc':'Mu8LegMC',
                     'eff_IsoMu17_mc':'Mu17LegMC',
                     'eff_IsoMu8_data':'Mu8Leg',
@@ -65,12 +65,17 @@ class MuonSFfromJSON(AddCollectionsModule):
         self.jsonTable = JsonTable(jsonFiles)
         self.channel = channel 
         if self.channel== 'Zll':
-            self.idSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['idSf'], 'abseta_pt')
-            self.isoSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['isoSf'], 'abseta_pt')
-            self.eff_IsoMu8_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_mc'], 'abseta_pt') 
-            self.eff_IsoMu17_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_mc'], 'abseta_pt') 
-            self.eff_IsoMu8_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_data'], 'abseta_pt') 
-            self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_data'], 'abseta_pt') 
+            if self.year == 2016:
+                for corr in self.tablenames[self.year][self.channel].keys():
+                    for lumi_sec in self.tablenames[self.year]['lumi'].keys():
+                        setattr(self, corr+lumi_sec, self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel][corr]+lumi_sec, 'abseta_pt')) 
+            else:
+                self.idSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['idSf'], 'abseta_pt')
+                self.isoSf = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['isoSf'], 'abseta_pt')
+                self.eff_IsoMu8_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_mc'], 'abseta_pt') 
+                self.eff_IsoMu17_mc = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_mc'], 'abseta_pt') 
+                self.eff_IsoMu8_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu8_data'], 'abseta_pt') 
+                self.eff_IsoMu17_data = self.jsonTable.getEtaPtTable(self.tablenames[self.year][self.channel]['eff_IsoMu17_data'], 'abseta_pt') 
         elif self.channel == 'Wlv':
             if self.year == 2016:
                 for corr in self.tablenames[self.year][self.channel].keys():
@@ -143,14 +148,20 @@ class MuonSFfromJSON(AddCollectionsModule):
                     weight_Id[i] = 0.0
                     weight_Iso[i] = 0.0
 
-                    for corr in self.tablenames[self.year][self.channel].keys():
+                    for corr in ['idSf','isoSf','triggerSf']:
                         for lumi_sec in self.tablenames[self.year]['lumi'].keys():
-                            w = self.getSf(corr+lumi_sec, lep_eta, lep_pt, lep_n, syst=syst)
                             if corr.startswith("triggerSf"):
-                                weight_trigg[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
+                                if self.channel=='Wlv':
+                                    w = self.getSf(corr+lumi_sec, lep_eta, lep_pt, lep_n, syst=syst)
+                                    weight_trigg[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
+                                else:
+                                    w = self.getTriggerSf(lep_eta, lep_pt, lep_n, syst=syst, lumi_sec=lumi_sec) 
+                                    weight_trigg[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
                             if corr.startswith("idSf"):
+                                w = self.getSf(corr+lumi_sec, lep_eta, lep_pt, lep_n, syst=syst)
                                 weight_Id[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
                             if corr.startswith("isoSf"):
+                                w = self.getSf(corr+lumi_sec, lep_eta, lep_pt, lep_n, syst=syst)
                                 weight_Iso[i] += self.tablenames[self.year]['lumi'][lumi_sec] * w
 
                 else:
@@ -207,19 +218,19 @@ class MuonSFfromJSON(AddCollectionsModule):
         return eff_event
 
 
-    def getTriggerSf(self, eta, pt, len_n, syst=None):
+    def getTriggerSf(self, eta, pt, len_n, syst=None, lumi_sec=""):
         triggSF = 1.
         if self.channel == 'Zll':
             if len_n==2:
-                eff_mu8_l1_mc  = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[0], pt[0], self.systVariations)
-                eff_mu17_l1_mc  = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[0], pt[0], self.systVariations)
-                eff_mu8_l1_data = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[0], pt[0], self.systVariations)
-                eff_mu17_l1_data = self.jsonTable.findvalerr(self.eff_IsoMu17_data, eta[0], pt[0], self.systVariations)
+                eff_mu8_l1_mc  = self.jsonTable.findvalerr(getattr(self, 'eff_IsoMu8_mc'+lumi_sec), eta[0], pt[0], self.systVariations)
+                eff_mu17_l1_mc  = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu17_mc'+lumi_sec), eta[0], pt[0], self.systVariations)
+                eff_mu8_l1_data = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu8_data'+lumi_sec), eta[0], pt[0], self.systVariations)
+                eff_mu17_l1_data = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu17_data'+lumi_sec), eta[0], pt[0], self.systVariations)
 
-                eff_mu8_l2_mc  = self.jsonTable.findvalerr(self.eff_IsoMu8_mc, eta[1], pt[1], self.systVariations)
-                eff_mu17_l2_mc  = self.jsonTable.findvalerr(self.eff_IsoMu17_mc, eta[1], pt[1], self.systVariations)
-                eff_mu8_l2_data = self.jsonTable.findvalerr(self.eff_IsoMu8_data, eta[1], pt[1], self.systVariations)
-                eff_mu17_l2_data = self.jsonTable.findvalerr(self.eff_IsoMu17_data, eta[1], pt[1], self.systVariations)
+                eff_mu8_l2_mc  = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu8_mc'+lumi_sec), eta[1], pt[1], self.systVariations)
+                eff_mu17_l2_mc  = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu17_mc'+lumi_sec), eta[1], pt[1], self.systVariations)
+                eff_mu8_l2_data = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu8_data'+lumi_sec), eta[1], pt[1], self.systVariations)
+                eff_mu17_l2_data = self.jsonTable.findvalerr(getattr(self,'eff_IsoMu17_data'+lumi_sec), eta[1], pt[1], self.systVariations)
                 #print("new event triggerSf")
                 #print(eta[0], pt[0])
                 #print(eff_mu8_l1_mc)

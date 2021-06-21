@@ -20,6 +20,6 @@ class Jet(object):
     def get(tree):
         jets = []
         for i in range(tree.nJet):
-            if tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50.0) and tree.Jet_jetId[i] > 4:
+            if tree.Jet_lepFilter[i] > 0 and (tree.Jet_puId[i] > 6 or tree.Jet_Pt[i] > 50.0) and tree.Jet_jetId[i] > 2:
                 jets.append(Jet(pt=tree.Jet_Pt[i], eta=tree.Jet_eta[i], phi=tree.Jet_phi[i], mass=tree.Jet_mass_nom[i], btag=tree.Jet_btagDeepB[i], index=i, pt_reg=tree.Jet_PtReg[i], mass_reg=tree.Jet_PtReg[i]/tree.Jet_Pt[i]*tree.Jet_mass_nom[i]))
         return jets

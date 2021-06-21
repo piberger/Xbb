@@ -26,7 +26,7 @@ class EWKweights(AddCollectionsModule):
         self.isData = self.sample.isData()
 
         if not self.isData:
-            self.applyEWK = any([x in self.sample.identifier for x in ['DY', 'WJet', 'WBJet', 'ZJet', 'ZBJet']])
+            self.applyEWK = any([x in self.sample.identifier for x in ['DY', 'WJet', 'WBJet', 'ZJet', 'ZBJet', 'W1Jets', 'W2Jets', 'Z1Jets', 'Z2Jets']])
             self.sys_sample = None
 
             if 'ZH_HToBB_ZToLL' in self.sample.identifier and not 'ggZH_HToBB_ZToLL' in self.sample.identifier:

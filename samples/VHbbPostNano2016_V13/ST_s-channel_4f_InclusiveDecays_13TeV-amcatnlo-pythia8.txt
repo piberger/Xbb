@@ -1,0 +1,2 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8//RunIISummer16NanoAODv7-PUMorio96/200619_150217/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ST_s-channel_4f_InclusiveDecays_13TeV-amcatnlo-pythia8//RunIISummer16NanoAODv7-PUMorio96/200619_150217/0000/tree_2.root

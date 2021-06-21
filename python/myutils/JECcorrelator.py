@@ -118,6 +118,40 @@ class JECcorrelator(AddCollectionsModule):
                 self.existingBranches[var] = array.array('f', [0.0]*50)
                 self.sampleTree.tree.SetBranchAddress(var, self.existingBranches[var])
 
+            for var in ["Jet_eta","Jet_phi","Jet_neEmEF","Jet_chEmEF"]:
+                setattr(self,var.lower(),array.array('f', [0.0]*self.maxNjet))
+                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+
+            for var in ["Jet_muonIdx1","Jet_muonIdx2"]:
+                setattr(self,var.lower(),array.array('i', [0]*self.maxNjet))
+                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+
+            for var in ["nJet","nMuon"]:
+                setattr(self,var.lower(),array.array('i', [0]))
+                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+
+            for var in ["Muon_pt"]:
+                setattr(self,var.lower(),array.array('f', [0.0]*50))
+                self.sampleTree.tree.SetBranchAddress(var, getattr(self, var.lower()))
+
+            for syst in self.JEC_reduced:
+                if syst != "nom": UD = ["Up","Down"]
+                else: UD = [""]
+                for Q in UD:
+                    setattr(self,"jet_pt_"+syst+Q,array.array('f', [0.0]*self.maxNjet))
+                    setattr(self,"jet_mass_"+syst+Q,array.array('f', [0.0]*self.maxNjet))
+                    setattr(self,"met_pt_"+syst+Q,array.array('f', [0.0]))
+                    setattr(self,"met_phi_"+syst+Q,array.array('f', [0.0]))
+                    setattr(self,"fatjet_pt_"+syst+Q,array.array('f', [0.0]*self.maxNfatjet))
+                    setattr(self,"fatjet_msoftdrop_"+syst+Q,array.array('f', [0.0]*self.maxNfatjet))
+
+                    self.sampleTree.tree.SetBranchAddress("Jet_pt_"+syst+Q, getattr(self, "jet_pt_"+syst+Q))
+                    self.sampleTree.tree.SetBranchAddress("Jet_mass_"+syst+Q, getattr(self, "jet_mass_"+syst+Q))
+                    self.sampleTree.tree.SetBranchAddress("MET_pt_"+syst+Q, getattr(self, "met_pt_"+syst+Q))
+                    self.sampleTree.tree.SetBranchAddress("MET_phi_"+syst+Q, getattr(self, "met_phi_"+syst+Q))
+                    self.sampleTree.tree.SetBranchAddress("FatJet_pt_"+syst+Q, getattr(self, "fatjet_pt_"+syst+Q))
+                    self.sampleTree.tree.SetBranchAddress("FatJet_msoftdrop_"+syst+Q, getattr(self, "fatjet_msoftdrop_"+syst+Q))
+
             for syst in self.JEC_reduced:
                 for Q in self._variations(syst):
                     self.addVectorBranch("Jet_pt_"+syst+Q, default=0.0, branchType='f', length=self.maxNjet, leaflist="Jet_pt_"+syst+Q+"[nJet]/F")
@@ -170,7 +204,6 @@ class JECcorrelator(AddCollectionsModule):
         return self.maxmin(Q, sum_1, sum_2)
     
     def METcorrelator(self,syst,Q,var,attr):
-
         MET_nom = ROOT.TLorentzVector()
         MET_nom.SetPtEtaPhiM(attr["MET_pt"]["nom"][0], 0.0, attr["MET_phi"]["nom"][0], 0.0)
         met_px_nom = MET_nom.X()
@@ -292,6 +325,7 @@ class JECcorrelator(AddCollectionsModule):
             attr["nJet"]  = tree.nJet
             for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
                 for syst in self.JEC_full:
+                    #print("syst :",syst)
                     attr[var][syst] = {}
                     for Q in self._variations(syst):
                         attr[var][syst][Q] = list(self.existingBranches[var+"_"+syst+Q])
@@ -321,6 +355,13 @@ class JECcorrelator(AddCollectionsModule):
                     for i in range(nFatJet):
                         self._b(self._v("FatJet_pt", syst, Q, ""))[i] = self.correlator(syst,i,Q,"FatJet_pt",attr)
                         self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i] = self.correlator(syst,i,Q,"FatJet_msoftdrop",attr)
+                        if ((getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i]>0) and (getattr(self,"fatjet_pt"+"_"+syst+Q)[i]>0)):
+                            #histograms["FatJet_pt"][syst][Q].Fill((getattr(self,"fatjet_pt"+"_"+syst+Q)[i] - self._b(self._v("FatJet_pt", syst, Q, ""))[i])/(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])) 
+                            #histograms["FatJet_msoftdrop"][syst][Q].Fill((getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i] - self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i])/(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])) 
+                            attr["FatJet_pt"][syst][Q].append(self._b(self._v("FatJet_pt", syst, Q, ""))[i])
+                            attr["FatJet_msoftdrop"][syst][Q].append(self._b(self._v("FatJet_msoftdrop", syst, Q, ""))[i])
+                            #true_attr["FatJet_pt"][syst][Q].append(getattr(self,"fatjet_pt"+"_"+syst+Q)[i])
+                            #true_attr["FatJet_msoftdrop"][syst][Q].append(getattr(self,"fatjet_msoftdrop"+"_"+syst+Q)[i])
 
             #self.nEvent += 1
             #if self.nEvent % 1000 == 0:
@@ -344,7 +385,7 @@ if __name__=='__main__':
     w.customInit({'sampleTree': sampleTree, 'sample': sample, 'config': config})
     sampleTree.addOutputBranches(w.getBranches())
     histograms={}
-    for jec in w.JEC_reduced:                                                                                                                                       histograms[jec] = {}
+    for jec in w.JEC_reduced:                                                                                                                   histograms[jec] = {}
 
     for var in ["Jet_pt", "Jet_mass", "MET_pt", "MET_phi", "FatJet_pt", "FatJet_msoftdrop"]:
         histograms[var] = {}

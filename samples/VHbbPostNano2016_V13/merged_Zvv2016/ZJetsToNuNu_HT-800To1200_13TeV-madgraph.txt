@@ -1,0 +1,11 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//cd3c8dc7dbb065ef7d2d45527587d9a90506cb5cca98d2409e25be94/000000_000000/0000/tree_0.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//91ca66d162e2bc67f1b2646dd976071c409c31772352c5f2059e9052/000000_000000/0000/tree_1.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//55771c0f10b7b6ae90b5c23fa5fd3d509f79292af60f0e039c8243cb/000000_000000/0000/tree_2.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//daa176408a96a932bd6d9266887f02174e0cc9f8f4135e4988e07f6b/000000_000000/0000/tree_3.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//e51d4bfe2b49029e7ee5ca5cdbb72c86767fc8fa98522cabc694cd2e/000000_000000/0000/tree_4.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//d4c85d287ae4875f3f40c988fcdb079030dc6d3d71ffac9f90cb3a1c/000000_000000/0000/tree_5.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//95fdf8117f2d865039f96bc9bbd20f1c582f3bdfb94aaad44237cb3d/000000_000000/0000/tree_6.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//9b651a42770c1cce18b293e038e498c4cf4142cd63c8926629c583d8/000000_000000/0000/tree_7.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//54d4fcda1e7ea6072227418dbe130434ee5ac32f80bb1a60a9870dbf/000000_000000/0000/tree_8.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//3ab76564778e9b24e8c2fd2e9872e8e0445f57e988301a0c2b496b0b/000000_000000/0000/tree_9.root
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V13/ZJetsToNuNu_HT-800To1200_13TeV-madgraph//e12d7e6db9016b6ca325e85a7f8dfd6d59c3a8df520eee14eb19f76e/000000_000000/0000/tree_10.root

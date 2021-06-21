@@ -1,0 +1,1 @@
+/store/group/phys_higgs/hbb/ntuples/VHbbPostNano/2016/V11/WminusH_HToBB_WToLNu_M125_13TeV_powheg_pythia8//f82bfa089312bc7b24a1b66d75ea453aff78e5cb664280ed2f236d9b/000000_000000/0000/tree_0.root
